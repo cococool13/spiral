@@ -39,7 +39,7 @@ export default function Hero() {
           className="type-display mt-8 text-6xl text-paper sm:text-7xl md:text-8xl"
           initial={reduced ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 80, damping: 16, delay: 0.5 }}
+          transition={{ type: "spring", stiffness: 80, damping: 16, delay: 0.85 }}
         >
           Spiral
         </motion.h1>
@@ -47,7 +47,7 @@ export default function Hero() {
           className="mt-6 max-w-xl text-lg text-concrete sm:text-xl"
           initial={reduced ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 80, damping: 16, delay: 0.75 }}
+          transition={{ type: "spring", stiffness: 80, damping: 16, delay: 1.05 }}
         >
           Small tools. No bloat. Your data stays yours.
         </motion.p>
@@ -56,7 +56,7 @@ export default function Hero() {
           className="mt-16 grid w-full grid-cols-1 gap-8 text-left sm:grid-cols-3"
           initial={reduced ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 70, damping: 16, delay: 1 }}
+          transition={{ type: "spring", stiffness: 70, damping: 16, delay: 1.3 }}
         >
           {pillars.map((p) => (
             <div key={p.title}>

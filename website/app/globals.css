@@ -59,6 +59,19 @@ a:focus-visible {
   outline-offset: 3px;
   border-radius: 2px;
 }
+
+/* The hero mark ships hidden in server HTML so it never flashes fully
+   assembled before hydration; the component unhides itself on mount.
+   (Must live on the svg, not the pieces — framer writes piece opacity as an
+   SVG attribute, which any CSS rule would override.) */
+.pre-hydration-hidden {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pre-hydration-hidden {
+    opacity: 1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
