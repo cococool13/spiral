@@ -34,11 +34,11 @@ export default function Nav() {
           />
           <span className="type-heading text-sm tracking-wide">Spiral</span>
         </a>
-        <div className="hidden items-center gap-6 font-mono text-xs text-gray sm:flex">
-          <a href="#apps" className="transition-colors hover:text-paper">
+        <div className="hidden items-center gap-2 font-mono text-xs text-gray sm:flex">
+          <a href="#apps" className="px-2 py-3 transition-colors hover:text-paper">
             Apps
           </a>
-          <a href="#other-work" className="transition-colors hover:text-paper">
+          <a href="#other-work" className="px-2 py-3 transition-colors hover:text-paper">
             Other Work
           </a>
         </div>

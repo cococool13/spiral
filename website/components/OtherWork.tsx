@@ -22,7 +22,7 @@ export default function OtherWork() {
                 <h3 className="type-heading text-lg">{p.name}</h3>
                 <p className="mt-2 text-sm text-steel">{p.description}</p>
                 {p.href && (
-                  <span className="mt-4 inline-block font-mono text-xs text-red">
+                  <span className="mt-4 inline-block font-mono text-xs font-medium text-oxblood underline-offset-4 group-hover:underline">
                     Visit →
                   </span>
                 )}
@@ -37,7 +37,7 @@ export default function OtherWork() {
                     href={p.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${cardClass} hover:-translate-y-0.5`}
+                    className={`${cardClass} group hover:-translate-y-0.5`}
                   >
                     {inner}
                   </a>

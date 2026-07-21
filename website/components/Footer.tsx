@@ -21,22 +21,22 @@ export default function Footer() {
             Free. Always.
           </span>
         </div>
-        <nav className="flex gap-8 font-mono text-xs text-gray">
+        <nav className="flex gap-4 font-mono text-xs text-gray">
           <a
             href="https://github.com/cococool13/spiral-wallpaper"
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-colors hover:text-paper"
+            className="px-2 py-3 transition-colors hover:text-paper"
           >
             GitHub
           </a>
           <a
             href="mailto:spiralcoco@gmail.com"
-            className="transition-colors hover:text-paper"
+            className="px-2 py-3 transition-colors hover:text-paper"
           >
             Contact
           </a>
-          <a href="#other-work" className="transition-colors hover:text-paper">
+          <a href="#other-work" className="px-2 py-3 transition-colors hover:text-paper">
             Other Work
           </a>
         </nav>

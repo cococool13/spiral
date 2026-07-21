@@ -98,30 +98,39 @@ function WarehouseScene() {
         <rect width="100%" height="100%" filter="url(#cement-fine)" />
       </svg>
 
-      {/* Board-formed panel seams: vertical joints with a lit top edge */}
+      {/* Wall detailing fades out where the wall meets the floor */}
       <div
-        className="absolute inset-0 opacity-70"
+        className="absolute inset-0"
         style={{
-          background:
-            "repeating-linear-gradient(90deg, transparent 0 calc(16.66% - 2px), rgba(0,0,0,.42) calc(16.66% - 2px) calc(16.66% - 1px), rgba(216,214,209,.05) calc(16.66% - 1px) 16.66%)",
+          maskImage: "linear-gradient(180deg, black 68%, transparent 94%)",
+          WebkitMaskImage: "linear-gradient(180deg, black 68%, transparent 94%)",
         }}
-      />
-      {/* Horizontal pour joints */}
-      <div
-        className="absolute inset-0 opacity-60"
-        style={{
-          background:
-            "linear-gradient(180deg, transparent calc(30% - 1px), rgba(0,0,0,.38) calc(30% - 1px) 30%, rgba(216,214,209,.04) 30% calc(30% + 1px), transparent calc(30% + 1px)), linear-gradient(180deg, transparent calc(62% - 1px), rgba(0,0,0,.38) calc(62% - 1px) 62%, rgba(216,214,209,.04) 62% calc(62% + 1px), transparent calc(62% + 1px))",
-        }}
-      />
-      {/* Form-tie holes, the giveaway detail of cast concrete */}
-      <div
-        className="absolute inset-0 opacity-50"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle 4px at 8.33% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 41.6% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 75% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 24.9% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px), radial-gradient(circle 4px at 58.3% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px), radial-gradient(circle 4px at 91.6% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px)",
-        }}
-      />
+      >
+        {/* Board-formed panel seams: vertical joints with a lit top edge */}
+        <div
+          className="absolute inset-0 opacity-70"
+          style={{
+            background:
+              "repeating-linear-gradient(90deg, transparent 0 calc(16.66% - 2px), rgba(0,0,0,.42) calc(16.66% - 2px) calc(16.66% - 1px), rgba(216,214,209,.05) calc(16.66% - 1px) 16.66%)",
+          }}
+        />
+        {/* Horizontal pour joints */}
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            background:
+              "linear-gradient(180deg, transparent calc(30% - 1px), rgba(0,0,0,.38) calc(30% - 1px) 30%, rgba(216,214,209,.04) 30% calc(30% + 1px), transparent calc(30% + 1px)), linear-gradient(180deg, transparent calc(62% - 1px), rgba(0,0,0,.38) calc(62% - 1px) 62%, rgba(216,214,209,.04) 62% calc(62% + 1px), transparent calc(62% + 1px))",
+          }}
+        />
+        {/* Form-tie holes, the giveaway detail of cast concrete */}
+        <div
+          className="absolute inset-0 opacity-50"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle 4px at 8.33% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 41.6% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 75% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 24.9% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px), radial-gradient(circle 4px at 58.3% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px), radial-gradient(circle 4px at 91.6% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px)",
+          }}
+        />
+      </div>
 
       {/* Structural columns, one lit edge each */}
       <div
@@ -171,7 +180,32 @@ function WarehouseScene() {
           filter: "blur(40px)",
         }}
       />
+      {/* ...and its source: an LED strip mounted on the right column's edge */}
+      <div
+        className="absolute right-[23%] top-[10%] h-[64%] w-[2px]"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, rgba(213,46,43,.9) 8%, rgba(213,46,43,.75) 85%, transparent)",
+        }}
+      />
+      <div
+        className="absolute right-[22.4%] top-[10%] h-[64%] w-[14px] mix-blend-screen"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, rgba(213,46,43,.5) 10%, rgba(213,46,43,.35) 85%, transparent)",
+          filter: "blur(8px)",
+        }}
+      />
 
+      {/* Ambient occlusion where the wall meets the floor */}
+      <div
+        className="absolute inset-x-0 bottom-[22%] h-[8%]"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, rgba(0,0,0,.45) 70%, rgba(0,0,0,.55))",
+          filter: "blur(10px)",
+        }}
+      />
       {/* Floor: darkness, a faint sheen line, red pooling in reflection */}
       <div
         className="absolute inset-x-0 bottom-0 h-[28%]"
