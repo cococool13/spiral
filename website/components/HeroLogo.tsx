@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 
 /**
  * The actual Spiral helix mark (path data mirrors /branding/spiral-mark.svg),
@@ -66,7 +66,7 @@ export default function HeroLogo({ size = 128 }: { size?: number }) {
         reduced ? (
           <path key={d.slice(0, 24)} d={d} fill="var(--spiral-red)" />
         ) : (
-          <motion.path
+          <m.path
             key={d.slice(0, 24)}
             d={d}
             fill="var(--spiral-red)"
@@ -85,7 +85,7 @@ export default function HeroLogo({ size = 128 }: { size?: number }) {
       {/* One specular sweep across the assembled mark */}
       {!reduced && (
         <g mask="url(#mark-mask)">
-          <motion.rect
+          <m.rect
             x={197}
             y={124}
             width={150}

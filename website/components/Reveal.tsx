@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 
 /** Scroll-triggered reveal: rises in with spring easing. No-op under reduced motion. */
@@ -16,7 +16,7 @@ export default function Reveal({
   const reduced = useReducedMotion();
   if (reduced) return <div className={className}>{children}</div>;
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, y: 32 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -24,6 +24,6 @@ export default function Reveal({
       transition={{ type: "spring", stiffness: 90, damping: 18, delay }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

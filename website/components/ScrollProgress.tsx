@@ -1,7 +1,22 @@
 "use client";
 
-import { motion, useScroll, useSpring, useReducedMotion } from "framer-motion";
-import { spiralPath } from "./SpiralMark";
+import { m, useScroll, useSpring, useReducedMotion } from "framer-motion";
+
+/** Archimedean spiral path (matches /branding/spiral-stroke.svg). */
+function spiralPath(cx = 100, cy = 100, turns = 3.25, steps = 260, radius = 88): string {
+  let d = "";
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const a = t * turns * 2 * Math.PI - Math.PI / 2;
+    const r = radius * (1 - t * 0.94);
+    const x = (cx + r * Math.cos(a)).toFixed(2);
+    const y = (cy + r * Math.sin(a)).toFixed(2);
+    d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
+  }
+  return d;
+}
+
+const SPIRAL_D = spiralPath();
 
 /**
  * Scroll-progress indicator echoing the logo's spiral stroke: the spiral
@@ -25,13 +40,13 @@ export default function ScrollProgress() {
     >
       <svg width={40} height={40} viewBox="0 0 200 200" fill="none">
         <path
-          d={spiralPath()}
+          d={SPIRAL_D}
           stroke="rgba(244,243,240,.15)"
           strokeWidth={8}
           strokeLinecap="round"
         />
-        <motion.path
-          d={spiralPath()}
+        <m.path
+          d={SPIRAL_D}
           stroke="var(--spiral-red)"
           strokeWidth={8}
           strokeLinecap="round"
