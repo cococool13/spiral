@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import SpiralMark, { spiralPath } from "./SpiralMark";
+import HeroLogo, { MARK_PATHS, MARK_VIEWBOX } from "./HeroLogo";
 
 const pillars = [
   {
@@ -19,9 +19,10 @@ const pillars = [
 ];
 
 /**
- * Full-bleed cinematic hero: a code-rendered metallic spiral catching red
- * light on dark concrete — depth from lighting, not flat UI color — with a
- * scrim for legibility.
+ * Full-bleed cinematic hero staged like a photograph of a concrete
+ * warehouse at night: textured walls, volumetric light shafts, a giant
+ * steel helix catching red light, film grain and a vignette. All of it is
+ * code-rendered (SVG noise + gradients) — no image payload.
  */
 export default function Hero() {
   const reduced = useReducedMotion();
@@ -30,47 +31,10 @@ export default function Hero() {
       id="top"
       className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6"
     >
-      {/* Cinematic background: concrete gradients + giant spiral catching red light */}
-      <div aria-hidden="true" className="absolute inset-0">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(120% 90% at 70% 15%, rgba(213,46,43,.16), transparent 55%), radial-gradient(90% 70% at 20% 85%, rgba(216,214,209,.07), transparent 60%), linear-gradient(180deg, var(--spiral-black) 0%, #101012 55%, var(--spiral-black) 100%)",
-          }}
-        />
-        <svg
-          viewBox="0 0 200 200"
-          fill="none"
-          className="absolute -right-[15%] top-1/2 h-[140vmin] w-[140vmin] -translate-y-1/2 opacity-40"
-        >
-          <defs>
-            <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="var(--spiral-concrete)" stopOpacity=".9" />
-              <stop offset=".45" stopColor="var(--spiral-gray)" stopOpacity=".25" />
-              <stop offset=".7" stopColor="var(--spiral-red)" stopOpacity=".55" />
-              <stop offset="1" stopColor="var(--spiral-oxblood)" stopOpacity=".2" />
-            </linearGradient>
-          </defs>
-          <path
-            d={spiralPath(100, 100, 3.25, 260, 96)}
-            stroke="url(#metal)"
-            strokeWidth={7}
-            strokeLinecap="round"
-          />
-        </svg>
-        {/* Scrim for legibility */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(11,11,12,.55) 0%, rgba(11,11,12,.25) 40%, rgba(11,11,12,.8) 100%)",
-          }}
-        />
-      </div>
+      <WarehouseScene />
 
       <div className="relative z-10 flex max-w-4xl flex-col items-center text-center">
-        <SpiralMark size={112} />
+        <HeroLogo size={128} />
         <motion.h1
           className="type-display mt-8 text-6xl text-paper sm:text-7xl md:text-8xl"
           initial={reduced ? false : { opacity: 0, y: 24 }}
@@ -103,5 +67,114 @@ export default function Hero() {
         </motion.div>
       </div>
     </section>
+  );
+}
+
+function WarehouseScene() {
+  return (
+    <div aria-hidden="true" className="absolute inset-0">
+      {/* Base: night interior, faint warm bounce off the floor */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, var(--spiral-black) 0%, #131315 46%, #17120f 72%, var(--spiral-black) 100%)",
+        }}
+      />
+
+      {/* Concrete wall texture — SVG fractal noise, blended like raw cement */}
+      <svg className="absolute inset-0 h-full w-full opacity-[.22] mix-blend-overlay">
+        <filter id="concrete">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="5" seed="7" />
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.9" intercept="0" />
+          </feComponentTransfer>
+        </filter>
+        <rect width="100%" height="100%" filter="url(#concrete)" />
+      </svg>
+
+      {/* Giant steel helix — the actual mark — leaning out of the dark, catching the red light */}
+      <svg
+        viewBox={MARK_VIEWBOX}
+        className="absolute -right-[8%] top-1/2 h-[130vmin] -translate-y-[46%] opacity-[.32]"
+        style={{ filter: "blur(1.5px)" }}
+      >
+        <defs>
+          <linearGradient id="steel-helix" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="var(--spiral-concrete)" stopOpacity=".55" />
+            <stop offset=".4" stopColor="var(--spiral-gray)" stopOpacity=".12" />
+            <stop offset=".62" stopColor="var(--spiral-red)" stopOpacity=".7" />
+            <stop offset=".85" stopColor="var(--spiral-oxblood)" stopOpacity=".35" />
+            <stop offset="1" stopColor="var(--spiral-black)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {MARK_PATHS.map((d) => (
+          <path key={d.slice(0, 24)} d={d} fill="url(#steel-helix)" />
+        ))}
+      </svg>
+
+      {/* Volumetric light shafts through high windows */}
+      <div
+        className="absolute -top-[20%] left-[8%] h-[120%] w-[22%] rotate-[16deg] mix-blend-screen"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(244,243,240,.14), rgba(244,243,240,.03) 55%, transparent 80%)",
+          filter: "blur(28px)",
+        }}
+      />
+      <div
+        className="absolute -top-[20%] left-[30%] h-[120%] w-[10%] rotate-[16deg] mix-blend-screen"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(244,243,240,.09), transparent 70%)",
+          filter: "blur(22px)",
+        }}
+      />
+      {/* Red practical light spilling from the right, where the helix stands */}
+      <div
+        className="absolute -right-[10%] top-[10%] h-[85%] w-[45%] mix-blend-screen"
+        style={{
+          background:
+            "radial-gradient(60% 55% at 65% 45%, rgba(213,46,43,.30), rgba(111,16,17,.12) 55%, transparent 75%)",
+          filter: "blur(36px)",
+        }}
+      />
+
+      {/* Polished floor: horizon line + soft red reflection pooling on it */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[26%]"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, rgba(0,0,0,.55) 40%, rgba(0,0,0,.75))",
+        }}
+      />
+      <div
+        className="absolute bottom-0 right-[6%] h-[18%] w-[38%] mix-blend-screen"
+        style={{
+          background:
+            "radial-gradient(70% 100% at 50% 100%, rgba(213,46,43,.14), transparent 70%)",
+          filter: "blur(24px)",
+        }}
+      />
+
+      {/* Film grain */}
+      <svg className="absolute inset-0 h-full w-full opacity-[.07]">
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="3" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain)" />
+      </svg>
+
+      {/* Scrim + vignette for legibility */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(11,11,12,.72) 100%), linear-gradient(180deg, rgba(11,11,12,.5) 0%, rgba(11,11,12,.15) 40%, rgba(11,11,12,.7) 100%)",
+        }}
+      />
+    </div>
   );
 }
