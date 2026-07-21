@@ -9,17 +9,18 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Brand fonts are stable subsets — cache forever
-[[headers]]
-  for = "/branding/fonts/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Other brand assets (mark, tokens, future demo media) — one day
+# Brand assets (mark, tokens, future demo media) — one day
 [[headers]]
   for = "/branding/*"
   [headers.values]
     Cache-Control = "public, max-age=86400"
+
+# Brand fonts are stable subsets — cache forever.
+# Must come AFTER /branding/* — Netlify lets later matching rules win.
+[[headers]]
+  for = "/branding/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/*"
