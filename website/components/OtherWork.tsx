@@ -37,7 +37,7 @@ export default function OtherWork() {
                     href={p.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${cardClass} group hover:-translate-y-0.5`}
+                    className={`${cardClass} group hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]`}
                   >
                     {inner}
                   </a>

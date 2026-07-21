@@ -88,6 +88,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+p {
+  text-wrap: pretty;
+}
+
 .type-display {
   font-family: var(--spiral-font-display);
   font-variation-settings: "wdth" var(--spiral-wdth-display);
@@ -160,13 +164,15 @@ body {
   opacity: 0.35;
   pointer-events: none;
 }
-.glass-pill:hover {
-  transform: translateY(-1px);
-  background: rgba(111, 16, 17, 0.45);
-  border-color: rgba(255, 255, 255, 0.6);
+@media (hover: hover) and (pointer: fine) {
+  .glass-pill:hover {
+    transform: translateY(-1px);
+    background: rgba(111, 16, 17, 0.45);
+    border-color: rgba(255, 255, 255, 0.6);
+  }
 }
 .glass-pill:active {
-  transform: translateY(0);
+  transform: scale(0.97);
   background: rgba(111, 16, 17, 0.6);
 }
 .glass-pill:focus-visible {
