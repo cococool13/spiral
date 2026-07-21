@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import HeroLogo, { MARK_PATHS, MARK_VIEWBOX } from "./HeroLogo";
+import HeroLogo from "./HeroLogo";
 
 const pillars = [
   {
@@ -73,87 +73,125 @@ export default function Hero() {
 function WarehouseScene() {
   return (
     <div aria-hidden="true" className="absolute inset-0">
-      {/* Base: night interior, faint warm bounce off the floor */}
+      {/* Base: night interior, faint warm bounce near the floor */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, var(--spiral-black) 0%, #131315 46%, #17120f 72%, var(--spiral-black) 100%)",
+            "linear-gradient(180deg, var(--spiral-black) 0%, #141416 42%, #161311 74%, var(--spiral-black) 100%)",
         }}
       />
 
-      {/* Concrete wall texture — SVG fractal noise, blended like raw cement */}
-      <svg className="absolute inset-0 h-full w-full opacity-[.22] mix-blend-overlay">
-        <filter id="concrete">
-          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="5" seed="7" />
+      {/* Raw cement surface — coarse mottling + fine tooth */}
+      <svg className="absolute inset-0 h-full w-full opacity-[.20] mix-blend-overlay">
+        <filter id="cement-coarse">
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.014" numOctaves="5" seed="11" />
           <feColorMatrix type="saturate" values="0" />
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.9" intercept="0" />
-          </feComponentTransfer>
         </filter>
-        <rect width="100%" height="100%" filter="url(#concrete)" />
+        <rect width="100%" height="100%" filter="url(#cement-coarse)" />
+      </svg>
+      <svg className="absolute inset-0 h-full w-full opacity-[.10] mix-blend-overlay">
+        <filter id="cement-fine">
+          <feTurbulence type="fractalNoise" baseFrequency="0.09 0.11" numOctaves="3" seed="5" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#cement-fine)" />
       </svg>
 
-      {/* Giant steel helix — the actual mark — leaning out of the dark, catching the red light */}
-      <svg
-        viewBox={MARK_VIEWBOX}
-        className="absolute -right-[8%] top-1/2 h-[130vmin] -translate-y-[46%] opacity-[.32]"
-        style={{ filter: "blur(1.5px)" }}
-      >
-        <defs>
-          <linearGradient id="steel-helix" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="var(--spiral-concrete)" stopOpacity=".55" />
-            <stop offset=".4" stopColor="var(--spiral-gray)" stopOpacity=".12" />
-            <stop offset=".62" stopColor="var(--spiral-red)" stopOpacity=".7" />
-            <stop offset=".85" stopColor="var(--spiral-oxblood)" stopOpacity=".35" />
-            <stop offset="1" stopColor="var(--spiral-black)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {MARK_PATHS.map((d) => (
-          <path key={d.slice(0, 24)} d={d} fill="url(#steel-helix)" />
-        ))}
-      </svg>
-
-      {/* Volumetric light shafts through high windows */}
+      {/* Board-formed panel seams: vertical joints with a lit top edge */}
       <div
-        className="absolute -top-[20%] left-[8%] h-[120%] w-[22%] rotate-[16deg] mix-blend-screen"
+        className="absolute inset-0 opacity-70"
         style={{
           background:
-            "linear-gradient(180deg, rgba(244,243,240,.14), rgba(244,243,240,.03) 55%, transparent 80%)",
-          filter: "blur(28px)",
+            "repeating-linear-gradient(90deg, transparent 0 calc(16.66% - 2px), rgba(0,0,0,.42) calc(16.66% - 2px) calc(16.66% - 1px), rgba(216,214,209,.05) calc(16.66% - 1px) 16.66%)",
         }}
       />
+      {/* Horizontal pour joints */}
       <div
-        className="absolute -top-[20%] left-[30%] h-[120%] w-[10%] rotate-[16deg] mix-blend-screen"
+        className="absolute inset-0 opacity-60"
         style={{
           background:
-            "linear-gradient(180deg, rgba(244,243,240,.09), transparent 70%)",
-          filter: "blur(22px)",
+            "linear-gradient(180deg, transparent calc(30% - 1px), rgba(0,0,0,.38) calc(30% - 1px) 30%, rgba(216,214,209,.04) 30% calc(30% + 1px), transparent calc(30% + 1px)), linear-gradient(180deg, transparent calc(62% - 1px), rgba(0,0,0,.38) calc(62% - 1px) 62%, rgba(216,214,209,.04) 62% calc(62% + 1px), transparent calc(62% + 1px))",
         }}
       />
-      {/* Red practical light spilling from the right, where the helix stands */}
+      {/* Form-tie holes, the giveaway detail of cast concrete */}
       <div
-        className="absolute -right-[10%] top-[10%] h-[85%] w-[45%] mix-blend-screen"
+        className="absolute inset-0 opacity-50"
         style={{
-          background:
-            "radial-gradient(60% 55% at 65% 45%, rgba(213,46,43,.30), rgba(111,16,17,.12) 55%, transparent 75%)",
-          filter: "blur(36px)",
+          backgroundImage:
+            "radial-gradient(circle 4px at 8.33% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 41.6% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 75% 26%, rgba(0,0,0,.55) 0 3px, rgba(216,214,209,.06) 3px 4px, transparent 4px), radial-gradient(circle 4px at 24.9% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px), radial-gradient(circle 4px at 58.3% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px), radial-gradient(circle 4px at 91.6% 58%, rgba(0,0,0,.5) 0 3px, rgba(216,214,209,.05) 3px 4px, transparent 4px)",
         }}
       />
 
-      {/* Polished floor: horizon line + soft red reflection pooling on it */}
+      {/* Structural columns, one lit edge each */}
       <div
-        className="absolute inset-x-0 bottom-0 h-[26%]"
+        className="absolute bottom-0 left-[13%] top-0 w-[6.5%]"
         style={{
           background:
-            "linear-gradient(180deg, transparent, rgba(0,0,0,.55) 40%, rgba(0,0,0,.75))",
+            "linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.35) 30%, rgba(216,214,209,.10) 88%, rgba(244,243,240,.16) 94%, rgba(0,0,0,.8))",
         }}
       />
       <div
-        className="absolute bottom-0 right-[6%] h-[18%] w-[38%] mix-blend-screen"
+        className="absolute bottom-0 right-[16%] top-0 w-[7%]"
         style={{
           background:
-            "radial-gradient(70% 100% at 50% 100%, rgba(213,46,43,.14), transparent 70%)",
+            "linear-gradient(90deg, rgba(0,0,0,.8), rgba(213,46,43,.10) 8%, rgba(0,0,0,.4) 35%, rgba(0,0,0,.72))",
+        }}
+      />
+
+      {/* Cool moonlight through a mullioned window, projected across the left wall */}
+      <div
+        className="absolute left-[2%] top-[16%] h-[62%] w-[30%] -skew-x-12 rotate-2 mix-blend-screen"
+        style={{
+          background:
+            "repeating-linear-gradient(90deg, rgba(226,232,240,.09) 0 22%, rgba(0,0,0,0) 22% 27%), repeating-linear-gradient(0deg, rgba(226,232,240,.07) 0 30%, rgba(0,0,0,0) 30% 34%)",
+          maskImage:
+            "radial-gradient(80% 90% at 50% 40%, black 30%, transparent 85%)",
+          WebkitMaskImage:
+            "radial-gradient(80% 90% at 50% 40%, black 30%, transparent 85%)",
+          filter: "blur(6px)",
+        }}
+      />
+      {/* Volumetric shaft feeding that window light */}
+      <div
+        className="absolute -top-[25%] left-[6%] h-[130%] w-[24%] rotate-[14deg] mix-blend-screen"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(226,232,240,.13), rgba(226,232,240,.03) 55%, transparent 80%)",
+          filter: "blur(30px)",
+        }}
+      />
+
+      {/* Red practical light raking the right wall */}
+      <div
+        className="absolute -right-[8%] top-[6%] h-[90%] w-[40%] mix-blend-screen"
+        style={{
+          background:
+            "radial-gradient(55% 60% at 70% 40%, rgba(213,46,43,.26), rgba(111,16,17,.10) 55%, transparent 75%)",
+          filter: "blur(40px)",
+        }}
+      />
+
+      {/* Floor: darkness, a faint sheen line, red pooling in reflection */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[28%]"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, rgba(0,0,0,.5) 35%, rgba(0,0,0,.78))",
+        }}
+      />
+      <div
+        className="absolute inset-x-0 bottom-[24%] h-px opacity-40"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(216,214,209,.35) 30%, rgba(216,214,209,.1) 60%, transparent)",
+        }}
+      />
+      <div
+        className="absolute bottom-0 right-[8%] h-[16%] w-[34%] mix-blend-screen"
+        style={{
+          background:
+            "radial-gradient(70% 100% at 50% 100%, rgba(213,46,43,.13), transparent 70%)",
           filter: "blur(24px)",
         }}
       />
@@ -172,7 +210,7 @@ function WarehouseScene() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(11,11,12,.72) 100%), linear-gradient(180deg, rgba(11,11,12,.5) 0%, rgba(11,11,12,.15) 40%, rgba(11,11,12,.7) 100%)",
+            "radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(11,11,12,.72) 100%), linear-gradient(180deg, rgba(11,11,12,.5) 0%, rgba(11,11,12,.18) 40%, rgba(11,11,12,.7) 100%)",
         }}
       />
     </div>
