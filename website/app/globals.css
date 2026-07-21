@@ -1,0 +1,184 @@
+@import "tailwindcss";
+/* Brand tokens — synced from /branding (single source of truth). */
+@import "../../branding/tokens.css";
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/branding/fonts/archivo-latin-wdth-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 62.5% 125%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/branding/fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/branding/fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
+@theme {
+  --color-black: var(--spiral-black);
+  --color-paper: var(--spiral-paper);
+  --color-gray: var(--spiral-gray);
+  --color-concrete: var(--spiral-concrete);
+  --color-red: var(--spiral-red);
+  --color-oxblood: var(--spiral-oxblood);
+  --color-ink: var(--spiral-ink);
+  --color-steel: var(--spiral-steel);
+  --color-conc1: var(--spiral-conc-01);
+  --color-conc2: var(--spiral-conc-02);
+  --color-conc3: var(--spiral-conc-03);
+  --font-display: var(--spiral-font-display);
+  --font-mono: var(--spiral-font-mono);
+  --ease-spiral: var(--spiral-ease);
+  --radius-ctl: var(--spiral-radius-ctl);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  background: var(--spiral-black);
+  color: var(--spiral-paper);
+  font-family: var(--spiral-font-display);
+  font-variation-settings: "wdth" 100;
+  font-weight: 400;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.type-display {
+  font-family: var(--spiral-font-display);
+  font-variation-settings: "wdth" var(--spiral-wdth-display);
+  font-weight: var(--spiral-wght-display);
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+.type-heading {
+  font-family: var(--spiral-font-display);
+  font-variation-settings: "wdth" var(--spiral-wdth-heading);
+  font-weight: var(--spiral-wght-heading);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.type-eyebrow {
+  font-family: var(--spiral-font-mono);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.type-eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--spiral-red);
+  margin-right: 10px;
+  vertical-align: 2px;
+}
+
+/* Glass pill — the ONE glassmorphism treatment on the site. CTAs only. */
+.glass-pill {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 24px;
+  border-radius: var(--spiral-radius-ctl);
+  border: 1px solid var(--spiral-glass-edge);
+  background: rgba(213, 46, 43, 0.28);
+  backdrop-filter: var(--spiral-glass-blur);
+  -webkit-backdrop-filter: var(--spiral-glass-blur);
+  box-shadow:
+    rgba(0, 0, 0, 0.08) 0 24px 48px,
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: var(--spiral-paper);
+  font-family: var(--spiral-font-mono);
+  font-weight: 500;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition:
+    transform var(--spiral-dur-fast) var(--spiral-ease),
+    background var(--spiral-dur-fast) var(--spiral-ease),
+    border-color var(--spiral-dur-fast) var(--spiral-ease);
+}
+.glass-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--spiral-glass-sheen);
+  opacity: 0.35;
+  pointer-events: none;
+}
+.glass-pill:hover {
+  transform: translateY(-1px);
+  background: rgba(111, 16, 17, 0.45);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.glass-pill:active {
+  transform: translateY(0);
+  background: rgba(111, 16, 17, 0.6);
+}
+.glass-pill:focus-visible {
+  outline: 2px solid var(--spiral-red);
+  outline-offset: 3px;
+}
+.glass-pill--secondary {
+  background: rgba(244, 243, 240, 0.08);
+  color: var(--spiral-paper);
+}
+.glass-pill--secondary:hover {
+  background: rgba(244, 243, 240, 0.14);
+}
+.glass-pill--disabled {
+  background: rgba(140, 141, 138, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--spiral-gray);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.glass-pill--disabled::after {
+  opacity: 0.1;
+}
+.glass-pill--disabled:hover {
+  transform: none;
+  background: rgba(140, 141, 138, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Floating nav pill container — glass, never flush to y=0 */
+.nav-pill {
+  border-radius: var(--spiral-radius-ctl);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(11, 11, 12, 0.55);
+  backdrop-filter: var(--spiral-glass-blur);
+  -webkit-backdrop-filter: var(--spiral-glass-blur);
+  box-shadow: rgba(0, 0, 0, 0.04) 0 4px 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-pill,
+  .glass-pill:hover {
+    transition: none;
+    transform: none;
+  }
+}
