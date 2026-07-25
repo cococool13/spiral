@@ -115,11 +115,11 @@ curve, enforced by the build. When in doubt, open the brand guide at
 
 ## Roadmap, stated plainly
 
-Next: a signed v1.0.0 release (macOS notarization + Windows signing), after
-a runtime pass on real Windows hardware. On hold: additional wallpaper
-sources (Unsplash and Pexels shipped briefly and were removed; the
-`WallpaperSource` interface is waiting for them). Out of scope for v1:
-animated wallpapers, auto-update, anything that phones home.
+Current: v1.0.1, with a signed and notarized universal macOS build. Next:
+Windows signing and the remaining runtime pass on real Windows hardware.
+On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
+and were removed; the `WallpaperSource` interface is waiting for them). Out
+of scope for v1: animated wallpapers, auto-update, anything that phones home.
 
 ---
 
