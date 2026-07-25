@@ -1,0 +1,46 @@
+/* Spiral brand tokens — single source of truth for all Spiral surfaces.
+   Consumed by collection/ and apps/* via each surface's scripts/sync-brand.mjs.
+   Do not hardcode these values anywhere else. */
+
+:root {
+  /* material — dark cinematic (marketing surfaces) */
+  --spiral-black: #0b0b0c; /* near-black base */
+  --spiral-paper: #f4f3f0; /* warm off-white */
+  --spiral-gray: #8c8d8a; /* concrete gray — secondary text, dividers */
+  --spiral-concrete: #d8d6d1; /* light concrete — card surfaces on dark */
+
+  /* material — light concrete (app surfaces) */
+  --spiral-conc-01: #ebe9e4;
+  --spiral-conc-02: #dddad3;
+  --spiral-conc-03: #cfccc4;
+  --spiral-ink: #10181b;
+  --spiral-steel: #666863;
+
+  /* accent — helix red. Interactive elements, the mark, warnings. Never a background fill. */
+  --spiral-red: #d52e2b;
+  --spiral-oxblood: #6f1011;
+
+  /* type */
+  --spiral-font-display: "Archivo", sans-serif; /* variable: wdth + wght */
+  --spiral-font-mono: "IBM Plex Mono", monospace;
+  --spiral-wdth-display: 125;
+  --spiral-wght-display: 850;
+  --spiral-wdth-heading: 112;
+  --spiral-wght-heading: 700;
+
+  /* rhythm */
+  --spiral-unit: 8px;
+  --spiral-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --spiral-dur-fast: 150ms;
+  --spiral-dur-slow: 400ms;
+
+  /* glass — CTA pills only, never surfaces */
+  --spiral-radius-ctl: 999px;
+  --spiral-glass-blur: blur(16px) saturate(1.7);
+  --spiral-glass-edge: rgba(255, 255, 255, 0.45);
+  --spiral-glass-sheen: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0) 55%
+  );
+}

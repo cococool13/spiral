@@ -4,7 +4,7 @@
     {
       "name": "website",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "website", "dev"],
+      "runtimeArgs": ["--dir", "collection", "dev"],
       "port": 3000
     }
   ]

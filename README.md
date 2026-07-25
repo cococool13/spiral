@@ -1,10 +1,14 @@
 <div align="center">
 
-<img src="assets/spiral-mark-red.svg" alt="Spiral mark" width="72" />
+<img src="brand/logo/mark-red.svg" alt="Spiral mark" width="72" />
 
-# Spiral Wallpaper
+# Spiral
 
-**Click a wallpaper. It downloads and applies. That's it.**
+**Small tools. No bloat. Your data stays yours.**
+
+The Spiral monorepo: the brand system, every app, and the site that houses
+them. The first app is **Spiral Wallpaper** — click a wallpaper, it downloads
+and applies, that's it.
 
 [![build](https://github.com/cococool13/spiral-wallpaper/actions/workflows/build.yml/badge.svg)](https://github.com/cococool13/spiral-wallpaper/actions/workflows/build.yml)
 ![platforms](https://img.shields.io/badge/macOS%2013%2B%20·%20Windows%2010%2B-10181B?label=runs%20on)
@@ -53,7 +57,7 @@ Needs Node 18+, pnpm, and Rust (rustup). On macOS: `xcode-select --install`.
 On Windows: Microsoft C++ Build Tools.
 
 ```bash
-cd spiral-wallpaper
+cd apps/wallpaper
 pnpm install
 pnpm tauri dev      # run the app
 pnpm tauri build    # release bundles (.app/.dmg or .exe/.msi)
@@ -66,16 +70,48 @@ cache, download, set wallpaper, verify) and restores your wallpaper after.
 
 ## What's in this repo
 
-| Path | What |
-| --- | --- |
-| [`spiral-wallpaper/`](spiral-wallpaper/) | The app: React + TypeScript UI, Rust core, branded DMG + NSIS installers |
-| [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs the app was built from: brand tokens, stack, scope |
-| [`assets/`](assets/) | The Spiral brand kit: mark, lockup, icon pipeline, full brand guide (`spiral-brand-guide.html`) |
-| [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | Product context and the visual system, as shipped |
-| [`reference/`](reference/) | External design reference material |
+Three top-level areas, one job each.
+
+```
+brand/         the design system — every colour, font, and mark lives here
+apps/          one folder per shipped app
+collection/    the spiral-collection.netlify.app website
+docs/          product context, visual system, external reference
+```
+
+| Path | What | Start here when… |
+| --- | --- | --- |
+| [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
+| [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
+| [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify | working on the website |
+| [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
+| [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
+
+**Brand assets are never duplicated.** Each surface copies what it needs out of
+`brand/` at build time into a gitignored folder — `collection/public/brand/` and
+`apps/wallpaper/src/assets/brand/`. Edit `brand/`, never a synced copy.
+
+## Working on it
+
+Each area is a self-contained pnpm project. There is no root workspace — `cd`
+into the one you want.
+
+```bash
+cd apps/wallpaper && pnpm install && pnpm tauri dev   # the desktop app
+cd collection     && pnpm install && pnpm dev         # the website (localhost:3000)
+```
+
+| Command | Where | What it does |
+| --- | --- | --- |
+| `pnpm build` | `apps/wallpaper` | hex-token guard → typecheck → Vite build |
+| `pnpm tauri build` | `apps/wallpaper` | release bundles (.app/.dmg, .exe/.msi) |
+| `pnpm build` | `collection` | static export into `out/` |
+| `pnpm typecheck` | `collection` | `tsc --noEmit` |
+| `pnpm sync-brand` | either | re-copy brand assets from `brand/` |
 
 The design system is eight colors, two fonts, two radii, and one easing
-curve, enforced by the build. When in doubt, open the brand guide.
+curve, enforced by the build. When in doubt, open the brand guide at
+[`brand/guide.html`](brand/guide.html).
 
 ## Roadmap, stated plainly
 

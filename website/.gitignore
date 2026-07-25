@@ -1,7 +1,0 @@
-node_modules/
-.next/
-out/
-next-env.d.ts
-*.tsbuildinfo
-# synced from /branding at build time — never edit or commit the copy
-public/branding/
