@@ -4,7 +4,7 @@
 Concrete surfaces from the Spiral tokens, the mark in one color, hairline
 rules — same material language as the app and the DMG background.
 
-Run from spiral-wallpaper/:  python3 scripts/make-nsis-images.py
+Run from apps/wallpaper/:  python3 scripts/make-nsis-images.py
 """
 
 from PIL import Image, ImageDraw, ImageFont
@@ -16,7 +16,7 @@ STL_02 = "#666863"
 HLX_01 = "#D52E2B"
 
 MONO_500 = "src/fonts/ibm-plex-mono-latin-500-normal.woff2"
-MARK = "../assets/spiral-mark-256.png"
+MARK = "../../brand/logo/png/mark-256.png"
 
 
 def mark_at(size: int) -> Image.Image:

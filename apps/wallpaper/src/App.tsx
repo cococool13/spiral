@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import markRed from "./assets/brand/spiral-mark-red.svg";
+import markRed from "./assets/brand/mark-red.svg";
 import { Browse } from "./screens/Browse";
 import { FirstRun } from "./screens/FirstRun";
 import { Settings } from "./screens/Settings";

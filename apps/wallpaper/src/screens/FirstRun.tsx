@@ -1,4 +1,4 @@
-import lockupRed from "../assets/brand/spiral-lockup-red.svg";
+import lockupRed from "../assets/brand/lockup-red.svg";
 
 interface FirstRunProps {
   onDone: () => void;

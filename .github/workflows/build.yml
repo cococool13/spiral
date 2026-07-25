@@ -8,9 +8,43 @@ on:
 
 defaults:
   run:
-    working-directory: spiral-wallpaper
+    working-directory: apps/wallpaper
 
 jobs:
+  # The website deploys via the Netlify CLI, not a git trigger, so nothing else
+  # would catch a broken build before someone runs `netlify deploy`.
+  website:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: collection
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: collection/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: collection/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint + format check
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # `prebuild` runs sync-brand, so a missing or renamed /brand asset fails
+      # here rather than silently shipping a 404 to production.
+      - name: Build static export
+        run: pnpm build
+
   windows:
     runs-on: windows-latest
     steps:
@@ -18,22 +52,27 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          package_json_file: spiral-wallpaper/package.json
+          package_json_file: apps/wallpaper/package.json
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: spiral-wallpaper/pnpm-lock.yaml
+          cache-dependency-path: apps/wallpaper/pnpm-lock.yaml
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: spiral-wallpaper/src-tauri
+          workspaces: apps/wallpaper/src-tauri
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # src/assets/brand is generated from /brand and gitignored, so it must
+      # exist before tsc and the Vite build resolve their SVG imports.
+      - name: Sync brand assets
+        run: pnpm sync-brand
 
       - name: Quality gates (hex guard + typecheck)
         run: pnpm check:hex && pnpm tsc --noEmit
@@ -49,7 +88,7 @@ jobs:
         with:
           name: spiral-windows
           path: |
-            spiral-wallpaper/src-tauri/target/release/bundle/msi/*.msi
-            spiral-wallpaper/src-tauri/target/release/bundle/nsis/*.exe
-            spiral-wallpaper/src-tauri/target/release/bundle/nsis/*.sig
+            apps/wallpaper/src-tauri/target/release/bundle/msi/*.msi
+            apps/wallpaper/src-tauri/target/release/bundle/nsis/*.exe
+            apps/wallpaper/src-tauri/target/release/bundle/nsis/*.sig
           if-no-files-found: error

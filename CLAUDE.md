@@ -1,4 +1,47 @@
-# Spiral Wallpaper — build brief for Claude Code
+# Spiral — repo guide for Claude Code
+
+## Where things are
+
+```
+brand/         the design system. Every colour, font, and mark. Single source of truth.
+apps/          one folder per shipped app  ·  apps/wallpaper = Spiral Wallpaper (Tauri)
+collection/    the spiral-collection.netlify.app website (Next.js, static export)
+docs/          PRODUCT.md, DESIGN.md, reference/, build specs
+```
+
+Rules that save you a wrong turn:
+
+- **Never define a brand value outside `brand/`.** Each surface copies what it
+  needs at build time into a gitignored folder (`collection/public/brand/`,
+  `apps/wallpaper/src/assets/brand/`) via its own `scripts/sync-brand.mjs`.
+  Editing a synced copy is always wrong — it is deleted on the next build.
+- **No root workspace.** `apps/wallpaper` and `collection` are independent pnpm
+  projects; `cd` into one before running anything.
+- `apps/wallpaper` fails its build on any hex value outside its tokens file
+  (`pnpm check:hex`). Use tokens.
+- Read `brand/README.md` before touching anything visual.
+
+## Apps and the website play by different rules
+
+The brief below was written for **Spiral Wallpaper**. Its *brand* rules — tokens,
+the mark, red discipline, voice — apply everywhere. Its *restraint* rules do not.
+
+| | `apps/*` | `collection/` |
+| --- | --- | --- |
+| Motion | explains state, never decorates | decorative motion is wanted; motion is the argument |
+| Frames | a handful of glass controls max — "we don't pay frames" | spend them; it's seconds of full attention |
+| Video | out of scope | belongs here |
+| Budgets | binary size, idle RAM, cold start | first-load JS, LCP, reduced-motion coverage |
+
+The website is heading somewhere deliberately ambitious — heavy motion, video,
+scroll-driven sequences, state of the art. **Before doing any work in
+`collection/`, read `collection/README.md`** — it carries that charter and the
+budgets that keep it fast. Do not import app restraint into the website, and do
+not import website ambition into an app.
+
+---
+
+# Spiral Wallpaper — build brief
 
 You are building **Spiral Wallpaper**, the first app of the Spiral brand — a free, privacy-first, super-lightweight desktop wallpaper app for macOS and Windows. It is a clean GUI over Wallhaven's free public API. The user clicks a wallpaper, it downloads and applies automatically. The app quits when the window closes — nothing keeps running in the background.
 
@@ -101,7 +144,7 @@ Static wallpapers only. No animated/live wallpapers — explicitly out of scope.
 
 ---
 
-## 7. External reference — `reference/DESIGN-mastercard.md`
+## 7. External reference — `docs/reference/DESIGN-mastercard.md`
 
 The repo includes an extracted design system from Mastercard's site. It is **reference, not authority** — Spiral's tokens and rules above always win on conflict. Mastercard's language is warm editorial (cream, circles, orbital arcs); Spiral's is industrial concrete. Do not blend the two palettes or motifs.
 
@@ -122,12 +165,17 @@ The repo includes an extracted design system from Mastercard's site. It is **ref
 - 20px / 40px radii on buttons, cards, or media frames — Spiral surfaces are square; only glass controls are rounded, and they are full-pill.
 - Signal Orange as a consent color — Spiral has one red and it already has a job.
 
-## 8. Assets provided (in `/assets`)
+## 8. Assets provided (in `/brand` — see `brand/README.md`)
 
-- `spiral-mark-red.svg` — primary mark (also recolorable; paths accept fill)
-- `spiral-lockup-red.svg` — mark + drawn wordmark (first-run screen only; never retype SPIRAL in Archivo as a lockup)
-- `spiral-mark-{16..1024}.png` — icon pipeline sources
-- `spiral-brand-guide.html` — full guidelines; when in doubt, open this
-- `../reference/DESIGN-mastercard.md` — external reference; see §7 for exactly what to adopt and ignore
+- `brand/logo/mark-red.svg` — primary mark (also recolorable; paths accept fill)
+- `brand/logo/lockup-red.svg` — mark + drawn wordmark (first-run screen only; never retype SPIRAL in Archivo as a lockup)
+- `brand/logo/mark.svg`, `brand/logo/stroke.svg` — filled mark for CSS masking, and the spiral stroke
+- `brand/logo/png/mark-{16..1024}.png` — icon pipeline sources
+- `brand/tokens.css` / `brand/tokens.json` — the tokens themselves
+- `brand/guide.html` — full guidelines; when in doubt, open this
+- `docs/reference/DESIGN-mastercard.md` — external reference; see §7 for exactly what to adopt and ignore
+
+Do not import these across folders at runtime. Run `pnpm sync-brand` in the
+surface you are working on; it copies what that surface needs.
 
 Begin with Milestone 1. Before writing code, output your plan for the milestone in ten lines or fewer.

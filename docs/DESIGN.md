@@ -1,6 +1,6 @@
 # Design
 
-Visual system of Spiral Wallpaper (`spiral-wallpaper/`). Source of truth: `src/styles/tokens.css` (the only file allowed to contain hex) and `assets/spiral-brand-guide.html`.
+Visual system of Spiral Wallpaper (`apps/wallpaper/`). Source of truth: `brand/tokens.css` (mirrored into `apps/wallpaper/src/styles/tokens.css`, the only file in that app allowed to contain hex) and `brand/guide.html`.
 
 ## Theme
 Industrial concrete, light-only by design (the material is poured concrete; there is no "dark concrete" variant in v1). Flat surfaces, hairline borders, no card shadows. Depth comes from material contrast; blur and shadow exist in exactly one place — the glass control layer.

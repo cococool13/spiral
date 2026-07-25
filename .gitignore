@@ -5,13 +5,13 @@
 node_modules/
 
 # Build output
-spiral-wallpaper/dist/
-spiral-wallpaper/src-tauri/target/
-spiral-wallpaper/src-tauri/gen/
+apps/wallpaper/dist/
+apps/wallpaper/src-tauri/target/
+apps/wallpaper/src-tauri/gen/
 
 # Local agent settings
 .claude/settings.local.json
 
 # Re-include Tauri icons (global 'Icon?' pattern matches icons/ case-insensitively)
-!spiral-wallpaper/src-tauri/icons/
-!spiral-wallpaper/src-tauri/icons/**
+!apps/wallpaper/src-tauri/icons/
+!apps/wallpaper/src-tauri/icons/**

@@ -5,7 +5,7 @@ Renders at 2x (1320x800 @ 144dpi) for a 660x400pt Finder window — matches
 bundle.macOS.dmg in tauri.conf.json (app at 180,170; Applications at 480,170).
 Colors and type come from the Spiral tokens; fonts are the app's own woff2s.
 
-Run from spiral-wallpaper/:  python3 scripts/make-dmg-background.py
+Run from apps/wallpaper/:  python3 scripts/make-dmg-background.py
 """
 
 from PIL import Image, ImageDraw, ImageFont
@@ -22,7 +22,7 @@ W, H = 660 * S, 400 * S
 
 MONO_500 = "src/fonts/ibm-plex-mono-latin-500-normal.woff2"
 MONO_400 = "src/fonts/ibm-plex-mono-latin-400-normal.woff2"
-MARK = "../assets/spiral-mark-256.png"
+MARK = "../../brand/logo/png/mark-256.png"
 OUT = "src-tauri/dmg/background.png"
 
 img = Image.new("RGB", (W, H), CONC_01)

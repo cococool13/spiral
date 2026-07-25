@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# synced from /brand at build time — never edit or commit the copy
+src/assets/brand/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

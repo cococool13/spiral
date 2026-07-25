@@ -2,9 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "spiral-wallpaper-vite",
+      "name": "collection",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "spiral-wallpaper", "dev"],
+      "runtimeArgs": ["--dir", "collection", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "wallpaper-ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "apps/wallpaper", "dev"],
       "port": 1420
     }
   ]

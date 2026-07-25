@@ -5,6 +5,9 @@
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "scripts": {
+    "sync-brand": "node scripts/sync-brand.mjs",
+    "predev": "node scripts/sync-brand.mjs",
+    "prebuild": "node scripts/sync-brand.mjs",
     "dev": "vite",
     "build": "node scripts/check-hex.mjs && tsc && vite build",
     "check:hex": "node scripts/check-hex.mjs",
