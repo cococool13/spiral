@@ -124,7 +124,7 @@ export default function InteractiveGrid({
             if (d2 > lineReachSq) continue;
             // quadratic falloff keeps the far end of each line near-invisible
             const t = 1 - d2 / lineReachSq;
-            ctx.globalAlpha = t * t * 0.3 * influence;
+            ctx.globalAlpha = t * t * 0.42 * influence;
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(px, py);
@@ -152,13 +152,13 @@ export default function InteractiveGrid({
             const g = Math.round(CONCRETE[1] + (RED[1] - CONCRETE[1]) * t);
             const b = Math.round(CONCRETE[2] + (RED[2] - CONCRETE[2]) * t);
             ctx.fillStyle = `rgb(${r},${g},${b})`;
-            ctx.globalAlpha = 0.18 + t * 0.75;
+            ctx.globalAlpha = 0.24 + t * 0.74;
             ctx.beginPath();
-            ctx.arc(x, y, dotRadius + t * 1.6, 0, Math.PI * 2);
+            ctx.arc(x, y, dotRadius + t * 1.9, 0, Math.PI * 2);
             ctx.fill();
           } else {
             ctx.fillStyle = `rgb(${CONCRETE[0]},${CONCRETE[1]},${CONCRETE[2]})`;
-            ctx.globalAlpha = 0.18;
+            ctx.globalAlpha = 0.24;
             ctx.beginPath();
             ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
             ctx.fill();
