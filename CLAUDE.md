@@ -21,9 +21,23 @@ Rules that save you a wrong turn:
   (`pnpm check:hex`). Use tokens.
 - Read `brand/README.md` before touching anything visual.
 
-The brief below is the original build brief for **Spiral Wallpaper**. Its brand,
-voice, and motion rules apply repo-wide; its stack and scope sections are
-specific to that app.
+## Apps and the website play by different rules
+
+The brief below was written for **Spiral Wallpaper**. Its *brand* rules — tokens,
+the mark, red discipline, voice — apply everywhere. Its *restraint* rules do not.
+
+| | `apps/*` | `collection/` |
+| --- | --- | --- |
+| Motion | explains state, never decorates | decorative motion is wanted; motion is the argument |
+| Frames | a handful of glass controls max — "we don't pay frames" | spend them; it's seconds of full attention |
+| Video | out of scope | belongs here |
+| Budgets | binary size, idle RAM, cold start | first-load JS, LCP, reduced-motion coverage |
+
+The website is heading somewhere deliberately ambitious — heavy motion, video,
+scroll-driven sequences, state of the art. **Before doing any work in
+`collection/`, read `collection/README.md`** — it carries that charter and the
+budgets that keep it fast. Do not import app restraint into the website, and do
+not import website ambition into an app.
 
 ---
 

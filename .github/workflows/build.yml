@@ -11,6 +11,37 @@ defaults:
     working-directory: apps/wallpaper
 
 jobs:
+  # The website deploys via the Netlify CLI, not a git trigger, so nothing else
+  # would catch a broken build before someone runs `netlify deploy`.
+  website:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: collection
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: collection/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: collection/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # `prebuild` runs sync-brand, so a missing or renamed /brand asset fails
+      # here rather than silently shipping a 404 to production.
+      - name: Build static export
+        run: pnpm build
+
   windows:
     runs-on: windows-latest
     steps:

@@ -8,7 +8,6 @@
     "prebuild": "node scripts/sync-brand.mjs",
     "dev": "next dev",
     "build": "next build",
-    "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
