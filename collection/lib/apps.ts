@@ -20,8 +20,7 @@ export interface SpiralApp {
   };
 }
 
-const RELEASE =
-  "https://github.com/cococool13/spiral-wallpaper/releases/download/v1.0.1";
+const RELEASE = "https://github.com/cococool13/spiral-wallpaper/releases/download/v1.0.1";
 
 export const apps: SpiralApp[] = [
   {
@@ -30,8 +29,7 @@ export const apps: SpiralApp[] = [
     tagline: "Click a wallpaper. It downloads and applies. That's it.",
     status: "live",
     version: "1.0.1",
-    iconPath:
-      "M3 5h18v13H3zM3 18h18M9 21h6M6 8l4 4M14 8l4 4M10 12l-2 3M16 12l-1.5 3",
+    iconPath: "M3 5h18v13H3zM3 18h18M9 21h6M6 8l4 4M14 8l4 4M10 12l-2 3M16 12l-1.5 3",
     video: {
       mp4: "/brand/media/wallpaper-demo.mp4",
       webm: "/brand/media/wallpaper-demo.webm",
@@ -82,7 +80,8 @@ export const apps: SpiralApp[] = [
     name: "Spiral Transcribe",
     tagline: "Audio in, text out. On your machine.",
     status: "coming-soon",
-    iconPath: "M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v4",
+    iconPath:
+      "M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v4",
   },
   {
     slug: "chat",

@@ -5,9 +5,9 @@
 // The list is an explicit allowlist, not a whole-folder copy: /brand also
 // holds the brand guide and the 1024px icon-pipeline PNGs, and neither
 // belongs in a web deploy.
-import { cpSync, mkdirSync, rmSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const src = path.resolve(here, "../../brand");

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { m, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 /**
  * The actual Spiral helix mark (path data mirrors /brand/logo/mark.svg),

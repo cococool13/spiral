@@ -87,6 +87,7 @@ function FallbackFrame() {
         <div className="grid grid-cols-3 gap-1.5 p-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative skeleton; tiles never reorder
               key={i}
               className={`aspect-video ${i === 1 ? "bg-red" : i % 2 ? "bg-conc2" : "bg-conc3"}`}
             />

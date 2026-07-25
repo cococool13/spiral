@@ -11,8 +11,8 @@ export default function AppGrid() {
           One job each. Free, always.
         </h2>
         <p className="mt-6 max-w-xl text-gray">
-          Every Spiral app is a small native tool that does one thing, states
-          everything it does, and quits when you close it.
+          Every Spiral app is a small native tool that does one thing, states everything
+          it does, and quits when you close it.
         </p>
       </Reveal>
       <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

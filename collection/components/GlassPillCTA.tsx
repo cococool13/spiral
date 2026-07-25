@@ -1,7 +1,7 @@
 "use client";
 
-import { useOS } from "@/lib/useOS";
 import type { SpiralApp } from "@/lib/apps";
+import { useOS } from "@/lib/useOS";
 
 interface Props {
   downloads: NonNullable<SpiralApp["downloads"]>;

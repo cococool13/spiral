@@ -1,6 +1,6 @@
 "use client";
 
-import { m, useScroll, useSpring, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion, useScroll, useSpring } from "framer-motion";
 
 /** Archimedean spiral path (matches /brand/logo/stroke.svg). */
 function spiralPath(cx = 100, cy = 100, turns = 3.25, steps = 260, radius = 88): string {
@@ -38,7 +38,7 @@ export default function ScrollProgress() {
       aria-hidden="true"
       className="fixed bottom-6 right-6 z-40 hidden md:block opacity-70"
     >
-      <svg width={40} height={40} viewBox="0 0 200 200" fill="none">
+      <svg aria-hidden="true" width={40} height={40} viewBox="0 0 200 200" fill="none">
         <path
           d={SPIRAL_D}
           stroke="rgba(244,243,240,.15)"

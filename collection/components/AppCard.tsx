@@ -1,13 +1,11 @@
 import type { SpiralApp } from "@/lib/apps";
-import GlassPillCTA, { DisabledPill } from "./GlassPillCTA";
 import DemoVideo from "./DemoVideo";
+import GlassPillCTA, { DisabledPill } from "./GlassPillCTA";
 
 export default function AppCard({ app }: { app: SpiralApp }) {
   const live = app.status === "live";
   return (
-    <article
-      className="flex flex-1 flex-col gap-6 rounded-[2px] border border-white/10 bg-white/[.02] p-8"
-    >
+    <article className="flex flex-1 flex-col gap-6 rounded-[2px] border border-white/10 bg-white/[.02] p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <span className="flex h-11 w-11 items-center justify-center border border-white/15 rounded-[2px]">

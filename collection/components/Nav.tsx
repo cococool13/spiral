@@ -1,7 +1,7 @@
 "use client";
 
-import GlassPillCTA from "./GlassPillCTA";
 import { apps } from "@/lib/apps";
+import GlassPillCTA from "./GlassPillCTA";
 
 /**
  * Floating glass pill nav — sits 24px below the top, never flush at y=0.

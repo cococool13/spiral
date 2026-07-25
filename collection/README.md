@@ -9,12 +9,17 @@ pnpm install
 pnpm dev          # localhost:3000
 pnpm build        # static export into out/
 pnpm typecheck    # tsc --noEmit
+pnpm lint         # biome check .  — lint + format, read-only
+pnpm format       # biome check --write .  — apply fixes
 pnpm sync-brand   # re-copy assets from /brand (runs automatically on dev/build)
 ```
 
-There is no lint script: Next 15 removed `next lint`, and the leftover one
-dropped into an interactive prompt and exited 1. Typecheck is the gate until
-ESLint is set up properly with the flat-config CLI.
+Lint and format are **Biome 2**, not ESLint + Prettier — one tool, one pass,
+config in `biome.json`. (The old `next lint` script was removed: Next 15 dropped
+it, and it fell through to an interactive prompt and exited 1.)
+
+CI runs `lint` → `typecheck` → `build` on every PR. Keep it green; `pnpm format`
+fixes almost everything it flags.
 
 ---
 

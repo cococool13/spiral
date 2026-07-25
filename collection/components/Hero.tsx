@@ -103,9 +103,14 @@ function LatticeScene() {
       />
 
       {/* Film grain */}
-      <svg className="absolute inset-0 h-full w-full opacity-[.07]">
+      <svg aria-hidden="true" className="absolute inset-0 h-full w-full opacity-[.07]">
         <filter id="grain">
-          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="3" />
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.65"
+            numOctaves="2"
+            seed="3"
+          />
           <feColorMatrix type="saturate" values="0" />
         </filter>
         <rect width="100%" height="100%" filter="url(#grain)" />

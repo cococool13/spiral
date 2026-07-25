@@ -182,8 +182,7 @@ export default function InteractiveGrid({
       cur.y += dy * 0.18;
       influence += di * 0.12;
 
-      const settled =
-        Math.abs(dx) < 0.4 && Math.abs(dy) < 0.4 && Math.abs(di) < 0.004;
+      const settled = Math.abs(dx) < 0.4 && Math.abs(dy) < 0.4 && Math.abs(di) < 0.004;
       if (settled) {
         cur.x = target.x;
         cur.y = target.y;
