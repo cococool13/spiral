@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "performance-balanced",
+  "name": "Balanced performance",
+  "risk": "low",
+  "conflicts_with": [],
+  "controls": [
+    {"id": "performance.background-mode", "value": "off"},
+    {"id": "performance.memory-saver", "value": "balanced"},
+    {"id": "performance.media-router", "value": "off"}
+  ]
+}

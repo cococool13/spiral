@@ -1,4 +1,12 @@
-export type AppStatus = "live" | "coming-soon";
+/**
+ * `source` is shipped and usable, but distributed as source rather than as a
+ * download. Spiral Slim is the case that needed it: its own SECURITY.md tells
+ * users that any "Spiral Slim" installer or signed binary is a malware
+ * indicator, so offering a DMG here would contradict the project's own advice
+ * to its users. Shipped is shipped, so it does not belong under "coming soon"
+ * either.
+ */
+export type AppStatus = "live" | "source" | "coming-soon";
 
 export interface SpiralApp {
   slug: string;
@@ -6,6 +14,15 @@ export interface SpiralApp {
   tagline: string;
   status: AppStatus;
   version?: string;
+  /** Where a `source` app is built from. Required when status is "source". */
+  source?: { url: string; note: string };
+  /**
+   * The app runs on Windows, but no Windows *binary* is published and none
+   * ever will be — the project's SECURITY.md rules it out. Without this the
+   * card offers a Windows visitor a download that does not exist, which is
+   * the one thing a page about trusting binaries must not do.
+   */
+  noWindowsBinary?: true;
   /** Inline SVG path data drawn in a 24x24 viewBox, stroke-based. */
   iconPath: string;
   video?: {
@@ -21,6 +38,7 @@ export interface SpiralApp {
 }
 
 const RELEASE = "https://github.com/cococool13/spiral-wallpaper/releases/download/v1.0.1";
+const SLIM_RELEASE = "https://github.com/cococool13/Spiral-Slim/releases/download/v1.0.0";
 
 export const apps: SpiralApp[] = [
   {
@@ -46,6 +64,29 @@ export const apps: SpiralApp[] = [
       },
       all: "https://github.com/cococool13/spiral-wallpaper/releases/latest",
     },
+  },
+  {
+    slug: "slim",
+    name: "Spiral Slim",
+    tagline: "Sets Brave's privacy policies. Shows every change first.",
+    status: "live",
+    version: "1.0.0",
+    noWindowsBinary: true,
+    downloads: {
+      mac: {
+        url: `${SLIM_RELEASE}/Spiral.Slim_1.0.0_universal.dmg`,
+        label: "Download for Mac",
+      },
+      // Windows runs the same app, built from source. This points at the
+      // repository rather than at a binary that does not and will not exist.
+      windows: {
+        url: "https://github.com/cococool13/Spiral-Slim#the-desktop-app-optional",
+        label: "Build it for Windows",
+      },
+      all: "https://github.com/cococool13/Spiral-Slim/releases/latest",
+    },
+    // A shield with two setting lines: policy, under protection.
+    iconPath: "M12 3l7 3v5.5c0 4.5-3 7.5-7 9.5-4-2-7-5-7-9.5V6zM9 11h6M9 14h4",
   },
   {
     slug: "dashboard",

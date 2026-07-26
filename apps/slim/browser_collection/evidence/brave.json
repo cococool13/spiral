@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "browser_id": "brave",
+  "mappings": {
+    "security.safe-browsing": {
+      "vendor_name": "SafeBrowsingProtectionLevel",
+      "values": {"standard": 1},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/safe-browsing-protection-level/",
+      "verified_on": "2026-07-22"
+    },
+    "security.downloads.malicious": {
+      "vendor_name": "DownloadRestrictions",
+      "values": {"block": 4},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/download-restrictions/",
+      "verified_on": "2026-07-22"
+    },
+    "security.https-upgrades": {
+      "vendor_name": "DefaultBraveHttpsUpgradeSetting",
+      "values": {"balanced": 3},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "telemetry.metrics": {
+      "vendor_name": "MetricsReportingEnabled",
+      "values": {"off": false},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/metrics-reporting-enabled/",
+      "verified_on": "2026-07-22"
+    },
+    "telemetry.url-keyed": {
+      "vendor_name": "UrlKeyedAnonymizedDataCollectionEnabled",
+      "values": {"off": false},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/url-keyed-anonymized-data-collection-enabled/",
+      "verified_on": "2026-07-22"
+    },
+    "privacy.third-party-cookies": {
+      "vendor_name": "BlockThirdPartyCookies",
+      "values": {"block": true},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/block-third-party-cookies/",
+      "verified_on": "2026-07-22"
+    },
+    "privacy.global-control": {
+      "vendor_name": "BraveGlobalPrivacyControlEnabled",
+      "values": {"on": true},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "network.secure-dns": {
+      "vendor_name": "DnsOverHttpsMode",
+      "values": {"automatic": "automatic"},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/dns-over-https-mode/",
+      "verified_on": "2026-07-22"
+    },
+    "performance.background-mode": {
+      "vendor_name": "BackgroundModeEnabled",
+      "values": {"off": false},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/background-mode-enabled/",
+      "verified_on": "2026-07-22"
+    },
+    "performance.memory-saver": {
+      "vendor_name": "MemorySaverModeSavings",
+      "values": {"balanced": 1, "aggressive": 2},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/memory-saver-mode-savings/",
+      "verified_on": "2026-07-22"
+    },
+    "performance.media-router": {
+      "vendor_name": "EnableMediaRouter",
+      "values": {"off": false},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/enable-media-router/",
+      "verified_on": "2026-07-22"
+    },
+    "vendor.promotions": {
+      "vendor_name": "PromotionsEnabled",
+      "values": {"off": false},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/promotions-enabled/",
+      "verified_on": "2026-07-22"
+    },
+    "vendor.rewards": {
+      "vendor_name": "BraveRewardsDisabled",
+      "values": {"off": true},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "vendor.wallet": {
+      "vendor_name": "BraveWalletDisabled",
+      "values": {"off": true},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "vendor.vpn": {
+      "vendor_name": "BraveVPNDisabled",
+      "values": {"off": true},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "vendor.ai": {
+      "vendor_name": "BraveAIChatEnabled",
+      "values": {"off": false},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "vendor.news": {
+      "vendor_name": "BraveNewsDisabled",
+      "values": {"off": true},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "vendor.talk": {
+      "vendor_name": "BraveTalkDisabled",
+      "values": {"off": true},
+      "platforms": ["macos", "windows"],
+      "source": "https://support.brave.com/hc/en-us/articles/360039248271-Group-Policy",
+      "verified_on": "2026-07-22"
+    },
+    "permissions.notifications.default": {
+      "vendor_name": "DefaultNotificationsSetting",
+      "values": {"block": 2},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/default-notifications-setting/",
+      "verified_on": "2026-07-22"
+    },
+    "media.autoplay": {
+      "vendor_name": "AutoplayAllowed",
+      "values": {"block": false},
+      "platforms": ["macos", "windows"],
+      "source": "https://chromeenterprise.google/policies/autoplay-allowed/",
+      "verified_on": "2026-07-22"
+    }
+  }
+}

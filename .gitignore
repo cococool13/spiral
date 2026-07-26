@@ -18,3 +18,15 @@ apps/wallpaper/src-tauri/gen/
 # Re-include Tauri icons (global 'Icon?' pattern matches icons/ case-insensitively)
 !apps/wallpaper/src-tauri/icons/
 !apps/wallpaper/src-tauri/icons/**
+
+# pnpm's on-disk store, created by installs inside the repo.
+.pnpm-store/
+
+# Agent planning scratch. Working notes, not project documentation.
+docs/superpowers/
+
+# Spiral Slim's app icons, for the same reason as the wallpaper ones above:
+# the global 'Icon?' pattern matches the icons/ directory case-insensitively,
+# and without this a fresh clone cannot bundle the app.
+!apps/slim/desktop/src-tauri/icons/
+!apps/slim/desktop/src-tauri/icons/**

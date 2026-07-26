@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "minimal-debloated",
+  "name": "Minimal / Debloated",
+  "description": "Removes vendor extras while preserving ordinary browsing.",
+  "risk": "low",
+  "modules": [
+    "security-foundation",
+    "performance-balanced",
+    "debloat-core",
+    "quiet-web"
+  ],
+  "overrides": {}
+}

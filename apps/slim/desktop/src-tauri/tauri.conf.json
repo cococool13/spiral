@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Spiral Slim",
+  "version": "1.0.0",
+  "identifier": "app.spiral.slim",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1421",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Spiral Slim",
+        "width": 820,
+        "height": 640,
+        "minWidth": 680,
+        "minHeight": 520,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Utility",
+    "copyright": "Spiral. Source-available under the SlimBrave Neo licence.",
+    "shortDescription": "Configure Brave's privacy policies, with the change shown first.",
+    "longDescription": "Spiral Slim is a local wizard over SlimBrave Neo. It reads the Brave channels installed on this Mac, shows the exact managed policies a profile would add, change or remove, and writes nothing until you confirm. No accounts, no telemetry, no network calls.",
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "hardenedRuntime": true
+    },
+    "resources": {
+      "../../slimbrave-mac.py": "slimbrave/slimbrave-mac.py",
+      "../../slimbrave-windows.py": "slimbrave/slimbrave-windows.py",
+      "../../slimbrave_catalog.py": "slimbrave/slimbrave_catalog.py",
+      "../../browser_collection.py": "slimbrave/browser_collection.py",
+      "../../browser_collection": "slimbrave/browser_collection",
+      "../../profiles": "slimbrave/profiles",
+      "../../modules": "slimbrave/modules",
+      "../../LICENSE": "slimbrave/LICENSE"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

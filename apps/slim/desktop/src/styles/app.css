@@ -1,0 +1,1417 @@
+/* Spiral Slim — industrial, calm, high contrast.
+   Colours come from tokens.css only. Square corners everywhere except
+   pill controls; all spacing is a multiple of --unit. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--conc-01);
+  color: var(--ink-01);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Every number here is a quantity that changes with the selection: policy
+     counts, change counts, step indices. Proportional digits make them
+     jitter as they update. */
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink-01);
+  outline-offset: 2px;
+}
+
+/* Anything that moves does so to explain a state change, never to decorate.
+   Reduced motion means gentler, not none: colour, border and shadow feedback
+   stay, because they are how a person knows the interface heard them. Only
+   movement and the looping indicator are suppressed. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    /* Dropping transform from the transitionable set is what removes the
+       movement. Nulling transform outright would also break transforms used
+       to express state rather than motion, such as the rail progress fill,
+       which would then read as 100% complete. State still shows; it just
+       arrives instantly. */
+    transition-property: background-color, border-color, color, box-shadow,
+      opacity !important;
+  }
+}
+
+/* Semantic layers. Nothing overlaps today; the scale exists so the first
+   overlay added does not reach for an arbitrary 999. */
+:root {
+  --z-sticky: 10;
+  --z-overlay: 20;
+  --z-toast: 30;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- one page */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+
+/* The window uses `titleBarStyle: Overlay`, so the page runs to the top of the
+   window and the title bar is transparent over it. That is the only setting
+   that matches both surfaces: the wizard is concrete, the intro is near-black,
+   and a fixed title-bar tone would clash with one of them.
+
+   The cost is that the traffic lights now sit over the page, so the header
+   starts below their strip (28px) rather than at the top edge. The intro has
+   no header and is deliberately full-bleed — the scene runs under the lights. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--unit);
+  padding: calc(var(--unit) * 1.5 + 28px) calc(var(--unit) * 3)
+    calc(var(--unit) * 1.5);
+  background: transparent;
+}
+
+/* Segmented progress instead of a mono counter: less to read, and it shows
+   position rather than making you compute it. */
+.header__progress {
+  display: flex;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.header__tick {
+  width: 22px;
+  height: 2px;
+  background: var(--conc-03);
+  transition: background-color var(--dur-slow) var(--ease);
+}
+
+.header__tick[data-done="true"] {
+  background: var(--hlx-01);
+}
+
+.header__wordmark {
+  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-02);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: calc(var(--unit) * 2) calc(var(--unit) * 3);
+}
+
+/* Movement only, never opacity. Measured in a throttled tab: a frozen frame
+   loop holds the animation at frame 0, so ANY opacity-from-zero reveal leaves
+   the stage invisible, with `both`, with `backwards`, and with no fill at all.
+   Animating transform alone means the worst case is content sitting 14px low
+   and perfectly legible.
+
+   The stagger is real rather than scripted: stages mount as they unlock, so
+   they already arrive at different moments. */
+.stage {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  animation: stage-in var(--dur-slow) var(--ease);
+}
+
+@keyframes stage-in {
+  from {
+    transform: translateY(14px);
+  }
+}
+
+.stage__head {
+  flex: 0 0 auto;
+  margin-bottom: calc(var(--unit) * 1.5);
+}
+
+.stage__title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.1;
+  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+
+.stage__hint {
+  margin: 4px 0 0;
+  max-width: 60ch;
+  color: var(--ink-02);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ deck */
+
+@property --aura-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.deck {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: calc(var(--unit) * 1.5);
+}
+
+/* Slots are narrower than the track so the neighbouring cards peek. That peek
+   is what tells you the deck slides without needing a label to say so. */
+.deck__track {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: calc(var(--unit) * 2);
+  padding: 4px max(calc(50% - 190px), var(--unit));
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.deck__track::-webkit-scrollbar {
+  display: none;
+}
+
+.deck__slot {
+  display: flex;
+  flex: 0 0 380px;
+  max-width: 380px;
+  min-width: 0;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+/* ------------------------------------------------------------------ card */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  min-height: 0;
+  padding: calc(var(--unit) * 4) calc(var(--unit) * 3);
+  overflow-y: auto;
+  border: 1px solid var(--conc-03);
+  border-radius: var(--radius-card);
+  background: var(--conc-02);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-slow) var(--ease),
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease);
+}
+
+.card--custom {
+  cursor: default;
+  align-items: stretch;
+  text-align: left;
+}
+
+/* The aura: a light travelling around the border, masked to the border box so
+   it is an edge and not a fill. Pure decoration, so a stalled frame loop only
+   parks the light rather than hiding anything. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--aura-angle),
+    transparent 0deg 170deg,
+    var(--aura-far) 240deg,
+    var(--aura-near) 300deg,
+    var(--aura-far) 340deg,
+    transparent 360deg
+  );
+  mask:
+    linear-gradient(black 0 0) content-box,
+    linear-gradient(black 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease);
+  pointer-events: none;
+}
+
+.deck__slot[data-active="true"] .card::before {
+  opacity: 1;
+  animation: aura-travel 6s linear infinite;
+}
+
+@keyframes aura-travel {
+  to {
+    --aura-angle: 360deg;
+  }
+}
+
+.deck__slot[data-active="false"] .card {
+  opacity: 0.4;
+  transform: scale(0.94);
+}
+
+.deck__slot[data-active="true"] .card {
+  border-color: var(--hlx-01);
+  background: var(--conc-01);
+  box-shadow: 0 0 70px -28px var(--aura-near);
+}
+
+.card__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card:has(.card__input:focus-visible) {
+  outline: 2px solid var(--ink-01);
+  outline-offset: -6px;
+}
+
+.card__flag {
+  margin-bottom: calc(var(--unit) * 1.5);
+  padding: 3px 12px;
+  border-radius: var(--radius-ctl);
+  background: var(--hlx-01);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card__logo {
+  width: 132px;
+  height: 132px;
+  margin-bottom: calc(var(--unit) * 3);
+  object-fit: contain;
+}
+
+.card__logo--absent {
+  border: 1px solid var(--conc-03);
+  border-radius: var(--radius-card);
+  background: var(--conc-01);
+}
+
+/* The name in helix red: the one piece of the card that has to carry. */
+.card__name {
+  margin: 0;
+  color: var(--hlx-01);
+  font-size: 30px;
+  line-height: 1.02;
+  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  text-transform: uppercase;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.card__lede {
+  margin: calc(var(--unit) * 1.5) 0 0;
+  max-width: 34ch;
+  color: var(--ink-02);
+  font-size: 14px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.card__points {
+  margin: calc(var(--unit) * 3) 0 0;
+  padding: 0;
+  width: 100%;
+  list-style: none;
+  text-align: left;
+}
+
+.card__points li {
+  position: relative;
+  padding: 7px 0 7px calc(var(--unit) * 2.5);
+  border-top: 1px solid var(--conc-03);
+  font-size: 14px;
+}
+
+.card__points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-ctl);
+  background: var(--hlx-01);
+}
+
+.card__foot {
+  margin-top: auto;
+  padding-top: calc(var(--unit) * 3);
+  color: var(--ink-02);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card__problem {
+  margin: calc(var(--unit) * 1.5) 0 0;
+  color: var(--hlx-02);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------ deck edges */
+
+.deck__edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  width: calc(var(--unit) * 8);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.deck__edge[data-side="prev"] {
+  left: 0;
+  justify-content: flex-start;
+}
+
+.deck__edge[data-side="next"] {
+  right: 0;
+  justify-content: flex-end;
+}
+
+.deck:hover .deck__edge:not(:disabled),
+.deck__edge:focus-visible {
+  opacity: 1;
+}
+
+.deck__edge:disabled {
+  cursor: default;
+}
+
+/* The global button:hover fill would paint a slab down the side of the deck.
+   The edge is a hit zone, not a surface. */
+.deck__edge:hover:not(:disabled),
+.deck__edge:active:not(:disabled) {
+  background: transparent;
+  transform: none;
+}
+
+.deck__edge span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--conc-03);
+  border-radius: var(--radius-ctl);
+  background: var(--conc-01);
+  color: var(--ink-01);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.deck__edge:hover span {
+  border-color: var(--hlx-01);
+}
+
+.deck__edge:active span {
+  transform: scale(0.94);
+}
+
+.deck__dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--unit);
+}
+
+.deck__dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-ctl);
+  background: var(--conc-03);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.deck__dot[data-active="true"] {
+  background: var(--hlx-01);
+  transform: scale(1.4);
+}
+
+/* ---------------------------------------------------------------- review */
+
+.review {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  gap: calc(var(--unit) * 2);
+  overflow-y: auto;
+}
+
+/* Same material as the choice cards, so the review reads as the last card in
+   the sequence rather than a different screen. */
+.review__card {
+  width: 100%;
+  max-width: 520px;
+  padding: calc(var(--unit) * 3);
+  border: 1px solid var(--hlx-01);
+  border-radius: var(--radius-card);
+  background: var(--conc-01);
+  box-shadow: 0 0 70px -28px var(--aura-near);
+  text-align: center;
+}
+
+.review__target {
+  margin: var(--unit) 0 0;
+  color: var(--ink-02);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.review .figures {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: calc(var(--unit) * 3);
+  padding-top: calc(var(--unit) * 3);
+  text-align: left;
+}
+
+.review__note {
+  margin: calc(var(--unit) * 3) 0 0;
+  padding: calc(var(--unit) * 1.5) calc(var(--unit) * 2);
+  border-radius: calc(var(--radius-card) / 2);
+  background: var(--conc-02);
+  color: var(--ink-02);
+  font-size: 13px;
+  text-align: left;
+  text-wrap: pretty;
+}
+
+.review__note strong {
+  color: var(--ink-01);
+}
+
+.review__note[data-tone="blocked"] strong,
+.review__note[data-tone="blocked"] {
+  color: var(--hlx-02);
+}
+
+.review__detail {
+  margin-top: calc(var(--unit) * 2);
+  text-align: left;
+}
+
+.review__detail > summary {
+  color: var(--ink-02);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.review__detail[open] > summary {
+  margin-bottom: var(--unit);
+}
+
+.review .confirm {
+  width: 100%;
+  max-width: 520px;
+  border-radius: calc(var(--radius-card) / 2);
+}
+
+/* --------------------------------------------------- custom card builder */
+
+.builder {
+  margin-top: calc(var(--unit) * 2);
+  width: 100%;
+}
+
+/* --------------------------------------------------------------- footer */
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--unit) * 2);
+  padding: calc(var(--unit) * 1.5) calc(var(--unit) * 3);
+  border-top: 1px solid var(--conc-03);
+  background: var(--conc-02);
+}
+
+.footer__reason {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-02);
+  font-size: 13px;
+}
+
+h1 {
+  margin: 0 0 calc(var(--unit) * 1.5);
+  font-size: 32px;
+  line-height: 1.08;
+  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  text-transform: uppercase;
+  /* A display face at 850 weight tightens as it grows. 0.01em was set for
+     28px and reads loose at 32. */
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+
+h2 {
+  margin: calc(var(--unit) * 4) 0 var(--unit);
+  font-size: 15px;
+  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 0 0 calc(var(--unit) * 3);
+  max-width: 60ch;
+  color: var(--ink-02);
+}
+
+p,
+li {
+  max-width: 66ch;
+  text-wrap: pretty;
+}
+
+/* --------------------------------------------------------------- choice */
+
+fieldset {
+  margin: 0 0 calc(var(--unit) * 2);
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  padding: 0;
+  margin-bottom: var(--unit);
+  font-size: 15px;
+  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--unit) * 1.5);
+}
+
+.choice {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: calc(var(--unit) * 2);
+  padding: calc(var(--unit) * 2);
+  border: 1px solid var(--conc-03);
+  background: var(--conc-02);
+  cursor: pointer;
+  /* Selection changes the border AND the red inset bar; transition both or
+     the bar snaps while the border eases. */
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.choice:hover {
+  border-color: var(--ink-02);
+}
+
+.choice:active {
+  transform: scale(0.99);
+}
+
+.choice:has(input:checked) {
+  border-color: var(--ink-01);
+  box-shadow: inset 3px 0 0 var(--hlx-01);
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--ink-01);
+  outline-offset: 2px;
+}
+
+.choice:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Optically centred on the cap-height of the 15px heading-weight title, not
+   on its line box. Geometric centring sits a pixel high here. */
+.choice input {
+  width: 16px;
+  height: 16px;
+  margin: 4px 0 0;
+  accent-color: var(--hlx-01);
+}
+
+.choice__title {
+  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+}
+
+.choice__meta {
+  margin-top: 2px;
+  color: var(--ink-02);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.choice__body {
+  margin: var(--unit) 0 0;
+  color: var(--ink-02);
+  font-size: 14px;
+}
+
+/* The browser's own icon, read from its app bundle. Square, never masked —
+   a vendor mark is theirs to shape. */
+.choice--logo {
+  grid-template-columns: 20px 32px 1fr;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  align-self: start;
+  object-fit: contain;
+}
+
+.logo--absent {
+  border: 1px solid var(--conc-03);
+  background: var(--conc-01);
+}
+
+/* ------------------------------------------------------ custom builder */
+
+/* Module rows live inside the custom card now, so they are light rows rather
+   than bordered boxes: the card already provides the container. */
+.module + .module {
+  margin-top: 2px;
+}
+
+.module__head {
+  display: flex;
+  align-items: center;
+  gap: var(--unit);
+  min-height: 40px;
+  padding: 0 var(--unit);
+  border-radius: calc(var(--radius-card) / 2);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.module__head:hover {
+  background: var(--conc-02);
+}
+
+.module__head input,
+.module__controls input {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  accent-color: var(--hlx-01);
+}
+
+.module__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+}
+
+.module__count {
+  color: var(--ink-02);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.module__controls {
+  margin: 0 0 var(--unit) calc(var(--unit) * 2);
+  padding: 0 0 0 calc(var(--unit) * 2);
+  list-style: none;
+  border-left: 1px solid var(--conc-03);
+}
+
+.module__controls label {
+  display: flex;
+  align-items: center;
+  gap: var(--unit);
+  min-height: 34px;
+  font-size: 13px;
+  color: var(--ink-02);
+  cursor: pointer;
+}
+
+.module__controls label:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.module__required {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-02);
+}
+
+.panel {
+  border: 1px solid var(--conc-03);
+  background: var(--conc-02);
+  padding: calc(var(--unit) * 2);
+}
+
+.panel + .panel {
+  margin-top: calc(var(--unit) * 1.5);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: minmax(0, 11em) 1fr;
+  gap: var(--unit) calc(var(--unit) * 2);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--ink-02);
+  font-size: 13px;
+}
+
+.facts dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* The decision moment. Applying replaces the whole managed policy set rather
+   than merging into it, so the removal count is the number a person most
+   needs to see before they confirm. It gets real display weight instead of
+   sitting in a 13px inline run. */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(var(--unit) * 2);
+  margin: calc(var(--unit) * 2) 0 0;
+  padding-top: calc(var(--unit) * 2);
+  border-top: 1px solid var(--conc-03);
+}
+
+.figure {
+  display: flex;
+  /* Value above label visually; label before value in the DOM, which is the
+     order a screen reader needs. */
+  flex-direction: column-reverse;
+  min-width: 0;
+}
+
+.figure__value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.figure__label {
+  margin-bottom: 2px;
+  color: var(--ink-02);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+/* A zero pulls the eye as hard as a 37 unless it recedes. */
+.figure[data-tone="zero"] .figure__value {
+  color: var(--ink-02);
+}
+
+.figure[data-tone="remove"] .figure__value {
+  color: var(--hlx-02);
+}
+
+.warn {
+  margin: calc(var(--unit) * 1.5) 0 0;
+  padding: calc(var(--unit) * 1.5) calc(var(--unit) * 2);
+  border-left: 3px solid var(--hlx-01);
+  background: var(--conc-01);
+  font-size: 14px;
+}
+
+.controls-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.controls-table th,
+.controls-table td {
+  padding: 6px calc(var(--unit) * 1.5) 6px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--conc-03);
+  vertical-align: top;
+}
+
+.controls-table th {
+  color: var(--ink-02);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.controls-table [data-action="unsupported"] {
+  color: var(--hlx-02);
+}
+
+details > summary {
+  cursor: pointer;
+  color: var(--ink-02);
+  font-size: 14px;
+}
+
+details[open] > summary {
+  margin-bottom: var(--unit);
+}
+
+/* ------------------------------------------------------------- confirm */
+
+.confirm {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: calc(var(--unit) * 2);
+  margin-top: calc(var(--unit) * 3);
+  padding: calc(var(--unit) * 2);
+  border: 1px solid var(--ink-01);
+  background: var(--conc-02);
+  cursor: pointer;
+  /* Same vocabulary as .choice: the irreversible control should not be the
+     one that feels dead. */
+  transition:
+    box-shadow var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.confirm:hover {
+  box-shadow: inset 3px 0 0 var(--hlx-01);
+}
+
+.confirm:active {
+  transform: scale(0.995);
+}
+
+.confirm input {
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  accent-color: var(--hlx-01);
+}
+
+.confirm:has(input:focus-visible) {
+  outline: 2px solid var(--ink-01);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- footer */
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--unit) * 2);
+  padding: calc(var(--unit) * 2) calc(var(--unit) * 6);
+  border-top: 1px solid var(--conc-03);
+  background: var(--conc-02);
+}
+
+.footer__reason {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-02);
+  font-size: 13px;
+}
+
+button {
+  font: inherit;
+  padding: 10px calc(var(--unit) * 3);
+  border: 1px solid var(--ink-01);
+  border-radius: var(--radius-ctl);
+  background: transparent;
+  color: var(--ink-01);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+button:hover:not(:disabled) {
+  background: var(--conc-03);
+}
+
+/* Press feedback. Apply is the most consequential control in the app and
+   had none. 0.97 rather than 0.96 because these are wide pill buttons and
+   a wider element reads a given scale as a larger movement. */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button[data-variant="primary"] {
+  border-color: var(--hlx-01);
+  background: var(--hlx-01);
+  color: var(--paper);
+  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+}
+
+button[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--hlx-02);
+  border-color: var(--hlx-02);
+}
+
+button:disabled {
+  border-color: var(--conc-03);
+  background: var(--conc-03);
+  color: var(--ink-02);
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------- status */
+
+.notice {
+  margin: 0 0 calc(var(--unit) * 3);
+  padding: calc(var(--unit) * 2);
+  border: 1px solid var(--conc-03);
+  border-left: 3px solid var(--hlx-01);
+  background: var(--conc-02);
+}
+
+.notice__title {
+  margin: 0 0 4px;
+  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+}
+
+.notice__detail,
+.notice__next {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notice__next {
+  margin-top: var(--unit);
+  color: var(--ink-02);
+}
+
+.busy {
+  display: flex;
+  align-items: center;
+  gap: var(--unit);
+  color: var(--ink-02);
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+/* A looping indicator needs a symmetric curve. --ease is an ease-out, which
+   made the dot fade fast and return slow: read as a stutter, not a pulse. */
+.busy::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: var(--hlx-01);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.steplist {
+  margin: var(--unit) 0 0;
+  padding-left: calc(var(--unit) * 2.5);
+}
+
+.steplist li + li {
+  margin-top: var(--unit);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* ----------------------------------------------------------------- intro */
+
+/* The launch screen, carrying collection/components/Hero.tsx onto the desktop:
+   dark base, one red practical raking in from the right, film grain, vignette.
+   The website renders its lattice on a canvas; here it is a repeating radial
+   gradient, which costs nothing and keeps the binary small. */
+
+.intro {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: calc(var(--unit) * 5) calc(var(--unit) * 4);
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    var(--scene-base) 0%,
+    var(--scene-mid) 42%,
+    var(--scene-warm) 74%,
+    var(--scene-base) 100%
+  );
+  color: var(--paper);
+}
+
+.intro__scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.intro__lattice {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--paper) 16%, transparent) 1px,
+    transparent 1.4px
+  );
+  background-size: 26px 26px;
+  mask-image: radial-gradient(90% 70% at 50% 45%, black 20%, transparent 78%);
+}
+
+/* The one red practical. Same geometry and alpha as the website's. */
+.intro__practical {
+  position: absolute;
+  top: 6%;
+  right: -8%;
+  width: 46%;
+  height: 90%;
+  mix-blend-mode: screen;
+  filter: blur(40px);
+  background: radial-gradient(
+    55% 60% at 70% 40%,
+    color-mix(in srgb, var(--hlx-01) 20%, transparent),
+    color-mix(in srgb, var(--hlx-02) 8%, transparent) 55%,
+    transparent 75%
+  );
+}
+
+.intro__grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.07;
+}
+
+.intro__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      120% 90% at 50% 45%,
+      transparent 55%,
+      color-mix(in srgb, var(--scene-base) 55%, transparent) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--scene-base) 34%, transparent) 0%,
+      color-mix(in srgb, var(--scene-base) 10%, transparent) 40%,
+      color-mix(in srgb, var(--scene-base) 52%, transparent) 100%
+    );
+}
+
+/* The mark's assembly. Each part's resting style is its FINISHED state — red,
+   opaque, in place — and the keyframes only describe where it comes from.
+   Anything that stops the animations running therefore leaves a correct,
+   visible mark rather than a blank screen. The overshoot curve stands in for
+   the website's spring (damping ratio ~0.63: one visible bounce). */
+.intro-mark__part {
+  fill: var(--hlx-01);
+  transform-box: fill-box;
+  transform-origin: center;
+  /* Transform only — no fade. The website fades each part in; here that would
+     put an `opacity: 0` keyframe on the one screen that has to work, and a
+     frame loop that starts and then stalls holds `backwards` fill at frame 0.
+     Measured: that is the failure, not a hypothetical. Without it the parts
+     arrive opaque, which reads as machined parts anyway. */
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.34, 1.42, 0.5, 1);
+  animation-fill-mode: backwards;
+}
+
+.intro-mark__part[data-part="core"] {
+  animation-name: intro-mark-core;
+  animation-delay: 50ms;
+}
+
+.intro-mark__part[data-part="upper"] {
+  animation-name: intro-mark-upper;
+  animation-delay: 420ms;
+}
+
+.intro-mark__part[data-part="lower"] {
+  animation-name: intro-mark-lower;
+  animation-delay: 740ms;
+}
+
+/* The core drops in; the bands slide from the directions they grow from. */
+@keyframes intro-mark-core {
+  from {
+    transform: rotate(16deg) scale(0.55);
+  }
+}
+
+@keyframes intro-mark-upper {
+  from {
+    transform: translate(-120px, -140px) rotate(-9deg);
+  }
+}
+
+@keyframes intro-mark-lower {
+  from {
+    transform: translate(110px, 150px) rotate(9deg);
+  }
+}
+
+/* The sheen rests invisible, so a failure to animate simply omits it. */
+.intro-mark__sheen {
+  opacity: 0;
+  animation: intro-mark-sheen 650ms var(--ease) 1450ms both;
+}
+
+@keyframes intro-mark-sheen {
+  0% {
+    opacity: 0;
+    transform: translateX(0) skewX(-16deg);
+  }
+  15%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(520px) skewX(-16deg);
+  }
+}
+
+/* The mark holds the optical centre while it assembles. The title is always
+   in the layout, so the stage starts offset by half the title's height and
+   rises to nothing once it settles — the lift and the reveal are one move,
+   with no reflow. */
+.intro__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(34px);
+  transition: transform 760ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.intro[data-settled="true"] .intro__stage {
+  transform: translateY(0);
+}
+
+/* The slot the title will occupy, held open from the first frame. */
+.intro__name {
+  height: 46px;
+  margin-top: calc(var(--unit) * 4);
+}
+
+.intro__title {
+  margin: 0;
+  font-size: 46px;
+  line-height: 1;
+  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  /* Two words at 46px display width can wrap in a narrow window, and the
+     slot above is sized for one line. */
+  white-space: nowrap;
+  /* Transform only. The element is mounted, so it is already visible; the
+     animation moves it, and a stalled frame loop costs position, not sight. */
+  animation: intro-rise 560ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes intro-rise {
+  from {
+    transform: translateY(12px);
+  }
+}
+
+/* The one glass control in the app, matching the website's download pill.
+   Bottom-right so it reads as "onward" rather than as the screen's subject. */
+.intro__next {
+  position: absolute;
+  right: calc(var(--unit) * 4);
+  bottom: calc(var(--unit) * 4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--unit);
+  min-height: 40px;
+  padding: 10px calc(var(--unit) * 2.5);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-ctl);
+  background: color-mix(in srgb, var(--hlx-01) 28%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow:
+    0 24px 48px color-mix(in srgb, var(--scene-base) 30%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--paper) 35%, transparent);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  /* Same rule as the title: mounted means visible, the animation only moves
+     it. This control is the only way out of the intro. */
+  animation: intro-rise 360ms var(--ease) 180ms backwards;
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.intro__next::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-sheen);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.intro__next:hover {
+  background: color-mix(in srgb, var(--hlx-02) 45%, transparent);
+  border-color: color-mix(in srgb, var(--paper) 60%, transparent);
+}
+
+.intro__next:active {
+  background: color-mix(in srgb, var(--hlx-02) 60%, transparent);
+}
+
+.intro__arrow {
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.intro__next:hover .intro__arrow {
+  transform: translateX(3px);
+}
+
+/* --------------------------------------------------- inline text actions */
+
+/* A button that reads as a link. Used where an action is secondary to the
+   surface it sits on and a pill would over-weight it. */
+.linklike {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--hlx-01);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.linklike:hover:not(:disabled) {
+  background: none;
+  color: var(--hlx-02);
+}
+
+.linklike:disabled {
+  background: none;
+  color: var(--ink-02);
+  text-decoration: none;
+}
+
+.startover {
+  margin: 0 0 calc(var(--unit) * 1.5);
+  color: var(--ink-02);
+  font-size: 13px;
+  text-align: center;
+}
+
+.review__actions {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--unit);
+  margin: calc(var(--unit) * 2) 0 0;
+}
+
+.review__notice {
+  color: var(--ink-02);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}

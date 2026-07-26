@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window. Spiral Slim needs nothing beyond core: no filesystem plugin, no shell plugin, no HTTP.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
