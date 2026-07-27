@@ -3,6 +3,19 @@ version: 2
 # Security alerts were on but no update config existed, so nothing opened PRs
 # and 13 advisories accumulated silently. Grouped so routine bumps arrive as
 # one PR per ecosystem instead of a stream of individual ones.
+#
+# Majors are ignored for npm and cargo. Grouping only covers minor/patch, so
+# every major arrived as its own PR — that is what produced 7 PRs on the first
+# run (typescript 5->7, @types/node 22->26, framer-motion 11->12, ...). Majors
+# are done deliberately instead: Next 15->16 needed a tsconfig migration and a
+# lint fix that an automated bump would have shipped broken.
+#
+# This does NOT mute security updates. Dependabot security PRs bypass `ignore`
+# entirely, so a CVE in any of these still opens a PR.
+#
+# github-actions deliberately keeps majors: that ecosystem is grouped into a
+# single PR, so a major there costs one PR rather than many, and stale actions
+# are their own problem.
 updates:
   - package-ecosystem: npm
     directory: /collection
@@ -14,6 +27,9 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: cargo
     directory: /apps/wallpaper/src-tauri
@@ -25,6 +41,9 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
