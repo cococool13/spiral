@@ -1,0 +1,37 @@
+version: 2
+
+# Security alerts were on but no update config existed, so nothing opened PRs
+# and 13 advisories accumulated silently. Grouped so routine bumps arrive as
+# one PR per ecosystem instead of a stream of individual ones.
+updates:
+  - package-ecosystem: npm
+    directory: /collection
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      patch-and-minor:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: cargo
+    directory: /apps/wallpaper/src-tauri
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      patch-and-minor:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"
