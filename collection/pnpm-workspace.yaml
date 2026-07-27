@@ -1,6 +1,13 @@
 packages:
   - "."
 
+# Next 15.5.x pins postcss 8.4.31 and sharp 0.34.5 transitively, both of
+# which carry open advisories with no patched release inside Next's range.
+# Both bumps are semver-compatible; drop these once Next ships them itself.
+overrides:
+  postcss: "^8.5.18"
+  sharp: "^0.35.0"
+
 allowBuilds:
   sharp: true
 
