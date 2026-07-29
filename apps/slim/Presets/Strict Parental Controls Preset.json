@@ -1,0 +1,25 @@
+{
+    "Features": {
+        "BraveP3AEnabled": false,
+        "BraveStatsPingEnabled": false,
+        "IncognitoModeAvailability": 1,
+        "ForceGoogleSafeSearch": true,
+        "BrowserSignin": 0,
+        "BraveDeAmpEnabled": true,
+        "BraveDebouncingEnabled": true,
+        "BraveTrackingQueryParametersFilteringEnabled": true,
+        "BraveReduceLanguageEnabled": true,
+        "SyncDisabled": true,
+        "BraveRewardsDisabled": true,
+        "BraveWalletDisabled": true,
+        "BraveVPNDisabled": true,
+        "BraveAIChatEnabled": false,
+        "BraveNewsDisabled": true,
+        "BraveTalkDisabled": true,
+        "BraveWebDiscoveryEnabled": false,
+        "TorDisabled": true,
+        "DeveloperToolsAvailability": 2
+    },
+    "DnsMode": "custom",
+    "DnsTemplates": "https://family.cloudflare-dns.com/dns-query"
+}

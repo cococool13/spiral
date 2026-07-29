@@ -1,5 +1,6 @@
 "use client";
 
+import { useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 interface Props {
@@ -14,8 +15,25 @@ interface Props {
  */
 export default function DemoVideo({ video, name }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [inView, setInView] = useState(false);
   const [available, setAvailable] = useState(false);
+  // A looping demo is moving content that starts on its own, so it needs a
+  // way to stop it (WCAG 2.2.2) and must not start under reduced motion.
+  const reduced = useReducedMotion();
+  const [playing, setPlaying] = useState(true);
+
+  useEffect(() => {
+    if (reduced) setPlaying(false);
+  }, [reduced]);
+
+  // Only the toggle drives this. First play is declarative, via autoPlay.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (playing) void el.play().catch(() => {});
+    else el.pause();
+  }, [playing]);
 
   useEffect(() => {
     const el = ref.current;
@@ -45,18 +63,29 @@ export default function DemoVideo({ video, name }: Props) {
       className="relative aspect-video w-full overflow-hidden rounded-[2px] border border-white/10 bg-black"
     >
       {inView && available ? (
-        <video
-          className="h-full w-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster={video.poster}
-          aria-label={`${name} demo: browsing wallpapers and applying one`}
-        >
-          <source src={video.webm} type="video/webm" />
-          <source src={video.mp4} type="video/mp4" />
-        </video>
+        <>
+          <video
+            ref={videoRef}
+            className="h-full w-full object-cover"
+            autoPlay={!reduced}
+            muted
+            loop
+            playsInline
+            poster={video.poster}
+            aria-label={`${name} demo: browsing wallpapers and applying one`}
+          >
+            <source src={video.webm} type="video/webm" />
+            <source src={video.mp4} type="video/mp4" />
+          </video>
+          <button
+            type="button"
+            onClick={() => setPlaying((p) => !p)}
+            aria-label={playing ? `Pause the ${name} demo` : `Play the ${name} demo`}
+            className="absolute bottom-3 right-3 inline-flex min-h-11 min-w-11 items-center justify-center rounded-[2px] border border-white/20 bg-black/60 px-3 font-mono text-xs text-paper backdrop-blur transition-colors hover:border-white/40"
+          >
+            {playing ? "Pause" : "Play"}
+          </button>
+        </>
       ) : (
         <FallbackFrame />
       )}

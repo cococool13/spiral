@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "balanced-daily",
+  "name": "Balanced Daily",
+  "description": "A secure, private, responsive daily configuration.",
+  "risk": "low",
+  "modules": [
+    "security-foundation",
+    "privacy-balanced",
+    "performance-balanced",
+    "debloat-core"
+  ],
+  "overrides": {}
+}

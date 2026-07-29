@@ -1,0 +1,23 @@
+{
+  "name": "slimbrave-neo-collection",
+  "version": "0.1.0",
+  "description": "Foundation layer for browser collection integration",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^1.0.4",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}

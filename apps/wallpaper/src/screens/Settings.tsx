@@ -87,7 +87,7 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
       await setSettings(next);
     } catch {
       setLocal(previous);
-      setError("The setting didn't save. Try again.");
+      setError("The setting didn’t save. Try again.");
     }
   }
 
@@ -97,7 +97,7 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
       await clearThumbCache();
       setCacheBytes(await thumbCacheSize());
     } catch {
-      setError("Couldn't clear the cache. Try again.");
+      setError("Couldn’t clear the cache. Try again.");
     }
   }
 
@@ -105,6 +105,9 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
 
   return (
     <main className="settings">
+      {/* The rows are h2s, so without this the screen started at level two. */}
+      <h1 className="visually-hidden">Settings</h1>
+
       {error && (
         <p className="settings__error" role="alert">
           {error}
@@ -129,7 +132,7 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
         <div>
           <h2 className="settings__label">Thumbnail cache</h2>
           <p className="settings__desc">
-            200 MB max, stored in Spiral's app data.
+            200 MB max, stored in Spiral’s app data.
             {cacheBytes !== undefined && ` Currently ${formatMegabytes(cacheBytes)}.`}
           </p>
         </div>
@@ -186,9 +189,9 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
             {phase === "current" && `Version ${version}. This is the latest version.`}
             {phase === "found" &&
               `Version ${version}. ${foundUpdate?.version} is available. It downloads, installs, and restarts Spiral.`}
-            {phase === "installing" && "Downloading and installing. Spiral restarts when it's done."}
+            {phase === "installing" && "Downloading and installing. Spiral restarts when it’s done."}
             {phase === "failed" &&
-              "The update check didn't reach GitHub. Check your network, then try again."}
+              "The update check didn’t reach GitHub. Check your network, then try again."}
           </p>
         </div>
         {phase === "found" || phase === "installing" ? (

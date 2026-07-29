@@ -1,0 +1,14 @@
+/target/
+/gen/
+
+# The global macOS gitignore carries `Icon?` (for the custom-folder-icon file).
+# On a case-insensitive filesystem that pattern also matches this `icons`
+# DIRECTORY, so without this negation the whole icon set is silently skipped
+# by `git add` and a fresh clone cannot bundle the app. Git cannot re-include
+# a file whose parent directory is excluded, so the directory is un-excluded
+# first.
+!icons/
+
+# icons/ is committed: `pnpm icon` generates it, but a bundle build needs it
+# present and regenerating requires macOS. The 1024px source is not needed.
+/icons/icon-source.png

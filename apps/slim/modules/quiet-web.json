@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "quiet-web",
+  "name": "Quiet web",
+  "risk": "medium",
+  "conflicts_with": [],
+  "controls": [
+    {
+      "id": "permissions.notifications.default",
+      "value": "block",
+      "required": false,
+      "exceptions": [],
+      "destructive": false
+    },
+    {"id": "media.autoplay", "value": "block"}
+  ]
+}

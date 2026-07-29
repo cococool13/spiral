@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "debloat-core",
+  "name": "Core debloat",
+  "risk": "low",
+  "conflicts_with": [],
+  "controls": [
+    {"id": "vendor.promotions", "value": "off"},
+    {"id": "vendor.rewards", "value": "off"},
+    {"id": "vendor.wallet", "value": "off"},
+    {"id": "vendor.vpn", "value": "off"},
+    {"id": "vendor.ai", "value": "off"},
+    {"id": "vendor.news", "value": "off"},
+    {"id": "vendor.talk", "value": "off"}
+  ]
+}

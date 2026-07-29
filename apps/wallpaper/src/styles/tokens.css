@@ -8,7 +8,16 @@
   --stl-02:  #666863;   /* secondary text (4.7:1 on page) */
   --hlx-01:  #D52E2B;   /* helix red — accents, never body copy */
   --hlx-02:  #6F1011;   /* oxblood — pressed / hover */
-  --paper:   #F5F4F0;   /* paper — button labels on red (4.5:1, bold >= 15px) */
+  --paper:   #F4F3F0;   /* paper — mirrors --spiral-paper in /brand/tokens.css */
+
+  /* Helix red darkened just enough for a --paper label to clear AA.
+     Measured: paper on --hlx-01 is 4.45:1, which fails the 4.5:1 body
+     threshold — button labels here are 15px bold, and WCAG only treats bold
+     as large text at 18.66px and up. This mix measures 4.83:1.
+     Filled controls only; --hlx-01 still owns marks, borders and accents.
+     Derived from two brand tokens rather than declared, so this file stays a
+     faithful mirror of /brand/tokens.css. Its long-term home is that file. */
+  --hlx-01-ink: color-mix(in srgb, var(--hlx-02) 10%, var(--hlx-01));
 
   /* type */
   --font-ui:   "Archivo", sans-serif;      /* variable: wdth + wght */

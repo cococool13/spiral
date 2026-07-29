@@ -7,16 +7,19 @@ import OtherWork from "@/components/OtherWork";
 import ScrollProgress from "@/components/ScrollProgress";
 
 export default function Home() {
+  // Nav and Footer sit outside <main>. Nested inside it they were generic
+  // divs, not banner and contentinfo landmarks — so the page had no site
+  // chrome to jump to, and <main> claimed the header and footer as content.
   return (
     <MotionProvider>
+      <Nav />
+      <ScrollProgress />
       <main>
-        <Nav />
-        <ScrollProgress />
         <Hero />
         <AppGrid />
         <OtherWork />
-        <Footer />
       </main>
+      <Footer />
     </MotionProvider>
   );
 }

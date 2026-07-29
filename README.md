@@ -83,6 +83,7 @@ docs/          product context, visual system, external reference
 | --- | --- | --- |
 | [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
+| [`apps/slim/`](apps/slim/) | SlimBrave Neo (stdlib-only Python) plus [`apps/slim/desktop/`](apps/slim/desktop/) — Spiral Slim v1.0.0, a Tauri wizard over it. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
@@ -97,8 +98,9 @@ Each area is a self-contained pnpm project. There is no root workspace — `cd`
 into the one you want.
 
 ```bash
-cd apps/wallpaper && pnpm install && pnpm tauri dev   # the desktop app
-cd collection     && pnpm install && pnpm dev         # the website (localhost:3000)
+cd apps/wallpaper    && pnpm install && pnpm tauri dev   # the desktop app
+cd apps/slim/desktop && pnpm install && pnpm tauri dev   # the Brave wizard
+cd collection        && pnpm install && pnpm dev         # the website (localhost:3000)
 ```
 
 | Command | Where | What it does |

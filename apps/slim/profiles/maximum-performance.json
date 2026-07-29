@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "maximum-performance",
+  "name": "Maximum Performance",
+  "description": "Prioritizes responsiveness and low background resource use.",
+  "risk": "medium",
+  "modules": [
+    "security-foundation",
+    "performance-balanced",
+    "debloat-core"
+  ],
+  "overrides": {
+    "performance.memory-saver": "aggressive"
+  }
+}

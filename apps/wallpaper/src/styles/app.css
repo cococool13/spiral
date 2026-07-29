@@ -42,9 +42,16 @@
   transition: color var(--dur-fast) var(--ease);
 }
 
-.chrome__nav-item:hover,
+.chrome__nav-item:hover {
+  color: var(--ink-01);
+}
+
+/* The active screen needs a channel hover cannot borrow. Sharing one
+   declaration with :hover made a hovered item identical to the active one,
+   so which screen you were on became ambiguous under the cursor. */
 .chrome__nav-item--active {
   color: var(--ink-01);
+  box-shadow: inset 0 -2px 0 var(--hlx-01);
 }
 
 /* Update available — the red dot device, next to the Settings nav item. */
@@ -159,6 +166,10 @@
   max-width: calc(var(--unit) * 50);
 }
 
+.browse__empty-action {
+  margin-top: var(--unit);
+}
+
 /* Thumbnail grid — results entrance rises, like every entrance in Spiral. */
 .browse__scroll {
   flex: 1;
@@ -242,6 +253,10 @@
   justify-content: center;
   gap: calc(var(--unit) * 2);
   padding: calc(var(--unit) * 2);
+  /* A scrim, so the control and its focus ring read against any photograph.
+     Without it the red button and the red focus ring sat directly on
+     unconstrained imagery and disappeared into warm frames. */
+  background: color-mix(in srgb, var(--conc-01) 55%, transparent);
   opacity: 0;
   transition: opacity var(--dur-fast) var(--ease);
 }
@@ -283,12 +298,14 @@
   border-radius: var(--radius-ctl);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
+  /* Elevation scaled to a 48px control. The previous 0 24px 48px detached
+     from the button and read as a smudge beneath it. */
   box-shadow:
-    rgba(0, 0, 0, 0.08) 0 24px 48px,
+    rgba(0, 0, 0, 0.06) 0 1px 2px,
+    rgba(0, 0, 0, 0.08) 0 4px 12px,
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
   overflow: hidden;
   font-family: var(--font-ui);
-  /* Paper on Helix Red passes only at bold >= 15px (measured 4.5:1). */
   font-size: 15px;
   font-variation-settings: "wdth" 100, "wght" 700;
   transition:
@@ -296,17 +313,42 @@
     background-color var(--dur-fast) var(--ease);
 }
 
+/* Specular highlight, confined to the top edge.
+   The brand's 115deg sheen washed 55% white across the whole pill, including
+   the band the label sits in: measured, that dropped paper-on-red from 4.48:1
+   to 2.61:1 at the label's leading edge. Darkening the fill cannot rescue it
+   (a 55% white veil lands near 1.95:1 whatever is underneath), so the sheen
+   now stops well above the text. Same glass read, no light across the label. */
 .btn-glass::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
+  /* 28%, not 40%: measured, the label's glyph band starts at 32.8% of the
+     button height, so 40% still lit the top of the text. */
+  height: 28%;
   border-radius: inherit;
-  background: var(--glass-sheen);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0)
+  );
   pointer-events: none;
 }
 
 .btn-glass:hover {
   transform: translateY(-1px);
+}
+
+/* Busy, but still focusable — see WallpaperTile. Styled explicitly because
+   :disabled no longer matches. */
+.btn-glass[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.btn-glass[aria-disabled="true"]:hover,
+.btn-glass[aria-disabled="true"]:active {
+  transform: none;
 }
 
 .btn-glass:active {
@@ -316,8 +358,10 @@
 
 .btn-glass--primary {
   /* Fully tinted: any real transparency over light concrete drops the paper
-     label below the guide's measured 4.5:1. Glass reads via sheen + edge. */
-  background: var(--hlx-01);
+     label below 4.5:1. Glass reads via sheen + edge.
+     --hlx-01-ink, not --hlx-01: paper on flat helix red measures 4.45:1 and
+     these labels are 15px bold, which WCAG does not count as large text. */
+  background: var(--hlx-01-ink);
   color: var(--paper);
 }
 

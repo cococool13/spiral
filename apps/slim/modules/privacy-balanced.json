@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "privacy-balanced",
+  "name": "Balanced privacy",
+  "risk": "low",
+  "conflicts_with": [],
+  "controls": [
+    {"id": "telemetry.metrics", "value": "off"},
+    {"id": "telemetry.url-keyed", "value": "off"},
+    {"id": "privacy.third-party-cookies", "value": "block"},
+    {"id": "privacy.global-control", "value": "on"},
+    {"id": "network.secure-dns", "value": "automatic"}
+  ]
+}

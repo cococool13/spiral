@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "security-foundation",
+  "name": "Security foundation",
+  "risk": "low",
+  "conflicts_with": [],
+  "controls": [
+    {"id": "security.safe-browsing", "value": "standard", "required": true},
+    {"id": "security.downloads.malicious", "value": "block", "required": false},
+    {"id": "security.https-upgrades", "value": "balanced", "required": false}
+  ]
+}

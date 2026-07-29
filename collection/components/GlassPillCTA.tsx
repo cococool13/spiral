@@ -5,6 +5,8 @@ import { useOS } from "@/lib/useOS";
 
 interface Props {
   downloads: NonNullable<SpiralApp["downloads"]>;
+  /** No Windows installer exists. Never show a download verb for it. */
+  noWindowsBinary?: boolean;
   secondary?: boolean;
 }
 
@@ -51,16 +53,28 @@ function WindowsMark() {
  * + glyph). The full label stays on aria-label, so assistive tech still hears
  * "Download for Mac" — the glyph is decoration, never the only signal.
  */
-export default function GlassPillCTA({ downloads, secondary }: Props) {
+export default function GlassPillCTA({ downloads, noWindowsBinary, secondary }: Props) {
   const os = useOS();
-  const target =
-    os === "mac"
+  // With no Windows installer to offer, the pill points at the repository and
+  // says so, rather than dressing a source link up as a download. The Windows
+  // mark is dropped too: a download glyph on a "build it" link is a lie a
+  // person only discovers after clicking.
+  const offMac = noWindowsBinary === true && os !== "mac";
+  const target = offMac
+    ? downloads.windows
+    : os === "mac"
       ? downloads.mac
       : os === "windows"
         ? downloads.windows
         : { url: downloads.all, label: "Download" };
 
-  const Mark = os === "mac" ? AppleMark : os === "windows" ? WindowsMark : null;
+  const Mark = offMac
+    ? null
+    : os === "mac"
+      ? AppleMark
+      : os === "windows"
+        ? WindowsMark
+        : null;
 
   return (
     <a
@@ -74,10 +88,11 @@ export default function GlassPillCTA({ downloads, secondary }: Props) {
   );
 }
 
+/**
+ * Not a control: there is nothing to activate yet, so this is a status label.
+ * It previously carried aria-disabled on a role-less span, which exposes
+ * nothing — the words already say it.
+ */
 export function DisabledPill({ label = "Coming soon" }: { label?: string }) {
-  return (
-    <span className="glass-pill glass-pill--disabled" aria-disabled="true">
-      {label}
-    </span>
-  );
+  return <span className="glass-pill glass-pill--disabled">{label}</span>;
 }

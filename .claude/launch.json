@@ -12,6 +12,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--dir", "apps/wallpaper", "dev"],
       "port": 1420
+    },
+    {
+      "name": "slim-ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "apps/slim/desktop", "dev"],
+      "port": 1421
     }
   ]
 }

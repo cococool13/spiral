@@ -1,0 +1,1 @@
+"""Browser-specific configuration adapters."""

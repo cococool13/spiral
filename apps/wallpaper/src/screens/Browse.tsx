@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { WallpaperTile } from "../components/WallpaperTile";
 import { useDebounce } from "../hooks/useDebounce";
 import { errorCopy, wallhaven } from "../sources";
@@ -28,11 +28,17 @@ export function Browse() {
   // Privacy pillar: no network until the user acts.
   const [touched, setTouched] = useState(false);
   const requestId = useRef(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // Roving tabindex: only this tile is in the tab order.
+  const [activeTile, setActiveTile] = useState(0);
 
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Arrow-key navigation between tiles (Enter activates natively).
+  // Arrow-key navigation between tiles (Enter activates natively). The grid is
+  // a composite widget, so it takes one Tab stop and the arrows move inside it
+  // — without the roving index every tile was its own stop and reaching "Load
+  // more" cost one press per result.
   function onGridKeyDown(e: React.KeyboardEvent) {
     const handled = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
     if (!handled.includes(e.key) || !gridRef.current) return;
@@ -67,11 +73,11 @@ export function Browse() {
         next = last;
     }
     buttons[next]?.focus();
+    setActiveTile(next);
     e.preventDefault();
   }
 
-  useEffect(() => {
-    if (!touched) return;
+  const search = useCallback(() => {
     const id = ++requestId.current;
     setStatus("loading");
     setError(undefined);
@@ -84,6 +90,7 @@ export function Browse() {
       })
       .then((result) => {
         if (id !== requestId.current) return;
+        setActiveTile(0); // a fresh result set starts its tab stop at the top
         setItems(result.items);
         setPageNum(result.page);
         setLastPage(result.lastPage);
@@ -94,7 +101,30 @@ export function Browse() {
         setError(errorCopy(e));
         setStatus("error");
       });
-  }, [debouncedQuery, chipIndex, touched]);
+  }, [chipIndex, debouncedQuery]);
+
+  useEffect(() => {
+    if (!touched) return;
+    search();
+  }, [search, touched]);
+
+  useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    }
+
+    document.addEventListener("keydown", focusSearch);
+    return () => document.removeEventListener("keydown", focusSearch);
+  }, []);
 
   async function loadMore() {
     const id = requestId.current;
@@ -120,11 +150,29 @@ export function Browse() {
 
   return (
     <main className="browse">
+      {/* Every screen needs a top-level heading. The only h1 used to live
+          inside the empty state, so once results arrived the view had none. */}
+      <h1 className="visually-hidden">Browse wallpapers</h1>
+
+      {/* A stable region, mounted before it has anything to say, so repeated
+          polite updates announce reliably. Results used to arrive in silence:
+          only the failure case had a role. */}
+      <span className="visually-hidden" role="status">
+        {status === "loading"
+          ? "Searching Wallhaven."
+          : status === "ready"
+            ? items.length === 0
+              ? "No results."
+              : `${items.length} wallpapers.`
+            : ""}
+      </span>
+
       <input
+        ref={searchInputRef}
         type="search"
         className="browse__search"
         aria-label="Search wallpapers"
-        placeholder="search wallpapers"
+        placeholder="search wallpapers — press /"
         spellCheck={false}
         value={query}
         onChange={(e) => {
@@ -133,11 +181,14 @@ export function Browse() {
         }}
       />
 
-      <div className="browse__chips">
+      {/* Same one-of-N control as Settings' segmented group, and now stated
+          the same way: the selected chip was previously visual only. */}
+      <div className="browse__chips" role="group" aria-label="Category">
         {CHIPS.map((chip, i) => (
           <button
             key={chip.label}
-            className={i === chipIndex && touched ? "chip chip--active" : "chip"}
+            aria-pressed={i === chipIndex}
+            className={i === chipIndex ? "chip chip--active" : "chip"}
             onClick={() => {
               setChipIndex(i);
               setTouched(true);
@@ -170,6 +221,9 @@ export function Browse() {
         <section className="browse__empty" aria-label="Search failed" role="alert">
           <span className="browse__empty-eyebrow">Problem</span>
           <p className="browse__empty-copy">{error}</p>
+          <button className="btn-glass btn-glass--secondary browse__empty-action" onClick={search}>
+            Try again
+          </button>
         </section>
       )}
 
@@ -186,9 +240,19 @@ export function Browse() {
 
       {status === "ready" && items.length > 0 && (
         <div className="browse__scroll">
-          <div className="browse__grid" role="list" ref={gridRef} onKeyDown={onGridKeyDown}>
-            {items.map((wallpaper) => (
-              <WallpaperTile key={wallpaper.id} wallpaper={wallpaper} source={wallhaven} />
+          {/* No role="list": the children are figures, not listitems, so the
+              grid announced as a list containing nothing. Arrow keys already
+              make this a composite widget rather than a list. */}
+          <div className="browse__grid" ref={gridRef} onKeyDown={onGridKeyDown}>
+            {items.map((wallpaper, i) => (
+              <WallpaperTile
+                key={wallpaper.id}
+                wallpaper={wallpaper}
+                source={wallhaven}
+                tabbable={i === Math.min(activeTile, items.length - 1)}
+                position={i + 1}
+                total={items.length}
+              />
             ))}
           </div>
           {error && (
