@@ -5,9 +5,11 @@ Current app release **v1.0.1** (Spiral Wallpaper).
 
 > **There are two separate Spiral Wallpaper codebases.** This one (`Spiral Claude`) is the
 > shipped repo — `github.com/cococool13/spiral-wallpaper`, pnpm **11.9**, **no tray, closing the
-> window quits**. `../Spiral Codex` is a parallel Codex-built variant with a different structure
-> and a `keepRunning` tray mode. **Facts do not transfer between them** — don't apply that
-> project's tray/settings behavior here.
+> window quits**. The Codex-built variant has a different structure and a `keepRunning` tray
+> mode; **facts do not transfer between them** — don't apply its tray/settings behavior here.
+> It is **no longer a sibling directory**. Only its docs and assets remain, at
+> `~/Downloads/2026-07-Creative-Assets/Spiral Codex/`. Treat any tray/settings claim sourced
+> from there as belonging to a different project.
 
 ## Repo layout
 
