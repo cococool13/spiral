@@ -1,6 +1,15 @@
 packages:
   - "."
 
+# Next still pins postcss 8.4.31 and sharp 0.34.5 transitively, both of
+# which carry open advisories with no patched release inside its range.
+# Re-checked on Next 16.2.12: removing these brings back 4 advisories
+# (1 moderate, 3 high), so they stay. Both bumps are semver-compatible;
+# drop them once Next ships the patched versions itself.
+overrides:
+  postcss: "^8.5.18"
+  sharp: "^0.35.0"
+
 allowBuilds:
   sharp: true
 

@@ -19,13 +19,13 @@ jobs:
       run:
         working-directory: collection
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: collection/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -47,14 +47,19 @@ jobs:
 
   windows:
     runs-on: windows-latest
+    # Lifted to job level so the build and upload steps can branch on whether
+    # a signing key is actually available. The `secrets` context is not usable
+    # in a step `if:`, but `env` is.
+    env:
+      TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/wallpaper/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -77,18 +82,43 @@ jobs:
       - name: Quality gates (hex guard + typecheck)
         run: pnpm check:hex && pnpm tsc --noEmit
 
-      - name: Build Tauri app
+      # Two build steps, split on whether the updater signing key is present.
+      #
+      # Dependabot pull requests run without repository secrets by design, so
+      # TAURI_SIGNING_PRIVATE_KEY is empty there. Passing an empty string is
+      # worse than passing nothing: Tauri treats it as a key and dies with
+      # "failed to decode secret key", which failed every Dependabot PR.
+      #
+      # The fix is to build unsigned in that case, not to copy the key into
+      # Dependabot secrets — PR bundles are throwaway artifacts that are never
+      # published, and exposing an app signing key to automated dependency PRs
+      # is a real risk for no benefit. Pushes to main still sign as before.
+      - name: Build Tauri app (signed)
+        if: env.TAURI_KEY != ''
         run: pnpm tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
+      - name: Build Tauri app (unsigned — no signing key in this context)
+        if: env.TAURI_KEY == ''
+        run: pnpm tauri build
+
       - name: Upload Windows bundles
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spiral-windows
           path: |
             apps/wallpaper/src-tauri/target/release/bundle/msi/*.msi
             apps/wallpaper/src-tauri/target/release/bundle/nsis/*.exe
-            apps/wallpaper/src-tauri/target/release/bundle/nsis/*.sig
+          if-no-files-found: error
+
+      # Separate step so the signed path still hard-fails when a .sig is
+      # missing, while unsigned PR builds simply skip it.
+      - name: Upload updater signatures
+        if: env.TAURI_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: spiral-windows-signatures
+          path: apps/wallpaper/src-tauri/target/release/bundle/nsis/*.sig
           if-no-files-found: error
