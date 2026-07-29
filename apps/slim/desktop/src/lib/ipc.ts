@@ -49,9 +49,15 @@ export function toWizardError(
         "checkout, then try again.",
     };
   }
+  // A raw exception message is not an explanation. This screen renders detail
+  // verbatim, so an unhandled throw used to reach the user as, literally,
+  // "Cannot read properties of undefined (reading 'invoke')" — which tells
+  // them nothing and contradicts this file's own contract above. The raw value
+  // still goes to the console, where it is useful.
+  console.error(fallbackTitle, thrown);
   return {
     title: fallbackTitle,
-    detail: thrown instanceof Error ? thrown.message : String(thrown),
+    detail: "Spiral Slim could not reach the part of the app that does this.",
     nextStep: "Nothing was changed. Try again, or reopen Spiral Slim.",
   };
 }

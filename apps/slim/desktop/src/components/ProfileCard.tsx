@@ -36,7 +36,7 @@ export function ProfileCard({
         aria-describedby={`${inputId}-body`}
       />
       {recommended ? <span className="card__flag">Recommended</span> : null}
-      <h3 className="card__name">{name}</h3>
+      <h2 className="card__name">{name}</h2>
       <p className="card__lede" id={`${inputId}-body`}>
         {copy?.purpose ?? description}
       </p>

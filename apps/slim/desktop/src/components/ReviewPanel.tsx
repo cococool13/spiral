@@ -58,7 +58,7 @@ export function ReviewPanel({
   return (
     <div className="review">
       <div className="review__card">
-        <h3 className="card__name">{preview.profileName}</h3>
+        <h2 className="card__name">{preview.profileName}</h2>
         <p className="review__target">
           {channelNames} · {preview.managedPolicyCount} policies ·{" "}
           {riskLabel(preview.risk)}

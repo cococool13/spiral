@@ -36,7 +36,7 @@ export function CustomCard({
 
   return (
     <div className="card card--custom" data-selected={selected}>
-      <h3 className="card__name">Custom</h3>
+      <h2 className="card__name">Custom</h2>
       <p className="card__lede">
         Same parts, your subset. Values are never edited, so a custom profile
         can only ever be a subset of the ones above.

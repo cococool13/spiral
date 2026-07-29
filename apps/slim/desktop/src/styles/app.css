@@ -1016,8 +1016,11 @@ button:active:not(:disabled) {
 }
 
 button[data-variant="primary"] {
-  border-color: var(--hlx-01);
-  background: var(--hlx-01);
+  /* --hlx-01-ink, not --hlx-01: a --paper label on flat helix red measures
+     4.45:1, and this label is 15px bold, which WCAG does not count as large
+     text. Apply is the most consequential control in the app. */
+  border-color: var(--hlx-01-ink);
+  background: var(--hlx-01-ink);
   color: var(--paper);
   font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
 }
@@ -1414,4 +1417,51 @@ code {
   font-family: var(--font-mono);
   font-size: 11px;
   overflow-wrap: anywhere;
+}
+
+/* ----------------------------------------------- interface-review additions */
+
+/* Replaces the inline styles that used to sit in Done.tsx. Same values, now
+   expressed in the unit scale like every other spacing rule here. */
+.panel__line {
+  margin: 0;
+}
+
+.panel__line--last {
+  margin-bottom: 0;
+}
+
+.panel__meta {
+  margin-top: var(--unit);
+}
+
+.done__action {
+  margin-top: var(--unit);
+}
+
+.done__action--spaced {
+  margin-top: calc(var(--unit) * 2);
+}
+
+/* The welcome step's "start clean" confirmation. Replaces a window.confirm,
+   whose OK/Cancel could not name the consequence. Matches the Done screen's
+   pattern so the same destructive action is confirmed the same way twice. */
+.startover--confirm {
+  margin: 0 0 calc(var(--unit) * 3);
+  padding: calc(var(--unit) * 2);
+  border: 1px solid var(--conc-03);
+  border-left: 3px solid var(--hlx-01);
+  background: var(--conc-02);
+}
+
+.startover--confirm p {
+  margin: 0;
+  max-width: 60ch;
+}
+
+.startover__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--unit);
+  margin-top: calc(var(--unit) * 2) !important;
 }

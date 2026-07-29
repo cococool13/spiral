@@ -27,6 +27,9 @@ import {
 export function App() {
   const [state, dispatch] = useReducer(reduce, initialState);
   const [resetConfirmed, setResetConfirmed] = useState(false);
+  // The welcome step's "start clean" path, confirmed inline rather than by a
+  // native OK/Cancel dialog.
+  const [pendingReset, setPendingReset] = useState(false);
   // The intro is a splash, not a wizard step: it gates nothing and carries no
   // state, so it stays out of the machine and out of the progress ticks.
   const [started, setStarted] = useState(false);
@@ -194,7 +197,36 @@ export function App() {
             {busy === null && !capability.canPreview ? (
               <p className="warn">{capability.reason}</p>
             ) : null}
-            {installed.some((c) => c.managedPolicyCount > 0) ? (
+            {installed.some((c) => c.managedPolicyCount > 0) && pendingReset ? (
+              <div className="startover startover--confirm" role="group">
+                <p>
+                  This removes every policy SlimBrave Neo wrote and puts Brave
+                  back to its own defaults on this {deviceNoun(platform)}.{" "}
+                  {authSentence(platform)}
+                </p>
+                <p className="startover__actions">
+                  <button
+                    type="button"
+                    data-variant="primary"
+                    disabled={busy !== null}
+                    onClick={() => {
+                      setPendingReset(false);
+                      void runReset(true);
+                    }}
+                  >
+                    Remove all policies
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => setPendingReset(false)}
+                  >
+                    Keep them
+                  </button>
+                </p>
+              </div>
+            ) : null}
+            {installed.some((c) => c.managedPolicyCount > 0) && !pendingReset ? (
               <p className="startover">
                 Brave is already managed on this {deviceNoun(platform)}.{" "}
                 <button
@@ -202,15 +234,13 @@ export function App() {
                   className="linklike"
                   disabled={busy !== null}
                   onClick={() => {
-                    if (
-                      !window.confirm(
-                        "Remove every policy SlimBrave Neo wrote and put " +
-                          "Brave back to its own defaults? " +
-                          authSentence(platform),
-                      )
-                    )
-                      return;
-                    void runReset(true);
+                    // window.confirm only offers OK / Cancel, so the most
+                    // destructive action in the app was confirmed by a button
+                    // that does not name what it does — while the identical
+                    // operation on the Done screen uses a checkbox and a
+                    // "Remove all policies" button. One pattern, the explicit
+                    // one, for both.
+                    setPendingReset(true);
                   }}
                 >
                   Remove them and start clean

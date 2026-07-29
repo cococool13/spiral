@@ -24,7 +24,9 @@ export function Stage({
   return (
     <section className="stage">
       <div className="stage__head">
-        <h2 className="stage__title">{title}</h2>
+        {/* h1: the wizard steps used to start at level two, so every screen
+            between the intro and Done had no top-level heading at all. */}
+        <h1 className="stage__title">{title}</h1>
         {hint === undefined ? null : <p className="stage__hint">{hint}</p>}
       </div>
       {children}

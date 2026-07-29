@@ -103,8 +103,22 @@ describe("errors always carry a next step", () => {
 
   it("turns an unknown throw into an actionable error", () => {
     const error = toWizardError("Could not apply the profile", "boom");
-    expect(error.detail).toBe("boom");
+    expect(error.title).toBe("Could not apply the profile");
     expect(error.nextStep).not.toBe("");
+  });
+
+  // This screen renders `detail` verbatim, so a raw exception message reached
+  // the user as "Cannot read properties of undefined (reading 'invoke')".
+  it("never puts a raw thrown value in front of the reader", () => {
+    const error = toWizardError(
+      "Could not check this computer",
+      new TypeError("Cannot read properties of undefined (reading 'invoke')"),
+    );
+    expect(error.detail).not.toContain("undefined");
+    expect(error.detail).not.toContain("Cannot read properties");
+    expect(error.detail).toBe(
+      "Spiral Slim could not reach the part of the app that does this.",
+    );
   });
 
   it("rejects an object that is only partly an error", () => {

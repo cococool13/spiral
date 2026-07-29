@@ -34,7 +34,7 @@ export function Done({
           Restart Brave for that to take effect.
         </p>
         <div className="panel">
-          <p style={{ margin: 0 }}>{resetOutcome.message}</p>
+          <p className="panel__line">{resetOutcome.message}</p>
         </div>
         <h2>Check it</h2>
         <p>
@@ -68,7 +68,7 @@ export function Done({
             <strong>not installed yet</strong>. macOS needs you to approve it.
           </p>
           <div className="panel">
-            <p style={{ margin: 0 }}>
+            <p className="panel__line">
               <strong>Finish the install</strong>
             </p>
             <ol className="steplist">
@@ -83,7 +83,7 @@ export function Done({
                 <strong>Install</strong>.
               </li>
             </ol>
-            <p style={{ marginBottom: 0 }}>
+            <p className="panel__line panel__line--last">
               Spiral Slim already opened that pane for you. Until you finish it,
               macOS 13 and later may clear these policies at the next restart.
             </p>
@@ -107,7 +107,7 @@ export function Done({
           <dt>Managed policies</dt>
           <dd>{outcome.managedPolicyCount}</dd>
         </dl>
-        <p className="choice__meta" style={{ marginTop: "8px" }}>
+        <p className="choice__meta panel__meta">
           {outcome.message}
         </p>
       </div>
@@ -126,7 +126,7 @@ export function Done({
         yet. Quit and reopen it.
       </p>
       {onOpenPolicyPage === undefined ? null : (
-        <p style={{ marginTop: "8px" }}>
+        <p className="done__action">
           <button type="button" onClick={onOpenPolicyPage}>
             Open brave://policy
           </button>
@@ -156,7 +156,7 @@ export function Done({
               Configuration Profile with it.
             </span>
           </label>
-          <p style={{ marginTop: "16px" }}>
+          <p className="done__action done__action--spaced">
             <button
               type="button"
               onClick={onReset}

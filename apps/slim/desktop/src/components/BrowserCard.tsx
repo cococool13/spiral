@@ -31,7 +31,7 @@ export function BrowserCard({
           height={132}
         />
       )}
-      <h3 className="card__name">Brave {channel.label}</h3>
+      <h2 className="card__name">Brave {channel.label}</h2>
       <p className="card__lede">
         {channel.managedPolicyCount === 0
           ? "Running on Brave's own defaults. Nothing is managed yet."
