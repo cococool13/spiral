@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { WallpaperTile } from "../components/WallpaperTile";
 import { useDebounce } from "../hooks/useDebounce";
 import { errorCopy, wallhaven } from "../sources";
@@ -28,6 +28,7 @@ export function Browse() {
   // Privacy pillar: no network until the user acts.
   const [touched, setTouched] = useState(false);
   const requestId = useRef(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -70,8 +71,7 @@ export function Browse() {
     e.preventDefault();
   }
 
-  useEffect(() => {
-    if (!touched) return;
+  const search = useCallback(() => {
     const id = ++requestId.current;
     setStatus("loading");
     setError(undefined);
@@ -94,7 +94,30 @@ export function Browse() {
         setError(errorCopy(e));
         setStatus("error");
       });
-  }, [debouncedQuery, chipIndex, touched]);
+  }, [chipIndex, debouncedQuery]);
+
+  useEffect(() => {
+    if (!touched) return;
+    search();
+  }, [search, touched]);
+
+  useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    }
+
+    document.addEventListener("keydown", focusSearch);
+    return () => document.removeEventListener("keydown", focusSearch);
+  }, []);
 
   async function loadMore() {
     const id = requestId.current;
@@ -121,10 +144,11 @@ export function Browse() {
   return (
     <main className="browse">
       <input
+        ref={searchInputRef}
         type="search"
         className="browse__search"
         aria-label="Search wallpapers"
-        placeholder="search wallpapers"
+        placeholder="search wallpapers — press /"
         spellCheck={false}
         value={query}
         onChange={(e) => {
@@ -170,6 +194,9 @@ export function Browse() {
         <section className="browse__empty" aria-label="Search failed" role="alert">
           <span className="browse__empty-eyebrow">Problem</span>
           <p className="browse__empty-copy">{error}</p>
+          <button className="btn-glass btn-glass--secondary browse__empty-action" onClick={search}>
+            Try again
+          </button>
         </section>
       )}
 

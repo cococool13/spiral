@@ -159,6 +159,10 @@
   max-width: calc(var(--unit) * 50);
 }
 
+.browse__empty-action {
+  margin-top: var(--unit);
+}
+
 /* Thumbnail grid — results entrance rises, like every entrance in Spiral. */
 .browse__scroll {
   flex: 1;
