@@ -62,7 +62,7 @@ pnpm check:hex       # reject colors outside the approved token set
 pnpm build           # token check + TypeScript + Vite production build
 pnpm tauri dev       # native development app
 pnpm tauri build     # platform release bundles
-SPIRAL_SMOKE=1 pnpm tauri dev  # end-to-end native smoke; restores wallpaper
+pnpm smoke           # end-to-end native smoke; exits non-zero on failure
 ```
 
 ```bash

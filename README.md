@@ -65,8 +65,10 @@ pnpm tauri build    # release bundles (.app/.dmg or .exe/.msi)
 
 `pnpm build` runs the quality gates: a guard that fails the build on any hex
 color outside the design tokens, then typecheck, then Vite.
-`SPIRAL_SMOKE=1 pnpm tauri dev` runs a full end-to-end smoke test (search,
-cache, download, set wallpaper, verify) and restores your wallpaper after.
+`pnpm smoke` runs a full end-to-end smoke test (search, cache, download, set
+wallpaper, verify) and restores your wallpaper after. It exits non-zero when
+the smoke fails, so it can gate a release — `tauri dev` does not forward the
+app's exit code on its own.
 
 ## What's in this repo
 

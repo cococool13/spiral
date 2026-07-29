@@ -21,7 +21,7 @@ pnpm install
 pnpm tauri dev            # run the app
 pnpm build                # hex-token guard + typecheck + Vite build
 pnpm tauri build          # release bundles (.app/.dmg on macOS; NSIS/MSI on Windows via CI)
-SPIRAL_SMOKE=1 pnpm tauri dev   # debug-only end-to-end smoke test; restores your wallpaper
+pnpm smoke                # debug-only end-to-end smoke test; restores your wallpaper
 ```
 
 `scripts/make-dmg-background.py` and `scripts/make-nsis-images.py` regenerate
