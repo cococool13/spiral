@@ -134,6 +134,17 @@ rather than emitting a `latest.json` without signatures — an unsigned macOS
 build is blocked by Gatekeeper, and a bundle with no `.sig` breaks the updater
 for everyone already running the previous version.
 
+### One-time setup
+
+```bash
+./scripts/setup-release-secrets.sh
+```
+
+Reads the signing identity and team ID from your keychain, asks for the four
+things it cannot derive, checks the certificate password actually opens the
+`.p12` before uploading anything, and pipes each value straight to
+`gh secret set`. Nothing is printed or written to disk.
+
 `macos` needs these repository secrets, in addition to the
 `TAURI_SIGNING_PRIVATE_KEY` the Windows job already uses:
 
