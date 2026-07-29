@@ -50,6 +50,20 @@ body {
   cursor: default;
 }
 
+/* Chrome behaves like a native window; prose does not. Error copy, the
+   version string and resolutions are exactly what someone copies into a bug
+   report, so selection is restored for text while labels and controls keep
+   the desktop feel. */
+p,
+code,
+.browse__empty-copy,
+.settings__desc,
+.settings__attribution,
+.tile__res,
+.tile__error {
+  user-select: text;
+}
+
 input,
 button {
   font: inherit;
@@ -60,6 +74,18 @@ button {
 :focus-visible {
   outline: 2px solid var(--hlx-01);
   outline-offset: 3px;
+}
+
+/* Available to assistive tech, absent from the layout. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

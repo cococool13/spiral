@@ -33,15 +33,15 @@ export function errorCopy(error: unknown): string {
   const code = String(error).split(":")[0];
   const copy: Record<string, string> = {
     offline:
-      "No connection. Spiral couldn't reach Wallhaven. Check your network, then try again.",
+      "No connection. Spiral couldn’t reach Wallhaven. Check your network, then try again.",
     rate_limited:
       "Wallhaven allows about 45 requests a minute. Wait a moment, then try again.",
     bad_response: "Wallhaven sent an unexpected response. Try again in a minute.",
     download_failed: "The download stopped partway. Try again.",
     bad_image:
-      "The file that arrived wasn't an image, so Spiral discarded it. Try another wallpaper.",
+      "The file that arrived wasn’t an image, so Spiral discarded it. Try another wallpaper.",
     apply_failed:
-      "The image downloaded but couldn't be set as your wallpaper. Restart Spiral, then try again.",
+      "The image downloaded but couldn’t be set as your wallpaper. Restart Spiral, then try again.",
   };
   return copy[code] ?? copy.bad_response;
 }

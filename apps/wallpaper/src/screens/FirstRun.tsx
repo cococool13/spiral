@@ -10,7 +10,7 @@ export function FirstRun({ onDone }: FirstRunProps) {
       <img src={lockupRed} alt="Spiral" className="firstrun__lockup" />
 
       <p className="firstrun__line">
-        Click a wallpaper. It downloads and applies. That's it.
+        Click a wallpaper. It downloads and applies. That’s it.
       </p>
 
       <button className="btn-glass btn-glass--primary" onClick={onDone} autoFocus>

@@ -53,6 +53,7 @@ function App() {
                 ? "chrome__nav-item chrome__nav-item--active"
                 : "chrome__nav-item"
             }
+            aria-current={screen === "browse" ? "page" : undefined}
             onClick={() => setScreen("browse")}
           >
             Browse
@@ -63,10 +64,19 @@ function App() {
                 ? "chrome__nav-item chrome__nav-item--active"
                 : "chrome__nav-item"
             }
+            aria-current={screen === "settings" ? "page" : undefined}
             onClick={() => setScreen("settings")}
           >
             Settings
-            {update && <span className="chrome__update-dot" aria-label="Update available" />}
+            {/* The dot is decoration; the words next to it carry the meaning.
+                aria-label on a plain span is not exposed, so the update was
+                invisible to screen readers and colour-only to everyone else. */}
+            {update && (
+              <>
+                <span className="chrome__update-dot" aria-hidden="true" />
+                <span className="visually-hidden"> — update available</span>
+              </>
+            )}
           </button>
         </nav>
       </header>
