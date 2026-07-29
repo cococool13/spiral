@@ -141,9 +141,12 @@ export function ReviewPanel({
             <button type="button" className="linklike" onClick={onExport}>
               Export this plan
             </button>
-            {notice === undefined || notice === null ? null : (
-              <span className="review__notice">{notice}</span>
-            )}
+            {/* Focus stays on the button after exporting, so without a live
+                region the "Saved to …" confirmation never reached anyone
+                using a screen reader. */}
+            <span className="review__notice" role="status">
+              {notice ?? ""}
+            </span>
           </p>
         )}
       </div>
