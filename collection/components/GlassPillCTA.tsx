@@ -88,10 +88,11 @@ export default function GlassPillCTA({ downloads, noWindowsBinary, secondary }: 
   );
 }
 
+/**
+ * Not a control: there is nothing to activate yet, so this is a status label.
+ * It previously carried aria-disabled on a role-less span, which exposes
+ * nothing — the words already say it.
+ */
 export function DisabledPill({ label = "Coming soon" }: { label?: string }) {
-  return (
-    <span className="glass-pill glass-pill--disabled" aria-disabled="true">
-      {label}
-    </span>
-  );
+  return <span className="glass-pill glass-pill--disabled">{label}</span>;
 }

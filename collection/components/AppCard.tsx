@@ -12,8 +12,8 @@ export default function AppCard({ app }: { app: SpiralApp }) {
   return (
     <article className="flex flex-1 flex-col gap-6 rounded-[2px] border border-white/10 bg-white/[.02] p-8">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="flex h-11 w-11 items-center justify-center border border-white/15 rounded-[2px]">
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 rounded-[2px]">
             <svg
               width={24}
               height={24}
@@ -64,7 +64,11 @@ export default function AppCard({ app }: { app: SpiralApp }) {
         </aside>
       )}
 
-      <div className="mt-auto flex items-center gap-4">
+      {/* flex-wrap + min-w-0: at 380px the pill, the downloads link and the
+          price label together had a min-content width of ~302px inside a
+          268px content box, so the card refused to shrink and pushed the
+          document 12px wider than the viewport. */}
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-3">
         {live && app.downloads ? (
           <>
             <GlassPillCTA
