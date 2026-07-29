@@ -11,6 +11,7 @@
     "dev": "vite",
     "build": "node scripts/check-hex.mjs && tsc && vite build",
     "check:hex": "node scripts/check-hex.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
   },
