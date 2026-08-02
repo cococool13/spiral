@@ -40,7 +40,14 @@ const find = (pattern, what) => {
 };
 
 // The updater bundles, and the detached signature each one must ship with.
-const macBundle = find(/_universal\.app\.tar\.gz$/, "macOS updater bundle");
+//
+// The macOS pattern carries no version and no target: Tauri names that bundle
+// after the .app it wraps, so a universal 1.0.2 build emits "Spiral
+// Wallpaper.app.tar.gz", not "Spiral Wallpaper_1.0.2_universal.app.tar.gz".
+// Matching the latter cost a tagged release that had already signed and
+// notarized successfully. Windows is the opposite — its installer name does
+// carry both — which is why only one of the two patterns looks stripped down.
+const macBundle = find(/\.app\.tar\.gz$/, "macOS updater bundle");
 const winBundle = find(/_x64-setup\.exe$/, "Windows updater bundle");
 
 const signatureFor = (bundle) => {
