@@ -188,14 +188,9 @@ jobs:
   # reason it exists.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    uses: ./.github/workflows/release-app.yml
-    with:
-      app-dir: apps/wallpaper
-      artifact-prefix: spiral
-      macos: true
-      windows: true
-      updater: true
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo bisect-stub
 
   # Wallpaper-specific, so it stays here rather than in the shared workflow:
   # the phrases it rewrites are this app's download lines. Runs only after the
