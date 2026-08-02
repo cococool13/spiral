@@ -69,7 +69,12 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.updater && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+      # Deliberately NOT TAURI_SIGNING_PRIVATE_KEY. Setting it at job level
+      # means setting it to "" whenever updater is false, and an empty env var
+      # is still a set env var: Tauri reads it as a key and dies with "failed
+      # to decode secret key". build.yml already carries that scar from every
+      # Dependabot PR. It is passed only to the step that needs it, below.
+      TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v7
 
@@ -84,7 +89,7 @@ jobs:
                       APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
             if [ -z "${!name}" ]; then missing="$missing $name"; fi
           done
-          if [ "${{ inputs.updater }}" = "true" ] && [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+          if [ "${{ inputs.updater }}" = "true" ] && [ -z "$TAURI_KEY" ]; then
             missing="$missing TAURI_SIGNING_PRIVATE_KEY"
           fi
           if [ -n "$missing" ]; then
@@ -139,18 +144,39 @@ jobs:
         run: pnpm run --if-present sync-brand
 
       # Universal, to match every previous release: one download that runs
-      # native on both architectures.
-      - name: Build, sign, and notarize
+      # native on both architectures. Two steps rather than one conditional
+      # env: the signing key must be absent, not empty, when there is no
+      # updater — see the note on TAURI_KEY above.
+      - name: Build, sign, and notarize (with updater artifacts)
+        if: inputs.updater
         run: pnpm tauri build --target ${{ inputs.macos-target }}
         env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
+      - name: Build, sign, and notarize
+        if: ${{ !inputs.updater }}
+        run: pnpm tauri build --target ${{ inputs.macos-target }}
+
+      # The DMG is what a person downloads and exists either way.
       - name: Upload macOS bundles
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-prefix }}-macos
+          path: ${{ inputs.app-dir }}/src-tauri/target/${{ inputs.macos-target }}/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+
+      # Separate, and only when there is an updater. Tauri emits .app.tar.gz
+      # and its .sig solely because createUpdaterArtifacts asked for them, so
+      # listing them above with if-no-files-found: error would fail every
+      # release of an app that has no updater — which is the exact case this
+      # workflow was parameterised for.
+      - name: Upload macOS updater bundle
+        if: inputs.updater
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-prefix }}-macos-updater
           path: |
-            ${{ inputs.app-dir }}/src-tauri/target/${{ inputs.macos-target }}/release/bundle/dmg/*.dmg
             ${{ inputs.app-dir }}/src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/*.app.tar.gz
             ${{ inputs.app-dir }}/src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: error
@@ -162,7 +188,9 @@ jobs:
       run:
         working-directory: ${{ inputs.app-dir }}
     env:
-      TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.updater && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+      # Same reasoning as the macOS job: never TAURI_SIGNING_PRIVATE_KEY at job
+      # level, because an empty value is worse than an absent one.
+      TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v7
 
@@ -188,10 +216,16 @@ jobs:
       - name: Sync brand assets
         run: pnpm run --if-present sync-brand
 
-      - name: Build Tauri app
+      - name: Build Tauri app (with updater artifacts)
+        if: inputs.updater
         run: pnpm tauri build
         env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+      - name: Build Tauri app
+        if: ${{ !inputs.updater }}
+        run: pnpm tauri build
 
       - name: Upload Windows bundles
         uses: actions/upload-artifact@v7
