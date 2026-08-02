@@ -265,6 +265,21 @@ jobs:
           merge-multiple: true
           path: artifacts
 
+      # `merge-multiple` drops the per-artifact folder but keeps each upload's
+      # own directory structure, so this arrives as artifacts/dmg, artifacts/
+      # macos, artifacts/msi, artifacts/nsis — directories, not files. The
+      # manifest script reads one flat directory, and `gh release create
+      # artifacts/*` would have tried to upload the folders themselves. Flatten
+      # once, here, rather than teaching both of those about the tree.
+      #
+      # Listing the result is deliberate: when a release does fail, the first
+      # question is always what was actually in the directory.
+      - name: Flatten the downloaded bundles
+        run: |
+          find artifacts -mindepth 2 -type f -exec mv -n {} artifacts/ \;
+          find artifacts -mindepth 1 -type d -empty -delete
+          ls -l artifacts
+
       # Throws rather than emitting a partial manifest — see the script.
       - name: Build latest.json and SHA256SUMS.txt
         run: |
