@@ -1,0 +1,36 @@
+name: dependabot auto-merge
+
+# Two dependency bumps sat open for four days, went red on a stale run, and
+# were merged by hand after a rebase proved the red was nothing to do with
+# them. That is the whole job this does now.
+#
+# It is not "merge without review" — enabling auto-merge asks GitHub to merge
+# only once every required check passes, and main requires website, windows and
+# check. A bump that breaks the build stays open exactly as it does today.
+#
+# Majors are already excluded upstream: .github/dependabot.yml ignores
+# major-version updates for npm and cargo, so what reaches here is patch and
+# minor plus the grouped github-actions PR. Security updates bypass that
+# ignore, which is the intended exception — a CVE fix should not wait on
+# someone noticing a notification.
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    # `github.actor` rather than the branch name: a branch called
+    # dependabot/anything can be pushed by anyone, and this job holds write
+    # permissions. The actor is set by GitHub and cannot be spoofed.
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Let GitHub merge it once the checks pass
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR"

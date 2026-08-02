@@ -22,6 +22,13 @@ on:
 
 jobs:
   release:
+    # Without this the workflow does not merely fail — it never starts. A
+    # called workflow cannot hold more than its caller was granted, this
+    # repository defaults the token to read, and the shared workflow's publish
+    # job needs `contents: write` to create the release. Omitting it here would
+    # have made Slim's very first tag a startup failure with no job to inspect.
+    permissions:
+      contents: write
     uses: ./.github/workflows/release-app.yml
     secrets: inherit
     with:
