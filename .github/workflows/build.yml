@@ -3,6 +3,9 @@ name: build
 on:
   push:
     branches: [main]
+    # A v* tag cuts a release: the macos job builds signed and notarized, and
+    # the release job publishes both platforms together.
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -122,3 +125,161 @@ jobs:
           name: spiral-windows-signatures
           path: apps/wallpaper/src-tauri/target/release/bundle/nsis/*.sig
           if-no-files-found: error
+
+  # macOS is built only for a tag. Notarization is a round trip to Apple that
+  # takes minutes, and it needs credentials that Dependabot and fork PRs do not
+  # have — running it per push would be slow and would fail for the wrong
+  # reasons. Windows still builds on every push, so a broken Rust change is
+  # caught long before anyone tags.
+  macos:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Stop before building rather than after. An unsigned or un-notarized
+      # macOS build is worse than no release: Gatekeeper blocks it, and a
+      # bundle with no .sig breaks the updater for everyone already on the
+      # previous version. Naming the missing secrets is the whole job of this
+      # step — a generic failure here costs an hour of guessing.
+      - name: Require signing and notarization credentials
+        run: |
+          missing=""
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD \
+                      APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD \
+                      APPLE_TEAM_ID TAURI_SIGNING_PRIVATE_KEY; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Cannot cut a macOS release. Missing repository secrets:$missing"
+            echo "Add them under Settings -> Secrets and variables -> Actions." >&2
+            exit 1
+          fi
+          echo "All signing and notarization credentials present."
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/wallpaper/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/wallpaper/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/wallpaper/src-tauri
+
+      # tauri.conf.json names the Developer ID identity, so that identity has
+      # to exist in a keychain the build can see. A dedicated throwaway
+      # keychain keeps this off the runner's login keychain and disappears with
+      # the runner.
+      - name: Import the Developer ID certificate
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync brand assets
+        run: pnpm sync-brand
+
+      - name: Quality gates (hex guard + typecheck)
+        run: pnpm check:hex && pnpm tsc --noEmit
+
+      # Universal, to match every previous release: one download that runs
+      # native on both architectures.
+      - name: Build, sign, and notarize
+        run: pnpm tauri build --target universal-apple-darwin
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+      - name: Upload macOS bundles
+        uses: actions/upload-artifact@v7
+        with:
+          name: spiral-macos
+          path: |
+            apps/wallpaper/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            apps/wallpaper/src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
+            apps/wallpaper/src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+          if-no-files-found: error
+
+  # Publishes both platforms as one release. Separate from the build jobs so a
+  # half-built release can never be published: this only runs once macos and
+  # windows have both succeeded.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # A tag that disagrees with the app's own version ships an installer
+      # whose About box contradicts its download page, and an updater manifest
+      # that never satisfies the client asking for it.
+      - name: Check the tag matches the app version
+        run: |
+          TAG=${GITHUB_REF_NAME#v}
+          PKG=$(node -p "require('./package.json').version")
+          CONF=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          echo "tag=$TAG package.json=$PKG tauri.conf.json=$CONF"
+          if [ "$TAG" != "$PKG" ] || [ "$TAG" != "$CONF" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json ($PKG) and tauri.conf.json ($CONF)."
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: spiral-*
+          merge-multiple: true
+          path: artifacts
+
+      # Throws rather than emitting a partial manifest — see the script.
+      - name: Build latest.json and SHA256SUMS.txt
+        run: |
+          node scripts/make-release-manifest.mjs \
+            --dir "$GITHUB_WORKSPACE/artifacts" \
+            --version "${GITHUB_REF_NAME#v}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --notes "See the release notes for what changed."
+
+      - name: Publish the release
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            artifacts/*
