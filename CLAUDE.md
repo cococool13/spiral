@@ -1,7 +1,7 @@
 # Spiral (Claude build) — Project Context
 
 The Spiral monorepo: the brand system, the apps, and the site that houses them.
-Current app release **v1.0.1** (Spiral Wallpaper).
+Current app release **v1.0.2** (Spiral Wallpaper).
 
 > **There are two separate Spiral Wallpaper codebases.** This one (`Spiral Claude`) is the
 > shipped repo — `github.com/cococool13/spiral-wallpaper`, pnpm **11.9**, **no tray, closing the
@@ -62,7 +62,7 @@ pnpm check:hex       # reject colors outside the approved token set
 pnpm build           # token check + TypeScript + Vite production build
 pnpm tauri dev       # native development app
 pnpm tauri build     # platform release bundles
-SPIRAL_SMOKE=1 pnpm tauri dev  # end-to-end native smoke; restores wallpaper
+pnpm smoke           # end-to-end native smoke; exits non-zero on failure
 ```
 
 ```bash
@@ -72,8 +72,13 @@ pnpm dev             # localhost:3000
 pnpm lint            # biome check .
 pnpm typecheck       # tsc --noEmit
 pnpm build           # static export into out/
-pnpm build && netlify deploy --prod --dir=out   # publish (CLI, not git-triggered)
+pnpm build && netlify deploy --prod --dir=out   # manual publish; CI does this on main
 ```
+
+Merging to `main` deploys the website. The `website` job lints, typechecks,
+builds, and then deploys that same `out/` to Netlify — so what is live is the
+export CI just checked, not a second build of the same commit. The command
+above still works and is the way to publish from a branch or without CI.
 
 Prerequisites: Node 22+, pnpm 11.9, Rust via rustup, and platform build tools.
 On macOS install Xcode command-line tools; Windows builds require Microsoft C++
@@ -96,7 +101,7 @@ is the design, not an accident. Fonts are self-hosted; the runtime must not depe
 Fonts or another font CDN.
 
 The website is Next.js App Router + React 19 + Tailwind v4 + framer-motion, `output: 'export'`,
-deployed to Netlify by CLI.
+deployed to Netlify from CI on every push to `main`.
 
 ## Non-Negotiables
 
@@ -115,8 +120,8 @@ deployed to Netlify by CLI.
 
 ## Release Notes
 
-- macOS v1.0.1 is universal, Developer ID signed, and notarized.
-- Windows v1.0.1 is built but not code-signed; README documents the SmartScreen flow.
+- macOS v1.0.2 is universal, Developer ID signed, and notarized.
+- Windows v1.0.2 is built but not code-signed; README documents the SmartScreen flow.
 - Checksums ship as `SHA256SUMS.txt` with releases.
 
 ## Definition of Done
