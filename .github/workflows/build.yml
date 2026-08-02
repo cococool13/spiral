@@ -334,9 +334,23 @@ jobs:
           BRANCH="docs/${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
+          git checkout -B "$BRANCH"
           git commit -aqm "docs: point the download and release notes at ${VERSION}"
-          git push -q origin "$BRANCH"
+
+          # Re-running a release on the same tag has to be safe. A plain push
+          # to an existing docs/<tag> is a non-fast-forward and fails, and a
+          # second `gh pr create` for the same head fails too — both of them
+          # *after* the release was published, which is the worst place to put
+          # an avoidable error. The branch is regenerated from the tag every
+          # time, so overwriting it is the intended behaviour rather than a
+          # loss; --force-with-lease still refuses if someone edited it.
+          git push -q --force-with-lease origin "$BRANCH"
+
+          if gh pr list --head "$BRANCH" --state open --json number \
+               --jq 'length' | grep -qv '^0$'; then
+            echo "A pull request for $BRANCH is already open; updated its branch."
+            exit 0
+          fi
 
           # Heredoc, not an inline string: a quoted body indented to match this
           # block would carry its leading spaces into the PR, and four spaces

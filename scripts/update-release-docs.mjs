@@ -42,10 +42,19 @@ function arg(name) {
 const version = arg("version");
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`"${version}" is not a bare x.y.z version`);
 
+// A rule that matches nothing is the failure this script exists to prevent.
+// The docs get reworded, the phrase it anchors on stops existing, and every
+// later run reports "already at <version>" over a line that never moved —
+// which reads exactly like success. Silence is only acceptable when the file
+// genuinely already carries this version, so unmatched rules are counted and
+// checked against that below.
 const byFile = new Map();
+const unmatched = [];
 for (const { file, pattern } of RULES) {
   if (!byFile.has(file)) byFile.set(file, readFileSync(resolve(ROOT, file), "utf8"));
   const text = byFile.get(file);
+  if (!pattern.test(text)) unmatched.push(`  ${file}  ${pattern}`);
+  pattern.lastIndex = 0; // the rules are /g; .test() advances it
   byFile.set(
     file,
     text.replace(pattern, (match) => match.replace(SEMVER_IN_TEXT, version)),
@@ -67,6 +76,20 @@ for (const [file, text] of byFile) {
 }
 
 process.stdout.write(`docs -> v${version}\n${report.join("\n")}\n`);
+
+// Fatal, not a warning. A rule pointing at a phrase that no longer exists is
+// indistinguishable from up-to-date docs in every later run, so the one moment
+// it can be caught is now.
+if (unmatched.length > 0) {
+  process.stderr.write(
+    `\nthese rules matched nothing — the docs were reworded, or the rule is wrong:\n` +
+      `${unmatched.join("\n")}\n` +
+      `Fix the pattern in scripts/update-release-docs.mjs, or drop the rule if the\n` +
+      `line is gone. Leaving it silent means a future release reports success over\n` +
+      `a line it never touched.\n`,
+  );
+  process.exit(1);
+}
 
 // Any version reference the rules did not reach is reported, not silently
 // left behind. It is not fatal — a genuine mention of an older release is
