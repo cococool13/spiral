@@ -58,8 +58,25 @@ read -r -s -p "Certificate password: " P12_PASSWORD; echo
 # Check it opens before uploading. Otherwise the first tagged release fails
 # minutes into a macOS runner with "MAC verification failed", and the cause is
 # a typo made here.
-openssl pkcs12 -in "$P12_PATH" -passin pass:"$P12_PASSWORD" -noout 2>/dev/null \
-  || die "That password does not open $P12_PATH. Nothing was uploaded."
+#
+# Keychain Access still exports .p12 with pbeWithSHA1And40BitRC2-CBC. OpenSSL 3
+# moved RC2 out of the default provider, so on a machine where `openssl` is
+# Homebrew's the check below fails with "unsupported" no matter how right the
+# password is. `-legacy` loads that provider back; LibreSSL — Apple's
+# /usr/bin/openssl — has no such flag and needs none, so probe for it.
+if openssl pkcs12 -legacy -help >/dev/null 2>&1; then
+  P12_CHECK=(openssl pkcs12 -legacy)
+else
+  P12_CHECK=(openssl pkcs12)
+fi
+
+# Report what openssl actually said rather than discarding it. Swallowing
+# stderr is what let a legacy-cipher failure masquerade as a wrong password.
+if ! P12_ERROR=$("${P12_CHECK[@]}" -in "$P12_PATH" -passin pass:"$P12_PASSWORD" \
+                   -noout 2>&1); then
+  die "That password does not open $P12_PATH. Nothing was uploaded.
+  openssl: $(printf '%s' "$P12_ERROR" | head -1)"
+fi
 dim "  certificate opens — good"
 echo
 
@@ -85,12 +102,15 @@ echo
 
 # --- upload ---------------------------------------------------------------
 bold "Uploading to $REPO"
+# `gh secret set` reads the value from stdin whenever --body is absent, which
+# is the only way to pass one without putting it in the argument list. There is
+# no --body-file flag on `secret set` — that belongs to `gh api`.
 set_secret() {
-  printf '%s' "$2" | gh secret set "$1" --repo "$REPO" --body-file - \
+  printf '%s' "$2" | gh secret set "$1" --repo "$REPO" \
     && echo "  set $1" || die "failed to set $1"
 }
 
-base64 -i "$P12_PATH" | gh secret set APPLE_CERTIFICATE --repo "$REPO" --body-file - \
+base64 -i "$P12_PATH" | gh secret set APPLE_CERTIFICATE --repo "$REPO" \
   && echo "  set APPLE_CERTIFICATE" || die "failed to set APPLE_CERTIFICATE"
 set_secret APPLE_CERTIFICATE_PASSWORD "$P12_PASSWORD"
 set_secret APPLE_SIGNING_IDENTITY "$IDENTITY"
