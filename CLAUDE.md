@@ -72,8 +72,13 @@ pnpm dev             # localhost:3000
 pnpm lint            # biome check .
 pnpm typecheck       # tsc --noEmit
 pnpm build           # static export into out/
-pnpm build && netlify deploy --prod --dir=out   # publish (CLI, not git-triggered)
+pnpm build && netlify deploy --prod --dir=out   # manual publish; CI does this on main
 ```
+
+Merging to `main` deploys the website. The `website` job lints, typechecks,
+builds, and then deploys that same `out/` to Netlify — so what is live is the
+export CI just checked, not a second build of the same commit. The command
+above still works and is the way to publish from a branch or without CI.
 
 Prerequisites: Node 22+, pnpm 11.9, Rust via rustup, and platform build tools.
 On macOS install Xcode command-line tools; Windows builds require Microsoft C++
@@ -96,7 +101,7 @@ is the design, not an accident. Fonts are self-hosted; the runtime must not depe
 Fonts or another font CDN.
 
 The website is Next.js App Router + React 19 + Tailwind v4 + framer-motion, `output: 'export'`,
-deployed to Netlify by CLI.
+deployed to Netlify from CI on every push to `main`.
 
 ## Non-Negotiables
 
