@@ -52,9 +52,13 @@ const read = (relative) => {
 
 // Cargo.lock holds every dependency's version too, so the crate's own
 // [[package]] block has to be located by name rather than by first match.
+// Line endings and spacing around `=` are both tolerated: a Windows checkout
+// with core.autocrlf gets CRLF in Cargo.lock, and matching bare \n there would
+// report the crate as missing from its own lockfile — a confusing way to say
+// "you are on Windows". Windows builds this repo in CI, so this is a real path.
 function lockEntry(text, crate) {
   const pattern = new RegExp(
-    `(\\[\\[package\\]\\]\\s*\\nname = "${crate}"\\s*\\nversion = ")([^"]+)(")`,
+    `(\\[\\[package\\]\\]\\r?\\nname\\s*=\\s*"${crate}"\\r?\\nversion\\s*=\\s*")([^"]+)(")`,
   );
   const match = text.match(pattern);
   if (!match) return null;
@@ -137,17 +141,31 @@ function set(app, version) {
   const cargo = spawnSync(
     "cargo",
     ["update", "-p", crate, "--precise", version, "--quiet"],
-    { cwd: resolve(ROOT, `${APPS[app].dir}/src-tauri`), stdio: "ignore" },
+    {
+      cwd: resolve(ROOT, `${APPS[app].dir}/src-tauri`),
+      stdio: ["ignore", "ignore", "pipe"],
+      encoding: "utf8",
+    },
   );
 
+  // Three outcomes, not two. "cargo is not installed" is the only one the
+  // regex may stand in for; a cargo that ran and refused — a lock conflict, an
+  // unresolvable graph — is a real failure, and falling back would quietly
+  // write a lockfile cargo had just declined to write. The manifests are
+  // already updated at this point, so it fails loudly and says so.
   if (cargo.status === 0) {
     process.stdout.write(`${app}: set to ${version} (Cargo.lock updated by cargo)\n`);
-  } else {
+  } else if (cargo.error?.code === "ENOENT") {
     const text = read(files["Cargo.lock"]);
     const entry = lockEntry(text, crate);
     if (!entry) fail(`no [[package]] entry named "${crate}" in ${files["Cargo.lock"]}`);
     write(files["Cargo.lock"], text.replace(entry.pattern, `$1${version}$3`));
-    process.stdout.write(`${app}: set to ${version} (Cargo.lock edited directly — cargo unavailable)\n`);
+    process.stdout.write(`${app}: set to ${version} (Cargo.lock edited directly — cargo not installed)\n`);
+  } else {
+    fail(
+      `the manifests are now ${version}, but cargo could not update ` +
+        `${files["Cargo.lock"]}:\n${(cargo.stderr || "").trim() || `exit code ${cargo.status}`}`,
+    );
   }
 }
 

@@ -10,6 +10,10 @@ name: versions
 # in an ordinary commit should be caught in that commit's own CI run, not
 # discovered by whoever tries to cut a release weeks later.
 
+# Every pull request, plus every push to main — not every push to every branch.
+# A branch with an open PR is already covered by `pull_request`, so widening
+# this would double the run on exactly the branches that are being reviewed
+# and add nothing for the ones that are not.
 on:
   push:
     branches: [main]
