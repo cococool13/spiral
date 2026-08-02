@@ -41,11 +41,11 @@ thumbnail cache is capped at 200 MB and says so in Settings.
 Get the current version from the
 [latest release](https://github.com/cococool13/spiral-wallpaper/releases/latest):
 
-- **macOS 13+** - `Spiral.Wallpaper_1.0.1_universal.dmg`. Signed with a Developer ID
+- **macOS 13+** - `Spiral.Wallpaper_1.0.2_universal.dmg`. Signed with a Developer ID
   and notarized by Apple; universal binary, runs native on Apple Silicon and
   Intel. Open the DMG, drag Spiral into Applications. That's the whole
   install.
-- **Windows 10+** - `Spiral.Wallpaper_1.0.1_x64-setup.exe` (or the `.msi`). Not yet
+- **Windows 10+** - `Spiral.Wallpaper_1.0.2_x64-setup.exe` (or the `.msi`). Not yet
   code-signed, so SmartScreen warns on first run: More info, then Run anyway.
 
 SHA-256 checksums for every file are attached to the release as
@@ -65,8 +65,10 @@ pnpm tauri build    # release bundles (.app/.dmg or .exe/.msi)
 
 `pnpm build` runs the quality gates: a guard that fails the build on any hex
 color outside the design tokens, then typecheck, then Vite.
-`SPIRAL_SMOKE=1 pnpm tauri dev` runs a full end-to-end smoke test (search,
-cache, download, set wallpaper, verify) and restores your wallpaper after.
+`pnpm smoke` runs a full end-to-end smoke test (search, cache, download, set
+wallpaper, verify) and restores your wallpaper after. It exits non-zero when
+the smoke fails, so it can gate a release — `tauri dev` does not forward the
+app's exit code on its own.
 
 ## What's in this repo
 
@@ -115,9 +117,49 @@ The design system is eight colors, two fonts, two radii, and one easing
 curve, enforced by the build. When in doubt, open the brand guide at
 [`brand/guide.html`](brand/guide.html).
 
+## Cutting a release
+
+Releases are tag-driven. Pushing a `v*` tag builds macOS (signed, notarized,
+universal) and Windows, then publishes both together with `latest.json` for the
+updater and `SHA256SUMS.txt` for anyone verifying a download.
+
+```bash
+# the tag must match apps/wallpaper/package.json and src-tauri/tauri.conf.json
+git tag v1.0.2 && git push origin v1.0.2
+```
+
+The workflow refuses to publish a partial release. It stops before building if
+a signing or notarization secret is missing, and the manifest step throws
+rather than emitting a `latest.json` without signatures — an unsigned macOS
+build is blocked by Gatekeeper, and a bundle with no `.sig` breaks the updater
+for everyone already running the previous version.
+
+### One-time setup
+
+```bash
+./scripts/setup-release-secrets.sh
+```
+
+Reads the signing identity and team ID from your keychain, asks for the four
+things it cannot derive, checks the certificate password actually opens the
+`.p12` before uploading anything, and pipes each value straight to
+`gh secret set`. Nothing is printed or written to disk.
+
+`macos` needs these repository secrets, in addition to the
+`TAURI_SIGNING_PRIVATE_KEY` the Windows job already uses:
+
+| Secret | What it is |
+| --- | --- |
+| `APPLE_CERTIFICATE` | Developer ID Application `.p12`, base64-encoded |
+| `APPLE_CERTIFICATE_PASSWORD` | password for that `.p12` |
+| `APPLE_SIGNING_IDENTITY` | e.g. `Developer ID Application: NAME (TEAMID)` |
+| `APPLE_ID` | Apple ID used for notarization |
+| `APPLE_PASSWORD` | app-specific password for that Apple ID |
+| `APPLE_TEAM_ID` | the team the certificate belongs to |
+
 ## Roadmap, stated plainly
 
-Current: v1.0.1, with a signed and notarized universal macOS build. Next:
+Current: v1.0.2, with a signed and notarized universal macOS build. Next:
 Windows signing and the remaining runtime pass on real Windows hardware.
 On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
 and were removed; the `WallpaperSource` interface is waiting for them). Out
