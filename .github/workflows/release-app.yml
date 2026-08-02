@@ -313,11 +313,19 @@ jobs:
 
       # Without an updater there is no manifest, but checksums are still what
       # someone verifies a download against.
+      # GitHub rewrites spaces to dots when it stores an asset, so "Spiral
+      # Slim_1.0.0_universal.dmg" is downloaded as "Spiral.Slim_1.0.0_...".
+      # Checksums have to name the file people actually receive or `shasum -c`
+      # reports every entry missing — the manifest script does the same
+      # substitution for the updater path, and this is the half without one.
       - name: Checksums only
         if: ${{ !inputs.updater }}
         run: |
           cd artifacts
-          shasum -a 256 * | sed 's/ \{2\}/  /' > /tmp/SHA256SUMS.txt
+          for f in *; do
+            [ -f "$f" ] || continue
+            printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "${f// /.}"
+          done > /tmp/SHA256SUMS.txt
           mv /tmp/SHA256SUMS.txt SHA256SUMS.txt
           cat SHA256SUMS.txt
 
