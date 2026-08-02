@@ -181,3 +181,66 @@ jobs:
             ${{ inputs.app-dir }}/src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: error
 
+  windows:
+    if: inputs.windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.app-dir }}
+    env:
+      # Same reasoning as the macOS job: never TAURI_SIGNING_PRIVATE_KEY at job
+      # level, because an empty value is worse than an absent one.
+      TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: ${{ inputs.app-dir }}/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.app-dir }}/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ inputs.app-dir }}/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync brand assets
+        run: pnpm run --if-present sync-brand
+
+      - name: Build Tauri app (with updater artifacts)
+        if: inputs.updater
+        run: pnpm tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+      - name: Build Tauri app
+        if: ${{ !inputs.updater }}
+        run: pnpm tauri build
+
+      - name: Upload Windows bundles
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-prefix }}-windows
+          path: |
+            ${{ inputs.app-dir }}/src-tauri/target/release/bundle/msi/*.msi
+            ${{ inputs.app-dir }}/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+      - name: Upload updater signatures
+        if: inputs.updater
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-prefix }}-windows-signatures
+          path: ${{ inputs.app-dir }}/src-tauri/target/release/bundle/nsis/*.sig
+          if-no-files-found: error
+
