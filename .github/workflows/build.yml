@@ -70,19 +70,30 @@ jobs:
       # `command = "pnpm build"`, and the export in out/ is the one this job
       # already linted and typechecked — rebuilding it there would discard that
       # and ship a different artifact than the one that passed.
+      # Both secrets, not just the token. The CLI reads NETLIFY_SITE_ID from the
+      # environment to know which project it is talking to, so a token without
+      # a site id gets past a token-only check and then fails mid-deploy asking
+      # to be linked — a red build on main for a configuration mistake the skip
+      # path exists to handle quietly.
       - name: Deploy to Netlify
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.NETLIFY_AUTH_TOKEN != ''
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != ''
         run: pnpm --package=netlify-cli@27 dlx netlify deploy --prod --dir=out --no-build
 
       # A push to main that cannot deploy should say so rather than report a
       # green build that shipped nothing. Not a failure: the build itself was
       # fine, and failing here would make the repo unusable for anyone who
       # forks it without the secrets.
+      # Names the one that is missing rather than both. "Add these two secrets"
+      # when one is already set sends someone to check a value that is fine.
       - name: Say so when the deploy was skipped
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.NETLIFY_AUTH_TOKEN == ''
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (env.NETLIFY_AUTH_TOKEN == '' || env.NETLIFY_SITE_ID == '')
         run: |
-          echo "::warning::Built but not deployed — NETLIFY_AUTH_TOKEN is not set."
-          echo "Add NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID under Settings -> Secrets and variables -> Actions."
+          missing=""
+          [ -z "$NETLIFY_AUTH_TOKEN" ] && missing="$missing NETLIFY_AUTH_TOKEN"
+          [ -z "$NETLIFY_SITE_ID" ] && missing="$missing NETLIFY_SITE_ID"
+          echo "::warning::Built but not published — missing repository secret(s):$missing"
+          echo "Add them under Settings -> Secrets and variables -> Actions."
+          exit 0
 
   windows:
     runs-on: windows-latest
