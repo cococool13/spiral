@@ -41,11 +41,11 @@ thumbnail cache is capped at 200 MB and says so in Settings.
 Get the current version from the
 [latest release](https://github.com/cococool13/spiral-wallpaper/releases/latest):
 
-- **macOS 13+** - `Spiral.Wallpaper_1.0.1_universal.dmg`. Signed with a Developer ID
+- **macOS 13+** - `Spiral.Wallpaper_1.0.2_universal.dmg`. Signed with a Developer ID
   and notarized by Apple; universal binary, runs native on Apple Silicon and
   Intel. Open the DMG, drag Spiral into Applications. That's the whole
   install.
-- **Windows 10+** - `Spiral.Wallpaper_1.0.1_x64-setup.exe` (or the `.msi`). Not yet
+- **Windows 10+** - `Spiral.Wallpaper_1.0.2_x64-setup.exe` (or the `.msi`). Not yet
   code-signed, so SmartScreen warns on first run: More info, then Run anyway.
 
 SHA-256 checksums for every file are attached to the release as
@@ -159,7 +159,7 @@ things it cannot derive, checks the certificate password actually opens the
 
 ## Roadmap, stated plainly
 
-Current: v1.0.1, with a signed and notarized universal macOS build. Next:
+Current: v1.0.2, with a signed and notarized universal macOS build. Next:
 Windows signing and the remaining runtime pass on real Windows hardware.
 On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
 and were removed; the `WallpaperSource` interface is waiting for them). Out
