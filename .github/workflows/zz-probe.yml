@@ -1,0 +1,9 @@
+name: zz-probe
+on: pull_request
+jobs:
+  probe:
+    uses: ./.github/workflows/release-app.yml
+    with:
+      app-dir: apps/wallpaper
+      artifact-prefix: spiral
+    secrets: inherit
