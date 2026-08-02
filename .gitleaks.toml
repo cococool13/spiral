@@ -1,0 +1,37 @@
+# Keeps the default gitleaks rules and allowlists one string they misread.
+#
+# `BraveP3AEnabled` is a Brave enterprise policy key — a public Chromium
+# identifier that SlimBrave writes into managed-policy tables, and one of
+# several hundred such names in this repo. The generic-api-key rule matches it
+# because it sits next to `key =`, which is what a leaked credential also looks
+# like. Six findings, all this one string, all in policy tables.
+#
+# It is allowlisted by exact secret value rather than by path: allowlisting
+# apps/slim/** would stop scanning a directory that writes system policy and
+# shells out with elevation, which is the last place worth going quiet. A real
+# key committed beside these tables still fails.
+#
+# The regex targets the extracted secret (gitleaks' default) and is anchored,
+# so it can excuse this exact value and nothing else. Do not switch it to
+# regexTarget = "match": that compares against the rule's whole matched span,
+# which for generic-api-key is wider than the value itself.
+#
+# Checked by planting a high-entropy ghp_ token in the same policy table:
+# without this file gitleaks reports the token plus three BraveP3AEnabled
+# findings, with it only the token. Entropy matters when repeating that test —
+# a placeholder like ghp_ followed by 36 identical characters is filtered
+# before any rule sees it, and reads as a pass that never ran.
+#
+# If a future policy name trips the same rule, add it here with the same
+# reasoning — do not widen this to a path, to "match", or drop the anchors.
+
+title = "Spiral"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public Brave/Chromium enterprise policy key names, not credentials"
+regexes = [
+  '''^BraveP3AEnabled$''',
+]
