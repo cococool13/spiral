@@ -1,0 +1,32 @@
+name: versions
+
+# Deliberately its own workflow rather than a step inside `build`. The version
+# files are the one thing worth checking on a doc-only or brand-only commit,
+# and this needs no pnpm install, no Rust, and no cache — it finishes in
+# seconds, so gating it behind the build jobs would only delay the answer.
+#
+# The release job already compares the tag against package.json and
+# tauri.conf.json, but that fires once, at the end, on a tag. Drift that starts
+# in an ordinary commit should be caught in that commit's own CI run, not
+# discovered by whoever tries to cut a release weeks later.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # No install step: `check` reads four files and shells out to nothing,
+      # precisely so this job cannot be broken by a dependency.
+      - name: Every app's four version files agree
+        run: node scripts/version.mjs check
