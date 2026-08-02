@@ -1,0 +1,32 @@
+name: release-slim
+
+# Spiral Slim releases on a `slim-v*` tag, so the two apps in this repo can be
+# released independently. A bare `v*` still belongs to Spiral Wallpaper.
+#
+#   git tag slim-v1.0.1 && git push origin slim-v1.0.1
+#
+# macOS only, and updater off, matching what Slim already commits to:
+# apps/slim/desktop/README.md records "no auto-updater" as a decision — adding
+# one means adding a second trust root — and no Windows or Linux binary, with
+# apps/slim/CLAUDE.md repeating it as a rule.
+#
+# The shared workflow does support Windows. Turning it on here is a product and
+# security decision, not a config change: it means publishing a compiled
+# artifact for a tool that writes system policy, and the two documents above
+# have to say so first.
+
+on:
+  push:
+    tags: ["slim-v*"]
+  workflow_dispatch:
+
+jobs:
+  release:
+    uses: ./.github/workflows/release-app.yml
+    secrets: inherit
+    with:
+      app-dir: apps/slim/desktop
+      artifact-prefix: slim
+      macos: true
+      windows: false
+      updater: false
