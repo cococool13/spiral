@@ -244,3 +244,11 @@ jobs:
           path: ${{ inputs.app-dir }}/src-tauri/target/release/bundle/nsis/*.sig
           if-no-files-found: error
 
+  publish:
+    needs: [macos, windows]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: echo publish-stub
