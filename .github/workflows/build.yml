@@ -274,7 +274,15 @@ jobs:
       #
       # Listing the result is deliberate: when a release does fail, the first
       # question is always what was actually in the directory.
+      #
+      # working-directory: . because this file sets apps/wallpaper as the
+      # default for every `run`, while download-artifact's `path` is relative
+      # to the workspace root — actions do not honour that default. So
+      # `artifacts` exists at the root and does not exist where a `run` step
+      # starts. Publishing below carries the same override for the same reason,
+      # and the manifest step sidesteps it with $GITHUB_WORKSPACE.
       - name: Flatten the downloaded bundles
+        working-directory: .
         run: |
           find artifacts -mindepth 2 -type f -exec mv -n {} artifacts/ \;
           find artifacts -mindepth 1 -type d -empty -delete
