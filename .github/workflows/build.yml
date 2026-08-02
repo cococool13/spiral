@@ -14,13 +14,25 @@ defaults:
     working-directory: apps/wallpaper
 
 jobs:
-  # The website deploys via the Netlify CLI, not a git trigger, so nothing else
-  # would catch a broken build before someone runs `netlify deploy`.
+  # Builds the website on every push and pull request, and deploys it when the
+  # push is to main. It used to only build: deploying was `netlify deploy` run
+  # by hand, which meant main could be green and correct for days while the
+  # live site served something older, with nothing anywhere saying so.
+  #
+  # The deploy reuses this job's own `out/` rather than living in a job of its
+  # own, so what ships is byte-for-byte what lint, typecheck, and build just
+  # passed on — not a second build of the same commit.
   website:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: collection
+    # Job level so the deploy step can branch on whether the token exists: the
+    # `secrets` context is not usable in a step `if:`, but `env` is. Same
+    # reason the Windows job lifts TAURI_KEY.
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
     steps:
       - uses: actions/checkout@v7
 
@@ -47,6 +59,41 @@ jobs:
       # here rather than silently shipping a 404 to production.
       - name: Build static export
         run: pnpm build
+
+      # Only a push to main, never a pull request: a PR deploying to --prod
+      # would put unreviewed work on the live site, and PR builds already prove
+      # the thing compiles. Forks and Dependabot get no token at all, so this
+      # cannot fire from them even if the ref check were wrong.
+      # `pnpm --package=... dlx netlify`, not `pnpm dlx netlify-cli`: the
+      # package ships two binaries (netlify and ntl) and plain dlx refuses to
+      # guess between them. --no-build because collection/netlify.toml declares
+      # `command = "pnpm build"`, and the export in out/ is the one this job
+      # already linted and typechecked — rebuilding it there would discard that
+      # and ship a different artifact than the one that passed.
+      # Both secrets, not just the token. The CLI reads NETLIFY_SITE_ID from the
+      # environment to know which project it is talking to, so a token without
+      # a site id gets past a token-only check and then fails mid-deploy asking
+      # to be linked — a red build on main for a configuration mistake the skip
+      # path exists to handle quietly.
+      - name: Deploy to Netlify
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != ''
+        run: pnpm --package=netlify-cli@27 dlx netlify deploy --prod --dir=out --no-build
+
+      # A push to main that cannot deploy should say so rather than report a
+      # green build that shipped nothing. Not a failure: the build itself was
+      # fine, and failing here would make the repo unusable for anyone who
+      # forks it without the secrets.
+      # Names the one that is missing rather than both. "Add these two secrets"
+      # when one is already set sends someone to check a value that is fine.
+      - name: Say so when the deploy was skipped
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (env.NETLIFY_AUTH_TOKEN == '' || env.NETLIFY_SITE_ID == '')
+        run: |
+          missing=""
+          [ -z "$NETLIFY_AUTH_TOKEN" ] && missing="$missing NETLIFY_AUTH_TOKEN"
+          [ -z "$NETLIFY_SITE_ID" ] && missing="$missing NETLIFY_SITE_ID"
+          echo "::warning::Built but not published — missing repository secret(s):$missing"
+          echo "Add them under Settings -> Secrets and variables -> Actions."
+          exit 0
 
   windows:
     runs-on: windows-latest
@@ -238,6 +285,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # For the docs pull request at the end of the job. `contents: write`
+      # alone pushes the branch but cannot open the PR.
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
 
@@ -306,3 +356,58 @@ jobs:
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
             artifacts/*
+
+      # Last, and only once the release exists: the filenames this writes are
+      # not true until the artifacts are attached. v1.0.1's doc update was a
+      # separate commit made by hand afterwards, and v1.0.2's very nearly was.
+      #
+      # A pull request rather than a push to main — main requires status checks
+      # and a linear history, so a commit straight from here would be rejected,
+      # and a release job that fails *after* publishing is a confusing thing to
+      # own. The docs land one review click later instead.
+      - name: Open a pull request pointing the docs at this release
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          node scripts/update-release-docs.mjs --version "${VERSION#v}"
+
+          if git diff --quiet; then
+            echo "docs already describe ${VERSION}; nothing to open."
+            exit 0
+          fi
+
+          BRANCH="docs/${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git commit -aqm "docs: point the download and release notes at ${VERSION}"
+
+          # Re-running a release on the same tag has to be safe. A plain push
+          # to an existing docs/<tag> is a non-fast-forward and fails, and a
+          # second `gh pr create` for the same head fails too — both of them
+          # *after* the release was published, which is the worst place to put
+          # an avoidable error. The branch is regenerated from the tag every
+          # time, so overwriting it is the intended behaviour rather than a
+          # loss; --force-with-lease still refuses if someone edited it.
+          git push -q --force-with-lease origin "$BRANCH"
+
+          if gh pr list --head "$BRANCH" --state open --json number \
+               --jq 'length' | grep -qv '^0$'; then
+            echo "A pull request for $BRANCH is already open; updated its branch."
+            exit 0
+          fi
+
+          # Heredoc, not an inline string: a quoted body indented to match this
+          # block would carry its leading spaces into the PR, and four spaces
+          # is a code block in Markdown.
+          gh pr create --base main --head "$BRANCH" \
+            --title "docs: point the download and release notes at ${VERSION}" \
+            --body-file - <<BODY
+          Opened by the release job once ${VERSION} was published.
+
+          Rewrites the download filenames and the current-release lines in \`README.md\` and \`CLAUDE.md\`, generated by \`scripts/update-release-docs.mjs\` — which anchors on whole phrases rather than the bare version string, so a checksum or a pinned dependency that happens to contain those digits is left alone.
+
+          The run log lists any other version reference it deliberately did not touch.
+          BODY
