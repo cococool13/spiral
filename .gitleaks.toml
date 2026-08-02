@@ -32,9 +32,37 @@ title = "Spiral"
 [extend]
 useDefault = true
 
-[allowlist]
+# Two separate allowlists, not one with both keys. Conditions inside a single
+# allowlist can be combined, and a value-plus-path allowlist that AND-ed them
+# would excuse the policy name only inside build output — which is the one
+# place it never appears.
+[[allowlists]]
 description = "Public Brave/Chromium enterprise policy key names, not credentials"
 regexTarget = "secret"
 regexes = [
   '''^BraveP3AEnabled$''',
+]
+
+# Generated trees, excluded by path rather than by value.
+#
+# `gitleaks detect` over history never sees these — they are all gitignored.
+# `--no-git`, which is what a pre-commit hook or a local sweep tends to run,
+# walks the working directory instead and does not read .gitignore, so it
+# reports whatever a build left behind: Rust .rmeta in target/deps, and Next's
+# prerender-manifest.json and .next/cache preview tokens, which are minted per
+# build. Twenty-two findings, none of them committable.
+#
+# Excluding by path is safe here in a way it would not be for source: nothing
+# under these directories is authored or committed, so there is no secret they
+# could hide. .claude/worktrees is listed because a worktree is a second copy
+# of this repo — without it every finding is counted once per worktree.
+[[allowlists]]
+description = "Generated and vendored trees — nothing here is authored or committed"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)target/''',
+  '''(^|/)\.next/''',
+  '''(^|/)out/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.claude/worktrees/''',
 ]
