@@ -9,10 +9,11 @@ on:
   pull_request:
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: apps/wallpaper
-
+# No workflow-level `defaults`. A job that calls a reusable workflow accepts
+# only a fixed set of keys — name, needs, if, permissions, uses, with, secrets,
+# strategy, concurrency — and a workflow-wide default tries to apply `defaults`
+# to it, which GitHub rejects before the run starts. The one job that wants a
+# different directory now says so itself, which is also plainer to read.
 jobs:
   # Builds the website on every push and pull request, and deploys it when the
   # push is to main. It used to only build: deploying was `netlify deploy` run
@@ -101,6 +102,9 @@ jobs:
   windows:
     if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/wallpaper
     # Lifted to job level so the build and upload steps can branch on whether
     # a signing key is actually available. The `secrets` context is not usable
     # in a step `if:`, but `env` is.
