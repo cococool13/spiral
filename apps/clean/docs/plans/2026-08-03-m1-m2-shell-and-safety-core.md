@@ -567,10 +567,12 @@ Modify `apps/clean/src-tauri/src/lib.rs`:
 ```rust
 mod permissions;
 
+// The updater plugin is registered at M7, not here. It reads
+// plugins.updater.pubkey at init and panics without it, so it cannot be
+// added before the signing key exists.
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             permissions::fda_status,
             permissions::open_privacy_settings
@@ -579,6 +581,8 @@ pub fn run() {
         .expect("error while running Spiral Clean");
 }
 ```
+
+This is the first `invoke_handler` in the project — Task 2 left the builder chain without one. Later tasks append to this same `generate_handler!` list.
 
 - [ ] **Step 6: Verify it still compiles**
 
