@@ -1,45 +1,61 @@
-# SlimBrave Neo
+# Spiral Slim
 
-Cross-platform Brave Browser debloat/hardening tool using Chromium enterprise managed policies. Source-only project: Python for Linux/macOS, PowerShell for Windows, no packaged binaries.
+Cross-platform browser debloat/hardening tool using Chromium and Mozilla enterprise managed policies. Source-only project: Python for Linux/macOS, PowerShell for Windows, no packaged binaries.
+
+All three platforms share one multi-browser engine: `--browser brave|chrome|edge|firefox`
+(Edge is Windows/macOS only — no auditable Linux policy source) and one per-browser
+preset layout (`Presets/<Browser>/*.json`). macOS additionally carries a
+`--detect`/`--preview-plan`/`--apply-plan` interface, Brave-only, that exists
+specifically to back this repo's `desktop/` Tauri wizard — see below.
 
 ## Commands
 
 ```bash
-sudo python3 slimbrave-linux.py
-sudo python3 slimbrave-linux.py --import "./Presets/Maximum Privacy Preset.json"
-sudo python3 slimbrave-linux.py --export ~/SlimBraveNeoSettings.json
-sudo python3 slimbrave-linux.py --reset
+sudo python3 spiral-slim-linux.py
+sudo python3 spiral-slim-linux.py --import "./Presets/Brave/Maximum Privacy Preset.json"
+sudo python3 spiral-slim-linux.py --export ~/SpiralSlimSettings.json
+sudo python3 spiral-slim-linux.py --reset
+sudo python3 spiral-slim-linux.py --browser chrome --import "./Presets/Chrome/Maximum Privacy Preset.json"
+sudo python3 spiral-slim-linux.py --browser firefox --import "./Presets/Firefox/Debloat Preset.json"
 
-sudo python3 slimbrave-mac.py
-sudo python3 slimbrave-mac.py --import "./Presets/Maximum Privacy Preset.json" --persist on
-sudo python3 slimbrave-mac.py --reset
+sudo python3 spiral-slim-mac.py
+sudo python3 spiral-slim-mac.py --import "./Presets/Brave/Maximum Privacy Preset.json" --persist on
+sudo python3 spiral-slim-mac.py --reset
+sudo python3 spiral-slim-mac.py --browser edge --import "./Presets/Edge/Debloat Preset.json"
 
 python3 slimbrave_catalog.py
 python3 slimbrave_catalog.py --format json
 python3 browser_collection.py --catalog --format json
 python3 browser_collection.py --preview-custom --modules debloat-core,quiet-web
 python3 browser_collection.py --preview-custom --modules debloat-core --exclude vendor.ai
-python3 slimbrave-mac.py --preview "./Presets/Maximum Performance and Privacy Preset.json" --format json
+python3 spiral-slim-mac.py --preview "./Presets/Brave/Maximum Privacy Preset.json" --format json
 ```
 
-Windows usage is documented in `README.md` and runs `SlimBrave.ps1` as Administrator.
+Windows usage is documented in `README.md` and runs `SpiralSlim.ps1` as Administrator.
 
-The plan interface, which `desktop/` (Spiral Slim) drives. `--detect` and
-`--preview-plan` change nothing and need no root; `--apply-plan` does and does:
+The plan interface, which `desktop/` (Spiral Slim) drives, is Brave-only —
+`browser_collection`'s adapter registry has no Chrome/Edge/Firefox equivalent
+yet. `--detect` and `--preview-plan` change nothing and need no root;
+`--apply-plan` does:
 
 ```bash
-python3 slimbrave-mac.py --detect --format json
-python3 slimbrave-mac.py --preview-plan ./plan.json --channels stable --format json
-sudo python3 slimbrave-mac.py --apply-plan ./plan.json --channels stable --persist on
+python3 spiral-slim-mac.py --detect --format json
+python3 spiral-slim-mac.py --preview-plan ./plan.json --channels stable --format json
+sudo python3 spiral-slim-mac.py --apply-plan ./plan.json --channels stable --persist on
 ```
 
 ## Architecture
 
 ```
-slimbrave-linux.py   # Linux TUI/CLI policy writer
-slimbrave-mac.py     # macOS TUI/CLI policy writer + profile persistence mode
+spiral-slim-linux.py # Linux TUI/CLI policy writer — Brave/Chrome/Firefox
+spiral-slim-mac.py   # macOS TUI/CLI policy writer — Brave/Chrome/Edge/Firefox
+                     # + profile persistence mode + the plan interface (Brave
+                     # only) that desktop/ drives — see Commands above
+slimbrave-windows.py # Windows plan-interface entrypoint for desktop/ — Brave
+                     # only, unrelated to SpiralSlim.ps1's interactive GUI
 slimbrave_catalog.py # read-only catalog for launchers and tool collections
-SlimBrave.ps1        # Windows policy script
+                     # (Brave only, reads Presets/Brave/)
+SpiralSlim.ps1       # Windows interactive GUI — Brave/Chrome/Edge/Firefox
 browser_collection/  # schema-driven engine: modules -> profiles -> preview
 browser_collection.py# read-only CLI over that engine
 modules/ profiles/   # the schema-driven policy sources the engine resolves
@@ -48,7 +64,9 @@ desktop/             # Spiral Slim — the Tauri 2 wizard. See desktop/README.md
                      # records three deliberate divergences from docs/DESIGN.md
                      # (a card radius, a glow, an animated red edge) — read it
                      # before "fixing" them back to the brand default.
-Presets/             # JSON policy presets (see below)
+Presets/<Browser>/   # per-browser preset JSON (Brave/Chrome/Edge/Firefox),
+                     # shared by all three scripts. See "Two policy sources"
+                     # below for how this relates to profiles/+modules/.
 assets/              # README screenshots/assets
 docs/                # collection integration contract
 SECURITY.md          # source-only distribution warning
@@ -56,27 +74,22 @@ SECURITY.md          # source-only distribution warning
 
 ## Two policy sources, deliberately not merged
 
-`Presets/*.json` is the TUI's world: a `Features` map of Brave policy keys,
-consumed by `--import`. `profiles/` + `modules/` is the schema-driven world the
-`browser_collection` engine resolves, consumed by `--preview-plan` and
-`--apply-plan`.
+`Presets/<Browser>/*.json` is the TUI's world: a `Features` map of policy keys
+plus a `"Browser"` field, consumed by `--import`. `profiles/` + `modules/` is
+the schema-driven world the `browser_collection` engine resolves, consumed by
+`--preview-plan` and `--apply-plan` (macOS/Brave only).
 
 **They are not interchangeable.** `import_settings` only applies keys that
-exist as TUI rows, so writing a profile through `--import` would silently drop
-`DownloadRestrictions`, `DnsOverHttpsMode`, `DefaultNotificationsSetting` and
-`PromotionsEnabled`, and would mis-set `SafeBrowsingProtectionLevel` and
-`MemorySaverModeSavings`. That is why the plan interface exists rather than a
-profile-to-preset converter. `tests/test_plan_interface.py` pins the invariant:
-every bundled profile must resolve to a plan the entrypoint accepts unchanged.
-
-Presets in `Presets/`:
-
-- `Balanced Privacy Preset.json` — privacy without breakage
-- `Developer Preset.json` — debloat, keep dev tooling
-- `Maximum Performance and Privacy Preset.json` — recommended fast, private daily driver
-- `Maximum Privacy Preset.json` — strictest privacy hardening
-- `Performance Focused Preset.json` — disable heavy features
-- `Strict Parental Controls Preset.json` — child-safe restrictions
+exist as TUI rows for the selected browser on the current platform — e.g.
+`BackgroundModeEnabled` is a real key in `Presets/Brave/*.json` (shared with
+Linux, where it's supported) but has no macOS row, since the Chromium policy
+isn't supported there; it silently no-ops on macOS rather than erroring.
+`tests/test_presets.py`'s `test_every_preset_value_is_supported_by_python_scripts`
+pins the invariant for macOS with `BackgroundModeEnabled` as the one documented,
+intentional platform gap — a preset key unsupported by *every* platform would
+still fail it. For the schema-driven world, `tests/test_plan_interface.py`
+pins a stronger invariant: every bundled profile must resolve to a plan the
+entrypoint accepts unchanged.
 
 ## Custom selections
 
@@ -95,8 +108,9 @@ plan the entrypoint accepts unchanged.
 - Verify macOS persistence behavior in `README.md` before changing `--persist` logic; profile installation requires GUI completion on modern macOS.
 - Preserve stdlib-only Python unless a dependency is deliberately introduced and documented.
 - Treat policy changes as security-sensitive: prefer explicit, readable mappings over clever abstractions.
+- The plan interface (`--detect`/`--preview-plan`/`--apply-plan`) is Brave-only and macOS-only. Don't extend it to other browsers or ship it on Linux/Windows without also building the corresponding `browser_collection` adapter — there isn't one today.
 
 ## Verification
 
-- After applying policies, users verify in Brave at `brave://policy`.
+- After applying policies, users verify in the browser's own `://policy` page (`brave://policy`, `chrome://policy`, `edge://policy`, `about:policies` for Firefox).
 - For macOS profile persistence, confirm System Settings -> General -> Device Management flow remains accurate.

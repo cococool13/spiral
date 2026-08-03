@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Apply a resolved SlimBrave Neo profile to Brave on Windows.
 
-The counterpart to ``slimbrave-mac.py``'s plan mode. The two share everything
+The counterpart to ``spiral-slim-mac.py``'s plan mode. The two share everything
 that decides *what* may be written — ``browser_collection.plan`` validates
 every key and value against ``evidence/brave.json`` before either of them
 touches the system — and differ only in *where* it goes: a managed plist on
@@ -47,7 +47,7 @@ def _winreg():
     except ImportError as error:
         raise WindowsError_(
             "This script only runs on Windows. On macOS use "
-            "slimbrave-mac.py; on Linux use slimbrave-linux.py."
+            "spiral-slim-mac.py; on Linux use spiral-slim-linux.py."
         ) from error
     return winreg
 
@@ -62,7 +62,7 @@ def require_windows():
     if not IS_WINDOWS:
         raise WindowsError_(
             "This script only runs on Windows. On macOS use "
-            "slimbrave-mac.py; on Linux use slimbrave-linux.py."
+            "spiral-slim-mac.py; on Linux use spiral-slim-linux.py."
         )
 
 
@@ -255,7 +255,7 @@ def _is_brave_running():
 
 
 # ---------------------------------------------------------------------------
-# Commands. The payloads mirror slimbrave-mac.py so one caller can read both.
+# Commands. The payloads mirror spiral-slim-mac.py so one caller can read both.
 # ---------------------------------------------------------------------------
 
 def cli_detect(output_format="text"):

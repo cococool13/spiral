@@ -469,13 +469,13 @@ class SharedValidationTests(unittest.TestCase):
 
     @unittest.skipUnless(
         curses_available(),
-        "slimbrave-mac.py draws a curses TUI and cannot be imported here",
+        "spiral-slim-mac.py draws a curses TUI and cannot be imported here",
     )
     def test_both_entrypoints_use_the_same_load_plan(self):
         windows = load_windows_module()
         from browser_collection import plan as shared
 
-        path = ROOT / "slimbrave-mac.py"
+        path = ROOT / "spiral-slim-mac.py"
         spec = importlib.util.spec_from_file_location("slimbrave_mac", path)
         mac = importlib.util.module_from_spec(spec)
         with mock.patch.object(sys, "platform", "darwin"):

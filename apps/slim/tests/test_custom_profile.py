@@ -169,7 +169,7 @@ class CustomPlanAcceptanceTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        path = ROOT / "slimbrave-mac.py"
+        path = ROOT / "spiral-slim-mac.py"
         spec = importlib.util.spec_from_file_location(path.stem, path)
         module = importlib.util.module_from_spec(spec)
         with mock.patch.object(sys, "platform", "darwin"):

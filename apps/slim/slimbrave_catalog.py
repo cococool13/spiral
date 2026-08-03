@@ -51,9 +51,15 @@ def _read_preset(path, project_dir):
 
 
 def build_catalog(project_dir=None):
-    """Return portable metadata for launchers and collection adapters."""
+    """Return portable metadata for launchers and collection adapters.
+
+    Presets live under Presets/Brave/ now that macOS shares the same
+    multi-browser preset layout as Linux/Windows (see Presets/Chrome/,
+    Presets/Edge/, Presets/Firefox/) — this catalog only describes Brave,
+    the one browser browser_collection's plan interface can verify.
+    """
     root = Path(project_dir or Path(__file__).resolve().parent).resolve()
-    preset_dir = root / "Presets"
+    preset_dir = root / "Presets" / "Brave"
     preset_paths = sorted(preset_dir.glob("*.json"))
     if not preset_paths:
         raise CatalogError(f"No presets found in {preset_dir}")
@@ -65,8 +71,8 @@ def build_catalog(project_dir=None):
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": {
-            "id": "slimbrave-neo",
-            "name": "SlimBrave Neo",
+            "id": "spiral-slim",
+            "name": "Spiral Slim",
             "category": "browser-configuration",
             "description": "Debloat and harden Brave with managed policies.",
             "source_only": True,
@@ -74,9 +80,9 @@ def build_catalog(project_dir=None):
         },
         "platforms": ["linux", "macos", "windows"],
         "entrypoints": {
-            "linux": "slimbrave-linux.py",
-            "macos": "slimbrave-mac.py",
-            "windows": "SlimBrave.ps1",
+            "linux": "spiral-slim-linux.py",
+            "macos": "spiral-slim-mac.py",
+            "windows": "SpiralSlim.ps1",
         },
         "capabilities": ["catalog", "preview", "apply", "export", "reset"],
         "platform_capabilities": {

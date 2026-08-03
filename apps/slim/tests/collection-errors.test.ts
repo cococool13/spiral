@@ -147,10 +147,10 @@ describe("collection-errors", () => {
     it("should include platform and entrypoint", () => {
       const error = new PreviewNotSupportedError(
         "darwin",
-        "python3 slimbrave-mac.py"
+        "python3 spiral-slim-mac.py"
       );
       expect(error.platform).toBe("darwin");
-      expect(error.entrypoint).toBe("python3 slimbrave-mac.py");
+      expect(error.entrypoint).toBe("python3 spiral-slim-mac.py");
     });
   });
 

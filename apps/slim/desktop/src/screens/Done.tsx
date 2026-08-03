@@ -170,7 +170,7 @@ export function Done({
         <p className="warn">
           Undo is unavailable because Spiral Slim cannot reach the SlimBrave Neo
           scripts. You can remove the policies from Terminal with{" "}
-          <code>sudo python3 slimbrave-mac.py --reset</code>.
+          <code>sudo python3 spiral-slim-mac.py --reset</code>.
         </p>
       )}
     </div>

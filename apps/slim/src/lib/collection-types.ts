@@ -44,10 +44,10 @@ export type BrowserCollectionType = "debloat" | "hardening" | "optimization" | "
 
 /**
  * Platform entrypoint command: the CLI invocation that performs discovery, preview, apply, or reset.
- * Example: "python3 slimbrave-mac.py", "npm run hardener.apply"
+ * Example: "python3 spiral-slim-mac.py", "npm run hardener.apply"
  */
 export interface PlatformEntrypoint {
-  /** Command to run for the given platform, like "python3 slimbrave-mac.py" */
+  /** Command to run for the given platform, like "python3 spiral-slim-mac.py" */
   readonly command: string;
 
   /** Whether this platform supports --preview mode (read-only preview without side effects) */

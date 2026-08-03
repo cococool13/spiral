@@ -1,6 +1,6 @@
 # Tool collection integration
 
-SlimBrave Neo exposes a small, read-only interface that a launcher or tool
+Spiral Slim exposes a small, read-only interface that a launcher or tool
 collection can inspect before it runs platform-specific code.
 
 ## Discovery

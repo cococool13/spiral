@@ -46,7 +46,7 @@ def valid_plan():
 class PlanValidationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.mac = load_script("slimbrave-mac.py", "darwin")
+        cls.mac = load_script("spiral-slim-mac.py", "darwin")
 
     def write_plan(self, document):
         handle = tempfile.NamedTemporaryFile(
@@ -157,7 +157,7 @@ class PlanEvidenceAgreementTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.mac = load_script("slimbrave-mac.py", "darwin")
+        cls.mac = load_script("spiral-slim-mac.py", "darwin")
 
     def planned_policy(self, profile_id):
         from browser_collection.adapters.brave import BraveAdapter
@@ -209,7 +209,7 @@ class PlanEvidenceAgreementTests(unittest.TestCase):
 class DetectCommandTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.mac = load_script("slimbrave-mac.py", "darwin")
+        cls.mac = load_script("spiral-slim-mac.py", "darwin")
 
     def run_detect(self, output_format):
         buffer = StringIO()
@@ -244,7 +244,7 @@ class DetectCommandTests(unittest.TestCase):
 class PreviewPlanCommandTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.mac = load_script("slimbrave-mac.py", "darwin")
+        cls.mac = load_script("spiral-slim-mac.py", "darwin")
 
     def installations(self):
         return [self.mac._make_installation(
@@ -294,7 +294,7 @@ class PreviewPlanCommandTests(unittest.TestCase):
 class ApplyPlanGuardTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.mac = load_script("slimbrave-mac.py", "darwin")
+        cls.mac = load_script("spiral-slim-mac.py", "darwin")
 
     def test_apply_rejects_an_unverified_plan_without_writing(self):
         handle = tempfile.NamedTemporaryFile(
@@ -354,14 +354,14 @@ class ApplyPathRootGateTests(unittest.TestCase):
     """--apply-plan must sit behind the same root gate as --import."""
 
     def test_apply_plan_is_listed_as_a_privileged_cli_action(self):
-        source = (ROOT / "slimbrave-mac.py").read_text(encoding="utf-8")
+        source = (ROOT / "spiral-slim-mac.py").read_text(encoding="utf-8")
         marker = "    is_cli = ("
         start = source.index(marker)
         block = source[start:source.index(")", start)]
         self.assertIn("args.apply_plan_path", block)
 
     def test_read_only_flags_are_handled_before_the_root_check(self):
-        source = (ROOT / "slimbrave-mac.py").read_text(encoding="utf-8")
+        source = (ROOT / "spiral-slim-mac.py").read_text(encoding="utf-8")
         root_check = source.index("if os.geteuid() != 0:")
         for flag in ("args.detect", "args.preview_plan_path"):
             self.assertLess(

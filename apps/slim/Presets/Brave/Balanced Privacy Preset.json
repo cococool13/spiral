@@ -1,4 +1,5 @@
 {
+    "Browser": "brave",
     "Features": {
         "MetricsReportingEnabled": false,
         "SafeBrowsingExtendedReportingEnabled": false,
@@ -7,7 +8,6 @@
         "BraveStatsPingEnabled": false,
         "AutofillCreditCardEnabled": false,
         "BrowserSignin": 0,
-        "EnableDoNotTrack": true,
         "BraveGlobalPrivacyControlEnabled": true,
         "BraveDeAmpEnabled": true,
         "BraveDebouncingEnabled": true,
@@ -15,8 +15,10 @@
         "BraveReduceLanguageEnabled": true,
         "WebRtcIPHandling": "disable_non_proxied_udp",
         "QuicAllowed": false,
+        "NetworkPredictionOptions": 2,
         "BlockThirdPartyCookies": true,
-        "ForceGoogleSafeSearch": true,
+        "PaymentMethodQueryEnabled": false,
+        "AlternateErrorPagesEnabled": false,
         "BraveRewardsDisabled": true,
         "BraveWalletDisabled": true,
         "BraveVPNDisabled": true,
@@ -26,8 +28,8 @@
         "BraveWebDiscoveryEnabled": false,
         "TorDisabled": true,
         "SyncDisabled": true,
-        "IPFSEnabled": false,
         "BackgroundModeEnabled": false,
+        "MediaRecommendationsEnabled": false,
         "ShoppingListEnabled": false,
         "DefaultBrowserSettingEnabled": false
     },

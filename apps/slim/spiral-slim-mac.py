@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SlimBrave Neo - Linux and macOS TUI for debloating and hardening Brave Browser.
+"""Spiral Slim - Linux and macOS TUI for debloating and hardening Brave Browser.
 
 Sets Chromium enterprise policies via JSON files on Linux or Plist on macOS. Requires root (sudo).
 
@@ -14,11 +14,11 @@ Multi-channel support:
     user-data directory and to detect running channels.
 
 Supports interactive curses TUI and non-interactive CLI usage:
-  sudo python3 slimbrave.py                              # TUI
-  sudo python3 slimbrave.py --import preset.json         # CLI import
-  sudo python3 slimbrave.py --export out.json            # CLI export
-  sudo python3 slimbrave.py --reset                      # CLI reset
-  sudo python3 slimbrave.py --channels stable,beta ...   # restrict (macOS)
+  sudo python3 spiral-slim.py                              # TUI
+  sudo python3 spiral-slim.py --import preset.json         # CLI import
+  sudo python3 spiral-slim.py --export out.json            # CLI export
+  sudo python3 spiral-slim.py --reset                      # CLI reset
+  sudo python3 spiral-slim.py --channels stable,beta ...   # restrict (macOS)
 """
 
 import argparse
@@ -54,7 +54,7 @@ if IS_MAC:
     # Configuration Profile (mode=on) — single mobileconfig wraps every
     # selected channel's policies; one PayloadContent entry per channel.
     PERSIST_PROFILE_IDENTIFIER = "io.github.slimbrave-neo.brave-policy"
-    PERSIST_PROFILE_DISPLAY = "SlimBrave Neo - Brave Policy"
+    PERSIST_PROFILE_DISPLAY = "Spiral Slim - Brave Policy"
     PERSIST_PROFILE_FILE = "/tmp/slimbrave-neo-policy.mobileconfig"
 else:
     POLICY_DIR = "/etc/brave/policies/managed"
@@ -62,6 +62,8 @@ else:
     ALLOWED_POLICY_DIRS = (
         "/etc/brave/policies/managed",
         "/etc/chromium/policies/managed",
+        "/etc/opt/chrome/policies/managed",
+        "/etc/firefox/policies",
     )
     PERSIST_MODES = ("off",)
     PERSIST_DEFAULT = "off"
@@ -106,9 +108,184 @@ LINUX_CHANNELS = [
      "user_data_dir": "Brave-Browser-Beta", "process_name": "brave-browser-beta"},
     {"id": "nightly", "label": "Nightly",
      "user_data_dir": "Brave-Browser-Nightly", "process_name": "brave-browser-nightly"},
+    {"id": "dev", "label": "Dev",
+     "user_data_dir": "Brave-Browser-Dev", "process_name": "brave-browser-dev"},
 ]
 
-CHANNEL_IDS = [c["id"] for c in MAC_CHANNELS]
+CHANNEL_IDS = [c["id"] for c in (MAC_CHANNELS if IS_MAC else LINUX_CHANNELS)]
+
+# Google Chrome channels. Since Chrome 77 every macOS channel reads managed
+# policy from the shared com.google.Chrome preference domain, so all
+# channel entries deliberately carry the same bundle_id — the plist-target
+# dedupe collapses them into one write.
+CHROME_MAC_CHANNELS = [
+    {"id": "stable", "label": "Stable", "app_name": "Google Chrome.app",
+     "bundle_id": "com.google.Chrome", "user_data_dir": "Chrome",
+     "process_name": "Google Chrome"},
+    {"id": "beta", "label": "Beta", "app_name": "Google Chrome Beta.app",
+     "bundle_id": "com.google.Chrome", "user_data_dir": "Chrome Beta",
+     "process_name": "Google Chrome Beta"},
+    {"id": "dev", "label": "Dev", "app_name": "Google Chrome Dev.app",
+     "bundle_id": "com.google.Chrome", "user_data_dir": "Chrome Dev",
+     "process_name": "Google Chrome Dev"},
+    {"id": "canary", "label": "Canary", "app_name": "Google Chrome Canary.app",
+     "bundle_id": "com.google.Chrome", "user_data_dir": "Chrome Canary",
+     "process_name": "Google Chrome Canary"},
+]
+
+CHROME_LINUX_CHANNELS = [
+    {"id": "stable", "label": "Stable",
+     "user_data_dir": "google-chrome", "process_name": "chrome"},
+    {"id": "beta", "label": "Beta",
+     "user_data_dir": "google-chrome-beta", "process_name": "chrome"},
+    {"id": "unstable", "label": "Unstable",
+     "user_data_dir": "google-chrome-unstable", "process_name": "chrome"},
+]
+
+# Microsoft Edge channels. Per Microsoft's macOS deployment docs, every
+# Edge channel reads from the shared com.microsoft.Edge preference domain
+# (channel-specific domains were retired in the Edge 77 betas).
+EDGE_MAC_CHANNELS = [
+    {"id": "stable", "label": "Stable", "app_name": "Microsoft Edge.app",
+     "bundle_id": "com.microsoft.Edge", "user_data_dir": "Microsoft Edge",
+     "process_name": "Microsoft Edge"},
+    {"id": "beta", "label": "Beta", "app_name": "Microsoft Edge Beta.app",
+     "bundle_id": "com.microsoft.Edge", "user_data_dir": "Microsoft Edge Beta",
+     "process_name": "Microsoft Edge Beta"},
+    {"id": "dev", "label": "Dev", "app_name": "Microsoft Edge Dev.app",
+     "bundle_id": "com.microsoft.Edge", "user_data_dir": "Microsoft Edge Dev",
+     "process_name": "Microsoft Edge Dev"},
+    {"id": "canary", "label": "Canary", "app_name": "Microsoft Edge Canary.app",
+     "bundle_id": "com.microsoft.Edge", "user_data_dir": "Microsoft Edge Canary",
+     "process_name": "Microsoft Edge Canary"},
+]
+
+# Mozilla Firefox channels. Firefox reads managed preferences from its own
+# bundle's preference domain on macOS (plus EnterprisePoliciesEnabled=true
+# to activate the policy engine); Developer Edition and Nightly have their
+# own domains, like Brave's channels.
+FIREFOX_MAC_CHANNELS = [
+    {"id": "stable", "label": "Stable", "app_name": "Firefox.app",
+     "bundle_id": "org.mozilla.firefox", "user_data_dir": "Firefox",
+     "process_name": "firefox"},
+    {"id": "developer", "label": "Developer Edition",
+     "app_name": "Firefox Developer Edition.app",
+     "bundle_id": "org.mozilla.firefoxdeveloperedition", "user_data_dir": "Firefox",
+     "process_name": "firefox"},
+    {"id": "nightly", "label": "Nightly", "app_name": "Firefox Nightly.app",
+     "bundle_id": "org.mozilla.nightly", "user_data_dir": "Firefox",
+     "process_name": "firefox"},
+]
+
+FIREFOX_LINUX_CHANNELS = [
+    {"id": "stable", "label": "Stable",
+     "user_data_dir": "firefox", "process_name": "firefox"},
+    {"id": "esr", "label": "ESR",
+     "user_data_dir": "firefox", "process_name": "firefox-esr"},
+]
+
+# ---------------------------------------------------------------------------
+# Browser registry
+#
+# All three speak the Chromium managed-policy dialect; only locations,
+# channel layouts, and vendor keys differ. Feature rows and categories
+# carry an optional "browsers" tuple; untagged entries apply everywhere.
+# Edge has no Linux entry: Microsoft's per-policy docs list Windows and
+# macOS only, so a Linux Edge catalog cannot be audited.
+# ---------------------------------------------------------------------------
+
+BROWSERS = {
+    "brave": {
+        "label": "Brave",
+        "engine": "chromium",
+        "mac_channels": MAC_CHANNELS,
+        "linux_channels": LINUX_CHANNELS,
+        "config_root": "BraveSoftware",
+        "linux_policy_dir": "/etc/brave/policies/managed",
+        "prefs_repair": True,
+        "profile_identifier": "io.github.slimbrave-neo.brave-policy",
+        "profile_display": "Spiral Slim - Brave Policy",
+    },
+    "chrome": {
+        "label": "Google Chrome",
+        "engine": "chromium",
+        "mac_channels": CHROME_MAC_CHANNELS,
+        "linux_channels": CHROME_LINUX_CHANNELS,
+        "config_root": "Google",
+        "linux_policy_dir": "/etc/opt/chrome/policies/managed",
+        "prefs_repair": False,
+        "profile_identifier": "io.github.slimbrave-neo.chrome-policy",
+        "profile_display": "Spiral Slim - Google Chrome Policy",
+    },
+    "edge": {
+        "label": "Microsoft Edge",
+        "engine": "chromium",
+        "mac_channels": EDGE_MAC_CHANNELS,
+        "linux_channels": None,   # unsupported: no auditable policy source
+        "config_root": "",
+        "linux_policy_dir": None,
+        "prefs_repair": False,
+        "profile_identifier": "io.github.slimbrave-neo.edge-policy",
+        "profile_display": "Spiral Slim - Microsoft Edge Policy",
+    },
+    "firefox": {
+        "label": "Mozilla Firefox",
+        "engine": "firefox",
+        "mac_channels": FIREFOX_MAC_CHANNELS,
+        "linux_channels": FIREFOX_LINUX_CHANNELS,
+        "config_root": "",
+        "linux_policy_dir": "/etc/firefox/policies",
+        "linux_policy_file": "policies.json",
+        "prefs_repair": False,
+        "profile_identifier": "io.github.slimbrave-neo.firefox-policy",
+        "profile_display": "Spiral Slim - Mozilla Firefox Policy",
+    },
+}
+
+# Untagged catalog rows apply to every Chromium-engine browser; Firefox
+# speaks a different policy dialect, so its rows are always tagged.
+CHROMIUM_BROWSERS = tuple(
+    name for name, cfg in BROWSERS.items() if cfg["engine"] == "chromium"
+)
+
+SELECTED_BROWSER = "brave"
+
+
+def browser_config():
+    return BROWSERS[SELECTED_BROWSER]
+
+
+def browser_label():
+    return browser_config()["label"]
+
+
+def browser_engine():
+    return browser_config()["engine"]
+
+
+def _browser_channels(cfg=None):
+    cfg = cfg or browser_config()
+    return cfg["mac_channels"] if IS_MAC else cfg["linux_channels"]
+
+
+def select_browser(name):
+    """Point module-level paths and persistence identifiers at a browser."""
+    global SELECTED_BROWSER, POLICY_DIR, POLICY_FILE
+    global PERSIST_PROFILE_IDENTIFIER, PERSIST_PROFILE_DISPLAY, PERSIST_PROFILE_FILE
+    cfg = BROWSERS[name]
+    if not IS_MAC and cfg["linux_policy_dir"] is None:
+        raise SystemExit(f"{cfg['label']} is not supported on Linux.")
+    SELECTED_BROWSER = name
+    if IS_MAC:
+        POLICY_FILE = os.path.join(
+            POLICY_DIR, f"{cfg['mac_channels'][0]['bundle_id']}.plist")
+        PERSIST_PROFILE_IDENTIFIER = cfg["profile_identifier"]
+        PERSIST_PROFILE_DISPLAY = cfg["profile_display"]
+        PERSIST_PROFILE_FILE = f"/tmp/slimbrave-neo-{name}-policy.mobileconfig"
+    else:
+        POLICY_DIR = cfg["linux_policy_dir"]
+        POLICY_FILE = os.path.join(
+            POLICY_DIR, cfg.get("linux_policy_file", "slimbrave.json"))
 
 
 def _user_home_for_brave():
@@ -120,10 +297,24 @@ def _user_home_for_brave():
     sudo_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
     if not sudo_user or sudo_user == "root":
         return None
-    try:
-        return os.path.expanduser(f"~{sudo_user}")
-    except KeyError:
+    home = os.path.expanduser(f"~{sudo_user}")
+    # expanduser returns the input unchanged when the user is unknown
+    if home.startswith("~"):
         return None
+    return home
+
+
+def _chown_to_sudo_user(path):
+    """Return a root-created file to the invoking user (no-op without sudo)."""
+    sudo_user = os.environ.get("SUDO_USER")
+    if not sudo_user:
+        return
+    try:
+        import pwd
+        user_info = pwd.getpwnam(sudo_user)
+        os.chown(path, user_info.pw_uid, user_info.pw_gid)
+    except (ImportError, KeyError, OSError):
+        pass
 
 
 def _mac_app_search_paths(app_name):
@@ -142,14 +333,57 @@ def _channel_prefs_path(user_data_dir):
     home = _user_home_for_brave()
     if not home:
         return None
+    root = browser_config()["config_root"]
     if IS_MAC:
-        return os.path.join(
-            home, "Library", "Application Support", "BraveSoftware",
-            user_data_dir, "Default", "Preferences",
-        )
+        parts = [home, "Library", "Application Support"]
+    else:
+        parts = [home, ".config"]
+    if root:
+        parts.append(root)
+    return os.path.join(*parts, user_data_dir, "Default", "Preferences")
+
+
+def _flatpak_prefs_path():
+    """Return the Flatpak Brave's Default profile Preferences path (Linux).
+
+    Flatpak keeps the profile under ~/.var/app/com.brave.Browser/config
+    instead of ~/.config, so the native channel paths never see it. The
+    Flathub manifest grants --filesystem=host-etc specifically to load
+    policies from /etc/brave/policies, so the shared POLICY_FILE works;
+    only prefs repair needs this extra location.
+    """
+    home = _user_home_for_brave()
+    if not home:
+        return None
     return os.path.join(
-        home, ".config", "BraveSoftware", user_data_dir, "Default", "Preferences",
+        home, ".var", "app", "com.brave.Browser", "config",
+        "BraveSoftware", "Brave-Browser", "Default", "Preferences",
     )
+
+
+def _profile_prefs_paths(default_prefs_path):
+    """Expand a channel's Default-profile Preferences path to all profiles.
+
+    Chromium keeps one directory per profile (Default, Profile 1, ...)
+    under the same user-data dir, and the Shields-exception leak lands in
+    every profile that was used while the policy was active — not just
+    Default.
+    """
+    if not default_prefs_path:
+        return []
+    user_data = os.path.dirname(os.path.dirname(default_prefs_path))
+    try:
+        entries = sorted(os.listdir(user_data))
+    except OSError:
+        return [default_prefs_path]
+    paths = []
+    for name in entries:
+        if name != "Default" and not name.startswith("Profile "):
+            continue
+        prefs = os.path.join(user_data, name, "Preferences")
+        if os.path.isfile(prefs):
+            paths.append(prefs)
+    return paths or [default_prefs_path]
 
 
 def _is_within_allowed_policy_dir(path):
@@ -225,7 +459,7 @@ def detect_brave():
     """
     if IS_MAC:
         installations = []
-        for ch in MAC_CHANNELS:
+        for ch in _browser_channels():
             for app_path in _mac_app_search_paths(ch["app_name"]):
                 if os.path.isdir(app_path):
                     installations.append(_make_installation(
@@ -237,13 +471,13 @@ def detect_brave():
                     break
 
         if not installations:
-            stable = MAC_CHANNELS[0]
+            stable = _browser_channels()[0]
             return {
                 "found": False,
                 "method": "not found",
                 "path": "",
                 "warnings": [
-                    "Brave browser not found. Policies will be written but may have no effect."
+                    f"{browser_label()} not found. Policies will be written but may have no effect."
                 ],
                 "installations": [_make_installation(
                     stable,
@@ -271,28 +505,46 @@ def detect_brave():
     warnings = []
     found_any = False
 
-    # Arch (brave-bin AUR package)
-    if os.path.isfile("/opt/brave-bin/brave"):
-        method, primary_path, found_any = "arch", "/opt/brave-bin/brave", True
-    # Deb / RPM (official brave-browser package)
-    elif os.path.isfile("/opt/brave.com/brave/brave-browser"):
-        method, primary_path, found_any = "deb/rpm", "/opt/brave.com/brave/brave-browser", True
-    elif os.path.isfile("/opt/brave.com/brave/brave"):
-        method, primary_path, found_any = "deb/rpm", "/opt/brave.com/brave/brave", True
+    if SELECTED_BROWSER == "chrome":
+        native_paths = ("/opt/google/chrome/google-chrome", "/opt/google/chrome/chrome")
+        flatpak_id = "com.google.Chrome"
+        path_names = ("google-chrome-stable", "google-chrome", "chrome")
+        snap_root = None
+    elif SELECTED_BROWSER == "firefox":
+        native_paths = ("/usr/lib/firefox/firefox", "/opt/firefox/firefox",
+                        "/usr/lib64/firefox/firefox")
+        flatpak_id = "org.mozilla.firefox"
+        path_names = ("firefox", "firefox-esr")
+        snap_root = "/snap/firefox/current"
     else:
+        native_paths = (
+            "/opt/brave-bin/brave",                  # Arch (brave-bin AUR)
+            "/opt/brave.com/brave/brave-browser",    # official deb/rpm
+            "/opt/brave.com/brave/brave",
+        )
+        flatpak_id = "com.brave.Browser"
+        path_names = ("brave-browser-stable", "brave-browser", "brave")
+        snap_root = "/snap/brave/current"
+
+    for np in native_paths:
+        if os.path.isfile(np):
+            label = "arch" if np == "/opt/brave-bin/brave" else "deb/rpm"
+            method, primary_path, found_any = label, np, True
+            break
+    if not found_any:
         try:
             result = subprocess.run(
-                ["flatpak", "info", "com.brave.Browser"],
+                ["flatpak", "info", flatpak_id],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             if result.returncode == 0:
-                method, primary_path, found_any = "flatpak", "com.brave.Browser", True
+                method, primary_path, found_any = "flatpak", flatpak_id, True
         except FileNotFoundError:
             pass  # flatpak not installed
 
-    if not found_any:
-        snap_path = "/snap/brave/current/opt/brave.com/brave/brave"
-        if os.path.isfile(snap_path) or os.path.isdir("/snap/brave/current"):
+    if not found_any and snap_root:
+        snap_path = snap_root + "/opt/brave.com/brave/brave"
+        if os.path.isfile(snap_path) or os.path.isdir(snap_root):
             method, primary_path, found_any = "snap", snap_path, True
             warnings.append(
                 "Snap confinement may prevent policies from taking effect. "
@@ -300,7 +552,7 @@ def detect_brave():
             )
 
     if not found_any:
-        for name in ("brave-browser-stable", "brave-browser", "brave"):
+        for name in path_names:
             found = shutil.which(name)
             if found:
                 method, primary_path, found_any = "unknown", found, True
@@ -309,7 +561,7 @@ def detect_brave():
     if not found_any:
         method = "not found"
         warnings.append(
-            "Brave browser not found. Policies will be written but may have no effect."
+            f"{browser_label()} not found. Policies will be written but may have no effect."
         )
 
     # Detect installed Linux channels by user-data dir presence (best effort).
@@ -318,9 +570,13 @@ def detect_brave():
     installations = []
     home = _user_home_for_brave()
     detected_labels = []
-    for ch in LINUX_CHANNELS:
+    for ch in _browser_channels():
         ch_dir = (
-            os.path.join(home, ".config", "BraveSoftware", ch["user_data_dir"])
+            os.path.join(
+                home, ".config",
+                *( [browser_config()["config_root"]]
+                   if browser_config()["config_root"] else [] ),
+                ch["user_data_dir"])
             if home else None
         )
         installed = (
@@ -336,10 +592,26 @@ def detect_brave():
             ))
             detected_labels.append(ch["label"])
 
+    # Flatpak keeps its profile under ~/.var/app, so the loop above cannot
+    # see it. Add a synthetic stable-channel record pointing at the Flatpak
+    # prefs so leak repair covers that profile too. Channel id stays
+    # "stable" so --channels filtering keeps working.
+    flatpak_prefs = _flatpak_prefs_path() if SELECTED_BROWSER == "brave" else None
+    if flatpak_prefs and os.path.isdir(
+            os.path.dirname(os.path.dirname(flatpak_prefs))):
+        installations.append(_make_installation(
+            {"id": "stable", "label": "Stable (Flatpak)",
+             "user_data_dir": "Brave-Browser", "process_name": "brave"},
+            app_path="com.brave.Browser" if method == "flatpak" else "",
+            plist_path=POLICY_FILE,
+            prefs_path=flatpak_prefs,
+        ))
+        detected_labels.append("Flatpak")
+
     if not installations:
         # Nothing detected per-channel — fall back to a single stable record so
         # apply/reset still has a target plist.
-        stable = LINUX_CHANNELS[0]
+        stable = _browser_channels()[0]
         installations.append(_make_installation(
             stable,
             app_path=primary_path,
@@ -360,79 +632,153 @@ def detect_brave():
 
 
 # ---------------------------------------------------------------------------
-# Feature definitions - mirrors the Windows SlimBrave Neo PS1 categories
+# Feature definitions - mirrors the Windows Spiral Slim PS1 categories
 # ---------------------------------------------------------------------------
 
 # Features with a `group` key are mutually exclusive within that group:
-# checking one silently unchecks the others. Used today for
-# IncognitoModeAvailability, where Disable (=1) and Force (=2) are
-# conflicting values for the same policy.
+# checking one silently unchecks the others. Used for policies where two
+# rows set conflicting values for the same key (IncognitoModeAvailability,
+# DefaultBraveReferrersSetting) and for the Shields URL lists.
 CATEGORIES = [
     {
         "name": "Telemetry & Reporting",
         "features": [
-            {"name": "Disable Metrics Reporting", "key": "MetricsReportingEnabled", "value": False},
-            {"name": "Disable Safe Browsing Reporting", "key": "SafeBrowsingExtendedReportingEnabled", "value": False},
-            {"name": "Disable URL Data Collection", "key": "UrlKeyedAnonymizedDataCollectionEnabled", "value": False},
-            {"name": "Disable P3A Analytics", "key": "BraveP3AEnabled", "value": False},
-            {"name": "Disable Stats Ping", "key": "BraveStatsPingEnabled", "value": False},
+            {"name": "Disable Metrics Reporting", "key": "MetricsReportingEnabled", "value": False, "browsers": ("brave", "chrome")},
+            {"name": "Disable Safe Browsing Reporting", "key": "SafeBrowsingExtendedReportingEnabled", "value": False, "browsers": ("brave", "chrome")},
+            {"name": "Disable URL Data Collection", "key": "UrlKeyedAnonymizedDataCollectionEnabled", "value": False, "browsers": ("brave", "chrome")},
+            {"name": "Disable P3A Analytics", "key": "BraveP3AEnabled", "value": False, "browsers": ("brave",)},
+            {"name": "Disable Stats Ping", "key": "BraveStatsPingEnabled", "value": False, "browsers": ("brave",)},
         ],
     },
     {
         "name": "Privacy & Security",
         "features": [
-            {"name": "Disable Safe Browsing", "key": "SafeBrowsingProtectionLevel", "value": 0},
+            {"name": "Disable Safe Browsing", "key": "SafeBrowsingProtectionLevel", "value": 0, "browsers": ("brave", "chrome")},
             {"name": "Disable Autofill (Addresses)", "key": "AutofillAddressEnabled", "value": False},
             {"name": "Disable Autofill (Credit Cards)", "key": "AutofillCreditCardEnabled", "value": False},
             {"name": "Disable Password Manager", "key": "PasswordManagerEnabled", "value": False},
+            {"name": "Disable Password Leak Detection", "key": "PasswordLeakDetectionEnabled", "value": False, "browsers": ("brave", "chrome")},
             {"name": "Disable Browser Sign-in", "key": "BrowserSignin", "value": 0},
-            {"name": "Enable Do Not Track", "key": "EnableDoNotTrack", "value": True},
-            {"name": "Enable Global Privacy Control", "key": "BraveGlobalPrivacyControlEnabled", "value": True},
-            {"name": "Enable De-AMP", "key": "BraveDeAmpEnabled", "value": True},
-            {"name": "Enable Debouncing", "key": "BraveDebouncingEnabled", "value": True},
-            {"name": "Strip Tracking URL Parameters", "key": "BraveTrackingQueryParametersFilteringEnabled", "value": True},
-            {"name": "Reduce Language Fingerprinting", "key": "BraveReduceLanguageEnabled", "value": True},
-            {"name": "Enforce Ad & Tracker Blocking", "key": "DefaultBraveAdblockSetting", "value": 2, "group": "shields"},
-            {"name": "Enforce Fingerprinting Protection", "key": "DefaultBraveFingerprintingV2Setting", "value": 3},
-            {"name": "Prefer HTTPS Upgrades", "key": "DefaultBraveHttpsUpgradeSetting", "value": 3},
-            {"name": "Restrict Cross-Site Referrers", "key": "DefaultBraveReferrersSetting", "value": 2},
-            {"name": "Disable WebRTC IP Leak", "key": "WebRtcIPHandling", "value": "disable_non_proxied_udp"},
+            {"name": "Disable Sync", "key": "SyncDisabled", "value": True},
+            {"name": "Enable Global Privacy Control", "key": "BraveGlobalPrivacyControlEnabled", "value": True, "browsers": ("brave",)},
+            {"name": "Enable De-AMP", "key": "BraveDeAmpEnabled", "value": True, "browsers": ("brave",)},
+            {"name": "Enable Debouncing", "key": "BraveDebouncingEnabled", "value": True, "browsers": ("brave",)},
+            {"name": "Strip Tracking URL Parameters", "key": "BraveTrackingQueryParametersFilteringEnabled", "value": True, "browsers": ("brave",)},
+            {"name": "Reduce Language Fingerprinting", "key": "BraveReduceLanguageEnabled", "value": True, "browsers": ("brave",)},
+            {"name": "Disable WebRTC IP Leak", "key": "WebRtcIPHandling", "value": "disable_non_proxied_udp", "browsers": ("brave", "chrome")},
             {"name": "Disable QUIC Protocol", "key": "QuicAllowed", "value": False},
+            {"name": "Disable Network Prediction (Prefetch)", "key": "NetworkPredictionOptions", "value": 2},
             {"name": "Block Third Party Cookies", "key": "BlockThirdPartyCookies", "value": True},
+            {"name": "Block Payment Method Probing", "key": "PaymentMethodQueryEnabled", "value": False},
+            {"name": "Disable Alternate Error Pages", "key": "AlternateErrorPagesEnabled", "value": False},
+        ],
+    },
+    {
+        # Site permissions and access lockdowns: content-setting defaults
+        # plus the escape hatches (guest, incognito, extensions) that would
+        # otherwise bypass the rest of the policy set.
+        "name": "Permissions & Access",
+        "features": [
+            {"name": "Block Web Notifications", "key": "DefaultNotificationsSetting", "value": 2},
+            {"name": "Block Location Access", "key": "DefaultGeolocationSetting", "value": 2},
+            {"name": "Block Motion Sensors", "key": "DefaultSensorsSetting", "value": 2},
             {"name": "Force Google SafeSearch", "key": "ForceGoogleSafeSearch", "value": True},
-            {"name": "Disable Incognito Mode", "key": "IncognitoModeAvailability", "value": 1, "group": "incognito"},
-            {"name": "Force Incognito Mode", "key": "IncognitoModeAvailability", "value": 2, "group": "incognito"},
+            {"name": "Filter Adult Content (SafeSites)", "key": "SafeSitesFilterBehavior", "value": 1, "browsers": ("brave", "chrome")},
+            {"name": "Disable Guest Mode", "key": "BrowserGuestModeEnabled", "value": False},
+            {"name": "Block All Extensions", "key": "ExtensionInstallBlocklist", "value": ["*"]},
+            {"name": "Disable Incognito Mode", "key": "IncognitoModeAvailability", "value": 1, "group": "incognito", "browsers": ("brave", "chrome")},
+            {"name": "Force Incognito Mode", "key": "IncognitoModeAvailability", "value": 2, "group": "incognito", "browsers": ("brave", "chrome")},
         ],
     },
     {
         "name": "Brave Features",
+        "browsers": ("brave",),
         "features": [
             {"name": "Disable Brave Rewards", "key": "BraveRewardsDisabled", "value": True},
             {"name": "Disable Brave Wallet", "key": "BraveWalletDisabled", "value": True},
             {"name": "Disable Brave VPN", "key": "BraveVPNDisabled", "value": True},
             {"name": "Disable Brave AI Chat", "key": "BraveAIChatEnabled", "value": False},
-            {"name": "Disable Brave Local AI", "key": "BraveLocalAIEnabled", "value": False},
-            {"name": "Disable Email Aliases", "key": "EmailAliasesEnabled", "value": False},
             {"name": "Disable Brave Shields", "key": "BraveShieldsDisabledForUrls", "value": ["https://*", "http://*"], "group": "shields"},
+            {"name": "Force Shields On (All Sites)", "key": "BraveShieldsEnabledForUrls", "value": ["https://*", "http://*"], "group": "shields"},
             {"name": "Disable Brave News", "key": "BraveNewsDisabled", "value": True},
             {"name": "Disable Brave Talk", "key": "BraveTalkDisabled", "value": True},
             {"name": "Disable Brave Playlist", "key": "BravePlaylistEnabled", "value": False},
             {"name": "Disable Web Discovery", "key": "BraveWebDiscoveryEnabled", "value": False},
             {"name": "Disable Speedreader", "key": "BraveSpeedreaderEnabled", "value": False},
             {"name": "Disable Tor", "key": "TorDisabled", "value": True},
-            {"name": "Disable Sync", "key": "SyncDisabled", "value": True},
-            {"name": "Disable IPFS", "key": "IPFSEnabled", "value": False},
+            {"name": "Disable Email Aliases", "key": "EmailAliasesEnabled", "value": False},
         ],
     },
     {
+        # Brave 1.83+ content-protection enforcers. These pin Brave's own
+        # privacy defaults as managed policy so neither the user nor a
+        # malicious page/extension can quietly weaken them.
+        "name": "Shields & Content Protection",
+        "browsers": ("brave",),
+        "features": [
+            {"name": "Enforce Ad Blocking", "key": "DefaultBraveAdblockSetting", "value": 2},
+            {"name": "Enforce Fingerprinting Protection", "key": "DefaultBraveFingerprintingV2Setting", "value": 3},
+            {"name": "Force HTTPS Upgrades (Strict)", "key": "DefaultBraveHttpsUpgradeSetting", "value": 2},
+            {"name": "Cap Referrers (Strict Origin)", "key": "DefaultBraveReferrersSetting", "value": 2, "group": "referrers"},
+            {"name": "Allow Permissive Referrers (unsafe-url)", "key": "DefaultBraveReferrersSetting", "value": 1, "group": "referrers"},
+            {"name": "Forget First-Party Storage on Close", "key": "DefaultBraveRemember1PStorageSetting", "value": 2},
+        ],
+    },
+    {
+        # Chrome-only keys, verified against Chromium policy_definitions
+        # YAML (see AUDIT.md). GeminiSettings is supported on chrome.win /
+        # chrome.mac only, which this script covers.
+        "name": "Chrome Features",
+        "browsers": ("chrome",),
+        "features": [
+            {"name": "Disable Feedback Collection", "key": "UserFeedbackAllowed", "value": False},
+            {"name": "Disable Chrome Labs", "key": "BrowserLabsEnabled", "value": False},
+            {"name": "Disable Search Side Panel", "key": "GoogleSearchSidePanelEnabled", "value": False},
+            {"name": "Disable Gemini Integrations", "key": "GeminiSettings", "value": 1},
+            {"name": "Restrict Field Trials (Critical Only)", "key": "ChromeVariations", "value": 1},
+        ],
+    },
+    {
+        # Edge-only keys, verified against Microsoft's per-policy Edge
+        # documentation (see AUDIT.md). Includes Edge's renamed equivalents
+        # of Chromium policies (InPrivate, WebRTC, SmartScreen, Password
+        # Monitor, Efficiency Mode). StartupBoostEnabled and Spotlight are
+        # Windows-only and deliberately absent here.
+        "name": "Edge Features",
+        "browsers": ("edge",),
+        "features": [
+            {"name": "Minimize Diagnostic Data", "key": "DiagnosticData", "value": 0},
+            {"name": "Disable Personalization Reporting", "key": "PersonalizationReportingEnabled", "value": False},
+            {"name": "Disable Feedback Collection", "key": "UserFeedbackAllowed", "value": False},
+            {"name": "Disable Sidebar & Copilot Hub", "key": "HubsSidebarEnabled", "value": False},
+            {"name": "Disable Collections", "key": "EdgeCollectionsEnabled", "value": False},
+            {"name": "Disable Shopping Assistant", "key": "EdgeShoppingAssistantEnabled", "value": False},
+            {"name": "Disable Microsoft Rewards", "key": "ShowMicrosoftRewards", "value": False},
+            {"name": "Disable Wallet Checkout", "key": "EdgeWalletCheckoutEnabled", "value": False},
+            {"name": "Disable New Tab MSN Feed", "key": "NewTabPageContentEnabled", "value": False},
+            {"name": "Disable Asset Delivery Service", "key": "EdgeAssetDeliveryServiceEnabled", "value": False},
+            {"name": "Enable Sleeping Tabs", "key": "SleepingTabsEnabled", "value": True},
+            {"name": "Enable Efficiency Mode", "key": "EfficiencyModeEnabled", "value": True},
+            {"name": "Disable SmartScreen", "key": "SmartScreenEnabled", "value": False},
+            {"name": "Disable Password Monitor", "key": "PasswordMonitorAllowed", "value": False},
+            {"name": "Disable WebRTC IP Leak (Edge)", "key": "WebRtcLocalhostIpHandling", "value": "disable_non_proxied_udp"},
+            {"name": "Force Bing SafeSearch (Strict)", "key": "ForceBingSafeSearch", "value": 2},
+            {"name": "Disable InPrivate Mode", "key": "InPrivateModeAvailability", "value": 1, "group": "incognito"},
+            {"name": "Force InPrivate Mode", "key": "InPrivateModeAvailability", "value": 2, "group": "incognito"},
+        ],
+    },
+    {
+        # Note: BackgroundModeEnabled is intentionally absent here — the
+        # Chromium policy is only supported on Windows and Linux, so on
+        # macOS it would just surface as an unrecognized-policy error in
+        # brave://policy.
         "name": "Performance & Bloat",
         "features": [
-            {"name": "Disable Background Mode", "key": "BackgroundModeEnabled", "value": False},
-            {"name": "Enable Memory Saver", "key": "HighEfficiencyModeEnabled", "value": True},
-            {"name": "Use Balanced Memory Savings", "key": "MemorySaverModeSavings", "value": 1},
-            {"name": "Disable Google Cast", "key": "EnableMediaRouter", "value": False},
-            {"name": "Disable Autoplay", "key": "AutoplayAllowed", "value": False},
-            {"name": "Disable Shopping List", "key": "ShoppingListEnabled", "value": False},
+            {"name": "Enable Memory Saver", "key": "HighEfficiencyModeEnabled", "value": True, "browsers": ("brave", "chrome")},
+            {"name": "Force Hardware Acceleration", "key": "HardwareAccelerationModeEnabled", "value": True},
+            {"name": "Disable Media Router (Cast)", "key": "EnableMediaRouter", "value": False},
+            {"name": "Disable Media Recommendations", "key": "MediaRecommendationsEnabled", "value": False, "browsers": ("brave", "chrome")},
+            {"name": "Disable Shopping List", "key": "ShoppingListEnabled", "value": False, "browsers": ("brave", "chrome")},
             {"name": "Always Open PDF Externally", "key": "AlwaysOpenPdfExternally", "value": True},
             {"name": "Disable Translate", "key": "TranslateEnabled", "value": False},
             {"name": "Disable Spellcheck", "key": "SpellcheckEnabled", "value": False},
@@ -440,12 +786,90 @@ CATEGORIES = [
             {"name": "Disable Printing", "key": "PrintingEnabled", "value": False},
             {"name": "Disable Default Browser Prompt", "key": "DefaultBrowserSettingEnabled", "value": False},
             {"name": "Disable Developer Tools", "key": "DeveloperToolsAvailability", "value": 2},
-            {"name": "Disable Wayback Machine", "key": "BraveWaybackMachineEnabled", "value": False},
+            {"name": "Disable Wayback Machine", "key": "BraveWaybackMachineEnabled", "value": False, "browsers": ("brave",)},
+        ],
+    },
+    # ------------------------------------------------------------------
+    # Mozilla Firefox catalog. Firefox speaks its own policy dialect
+    # (policies.json / org.mozilla.firefox), so nothing above applies to
+    # it; every row is verified against mozilla/enterprise-admin-reference
+    # policies-schema.json (see AUDIT.md). Values may be nested objects —
+    # the writers serialize them as-is.
+    # ------------------------------------------------------------------
+    {
+        "name": "Telemetry & Reporting",
+        "browsers": ("firefox",),
+        "features": [
+            {"name": "Disable Telemetry", "key": "DisableTelemetry", "value": True},
+            {"name": "Disable Firefox Studies", "key": "DisableFirefoxStudies", "value": True},
+            {"name": "Disable Feedback Commands", "key": "DisableFeedbackCommands", "value": True},
+            {"name": "Disable Captive Portal Pings", "key": "CaptivePortal", "value": False},
+        ],
+    },
+    {
+        "name": "Privacy & Security",
+        "browsers": ("firefox",),
+        "features": [
+            {"name": "Enforce Tracking Protection (Strict)", "key": "EnableTrackingProtection",
+             "value": {"Value": True, "Locked": True, "Cryptomining": True,
+                       "Fingerprinting": True, "EmailTracking": True}},
+            {"name": "Force HTTPS-Only Mode", "key": "HttpsOnlyMode", "value": "force_enabled"},
+            {"name": "Disable Password Manager", "key": "PasswordManagerEnabled", "value": False},
+            {"name": "Disable Login Save Prompts", "key": "OfferToSaveLogins", "value": False},
+            {"name": "Disable Form History", "key": "DisableFormHistory", "value": True},
+            {"name": "Disable Autofill (Addresses)", "key": "AutofillAddressEnabled", "value": False},
+            {"name": "Disable Autofill (Credit Cards)", "key": "AutofillCreditCardEnabled", "value": False},
+            {"name": "Disable Firefox Accounts & Sync", "key": "DisableFirefoxAccounts", "value": True},
+            {"name": "Disable Network Prediction (Prefetch)", "key": "NetworkPrediction", "value": False},
+            {"name": "Disable Search Suggestions", "key": "SearchSuggestEnabled", "value": False},
+        ],
+    },
+    {
+        "name": "Permissions & Access",
+        "browsers": ("firefox",),
+        "features": [
+            {"name": "Block Location & Notification Prompts", "key": "Permissions",
+             "value": {"Location": {"BlockNewRequests": True, "Locked": True},
+                       "Notifications": {"BlockNewRequests": True, "Locked": True}}},
+            {"name": "Disable Private Browsing", "key": "DisablePrivateBrowsing", "value": True},
+            {"name": "Block about:config", "key": "BlockAboutConfig", "value": True},
+            {"name": "Block All Extensions", "key": "ExtensionSettings",
+             "value": {"*": {"installation_mode": "blocked"}}},
+        ],
+    },
+    {
+        "name": "Firefox Features",
+        "browsers": ("firefox",),
+        "features": [
+            {"name": "Disable Pocket", "key": "DisablePocket", "value": True},
+            {"name": "Clean New Tab (No Sponsored Content)", "key": "FirefoxHome",
+             "value": {"Search": True, "TopSites": True, "SponsoredTopSites": False,
+                       "Highlights": False, "Pocket": False, "SponsoredPocket": False,
+                       "Stories": False, "SponsoredStories": False, "Weather": False,
+                       "Snippets": False, "Locked": True}},
+            {"name": "Disable Recommendations & Onboarding", "key": "UserMessaging",
+             "value": {"WhatsNew": False, "ExtensionRecommendations": False,
+                       "FeatureRecommendations": False, "UrlbarInterventions": False,
+                       "SkipOnboarding": True, "MoreFromMozilla": False,
+                       "FirefoxLabs": False, "Locked": True}},
+            {"name": "Disable AI Features", "key": "AIControls",
+             "value": {"Default": {"Value": "blocked", "Locked": True}}},
+        ],
+    },
+    {
+        "name": "Performance & Bloat",
+        "browsers": ("firefox",),
+        "features": [
+            {"name": "Force Hardware Acceleration", "key": "HardwareAcceleration", "value": True},
+            {"name": "Disable Default Browser Prompt", "key": "DontCheckDefaultBrowser", "value": True},
         ],
     },
 ]
 
-DNS_MODES = ["automatic", "off", "secure", "custom"]
+# "unmanaged" (the default) writes no DNS policy at all, leaving Brave's
+# DNS settings user-controlled. The other four are managed-policy values —
+# including "off", which actively force-disables DoH as policy.
+DNS_MODES = ["unmanaged", "automatic", "off", "secure", "custom"]
 
 # ---------------------------------------------------------------------------
 # Build a flat list of rows for the TUI (headers + toggleable items + DNS)
@@ -468,10 +892,20 @@ def build_rows(installations=None):
     here anymore.
     """
     del installations  # kept for API stability; no longer affects layout
+    browser = SELECTED_BROWSER
     rows = []
     for cat in CATEGORIES:
+        cat_browsers = cat.get("browsers", CHROMIUM_BROWSERS)
+        if browser not in cat_browsers:
+            continue
+        # Feature rows inherit their category's browser scope unless
+        # they narrow it further with their own tag.
+        feats = [f for f in cat["features"]
+                 if browser in f.get("browsers", cat_browsers)]
+        if not feats:
+            continue
         rows.append({"type": ROW_HEADER, "text": cat["name"]})
-        for feat in cat["features"]:
+        for feat in feats:
             rows.append({
                 "type": ROW_FEATURE,
                 "text": feat["name"],
@@ -503,7 +937,7 @@ def get_dns_mode(rows):
     for row in rows:
         if row["type"] == ROW_DNS:
             return row["options"][row["selected"]]
-    return "automatic"
+    return "unmanaged"
 
 
 def get_dns_template(rows):
@@ -522,7 +956,7 @@ def toggle_feature_row(rows, target):
 
 
 def _set_feature_checked(rows, target, checked):
-    """Set a feature row while preserving mutual-exclusion groups."""
+    """Set a feature row's checked state directly, preserving mutual-exclusion groups."""
     target["checked"] = checked
     group = target.get("group")
     if checked and group:
@@ -579,12 +1013,13 @@ def _is_brave_running(installations=None):
     process name (Stable on each platform), preserving old behaviour for
     callers that haven't been updated.
     """
-    if installations is None:
-        names = ["Brave Browser"] if IS_MAC else ["brave"]
+    default_name = _browser_channels()[0]["process_name"]
+    if not installations:
+        names = [default_name]
     else:
         names = [i["process_name"] for i in installations if i.get("process_name")]
         if not names:
-            names = ["Brave Browser"] if IS_MAC else ["brave"]
+            names = [default_name]
 
     for name in names:
         try:
@@ -651,14 +1086,7 @@ def _repair_one_prefs(pref_path):
 
     # We're root via sudo — return the file to its original owner so the
     # user's Brave can rewrite it on the next session.
-    sudo_user = os.environ.get("SUDO_USER")
-    if sudo_user:
-        try:
-            import pwd
-            user_info = pwd.getpwnam(sudo_user)
-            os.chown(pref_path, user_info.pw_uid, user_info.pw_gid)
-        except (ImportError, KeyError, OSError):
-            pass
+    _chown_to_sudo_user(pref_path)
 
     return removed
 
@@ -669,20 +1097,22 @@ def repair_brave_prefs(installations=None):
     Returns (removed_count, brave_was_running). When `installations` is None,
     repairs only the legacy stable-channel prefs path (back-compat).
     """
+    if not browser_config()["prefs_repair"]:
+        return (0, _is_brave_running(installations or []))
     if installations is None:
         # Legacy single-channel path — synthesise a stable installation.
-        ch_def = MAC_CHANNELS[0] if IS_MAC else LINUX_CHANNELS[0]
+        ch_def = _browser_channels()[0]
         installations = [{"prefs_path": _channel_prefs_path(ch_def["user_data_dir"])}]
 
     running = _is_brave_running(installations)
     total = 0
     seen = set()
     for inst in installations:
-        path = inst.get("prefs_path")
-        if not path or path in seen:
-            continue
-        seen.add(path)
-        total += _repair_one_prefs(path)
+        for path in _profile_prefs_paths(inst.get("prefs_path")):
+            if path in seen:
+                continue
+            seen.add(path)
+            total += _repair_one_prefs(path)
     return (total, running)
 
 
@@ -704,7 +1134,7 @@ def _stable_uuid(slug):
 
 
 def _is_profile_installed():
-    """True if the SlimBrave Neo Configuration Profile is in the system db.
+    """True if the Spiral Slim Configuration Profile is in the system db.
 
     Reads `profiles list -output stdout-xml` (a plist mapping a domain
     label to an array of profile dicts) and scans for our identifier.
@@ -756,7 +1186,7 @@ def _build_mobileconfig(policy_by_bundle):
             "PayloadUUID": _stable_uuid(
                 f"{PERSIST_PROFILE_IDENTIFIER}.payload.{bundle_id}"
             ),
-            "PayloadDisplayName": f"Brave Policy ({bundle_id})",
+            "PayloadDisplayName": f"{browser_label()} Policy ({bundle_id})",
             "PayloadContent": {
                 bundle_id: {
                     "Forced": [{"mcx_preference_settings": dict(policy)}],
@@ -770,17 +1200,17 @@ def _build_mobileconfig(policy_by_bundle):
         "PayloadUUID": _stable_uuid(PERSIST_PROFILE_IDENTIFIER),
         "PayloadDisplayName": PERSIST_PROFILE_DISPLAY,
         "PayloadDescription": (
-            "Brave Browser enterprise policies managed by SlimBrave Neo. "
-            "Remove via SlimBrave Neo --reset or in System Settings."
+            f"{browser_label()} enterprise policies managed by Spiral Slim. "
+            "Remove via Spiral Slim --reset or in System Settings."
         ),
-        "PayloadOrganization": "SlimBrave Neo",
+        "PayloadOrganization": "Spiral Slim",
         "PayloadScope": "System",
         "PayloadContent": inner_payloads,
     }
 
 
 def _remove_profile():
-    """Remove the SlimBrave Neo profile via the `profiles` CLI.
+    """Remove the Spiral Slim profile via the `profiles` CLI.
 
     `profiles remove -identifier ... -forced` is the root-only path that
     still works without a GUI on macOS 11+. Silent when nothing to remove.
@@ -806,14 +1236,15 @@ def _install_profile_from_policy(policy_by_bundle):
     macOS 11+ disallows CLI install of configuration profiles (see
     `man profiles`), so the only path is `open <file.mobileconfig>`
     which lets macOS route the file to System Settings > General >
-    Device Management for user approval. Any installed version stays active
-    until macOS accepts the replacement, avoiding a policy gap if the user
-    cancels or the settings UI fails to open.
+    Device Management for user approval. Any prior version is removed
+    first so the user sees a single fresh entry.
 
     `open` is run as the invoking user (SUDO_USER) so LaunchServices
     targets that user's GUI session — running it as root produces
     inconsistent behaviour when the console user differs.
     """
+    if _is_profile_installed():
+        _remove_profile()
     mc = _build_mobileconfig(policy_by_bundle)
     try:
         # /tmp is world-readable but the profile contents aren't secret —
@@ -887,16 +1318,22 @@ def _flush_cfprefsd():
 
 
 def _clear_persistence_artifacts():
-    """Remove any installed Configuration Profile.
+    """Remove any installed Configuration Profile and its mobileconfig.
 
     Called by reset and by apply when switching modes (so an `off` Apply
     after a previous `on` Apply cleanly tears the profile down). Plist
     file deletion is the caller's responsibility — apply/reset already
-    iterate over plist_path targets.
+    iterate over plist_path targets. The staged mobileconfig in /tmp is
+    removed too so a reset leaves nothing behind; a persist=on Apply
+    rewrites it immediately afterwards.
     """
     if not IS_MAC:
         return
     _remove_profile()
+    try:
+        os.remove(PERSIST_PROFILE_FILE)
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -912,7 +1349,10 @@ def _read_one_policy(plist_path):
                 return plistlib.load(f)
         else:
             with open(plist_path, "r") as f:
-                return json.load(f)
+                data = json.load(f)
+                if browser_engine() == "firefox" and isinstance(data, dict):
+                    return data.get("policies", {})
+                return data
     except (FileNotFoundError, PermissionError):
         return {}
     except Exception:
@@ -966,20 +1406,47 @@ def _build_policy(rows):
     if dns_mode == "custom" and not dns_template:
         return None, "Custom DNS requires a DoH template URL."
 
-    if dns_mode:
-        # "custom" maps to "secure" in the actual Chromium policy
-        if dns_mode == "custom":
+    # "unmanaged" writes no DNS keys at all; since Apply fully overwrites
+    # the policy file, any previously-managed DNS policy is removed.
+    # Firefox has no mode enum — its DNSOverHTTPS object maps as:
+    # off = Enabled false; automatic = Enabled true (fallback allowed);
+    # secure/custom = Enabled true with fallback off (+ ProviderURL).
+    if dns_mode and dns_mode != "unmanaged":
+        if browser_engine() == "firefox":
+            if dns_mode == "off":
+                policy["DNSOverHTTPS"] = {"Enabled": False, "Locked": True}
+            elif dns_mode == "automatic":
+                policy["DNSOverHTTPS"] = {"Enabled": True, "Locked": True}
+            else:  # secure / custom
+                doh = {"Enabled": True, "Fallback": False, "Locked": True}
+                if dns_template:
+                    doh["ProviderURL"] = dns_template
+                policy["DNSOverHTTPS"] = doh
+        elif dns_mode == "custom":
             policy["DnsOverHttpsMode"] = "secure"
             policy["DnsOverHttpsTemplates"] = dns_template
         else:
             policy["DnsOverHttpsMode"] = dns_mode
             if dns_mode == "secure" and dns_template:
                 policy["DnsOverHttpsTemplates"] = dns_template
+
+    if IS_MAC and browser_engine() == "firefox":
+        # Firefox's macOS policy engine only activates when this marker
+        # key is present in the preference domain.
+        policy["EnterprisePoliciesEnabled"] = True
     return policy, ""
 
 
 def _write_one_policy(plist_path, policy):
-    """Write a single policy file and return (ok, error_msg)."""
+    """Write a single policy file and return (ok, error_msg).
+
+    Firefox on Linux reads a top-level {"policies": {...}} wrapper in
+    policies.json; on macOS its policy keys go straight into the
+    preference domain (EnterprisePoliciesEnabled is injected by
+    _build_policy to activate the policy engine).
+    """
+    if browser_engine() == "firefox" and not IS_MAC:
+        policy = {"policies": policy}
     try:
         os.makedirs(os.path.dirname(plist_path), exist_ok=True)
         if IS_MAC:
@@ -1037,17 +1504,107 @@ def apply_policy(rows, installations=None, persist_mode=PERSIST_DEFAULT,
         on   Install an Apple Configuration Profile via System Settings
              so policies survive reboots. Requires a one-time GUI step.
 
-    Switching to `off` clears the profile. Applying with `on` preserves any
-    installed profile until macOS accepts its replacement and writes matching
-    plists as an immediate, non-durable fallback during GUI approval.
+    Switching `on` ↔ `off` implicitly clears the previous artifact so
+    the on-disk state always matches the new mode.
     """
+    if not IS_MAC and persist_mode != "off":
+        persist_mode = "off"
+    if persist_mode not in PERSIST_MODES:
+        return False, (
+            f"Unknown persist mode '{persist_mode}'. "
+            f"Valid: {', '.join(PERSIST_MODES)}."
+        )
+
     policy, err = _build_policy(rows)
     if policy is None:
         return False, err
 
-    return _apply_policy_dict(
-        policy, installations, persist_mode, selected_channel_ids,
+    if installations is None:
+        targets = [(POLICY_FILE, "")]
+    else:
+        targets = _dedupe_plist_targets(_selected_channel_targets(installations, selected_channel_ids))
+
+    if not targets:
+        return False, f"No {browser_label()} channel selected. Check at least one channel."
+
+    written_labels = []
+
+    if persist_mode == "on":
+        # Write the same values as a plist fallback before queueing the
+        # profile, and let _install_profile_from_policy remove any stale
+        # profile itself. Clearing persistence artifacts up front (before
+        # a fresh plist/profile is in place) would leave a brief window
+        # with no enforced policy at all — the same gap _apply_policy_dict
+        # (the plan interface's equivalent) avoids.
+        policy_by_bundle = {}
+        for plist_path, label in targets:
+            ok, err = _write_one_policy(plist_path, policy)
+            if not ok:
+                scope = f" ({label})" if label else ""
+                return False, f"{err}{scope}"
+            bundle = _bundle_id_for_plist(plist_path)
+            if bundle:
+                policy_by_bundle[bundle] = policy
+            if label:
+                written_labels.append(label)
+        _flush_cfprefsd()
+        if not policy_by_bundle:
+            return False, "No valid Brave channel bundle id found."
+        ok, err = _install_profile_from_policy(policy_by_bundle)
+        if not ok:
+            return False, err
+    else:
+        # `off`: drop any previously-installed profile so switching modes
+        # is never additive — an `off` Apply after a previous `on` Apply
+        # should leave only the plist, not both.
+        if IS_MAC:
+            _clear_persistence_artifacts()
+        # `off`: plain plist into /Library/Managed Preferences/. cfprefsd
+        # is flushed so it re-reads the fresh values instead of serving
+        # a stale "not managed" cache.
+        for plist_path, label in targets:
+            ok, err = _write_one_policy(plist_path, policy)
+            if not ok:
+                scope = f" ({label})" if label else ""
+                return False, f"{err}{scope}"
+            if label:
+                written_labels.append(label)
+        if IS_MAC:
+            _flush_cfprefsd()
+
+    repair_targets = (
+        _selected_channel_targets(installations, selected_channel_ids)
+        if installations else None
     )
+    return True, _post_apply_message(
+        *repair_brave_prefs(repair_targets),
+        labels=written_labels, persist_mode=persist_mode,
+    )
+
+
+def _post_apply_message(repaired, brave_running, labels=None,
+                        persist_mode=PERSIST_DEFAULT):
+    """Build the status message after a successful Apply."""
+    scope = f" to {', '.join(labels)}" if labels else ""
+    if persist_mode == "on":
+        base = (
+            f"Profile generated{scope}. Finish in "
+            "System Settings > General > Device Management."
+        )
+    elif IS_MAC:
+        base = (
+            f"Settings applied{scope}. Restart {browser_label()} to see changes. "
+            "Persistence is off — values may reset on macOS 13+."
+        )
+    else:
+        base = f"Settings applied{scope}. Restart {browser_label()} to see changes."
+
+    if repaired > 0:
+        prefs = f"pref{'s' if repaired != 1 else ''}"
+        base += f" Cleaned {repaired} leaked profile {prefs}."
+    if brave_running:
+        base += f" ({browser_label()} is running — fully close it before reopening.)"
+    return base
 
 
 def _apply_policy_dict(policy, installations, persist_mode,
@@ -1056,7 +1613,9 @@ def _apply_policy_dict(policy, installations, persist_mode,
 
     Split out of apply_policy so the plan interface further down can reuse
     the exact same write / Configuration Profile / cfprefsd / prefs-repair
-    path instead of growing a second implementation of it.
+    path instead of growing a second implementation of it. Brave-only: the
+    plan comes from browser_collection's BraveAdapter, which has no Chrome/
+    Edge/Firefox equivalent yet.
     """
     if not IS_MAC and persist_mode != "off":
         persist_mode = "off"
@@ -1131,31 +1690,6 @@ def _apply_policy_dict(policy, installations, persist_mode,
     return True, message
 
 
-def _post_apply_message(repaired, brave_running, labels=None,
-                        persist_mode=PERSIST_DEFAULT):
-    """Build the status message after a successful Apply."""
-    scope = f" to {', '.join(labels)}" if labels else ""
-    if persist_mode == "on":
-        base = (
-            f"Profile generated{scope}. Finish in "
-            "System Settings > General > Device Management."
-        )
-    elif IS_MAC:
-        base = (
-            f"Settings applied{scope}. Restart Brave to see changes. "
-            "Persistence is off — values may reset on macOS 13+."
-        )
-    else:
-        base = f"Settings applied{scope}. Restart Brave to see changes."
-
-    if repaired > 0:
-        prefs = f"pref{'s' if repaired != 1 else ''}"
-        base += f" Cleaned {repaired} leaked profile {prefs}."
-    if brave_running:
-        base += " (Brave is running — fully close it before reopening.)"
-    return base
-
-
 def reset_policy(rows, installations=None, selected_channel_ids=None):
     """Reset all SlimBrave state: plists, profile, prefs leak.
 
@@ -1200,14 +1734,14 @@ def reset_policy(rows, installations=None, selected_channel_ids=None):
     )
     repaired, running = repair_brave_prefs(repair_targets)
     scope = f" for {', '.join(cleared_labels)}" if cleared_labels else ""
-    msg = f"All settings reset{scope}. Restart Brave to see changes."
+    msg = f"All settings reset{scope}. Restart {browser_label()} to see changes."
     if repaired > 0:
         msg = (
             f"Reset{scope}; cleaned {repaired} leaked profile "
-            f"pref{'s' if repaired != 1 else ''}. Restart Brave."
+            f"pref{'s' if repaired != 1 else ''}. Restart {browser_label()}."
         )
     if running:
-        msg += " (Brave is running — fully close it before reopening.)"
+        msg += f" ({browser_label()} is running — fully close it before reopening.)"
     return True, msg
 
 
@@ -1228,18 +1762,32 @@ def detect_managed_channel_ids(installations):
     return managed
 
 
+def _policy_dns_state(policy):
+    """Return (mode, template) from an on-disk policy, engine-aware."""
+    if browser_engine() == "firefox":
+        doh = policy.get("DNSOverHTTPS")
+        if not isinstance(doh, dict):
+            return (None, "")
+        if not doh.get("Enabled", False):
+            return ("off", "")
+        tmpl = doh.get("ProviderURL", "")
+        if doh.get("Fallback", True) and not tmpl:
+            return ("automatic", "")
+        return ("secure", tmpl)
+    return (policy.get("DnsOverHttpsMode"),
+            policy.get("DnsOverHttpsTemplates", ""))
+
+
 def sync_rows_with_policy(rows, policy):
     """Pre-check rows that match an existing policy on disk."""
     if not policy:
         return
     for row in rows:
         if row["type"] == ROW_FEATURE:
-            matches = row["key"] in policy and policy[row["key"]] == row["value"]
-            if matches:
-                _set_feature_checked(rows, row, True)
+            if row["key"] in policy and policy[row["key"]] == row["value"]:
+                row["checked"] = True
         elif row["type"] == ROW_DNS:
-            dns_val = policy.get("DnsOverHttpsMode")
-            dns_tmpl = policy.get("DnsOverHttpsTemplates", "")
+            dns_val, dns_tmpl = _policy_dns_state(policy)
             # If mode is "secure" and a template is set, show as "custom"
             if dns_val == "secure" and dns_tmpl:
                 if "custom" in row["options"]:
@@ -1247,7 +1795,7 @@ def sync_rows_with_policy(rows, policy):
             elif dns_val in row["options"]:
                 row["selected"] = row["options"].index(dns_val)
         elif row["type"] == ROW_DNS_TEMPLATE:
-            tmpl = policy.get("DnsOverHttpsTemplates", "")
+            _, tmpl = _policy_dns_state(policy)
             if tmpl:
                 row["value"] = tmpl
                 row["cursor"] = len(tmpl)
@@ -1256,7 +1804,7 @@ def sync_rows_with_policy(rows, policy):
 def detect_persist_mode():
     """Detect whether persistence is currently in use on this Mac.
 
-    Returns "on" if the SlimBrave Neo Configuration Profile is in the
+    Returns "on" if the Spiral Slim Configuration Profile is in the
     system db, otherwise "off". Non-macOS always returns "off".
     """
     if not IS_MAC:
@@ -1269,7 +1817,7 @@ def detect_persist_mode():
 
 
 def export_settings(rows, path):
-    """Export current TUI selections to a SlimBrave Neo JSON config file.
+    """Export current TUI selections to a Spiral Slim JSON config file.
 
     Writes the new key-value map format so multi-value policies (e.g.
     IncognitoModeAvailability, which can be 1 for Disable or 2 for Force)
@@ -1286,17 +1834,23 @@ def export_settings(rows, path):
         elif row["type"] == ROW_DNS_TEMPLATE:
             dns_template = row["value"].strip()
 
-    settings = {"Features": features}
-    if dns_mode:
+    # DnsMode is omitted when DNS is unmanaged, so importing the file
+    # (on any platform) lands back on "unmanaged" instead of forcing a
+    # managed DNS policy. The template only matters for custom/secure.
+    settings = {"Browser": SELECTED_BROWSER, "Features": features}
+    if dns_mode and dns_mode != "unmanaged":
         settings["DnsMode"] = dns_mode
-    if dns_template:
-        settings["DnsTemplates"] = dns_template
+        if dns_template and dns_mode in ("custom", "secure"):
+            settings["DnsTemplates"] = dns_template
 
     try:
         out_dir = os.path.dirname(path)
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
         _atomic_write(path, json.dumps(settings, indent=4))
+        # Running as root: hand the export back to the invoking user so it
+        # isn't a root-owned file stranded in their home directory.
+        _chown_to_sudo_user(path)
         return True, f"Exported to {path}"
     except OSError as e:
         return False, f"Export failed: {e}"
@@ -1319,7 +1873,7 @@ def _parse_imported_features(features_obj):
 
 
 def import_settings(rows, path):
-    """Import a SlimBrave Neo JSON config and update TUI row states."""
+    """Import a Spiral Slim JSON config and update TUI row states."""
     try:
         config = read_json_file(path)
     except FileNotFoundError:
@@ -1329,9 +1883,20 @@ def import_settings(rows, path):
     except OSError as e:
         return False, f"Read error: {e}"
 
+    declared = str(config.get("Browser", "")).strip().lower()
+    if declared and declared != SELECTED_BROWSER:
+        return False, (
+            f"Config targets '{declared}' but the selected browser is "
+            f"'{SELECTED_BROWSER}'. Re-run with --browser {declared}."
+        )
+
     features_map, is_legacy = _parse_imported_features(config.get("Features"))
     dns_mode = config.get("DnsMode", "")
     dns_template = config.get("DnsTemplates", "") or ""
+    if not dns_mode:
+        # No DnsMode in the file means DNS is unmanaged (a bare
+        # DnsTemplates is treated as custom for legacy exports).
+        dns_mode = "custom" if dns_template else "unmanaged"
 
     # Legacy array format can't distinguish value-1 vs value-2 for keys
     # with multiple rows (IncognitoModeAvailability). To avoid silently
@@ -1351,16 +1916,13 @@ def import_settings(rows, path):
                 if key in legacy_handled:
                     row["checked"] = False
                 else:
-                    _set_feature_checked(rows, row, True)
+                    row["checked"] = True
                     legacy_handled.add(key)
             else:
-                _set_feature_checked(rows, row, expected == row["value"])
+                row["checked"] = (expected == row["value"])
         elif row["type"] == ROW_DNS:
-            if dns_mode and dns_mode in row["options"]:
+            if dns_mode in row["options"]:
                 row["selected"] = row["options"].index(dns_mode)
-            elif dns_mode == "secure":
-                if "secure" in row["options"]:
-                    row["selected"] = row["options"].index("secure")
         elif row["type"] == ROW_DNS_TEMPLATE:
             row["value"] = dns_template
             row["cursor"] = len(dns_template)
@@ -1424,9 +1986,9 @@ def draw(stdscr, rows, cursor_idx, scroll_offset, focus, btn_idx,
 
     # Title bar
     if install_method:
-        title = f" SlimBrave Neo - Brave Browser Debloater [{install_method}] "
+        title = f" Spiral Slim - {browser_label()} Debloater [{install_method}] "
     else:
-        title = " SlimBrave Neo - Brave Browser Debloater "
+        title = f" Spiral Slim - {browser_label()} Debloater "
     pad = max(0, (usable_w - len(title)) // 2)
     try:
         stdscr.addnstr(0, 0, " " * usable_w, usable_w,
@@ -2059,17 +2621,18 @@ def _filter_installations_by_channels(installations, channel_spec):
     """
     if not channel_spec or channel_spec == "auto":
         return installations, ""
+    valid_ids = [c["id"] for c in _browser_channels()]
     requested = [c.strip().lower() for c in channel_spec.split(",") if c.strip()]
-    unknown = [c for c in requested if c not in CHANNEL_IDS]
+    unknown = [c for c in requested if c not in valid_ids]
     if unknown:
         return None, (
             f"Unknown channel(s): {', '.join(unknown)}. "
-            f"Valid: {', '.join(CHANNEL_IDS)}"
+            f"Valid: {', '.join(valid_ids)}"
         )
     filtered = [i for i in installations if i["channel"] in requested]
     if not filtered:
         return None, (
-            f"No installed Brave channel matches --channels {channel_spec}. "
+            f"No installed {browser_label()} channel matches --channels {channel_spec}. "
             f"Detected: {', '.join(i['channel'] for i in installations) or 'none'}"
         )
     return filtered, ""
@@ -2105,6 +2668,71 @@ def cli_import(path, installations, doh_templates="",
             "double-click the downloaded profile and click Install. "
             "See https://support.apple.com/guide/mac-help/mh35561/mac"
         )
+    return 0
+
+
+def cli_export(path, installations):
+    """Non-interactive: export current policy to a config file."""
+    policy = load_existing_policy(installations)
+    if not policy:
+        print("No existing policy found.", file=sys.stderr)
+        return 1
+
+    rows = build_rows(installations)
+    sync_rows_with_policy(rows, policy)
+
+    ok, msg = export_settings(rows, path)
+    if not ok:
+        print(f"Error: {msg}", file=sys.stderr)
+        return 1
+    print(msg)
+    return 0
+
+
+def cli_reset(installations):
+    """Non-interactive: tear down every SlimBrave artifact and repair leaks.
+
+    Removes plist files, the Configuration Profile (if installed), and
+    repairs leaked Brave-profile prefs. Unconditional so a single
+    --reset always leaves a clean slate.
+    """
+    targets = _dedupe_plist_targets(installations)
+    if not targets:
+        print(f"No policy file found at {POLICY_FILE}")
+        return 0
+    try:
+        for plist_path, label in targets:
+            if os.path.exists(plist_path):
+                os.remove(plist_path)
+                print(
+                    f"Removed {plist_path}"
+                    + (f" ({label})" if label else "")
+                )
+            else:
+                print(
+                    f"No policy file found at {plist_path}"
+                    + (f" ({label})" if label else "")
+                )
+    except OSError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+    if IS_MAC:
+        profile_was_installed = _is_profile_installed()
+        _clear_persistence_artifacts()
+        _flush_cfprefsd()
+        if profile_was_installed:
+            print(f"Removed Configuration Profile "
+                  f"({PERSIST_PROFILE_IDENTIFIER})")
+
+    repaired, running = repair_brave_prefs(installations)
+    if repaired > 0:
+        print(
+            f"Cleaned {repaired} leaked profile "
+            f"pref{'s' if repaired != 1 else ''} from Brave's user profile."
+        )
+    if running:
+        print(f"Note: {browser_label()} is running — fully close it before reopening.")
     return 0
 
 
@@ -2173,12 +2801,10 @@ def cli_preview(path, installations, doh_templates="",
 
     print("Preview only — no changes will be made.")
     print(f"Preset: {os.path.abspath(path)}")
-    print(f"Brave channels: {', '.join(labels) if labels else 'default policy target'}")
+    print(f"{browser_label()} channels: {', '.join(labels) if labels else 'default policy target'}")
     print(f"Managed policies: {len(policy)}")
     if IS_MAC and persist_mode == "on":
         print("Persistence: Configuration Profile (approval required in Device Management)")
-        installed = profile_status.replace("_", " ")
-        print(f"Existing SlimBrave profile: {installed}")
     elif IS_MAC:
         print("Persistence: plist only (may reset after reboot on macOS 13+)")
     else:
@@ -2199,6 +2825,17 @@ def cli_preview(path, installations, doh_templates="",
     return 0
 
 
+def cli_catalog(output_format="text"):
+    """Print the portable, read-only tool and preset catalog."""
+    try:
+        from slimbrave_catalog import print_catalog
+        print_catalog(output_format, os.path.dirname(os.path.abspath(__file__)))
+    except (ValueError, ImportError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Plan interface
 #
@@ -2209,9 +2846,12 @@ def cli_preview(path, installations, doh_templates="",
 # the plan is rejected instead of written. A caller therefore cannot use
 # this path to smuggle an unvetted policy into a managed location.
 #
-# Policy writing stays where it already lives: cli_apply_plan hands the
-# verified map to _apply_policy_dict, the same plist / Configuration Profile
-# / cfprefsd / prefs-repair path Apply uses in the TUI.
+# Brave-only, regardless of --browser: browser_collection's adapter
+# registry has no Chrome/Edge/Firefox equivalent yet, and desktop/ (the
+# only caller) never drives this with anything but Brave. Policy writing
+# stays where it already lives: cli_apply_plan hands the verified map to
+# _apply_policy_dict, the same plist / Configuration Profile / cfprefsd /
+# prefs-repair path Apply uses in the TUI.
 # ---------------------------------------------------------------------------
 
 # Plan validation lives in browser_collection/plan.py so that macOS and
@@ -2249,7 +2889,7 @@ except ImportError:  # pragma: no cover - exercised only without the package
     def load_plan(path):
         raise PlanError(
             "browser_collection is required for plan mode. Run this script "
-            "from the SlimBrave Neo project directory."
+            "from the Spiral Slim project directory."
         )
 
 
@@ -2390,92 +3030,21 @@ def cli_apply_plan(path, installations, persist_mode=PERSIST_DEFAULT):
     return 0
 
 
-def cli_catalog(output_format="text"):
-    """Print the portable, read-only tool and preset catalog."""
-    try:
-        from slimbrave_catalog import print_catalog
-        print_catalog(output_format, os.path.dirname(os.path.abspath(__file__)))
-    except (ValueError, ImportError) as error:
-        print(f"Error: {error}", file=sys.stderr)
-        return 1
-    return 0
-
-
-def cli_export(path, installations):
-    """Non-interactive: export current policy to a config file."""
-    policy = load_existing_policy(installations)
-    if not policy:
-        print("No existing policy found.", file=sys.stderr)
-        return 1
-
-    rows = build_rows(installations)
-    sync_rows_with_policy(rows, policy)
-
-    ok, msg = export_settings(rows, path)
-    if not ok:
-        print(f"Error: {msg}", file=sys.stderr)
-        return 1
-    print(msg)
-    return 0
-
-
-def cli_reset(installations):
-    """Non-interactive: tear down every SlimBrave artifact and repair leaks.
-
-    Removes plist files, the Configuration Profile (if installed), and
-    repairs leaked Brave-profile prefs. Unconditional so a single
-    --reset always leaves a clean slate.
-    """
-    targets = _dedupe_plist_targets(installations)
-    if not targets:
-        print(f"No policy file found at {POLICY_FILE}")
-        return 0
-    try:
-        for plist_path, label in targets:
-            if os.path.exists(plist_path):
-                os.remove(plist_path)
-                print(
-                    f"Removed {plist_path}"
-                    + (f" ({label})" if label else "")
-                )
-            else:
-                print(
-                    f"No policy file found at {plist_path}"
-                    + (f" ({label})" if label else "")
-                )
-    except OSError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
-
-    if IS_MAC:
-        profile_was_installed = _is_profile_installed()
-        _clear_persistence_artifacts()
-        _flush_cfprefsd()
-        if profile_was_installed:
-            print(f"Removed Configuration Profile "
-                  f"({PERSIST_PROFILE_IDENTIFIER})")
-
-    repaired, running = repair_brave_prefs(installations)
-    if repaired > 0:
-        print(
-            f"Cleaned {repaired} leaked profile "
-            f"pref{'s' if repaired != 1 else ''} from Brave's user profile."
-        )
-    if running:
-        print("Note: Brave is running — fully close it before reopening.")
-    return 0
-
-
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        prog="slimbrave",
-        description="SlimBrave Neo - Brave Browser debloater for Linux and macOS",
+        prog="spiral-slim",
+        description="Spiral Slim - Brave Browser debloater for Linux and macOS",
         epilog="Run without arguments to launch the interactive TUI.",
     )
     parser.add_argument(
+        "--browser", choices=sorted(BROWSERS), default="brave",
+        help="which browser to manage (default: brave; edge is macOS/Windows only, "
+             "firefox uses Mozilla's policies.json / managed-preferences dialect)",
+    )
+    parser.add_argument(
         "--import", dest="import_path", metavar="PATH",
-        help="import a SlimBrave Neo JSON config and apply policies",
+        help="import a Spiral Slim JSON config and apply policies",
     )
     parser.add_argument(
         "--preview", dest="preview_path", metavar="PATH",
@@ -2483,23 +3052,27 @@ def parse_args():
     )
     parser.add_argument(
         "--catalog", action="store_true",
-        help="list bundled presets and integration metadata without root",
+        help="list bundled presets and integration metadata without root "
+             "(macOS only)",
     )
     parser.add_argument(
         "--detect", action="store_true",
-        help="report detected Brave channels without root or changes",
+        help="report detected Brave channels without root or changes "
+             "(macOS only; drives desktop/)",
     )
     parser.add_argument(
         "--preview-plan", dest="preview_plan_path", metavar="PATH",
         help=(
-            "preview a browser_collection plan without root or changes"
+            "preview a browser_collection plan without root or changes "
+            "(macOS/Brave only; drives desktop/)"
         ),
     )
     parser.add_argument(
         "--apply-plan", dest="apply_plan_path", metavar="PATH",
         help=(
             "apply a browser_collection plan whose every key and value is "
-            "in the verified Brave mapping (requires root)"
+            "in the verified Brave mapping, requires root "
+            "(macOS/Brave only; drives desktop/)"
         ),
     )
     parser.add_argument(
@@ -2511,11 +3084,11 @@ def parse_args():
     )
     parser.add_argument(
         "--export", dest="export_path", metavar="PATH",
-        help="export current policy to a SlimBrave Neo JSON config",
+        help="export current policy to a Spiral Slim JSON config",
     )
     parser.add_argument(
         "--reset", action="store_true",
-        help="remove the SlimBrave Neo managed policy file",
+        help="remove the Spiral Slim managed policy file",
     )
     parser.add_argument(
         "--policy-file", metavar="PATH",
@@ -2553,14 +3126,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-
-    if args.catalog:
-        sys.exit(cli_catalog(args.format))
-
-    # Detection is read-only and answers "what is on this machine", so it
-    # runs before any policy-path handling or root check.
-    if args.detect:
-        sys.exit(cli_detect(args.format))
+    select_browser(args.browser)
 
     # Override policy file path if requested. This is a single-target
     # override that bypasses channel detection — useful for tests and for
@@ -2586,6 +3152,14 @@ if __name__ == "__main__":
             plist_path=POLICY_FILE,
             prefs_path=_channel_prefs_path(default_channel["user_data_dir"]),
         )]
+
+    if args.catalog:
+        sys.exit(cli_catalog(args.format))
+
+    # Detection is read-only and answers "what is on this machine", so it
+    # runs before any policy-path handling or root check.
+    if args.detect:
+        sys.exit(cli_detect(args.format))
 
     is_cli = (
         args.import_path or args.preview_path or args.export_path
@@ -2631,31 +3205,33 @@ if __name__ == "__main__":
         ))
 
     if os.geteuid() != 0:
-        print("SlimBrave Neo must be run as root.")
+        print("Spiral Slim must be run as root.")
         if is_cli:
-            print("Usage: sudo python3 slimbrave.py --import preset.json")
+            print("Usage: sudo python3 spiral-slim.py --import preset.json")
         else:
-            print("Usage: sudo python3 slimbrave.py")
+            print("Usage: sudo python3 spiral-slim.py")
         sys.exit(1)
 
     if is_cli:
         # Non-interactive CLI mode. --persist defaults to whichever mode is
-        # currently installed (matches the TUI's sticky default) so a re-run
-        # never silently demotes a profile back to plist-only.
+        # currently installed (matches the TUI's sticky default) so a
+        # re-run never silently demotes a profile back to plist-only.
         installations, persist_mode = _resolve_targets()
 
+        # Accumulate so a later success cannot mask an earlier failure
+        # (e.g. --reset failing followed by a clean --import).
         rc = 0
         if args.reset:
-            rc = cli_reset(installations)
+            rc = max(rc, cli_reset(installations))
         if args.import_path:
-            rc = cli_import(args.import_path, installations,
-                            doh_templates=args.doh_templates or "",
-                            persist_mode=persist_mode)
+            rc = max(rc, cli_import(args.import_path, installations,
+                                    doh_templates=args.doh_templates or "",
+                                    persist_mode=persist_mode))
         if args.apply_plan_path:
-            rc = cli_apply_plan(args.apply_plan_path, installations,
-                                persist_mode=persist_mode)
+            rc = max(rc, cli_apply_plan(args.apply_plan_path, installations,
+                                        persist_mode=persist_mode))
         if args.export_path:
-            rc = cli_export(args.export_path, installations)
+            rc = max(rc, cli_export(args.export_path, installations))
         sys.exit(rc)
 
     # Interactive TUI mode

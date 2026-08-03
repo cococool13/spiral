@@ -109,12 +109,12 @@ describe("collection-types", () => {
   describe("type consistency", () => {
     it("should create immutable readonly interfaces", () => {
       const entrypoint: PlatformEntrypoint = {
-        command: "python3 slimbrave-mac.py",
+        command: "python3 spiral-slim-mac.py",
         supportsPreview: true,
         supportsJson: true,
         requiresElevation: true,
       };
-      expect(entrypoint.command).toBe("python3 slimbrave-mac.py");
+      expect(entrypoint.command).toBe("python3 spiral-slim-mac.py");
     });
 
     it("should allow readonly arrays", () => {
