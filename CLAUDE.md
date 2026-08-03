@@ -7,18 +7,24 @@ Current app release **v1.0.2** (Spiral Wallpaper).
 > shipped repo — `github.com/cococool13/spiral-wallpaper`, pnpm **11.9**, **no tray, closing the
 > window quits**. The Codex-built variant has a different structure and a `keepRunning` tray
 > mode; **facts do not transfer between them** — don't apply its tray/settings behavior here.
-> It is **no longer a sibling directory**. Only its docs and assets remain, at
-> `~/Downloads/2026-07-Creative-Assets/Spiral Codex/`. Treat any tray/settings claim sourced
-> from there as belonging to a different project.
+> It is **no longer a sibling directory**, and as of 2026-08-02 its docs/assets no longer exist
+> locally either (the `~/Downloads/2026-07-Creative-Assets/Spiral Codex/` copy is gone). Treat
+> any tray/settings claim about the Codex variant as unverifiable, not as fact about this repo.
 
 ## Repo layout
 
 ```
 brand/         the design system. Every colour, font, and mark. Single source of truth.
-apps/          one folder per shipped app  ·  apps/wallpaper = Spiral Wallpaper (Tauri)
+apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri, shipped)
+               apps/slim = Spiral Slim (Python + Tauri wizard, shipped on macOS)
+               apps/cleaner = Spiral Cleaner (docs/ADRs only — pre-code, planning stage)
 collection/    the spiral-collection.netlify.app website (Next.js, static export)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```
+
+This repo is the one true source for every Spiral product — brand, apps, docs, and site.
+Don't leave product planning material (ADRs, context docs, specs) sitting only in a
+Documents folder or a separate standalone repo; bring it in here, even pre-code.
 
 - **Never define a brand value outside `brand/`.** Each surface copies what it needs at build
   time into a gitignored folder (`collection/public/brand/`, `apps/wallpaper/src/assets/brand/`)

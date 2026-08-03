@@ -76,16 +76,21 @@ Three top-level areas, one job each.
 
 ```
 brand/         the design system — every colour, font, and mark lives here
-apps/          one folder per shipped app
+apps/          one folder per app — shipped, in progress, or still just docs
 collection/    the spiral-collection.netlify.app website
 docs/          product context, visual system, external reference
 ```
+
+This repo is the one true source for every Spiral product. Product planning
+material (ADRs, context docs) lives here even before there's code — see
+`apps/cleaner/` for an example.
 
 | Path | What | Start here when… |
 | --- | --- | --- |
 | [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
-| [`apps/slim/`](apps/slim/) | SlimBrave Neo (stdlib-only Python) plus [`apps/slim/desktop/`](apps/slim/desktop/) — Spiral Slim v1.0.0, a Tauri wizard over it. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
+| [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
+| [`apps/cleaner/`](apps/cleaner/) | Spiral Cleaner: a native macOS maintenance app (Optimize Mac workflow, app-uninstall with associated-file cleanup). Pre-code — only `CONTEXT.md` and `docs/adr/` exist so far | picking up planning work before any code is written |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
