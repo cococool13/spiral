@@ -323,7 +323,6 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 dirs = "6"
 walkdir = "2"
@@ -351,9 +350,11 @@ fn main() {
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": ["main"],
-  "permissions": ["core:default", "updater:default", "process:default"]
+  "permissions": ["core:default", "process:default"]
 }
 ```
+
+**Amended during execution.** The updater plugin is deliberately absent from this task. `tauri-plugin-updater` reads `plugins.updater.pubkey` at init and panics when it is missing, so registering it before the signing key exists produces an app that cannot launch. It lands at M7 together with the key, the `pubkey`, the endpoint, and `updater: true` in the release workflow — the same reasoning Task 10 already applies. `@tauri-apps/plugin-updater` stays in `package.json`; the frontend dependency is inert until then.
 
 - [ ] **Step 3: Create the Tauri config**
 
@@ -429,10 +430,12 @@ fn main() {
 `apps/clean/src-tauri/src/lib.rs`:
 
 ```rust
+// The updater plugin is registered at M7, not here. It reads
+// plugins.updater.pubkey at init and panics without it, so it cannot be
+// added before the signing key exists.
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .run(tauri::generate_context!())
         .expect("error while running Spiral Clean");
 }
