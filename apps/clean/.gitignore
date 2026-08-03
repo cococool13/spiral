@@ -1,0 +1,8 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# Synced from /brand at build time. Never edit — deleted on the next build.
+src/assets/brand/
+src/styles/tokens.css
