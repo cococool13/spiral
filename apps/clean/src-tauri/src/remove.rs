@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 /// guarantee: `UserChosen` is a unit variant with no path constraint, so any
 /// caller can justify Trashing any path that clears the user-content and
 /// exclusion bars this way. What `execute` actually guarantees is narrower —
-/// user content is denied no matter which variant is used, and `Catalog` can
-/// only reach `Permanent` through a real catalog entry (see
-/// `disposition_for`).
+/// user content (and anything above it) is denied no matter which variant
+/// is used, and `Catalog` can only reach `Permanent` through a real catalog
+/// entry whose own roots actually cover the path (see `disposition_for`).
 #[derive(Debug, Clone, serde::Deserialize)]
 pub enum Justification {
     /// Matched a safe-category catalog entry, by id.
@@ -112,17 +112,50 @@ fn normalize(path: &Path) -> Option<PathBuf> {
 
     const FIRMLINK_PREFIX: &str = "/System/Volumes/Data";
     let prefix = Path::new(FIRMLINK_PREFIX);
-    let normalized = if starts_with_case_insensitive(path, prefix) {
-        let mut remaining = path.components();
+    let mut normalized = path.to_path_buf();
+    // A loop, not a single strip: macOS does not nest this firmlink today
+    // (confirmed unreachable on the current macOS), so a doubled
+    // `/System/Volumes/Data/System/Volumes/Data/...` prefix cannot exist in
+    // practice — but stripping only once would silently leave it half
+    // -stripped if that ever changed. One extra loop condition is cheap
+    // insurance on a security-critical comparison.
+    while starts_with_case_insensitive(&normalized, prefix) {
+        let mut remaining = normalized.components();
         for _ in prefix.components() {
             remaining.next();
         }
-        Path::new("/").join(remaining.as_path())
-    } else {
-        path.to_path_buf()
-    };
+        normalized = Path::new("/").join(remaining.as_path());
+    }
 
     Some(normalized)
+}
+
+/// Roots that must never themselves be deletable, nor have anything *above*
+/// them be deletable either: home, `/Users`, `/Applications`, `~/Library`,
+/// and everything in `USER_CONTENT`. This is not the same guarantee as
+/// containment (`starts_with_case_insensitive(candidate, root)`, "is the
+/// candidate inside the root") — it is the mirror image
+/// (`starts_with_case_insensitive(root, candidate)`, "is the candidate the
+/// root, or an ancestor of it"). `/Users` is an *ancestor* of
+/// `~/Documents`, not a descendant of it, so containment alone lets it
+/// straight through; deleting it would recursively destroy every account's
+/// Documents, Desktop, and Pictures.
+fn protected_roots() -> Vec<PathBuf> {
+    let mut roots = vec![PathBuf::from("/Applications"), PathBuf::from("/Users")];
+    if let Some(home) = dirs::home_dir() {
+        roots.push(home.join("Library"));
+        for r in USER_CONTENT {
+            roots.push(home.join(r));
+        }
+        roots.push(home);
+    }
+    roots
+}
+
+/// True when `path` (already normalised) is one of `protected_roots`, or an
+/// ancestor of one of them.
+fn is_ancestor_of_protected_root(path: &Path) -> bool {
+    protected_roots().iter().any(|root| starts_with_case_insensitive(root, path))
 }
 
 fn is_user_content(path: &Path) -> bool {
@@ -132,6 +165,10 @@ fn is_user_content(path: &Path) -> bool {
     };
 
     if starts_with_case_insensitive(&normalized, Path::new("/Volumes")) {
+        return true;
+    }
+
+    if is_ancestor_of_protected_root(&normalized) {
         return true;
     }
 
@@ -168,18 +205,45 @@ fn is_within_app_bundle_scope(path: &Path) -> bool {
     }
 }
 
+/// True when `path` (already normalised) lies at or beneath one of
+/// `entry`'s own roots, expanded and normalised the same way. Catalog
+/// membership is supposed to be the only route to `Permanent` deletion
+/// (ADR-0006) — but an id existing on its own proves nothing about the path
+/// handed in; without this check the id is a password with no lock
+/// attached to it, and `Catalog("user-caches")` would justify deleting
+/// anything at all. `catalog::expand` does no canonicalisation of its own,
+/// which is fine here because every root it's given comes from the
+/// hardcoded catalog, never from a candidate path.
+fn is_within_catalog_entry(path: &Path, entry: &catalog::CatalogEntry) -> bool {
+    entry.roots.iter().any(|root| {
+        catalog::expand(root)
+            .and_then(|r| normalize(&r))
+            .map(|r| starts_with_case_insensitive(path, &r))
+            .unwrap_or(false)
+    })
+}
+
 /// Disposition is derived here, never supplied by the caller. Two routes
-/// reach `Permanent`: a `Catalog` match, and `AppBundle` (ADR-0004) — an app
-/// uninstall is permanent by design. `AppBundle` is constrained to
-/// `/Applications`, `~/Applications`, and `~/Library` (checked, note, after
-/// the user-content bar has already run and already excludes
-/// `~/Library/Mobile Documents`); it does not yet prove the path belongs to
-/// the named `bundle_id` — that lands with `associate.rs` in M4, so this is
-/// a containment floor, not full validation.
+/// reach `Permanent`: a `Catalog` match whose path is actually under that
+/// entry's own roots (see `is_within_catalog_entry`), and `AppBundle`
+/// (ADR-0004) — an app uninstall is permanent by design. `AppBundle` is
+/// constrained to `/Applications`, `~/Applications`, and `~/Library`
+/// (checked, note, after the user-content bar has already run and already
+/// excludes `~/Library/Mobile Documents`); it does not yet prove the path
+/// belongs to the named `bundle_id` — that lands with `associate.rs` in M4,
+/// so this is a containment floor, not full validation.
 fn disposition_for(path: &Path, j: &Justification) -> Result<Disposition, String> {
     match j {
         Justification::Catalog(id) => match catalog::find(id) {
-            Some(entry) => Ok(entry.disposition),
+            Some(entry) => match normalize(path) {
+                Some(normalized) if is_within_catalog_entry(&normalized, entry) => {
+                    Ok(entry.disposition)
+                }
+                _ => Err(format!(
+                    "{} is not covered by the \"{id}\" category. Nothing was removed.",
+                    path.display()
+                )),
+            },
             None => Err(format!(
                 "\"{id}\" is not a category in this release. Nothing was removed."
             )),
@@ -317,9 +381,26 @@ mod tests {
         Candidate { path, bytes: 1, justification: j }
     }
 
+    /// A uniquely-named, self-cleaning directory genuinely inside the real
+    /// `user-caches` catalog root (`~/Library/Caches`). Since `disposition_for`
+    /// now validates a `Catalog` justification against that entry's own
+    /// roots, a test that wants to see an actual `Catalog("user-caches")`
+    /// deletion succeed needs a path that really is under
+    /// `~/Library/Caches` — a plain `tempfile::tempdir()` under `/tmp` no
+    /// longer qualifies, and rightly so. `~/Library/Caches` is guaranteed
+    /// present on macOS, and the unique `spiral-clean-test-` prefix keeps
+    /// this hermetic and safe under parallel test execution.
+    fn catalog_root_tempdir() -> tempfile::TempDir {
+        let home = dirs::home_dir().expect("home directory should resolve in tests");
+        tempfile::Builder::new()
+            .prefix("spiral-clean-test-")
+            .tempdir_in(home.join("Library/Caches"))
+            .expect("~/Library/Caches should exist on macOS")
+    }
+
     #[test]
     fn a_catalog_candidate_is_removed_permanently() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = catalog_root_tempdir();
         let p = file(dir.path(), "cache.bin");
         let reports = execute(
             vec![candidate(p.clone(), Justification::Catalog("user-caches".into()))],
@@ -401,7 +482,7 @@ mod tests {
 
     #[test]
     fn one_failure_does_not_abort_the_batch() {
-        let dir = tempfile::tempdir().unwrap();
+        let dir = catalog_root_tempdir();
         let good = file(dir.path(), "a.bin");
         let missing = dir.path().join("gone.bin");
         let reports = execute(
@@ -589,7 +670,7 @@ mod tests {
         // log.
         use std::os::unix::fs::PermissionsExt;
 
-        let dir = tempfile::tempdir().unwrap();
+        let dir = catalog_root_tempdir();
         let target = dir.path().join("target");
         std::fs::create_dir(&target).unwrap();
         std::fs::write(target.join("a_file.txt"), b"x").unwrap();
@@ -615,5 +696,90 @@ mod tests {
             reports[0].outcome
         );
         assert!(!target.join("a_file.txt").exists());
+    }
+
+    #[test]
+    fn ancestor_of_user_content_is_denied_with_catalog_justification() {
+        // New CRITICAL: the user-content bar's containment check only ever
+        // caught a candidate *inside* a protected root, never a candidate
+        // that IS one or sits *above* one. `/Users` is an ancestor of
+        // `~/Documents`, not a descendant of it, and
+        // `/System/Volumes/Data/Users` normalises to the same thing. Naming
+        // a real catalog id ("user-caches") does not help — the ancestor
+        // guard runs in `is_user_content`, before `disposition_for` (and
+        // therefore catalog containment) is ever reached.
+        let home = dirs::home_dir().unwrap();
+        for path in [
+            PathBuf::from("/Users"),
+            home.clone(),
+            PathBuf::from("/System/Volumes/Data/Users"),
+        ] {
+            let reports = execute(
+                vec![candidate(path.clone(), Justification::Catalog("user-caches".into()))],
+                &exclude::new(vec![]),
+            );
+            assert!(
+                matches!(reports[0].outcome, Outcome::Denied(_)),
+                "{path:?} was not denied"
+            );
+        }
+    }
+
+    #[test]
+    fn catalog_justification_is_validated_against_its_own_entrys_roots() {
+        // The other half of the same finding: a catalog id existing was
+        // never enough on its own — `disposition_for` used to grant
+        // `Permanent` to *any* path once the id looked up, with zero
+        // relationship to what that id actually names. Exercised directly
+        // against `disposition_for` (no real I/O, so this can safely name
+        // real paths): `~/Library/Caches` is genuinely `user-caches`'s own
+        // root and must stay permitted, so the fix doesn't over-block, but
+        // a path under the *different* `~/Library/Logs` root must not pass
+        // as `user-caches`.
+        let home = dirs::home_dir().unwrap();
+
+        let own_root = disposition_for(
+            &home.join("Library/Caches"),
+            &Justification::Catalog("user-caches".into()),
+        );
+        assert_eq!(own_root, Ok(Disposition::Permanent));
+
+        let wrong_entry = disposition_for(
+            &home.join("Library/Logs/some.log"),
+            &Justification::Catalog("user-caches".into()),
+        );
+        assert!(
+            wrong_entry.is_err(),
+            "a Library/Logs path was accepted under the user-caches justification"
+        );
+    }
+
+    #[test]
+    fn library_itself_is_denied_under_app_bundle_justification() {
+        // `~/Library` is in scope for `AppBundle` — it has to be, that's
+        // where per-app support state lives — but `~/Library` *itself* must
+        // never be deletable: that would destroy every app's state on the
+        // machine. Caught by the same ancestor guard as `/Users`.
+        let home = dirs::home_dir().unwrap();
+        let reports = execute(
+            vec![candidate(
+                home.join("Library"),
+                Justification::AppBundle { bundle_id: "x".into() },
+            )],
+            &exclude::new(vec![]),
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+    }
+
+    #[test]
+    fn applications_itself_is_denied_under_app_bundle_justification() {
+        let reports = execute(
+            vec![candidate(
+                PathBuf::from("/Applications"),
+                Justification::AppBundle { bundle_id: "x".into() },
+            )],
+            &exclude::new(vec![]),
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
     }
 }
