@@ -33,6 +33,7 @@ pub fn run() {
             commands::clean_execute,
             commands::uninstall_list,
             commands::uninstall_inspect,
+            commands::uninstall_execute,
             permissions::fda_status,
             permissions::open_privacy_settings
         ])

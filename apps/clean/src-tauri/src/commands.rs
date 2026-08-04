@@ -4,8 +4,8 @@
 //! which is what lets them be tested without a running app.
 
 use crate::remove::Evidence;
-use crate::{apps, associate, catalog, exclude, history, remove, scan, volume};
-use std::path::Path;
+use crate::{apps, associate, catalog, exclude, history, paths, remove, scan, volume};
+use std::path::{Path, PathBuf};
 
 /// Max paths returned per category across the IPC bridge.
 /// The UI's disclosure view caps expansion at 500. `items` (true file count)
@@ -97,7 +97,7 @@ pub struct CleanReport {
 /// failed partway, so it is unreachable while candidates are files only. It is
 /// reported honestly rather than dropped, because the day a producer of
 /// directory candidates lands, silence would be the worst possible default.
-fn candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candidate> {
+fn catalog_candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candidate> {
     result
         .paths
         .iter()
@@ -216,7 +216,7 @@ fn run_clean(
     for (id, _entry) in &entries {
         if let Some(result) = attributed.remove(id) {
             estimated_bytes += result.bytes;
-            candidates.extend(candidates_for(id, &result));
+            candidates.extend(catalog_candidates_for(id, &result));
         }
     }
 
@@ -407,6 +407,191 @@ pub fn uninstall_inspect(bundle_id: String) -> Result<InspectResult, String> {
     inspect_within(&bundle_id, &home)
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct UninstallReport {
+    pub removed: usize,
+    pub partially_removed: Vec<FailedItem>,
+    pub excluded: usize,
+    pub failed: Vec<FailedItem>,
+}
+
+/// Canonicalise `home` the same way `remove::execute`'s own `Roots::new`
+/// will when it builds its scope roots — `strip_firmlink(resolve(home))` —
+/// and do it exactly once, here, before `home` reaches either consumer.
+///
+/// Two earlier reviews (Tasks 2 and 4) traced the same defect from opposite
+/// ends: `associate::associate` builds every `InspectItem.path` from
+/// whatever spelling of `home` it is given, and `remove::Roots::new`
+/// canonicalises its own copy independently. `is_within_app_bundle_scope`
+/// then checks a candidate's *written* form as well as its resolved one (see
+/// `remove.rs` — the symlinked-`~/Applications` attack that check exists to
+/// close), so if `associate` saw `/var/...` while `Roots::new` saw
+/// `/private/var/...`, every `AppBundle` candidate would fail that
+/// written-form check and be silently denied. Canonicalising inside
+/// `associate` alone cannot fix this, because `Roots::new` still
+/// canonicalises its own copy independently — the two sides would simply
+/// disagree in the other direction. The only fix is a single canonical
+/// `home`, computed once, handed unchanged to both.
+///
+/// `dirs::home_dir()` is already canonical on macOS (`/Users/<name>` has no
+/// symlinked ancestor — verified three ways in Task 4's review), so this
+/// changes nothing in production. It matters only for a caller — every test
+/// in this module — that stands a `tempfile::tempdir()` in for `home`:
+/// `tempfile` places its directories under `/var/folders/...`, and macOS
+/// resolves `/var` to `/private/var` via a top-level symlink.
+fn canonical_home(home: &Path) -> Result<PathBuf, String> {
+    paths::resolve(home).map(paths::strip_firmlink).ok_or_else(|| {
+        "Spiral Clean could not resolve your home folder, so it cannot verify any path is \
+         safe to remove. Nothing was uninstalled. Reopen Spiral Clean and try again."
+            .to_string()
+    })
+}
+
+/// Build the removal candidates for one uninstall. Every candidate carries
+/// the `Evidence` the association actually found for that item — never a
+/// caller's bare word for it, the same discipline `commands::catalog_candidates_for`
+/// applies to the Clean screen's own candidates.
+///
+/// **Only the items `inspect_within` found become candidates — never the
+/// `.app` bundle itself.** `associate::associate` never returns the bundle
+/// path (its search is `home/Library` only; see its own doc comment), and
+/// M4 deliberately leaves directory removal unimplemented (see the plan's
+/// "what M4 leaves out") — a `.app` bundle is itself a directory. This task
+/// removes an app's leftover files; removing the bundle awaits directory
+/// removal landing.
+fn candidates_for(bundle_id: &str, items: &[InspectItem]) -> Vec<remove::Candidate> {
+    items
+        .iter()
+        .map(|item| remove::Candidate {
+            path: PathBuf::from(&item.path),
+            justification: remove::Justification::AppBundle {
+                bundle_id: bundle_id.to_string(),
+                evidence: item.evidence,
+            },
+        })
+        .collect()
+}
+
+/// A UTC timestamp for the run log, `YYYY-MM-DDTHH:MM:SSZ` — the same shape
+/// the webview sends `clean_execute` via `Date.toISOString()`. Generated
+/// here rather than accepted as a parameter, because `uninstall_execute`'s
+/// interface takes none. Built with `libc::gmtime_r` rather than adding a
+/// date/time crate for one timestamp — `libc` is already a dependency (see
+/// `volume.rs`).
+fn now_iso8601() -> String {
+    let now = unsafe { libc::time(std::ptr::null_mut()) };
+    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+    unsafe { libc::gmtime_r(&now, &mut tm) };
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec,
+    )
+}
+
+/// Testable core of `uninstall_execute`. This is the second destructive
+/// command in the app, and it follows the rule the first one
+/// (`clean_execute`/`remove::execute`) established: the webview cannot name
+/// a file, only a position (`deselected`, indices) in a list Rust itself
+/// produced a moment earlier via `uninstall_inspect`. This function
+/// **re-inspects from scratch** rather than trusting anything else the
+/// webview might echo back — `bundle_id` is the only thing it takes on
+/// faith, and that is re-resolved to a real installed app by
+/// `inspect_within` before anything else happens.
+fn run_uninstall(
+    bundle_id: &str,
+    deselected: Vec<usize>,
+    config_dir: &Path,
+    home: &Path,
+) -> Result<UninstallReport, String> {
+    // Canonicalised once, here, before `home` reaches either
+    // `inspect_within` (and, through it, `associate::associate`) or
+    // `remove::execute` below — see `canonical_home`.
+    let home = canonical_home(home)?;
+
+    let inspected = inspect_within(bundle_id, &home)?;
+    let total = inspected.items.len();
+
+    // A frontend and backend disagreeing about list length must not resolve
+    // into removing the wrong item: every index is validated before any item
+    // is dropped, and a single bad index denies the whole call rather than
+    // silently honouring the rest.
+    let mut skip = std::collections::HashSet::new();
+    for &index in &deselected {
+        if index >= total {
+            return Err(format!(
+                "Deselected item {index} does not exist — this app has {total} associated \
+                 item{}. The list may be out of date; reopen the review and try again.",
+                if total == 1 { "" } else { "s" }
+            ));
+        }
+        skip.insert(index);
+    }
+
+    let kept: Vec<InspectItem> = inspected
+        .items
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, item)| (!skip.contains(&i)).then_some(item))
+        .collect();
+
+    let estimated_bytes: u64 = kept.iter().map(|item| item.bytes).sum();
+    let candidates = candidates_for(bundle_id, &kept);
+
+    let before = volume::available_bytes(&home);
+
+    // Loaded here, immediately before the removal, and never held across
+    // calls — an exclusion added mid-session must bind on the very next run.
+    let exclusions = exclude::load(config_dir);
+    let reports = remove::execute(candidates, &exclusions, &home);
+
+    let after = volume::available_bytes(&home);
+    let measured_bytes = match (before, after) {
+        (Some(b), Some(a)) => a.saturating_sub(b),
+        _ => 0,
+    };
+
+    let Tally { removed, partially_removed, excluded, failed } = tally(reports);
+
+    // A failed history write must not fail the run — the removal already
+    // happened, and reporting failure here would be false. The result is
+    // discarded deliberately.
+    let _ = history::append(
+        config_dir,
+        history::RunRecord {
+            started_at: now_iso8601(),
+            screen: "uninstall".into(),
+            removed,
+            partially_removed: partially_removed.len(),
+            estimated_bytes,
+            measured_bytes,
+            interrupted: false,
+        },
+    );
+
+    Ok(UninstallReport { removed, partially_removed, excluded, failed })
+}
+
+#[tauri::command]
+pub fn uninstall_execute(
+    app: tauri::AppHandle,
+    bundle_id: String,
+    deselected: Vec<usize>,
+) -> Result<UninstallReport, String> {
+    use tauri::Manager;
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app."))?;
+    let home = dirs::home_dir()
+        .ok_or("Could not locate your home folder, so nothing was uninstalled.")?;
+    run_uninstall(&bundle_id, deselected, &dir, &home)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -588,7 +773,7 @@ mod tests {
             items: 2,
             paths: vec![PathBuf::from("/tmp/spiral-a"), PathBuf::from("/tmp/spiral-b")],
         };
-        let candidates = candidates_for("user-caches", &result);
+        let candidates = catalog_candidates_for("user-caches", &result);
         assert_eq!(candidates.len(), 2);
         for c in &candidates {
             match &c.justification {
@@ -696,5 +881,232 @@ mod tests {
     fn handoff_label_points_a_system_extension_at_system_settings() {
         let label = handoff_label(&apps::Handoff::SystemExtension);
         assert!(label.contains("System Settings"), "{label}");
+    }
+
+    #[test]
+    fn an_out_of_range_deselection_denies_the_whole_call() {
+        // A frontend and backend disagreeing about list length must not
+        // resolve into a deletion of the wrong item.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let err = run_uninstall("com.example.absent", vec![99], cfg.path(), home.path())
+            .unwrap_err();
+        assert!(!err.is_empty());
+    }
+
+    #[test]
+    fn every_candidate_carries_the_evidence_the_association_found() {
+        let items = vec![
+            InspectItem { path: "/x/com.example.foo".into(), bytes: 1, evidence: Evidence::Verified },
+            InspectItem { path: "/x/Foo".into(), bytes: 1, evidence: Evidence::Likely },
+        ];
+        let candidates = candidates_for("com.example.foo", &items);
+        assert_eq!(candidates.len(), 2);
+        match &candidates[0].justification {
+            remove::Justification::AppBundle { evidence, .. } => assert_eq!(*evidence, Evidence::Verified),
+            other => panic!("unexpected: {other:?}"),
+        }
+        match &candidates[1].justification {
+            remove::Justification::AppBundle { evidence, .. } => assert_eq!(*evidence, Evidence::Likely),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    /// Plant a real, discoverable app with exactly one associated item, so a
+    /// test can reach the range check itself rather than being denied
+    /// earlier by `inspect_within`'s unknown-bundle-id guard.
+    ///
+    /// `bundle_id` is a caller-supplied parameter, not a shared constant,
+    /// because `apps::is_running` shells out to `pgrep -f <bundle_id>`
+    /// (`apps.rs`, out of scope for this task): two tests sharing one bundle
+    /// id and running concurrently on separate threads can each spawn a
+    /// `pgrep -f <that id>` subprocess, and *the search pattern is itself
+    /// part of every process's command line* — including the sibling
+    /// `pgrep` invocation's own argv. `pgrep -f com.example.foo` run by test
+    /// A can therefore match test B's simultaneously-running
+    /// `pgrep -f com.example.foo`, and `is_running` wrongly reports the app
+    /// as running. This was reproduced directly: adding several tests that
+    /// all used the literal id `com.example.foo` made the pre-existing
+    /// `inspect_finds_the_apps_own_associated_files_sorted_by_path` (Task 5)
+    /// fail deterministically under the default parallel test runner, and
+    /// pass every time under `--test-threads=1`. Giving each test its own
+    /// id removes the shared search term and the collision with it.
+    fn plant_app_with_one_item(home: &std::path::Path, bundle_id: &str) {
+        let user_apps = home.join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        plant_app(&user_apps, "Foo", bundle_id);
+        let support = home.join("Library/Application Support");
+        std::fs::create_dir_all(&support).unwrap();
+        std::fs::write(support.join(bundle_id), b"x").unwrap();
+    }
+
+    #[test]
+    fn an_out_of_range_index_against_a_real_app_is_caught_and_named() {
+        // The brief's own test above (`an_out_of_range_deselection_denies_the_
+        // whole_call`) uses an absent bundle id, so `inspect_within` denies it
+        // before the range check ever runs — it does not actually exercise
+        // this guard, and a mutation that always accepted every index would
+        // not make it fail. This test plants a real app with exactly one
+        // associated item, so the only thing standing between `deselected`
+        // and `remove::execute` is the range check itself, and asserts the
+        // message names both the bad index and the true list length, per the
+        // brief's Step 3.2 ("naming the index and the list length").
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        plant_app_with_one_item(home.path(), "com.example.uninstall-range");
+
+        let err = run_uninstall("com.example.uninstall-range", vec![1], cfg.path(), home.path())
+            .unwrap_err();
+        assert!(err.contains('1'), "must name the out-of-range index: {err}");
+        assert!(
+            err.contains("1 associated item"),
+            "must name the true list length: {err}"
+        );
+    }
+
+    #[test]
+    fn a_duplicate_index_does_not_break_the_drop() {
+        // Deselecting the same item twice must behave exactly like
+        // deselecting it once, not error and not double-count.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        plant_app_with_one_item(home.path(), "com.example.uninstall-dup");
+
+        let report = run_uninstall(
+            "com.example.uninstall-dup",
+            vec![0, 0],
+            cfg.path(),
+            home.path(),
+        )
+        .unwrap();
+        assert_eq!(report.removed, 0);
+        assert_eq!(report.excluded, 0);
+        assert!(report.failed.is_empty());
+        assert!(report.partially_removed.is_empty());
+    }
+
+    #[test]
+    fn an_empty_deselection_keeps_every_item() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        plant_app_with_one_item(home.path(), "com.example.uninstall-empty");
+        let item = home.path().join("Library/Application Support/com.example.uninstall-empty");
+        assert!(item.exists());
+
+        let report =
+            run_uninstall("com.example.uninstall-empty", vec![], cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 1, "the sole item should have been removed: {report:?}");
+        assert!(!item.exists());
+    }
+
+    #[test]
+    fn deselecting_every_item_removes_nothing_but_still_succeeds() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        plant_app_with_one_item(home.path(), "com.example.uninstall-all");
+        let item = home.path().join("Library/Application Support/com.example.uninstall-all");
+
+        let report =
+            run_uninstall("com.example.uninstall-all", vec![0], cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 0);
+        assert_eq!(report.excluded, 0);
+        assert!(report.failed.is_empty());
+        assert!(item.exists(), "a deselected item must survive");
+    }
+
+    #[test]
+    fn an_app_with_no_associated_files_uninstalls_cleanly() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let user_apps = home.path().join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        plant_app(&user_apps, "Foo", "com.example.uninstall-none");
+
+        let report =
+            run_uninstall("com.example.uninstall-none", vec![], cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 0);
+        assert!(report.failed.is_empty());
+        assert!(report.partially_removed.is_empty());
+    }
+
+    #[test]
+    fn a_likely_item_goes_to_the_trash_a_verified_item_is_permanent() {
+        // End-to-end proof that the evidence carried on each `InspectItem`
+        // reaches `remove::execute` and determines disposition there, not in
+        // this module — `Verified` items are the app's own bundle id in the
+        // name and are removed permanently; `Likely` items match only by
+        // display name and go to the Trash (ADR-0004, as amended).
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-evidence";
+        let user_apps = home.path().join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        plant_app(&user_apps, "Foo", bundle_id);
+        let support = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&support).unwrap();
+        std::fs::write(support.join(bundle_id), b"x").unwrap();
+        std::fs::write(support.join("Foo"), b"x").unwrap();
+
+        let report = run_uninstall(bundle_id, vec![], cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 2, "{report:?}");
+        assert!(!support.join(bundle_id).exists());
+        assert!(!support.join("Foo").exists());
+    }
+
+    #[test]
+    fn a_history_record_is_appended_with_the_uninstall_screen() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        plant_app_with_one_item(home.path(), "com.example.uninstall-history");
+
+        run_uninstall("com.example.uninstall-history", vec![], cfg.path(), home.path()).unwrap();
+
+        let runs = history::read(cfg.path()).unwrap();
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].screen, "uninstall");
+        assert_eq!(runs[0].removed, 1);
+    }
+
+    #[test]
+    fn an_exclusion_protects_an_associated_item_from_uninstall() {
+        // The frontend cannot bypass the exclusion list by routing a removal
+        // through `uninstall_execute` instead of `clean_execute` — both paths
+        // load the same list from `config_dir` and hand it to the same
+        // `remove::execute`.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-exclusion";
+        plant_app_with_one_item(home.path(), bundle_id);
+        let item = home.path().join("Library/Application Support").join(bundle_id);
+
+        std::fs::write(
+            cfg.path().join("exclusions.json"),
+            serde_json::to_vec(&serde_json::json!({ "paths": [item.to_string_lossy()] })).unwrap(),
+        )
+        .unwrap();
+
+        let report = run_uninstall(bundle_id, vec![], cfg.path(), home.path()).unwrap();
+        assert_eq!(report.excluded, 1);
+        assert_eq!(report.removed, 0);
+        assert!(item.exists(), "an excluded item was removed via uninstall");
+    }
+
+    #[test]
+    fn an_unresolvable_home_is_denied_not_panicked() {
+        // `dirs::home_dir()` returning `Some` in the real `uninstall_execute`
+        // does not guarantee it resolves — a symlink loop or an unreadable
+        // ancestor still fails. `canonical_home` must deny with a stated
+        // reason rather than let a `?`-propagated `None` panic, exactly the
+        // discipline `remove::execute` itself already holds to.
+        let base = tempfile::tempdir().unwrap();
+        let home_a = base.path().join("home_a");
+        let home_b = base.path().join("home_b");
+        std::os::unix::fs::symlink(&home_b, &home_a).unwrap();
+        std::os::unix::fs::symlink(&home_a, &home_b).unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+
+        let err =
+            run_uninstall("com.example.unresolvable", vec![], cfg.path(), &home_a).unwrap_err();
+        assert!(!err.is_empty());
     }
 }
