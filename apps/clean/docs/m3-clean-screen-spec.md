@@ -33,6 +33,12 @@ Five new entries, all `Disposition::Permanent`, all literal roots:
 | `firefox-cache` | `~/Library/Caches/Firefox` |
 | `trash` | `~/.Trash` |
 
+**Amendment, 2026-08-04: categories nest, so files are attributed to the most specific one.**
+
+`user-caches` has root `~/Library/Caches`, which *contains* all four browser roots and the SwiftPM cache. `user-logs` likewise contains `crash-reports`. Scanned independently, a Chrome cache file would be counted twice — once as "Chrome cache" and once as "Application caches" — and the Clean screen would show a total larger than anything it could free. That is the estimate lying by construction, which is the failure the measured-versus-estimated design exists to prevent. It would also inflate the failure list, because the second pass over a path finds the file already gone.
+
+Every file is therefore attributed to exactly one category: the one whose expanded root is its **longest matching prefix**. "Application caches" becomes everything under `~/Library/Caches` that no more specific entry claims. Totals add up, per-browser granularity survives, and any combination of selections frees exactly what it said it would.
+
 Cookies, history, passwords and profiles are never touched — none of these roots contains them, which is the point of keeping the catalog literal. Note that `~/.Trash` is not a `USER_CONTENT` root, so its contents are reachable while `~/.Trash` itself remains protected as a catalog root; emptying the Trash is exactly the intended behaviour.
 
 Adding these makes the shipped catalog match what `design-spec.md` decision 3 and ADR-0001 already describe. The implementation note in ADR-0001 that records the gap should be updated once they land.
