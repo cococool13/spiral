@@ -458,6 +458,12 @@ git commit -m "feat(clean): expose catalog and scan to the UI"
 
 **This is the task the whole app has been building toward.** It is the first code that can delete a user's files. Two things make it defensible: it accepts only ids, and it constructs every `Candidate` itself.
 
+> **Amended during execution, after a real incident.** The first attempt at this task specified `run_clean(ids, config_dir)`, where `config_dir` governed only the exclusion list and the history log — the scan and the deletion resolved the *real* home through `dirs::home_dir()`. There was therefore no test seam on the destructive path at all. When an implementer stubbed the unknown-id guard to prove a test was load-bearing, exactly as instructed, the very next line scanned and permanently deleted 32,555 files from the developer's own `~/Library/Caches`.
+>
+> The guard was the only thing between a unit test and a real disk. That is not a guard's job. **`run_clean` now takes `home: &Path` explicitly**, and every test passes a temp directory — so no mutation of any guard can reach the real filesystem. `scan.rs` grows a `scan_entry_in(entry, home)` and `scan_entry` becomes a thin wrapper that resolves the home and delegates.
+>
+> The principle worth carrying: a test seam that only exists on the *non*-destructive path is not a test seam. If mutating any single guard can reach real user data, the harness is wrong no matter how correct the guard is.
+
 Because nothing deserializes them any more, `Candidate` and `Justification` lose `#[derive(serde::Deserialize)]`. That turns the M2 plan's claim — "the frontend cannot construct a deletion the backend will honor" — from a convention into something the compiler enforces.
 
 - [ ] **Step 1: Write the failing tests**

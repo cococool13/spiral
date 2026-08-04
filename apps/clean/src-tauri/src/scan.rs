@@ -62,22 +62,23 @@ fn measure(root: &Path) -> (u64, usize, Vec<PathBuf>) {
     (bytes, items, paths)
 }
 
-/// Measure every root of a single catalog entry. `catalog::expand` is safe
-/// here because `entry.roots` comes only from `catalog::catalog()` — never
-/// from user input or a scan result. If the home directory can't be
-/// resolved, the entry measures as empty rather than panicking.
-pub fn scan_entry(entry: &CatalogEntry) -> CategoryResult {
+/// Measure every root of a single catalog entry against an explicit `home`.
+/// `catalog::expand` is safe here because `entry.roots` comes only from
+/// `catalog::catalog()` — never from user input or a scan result.
+///
+/// Taking `home` explicitly, rather than resolving it internally, is what
+/// lets a caller (a test, or `commands::run_clean`) point a scan at a
+/// confined directory instead of the real machine's home.
+pub fn scan_entry_in(entry: &CatalogEntry, home: &Path) -> CategoryResult {
     let mut bytes = 0;
     let mut items = 0;
     let mut paths = Vec::new();
-    if let Some(home) = dirs::home_dir() {
-        for root in entry.roots {
-            let path = catalog::expand(root, &home);
-            let (b, i, mut p) = measure(&path);
-            bytes += b;
-            items += i;
-            paths.append(&mut p);
-        }
+    for root in entry.roots {
+        let path = catalog::expand(root, home);
+        let (b, i, mut p) = measure(&path);
+        bytes += b;
+        items += i;
+        paths.append(&mut p);
     }
     CategoryResult {
         id: entry.id.to_string(),
@@ -85,6 +86,21 @@ pub fn scan_entry(entry: &CatalogEntry) -> CategoryResult {
         bytes,
         items,
         paths,
+    }
+}
+
+/// `scan_entry_in` against the real machine's home. If the home directory
+/// can't be resolved, the entry measures as empty rather than panicking.
+pub fn scan_entry(entry: &CatalogEntry) -> CategoryResult {
+    match dirs::home_dir() {
+        Some(home) => scan_entry_in(entry, &home),
+        None => CategoryResult {
+            id: entry.id.to_string(),
+            label: entry.label.to_string(),
+            bytes: 0,
+            items: 0,
+            paths: Vec::new(),
+        },
     }
 }
 

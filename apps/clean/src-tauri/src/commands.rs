@@ -92,8 +92,12 @@ fn snapshot_note(estimated: u64, measured: u64, snapshots: bool) -> Option<Strin
 }
 
 /// Testable core of `clean_execute`. `config_dir` holds the exclusion list and
-/// the run log, so tests can point it at a temp directory.
-fn run_clean(ids: Vec<String>, config_dir: &Path) -> Result<CleanReport, String> {
+/// the run log; `home` is the directory every scan and the free-space
+/// measurement are resolved against. Both are supplied by the caller rather
+/// than resolved in here — a test points both at a temp directory, so no
+/// guard in this function is the only thing standing between a broken test
+/// and the real filesystem.
+fn run_clean(ids: Vec<String>, config_dir: &Path, home: &Path) -> Result<CleanReport, String> {
     if ids.is_empty() {
         return Err("No categories were selected. Tick at least one and try again.".into());
     }
@@ -111,13 +115,12 @@ fn run_clean(ids: Vec<String>, config_dir: &Path) -> Result<CleanReport, String>
         }
     }
 
-    let home = dirs::home_dir().ok_or("Could not locate your home folder, so nothing was scanned.")?;
-    let before = volume::available_bytes(&home);
+    let before = volume::available_bytes(home);
 
     let mut candidates = Vec::new();
     let mut estimated_bytes = 0;
     for (id, entry) in &entries {
-        let result = scan::scan_entry(entry);
+        let result = scan::scan_entry_in(entry, home);
         estimated_bytes += result.bytes;
         candidates.extend(candidates_for(id, &result));
     }
@@ -127,7 +130,7 @@ fn run_clean(ids: Vec<String>, config_dir: &Path) -> Result<CleanReport, String>
     let exclusions = exclude::load(config_dir);
     let reports = remove::execute(candidates, &exclusions);
 
-    let after = volume::available_bytes(&home);
+    let after = volume::available_bytes(home);
     let measured_bytes = match (before, after) {
         (Some(b), Some(a)) => a.saturating_sub(b),
         _ => 0,
@@ -186,7 +189,9 @@ pub fn clean_execute(app: tauri::AppHandle, ids: Vec<String>) -> Result<CleanRep
         .path()
         .app_config_dir()
         .map_err(|e| format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app."))?;
-    run_clean(ids, &dir)
+    let home = dirs::home_dir()
+        .ok_or("Could not locate your home folder, so nothing was scanned.")?;
+    run_clean(ids, &dir, &home)
 }
 
 #[cfg(test)]
@@ -243,15 +248,58 @@ mod tests {
         // Fail closed: a request naming a category that does not exist is not
         // partially honoured. Nothing is scanned and nothing is removed.
         let dir = tempfile::tempdir().unwrap();
-        let err = run_clean(vec!["user-caches".into(), "not-a-real-id".into()], dir.path())
-            .unwrap_err();
+        let home = tempfile::tempdir().unwrap();
+        let err = run_clean(
+            vec!["user-caches".into(), "not-a-real-id".into()],
+            dir.path(),
+            home.path(),
+        )
+        .unwrap_err();
         assert!(err.contains("not-a-real-id"), "the message must name the id: {err}");
     }
 
     #[test]
     fn an_empty_selection_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(run_clean(vec![], dir.path()).is_err());
+        let home = tempfile::tempdir().unwrap();
+        assert!(run_clean(vec![], dir.path(), home.path()).is_err());
+    }
+
+    #[test]
+    fn run_clean_never_touches_anything_outside_the_home_it_is_given() {
+        // The seam this test exists to prove: `run_clean` takes `home` as an
+        // argument rather than resolving it internally, so nothing inside it
+        // — however broken — can reach the real machine's home directory. A
+        // valid id, a fake home, and a planted file under that fake home's
+        // corresponding catalog root; assert on the returned `CleanReport`,
+        // never on the real filesystem, per the coordinator's note.
+        let dir = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let caches = home.path().join("Library/Caches");
+        std::fs::create_dir_all(&caches).unwrap();
+        std::fs::write(caches.join("planted.bin"), b"x").unwrap();
+
+        let report = run_clean(vec!["user-caches".into()], dir.path(), home.path()).unwrap();
+
+        // `remove::execute` evaluates its own containment bars against the
+        // *real* machine's home (`Roots::system()`), independently of the
+        // fake `home` passed to `run_clean`. A path under a fake home does
+        // not lie under any real catalog root, so every candidate here is
+        // denied by that containment check — never removed. That is the
+        // correct, safe outcome, not a workaround: the seam in `run_clean`
+        // only has to keep the *scan* from reaching outside `home`; the
+        // deletion boundary in `remove.rs` is a second, independent bar.
+        assert_eq!(report.removed, 0, "nothing under a fake home should ever be removed");
+        assert_eq!(report.excluded, 0);
+        assert_eq!(
+            report.failed.len(),
+            1,
+            "the planted file should have produced exactly one denied candidate: {:?}",
+            report.failed
+        );
+
+        // The planted file itself must still exist — nothing was deleted.
+        assert!(caches.join("planted.bin").exists());
     }
 
     #[test]
