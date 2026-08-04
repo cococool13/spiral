@@ -46,7 +46,7 @@ Adding these makes the shipped catalog match what `design-spec.md` decision 3 an
 | `commands.rs` | The Tauri command layer — the only module that talks to the webview. Keeps Tauri types out of `scan` and `remove` |
 | `volume.rs` | Free-space measurement and the local-snapshot check |
 
-`catalog.rs` gains the six entries above. `remove.rs`, `exclude.rs`, `paths.rs`, `scan.rs` and `history.rs` keep their logic; `remove.rs` changes only by losing two derives.
+`catalog.rs` gains the five entries above. `remove.rs`, `exclude.rs`, `paths.rs`, `scan.rs` and `history.rs` keep their logic; `remove.rs` changes only by losing two derives.
 
 ### Commands
 
