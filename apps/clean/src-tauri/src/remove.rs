@@ -182,9 +182,10 @@ fn is_library_container(path: &Path, library: Option<&Path>) -> bool {
 
 /// The set of real directories every bar is evaluated against.
 ///
-/// Production builds this from the machine (`Roots::system`). Tests build it
-/// over a temporary directory (`Roots::rooted_at`), which is what lets a unit
-/// test exercise *genuine* containment — the check is not weakened, it is
+/// Built with `Roots::rooted_at`, always over a home the caller supplies —
+/// `execute`'s caller resolves the real home for production use, and a test
+/// points it at a temporary directory instead, which is what lets a unit
+/// test exercise *genuine* containment: the check is not weakened, it is
 /// simply pointed at a home that is not the developer's.
 struct Roots {
     /// Already resolved, so that roots derived from it are directly
@@ -264,11 +265,6 @@ impl Roots {
         })
     }
 
-    fn system() -> Option<Self> {
-        Self::new(&dirs::home_dir()?)
-    }
-
-    #[cfg(test)]
     fn rooted_at(home: &Path) -> Self {
         Self::new(home).expect("a test home directory should resolve")
     }
@@ -598,11 +594,18 @@ fn delete_permanent(path: &Path) -> Result<(), FailureKind> {
 /// meaning "nothing is protected". Load it immediately before calling this —
 /// nothing here ties an in-memory list to what is actually on disk, and a
 /// stale copy could let a since-added exclusion go unrespected.
-pub fn execute(candidates: Vec<Candidate>, excl: &Result<ExclusionList, String>) -> Vec<Report> {
+///
+/// `home` is supplied by the caller rather than resolved in here, so every
+/// destructive path this function can reach is confinable in a test. This
+/// exists because a test harness without that seam once permanently deleted
+/// 32,555 real files under a developer's `~/Library/Caches` — a stubbed
+/// guard downstream was the only thing standing between a unit test and the
+/// real disk.
+pub fn execute(candidates: Vec<Candidate>, excl: &Result<ExclusionList, String>, home: &Path) -> Vec<Report> {
     execute_within(
         candidates,
         excl.as_ref().map_err(String::as_str),
-        Roots::system().as_ref(),
+        Some(&Roots::rooted_at(home)),
     )
 }
 
@@ -721,7 +724,8 @@ mod tests {
     /// The real machine's roots. Only ever handed to `is_user_content` and
     /// `disposition_for`, which perform no I/O beyond `canonicalize`.
     fn system_roots() -> Roots {
-        Roots::system().expect("home directory should resolve in tests")
+        let home = dirs::home_dir().expect("home directory should resolve in tests");
+        Roots::rooted_at(&home)
     }
 
     fn symlink(target: &Path, link: &Path) {
@@ -1015,14 +1019,38 @@ mod tests {
         // this one proves `execute` actually consults bar 1 — using a path
         // that is protected (`/Volumes`) but certain not to exist, so a
         // regression here fails the assertion instead of destroying data.
+        let home = fake_home();
         let reports = execute(
             vec![candidate(
                 PathBuf::from("/Volumes/spiral-clean-no-such-volume/thing"),
                 Justification::UserChosen,
             )],
             &Ok(exclude::new(vec![])),
+            home.path(),
         );
         assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+    }
+
+    #[test]
+    fn execute_confines_itself_to_the_home_it_is_given() {
+        // The seam. With a temp home, no bar may consult the real one — so a
+        // stubbed guard downstream can destroy only the tempdir.
+        let home = tempfile::tempdir().unwrap();
+        let caches = home.path().join("Library/Caches");
+        std::fs::create_dir_all(&caches).unwrap();
+        let victim = caches.join("a.bin");
+        std::fs::write(&victim, b"x").unwrap();
+
+        let reports = execute(
+            vec![Candidate {
+                path: victim.clone(),
+                justification: Justification::Catalog("user-caches".into()),
+            }],
+            &Ok(crate::exclude::new(vec![])),
+            home.path(),
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Removed(_)));
+        assert!(!victim.exists());
     }
 
     #[test]

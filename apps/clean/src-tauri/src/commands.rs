@@ -108,9 +108,9 @@ fn candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candid
 }
 
 /// What a batch of `remove::Report`s adds up to. Split out of `run_clean` so
-/// it can be tested against hand-built outcomes: `run_clean` reaches
-/// `remove::execute`, which resolves the real machine's home no matter what
-/// `home` it is handed, and must never be exercised by a test.
+/// it can be tested against hand-built outcomes without going anywhere near
+/// `remove::execute` — pure aggregation over reports that never touched a
+/// filesystem, temp-rooted or otherwise.
 #[derive(Default)]
 struct Tally {
     removed: usize,
@@ -222,7 +222,7 @@ fn run_clean(
     // Loaded here, immediately before the removal, and never held across
     // calls — an exclusion added mid-session must bind on the very next run.
     let exclusions = exclude::load(config_dir);
-    let reports = remove::execute(candidates, &exclusions);
+    let reports = remove::execute(candidates, &exclusions, home);
 
     let after = volume::available_bytes(home);
     let measured_bytes = match (before, after) {
@@ -385,14 +385,17 @@ mod tests {
         // against a real home already deleted 32,555 real files once, when
         // an earlier version of this exact seam test's ancestor stubbed the
         // unknown-id guard to prove it was load-bearing. `remove::execute`
-        // resolves `Roots::system()` — the real machine's home — regardless
-        // of what `home` is passed to `run_clean`, so no test that reaches it
-        // can ever be made safe to mutate around. `scan_entry_in` is
-        // read-only: there is nothing here for a stubbed guard to delete, so
-        // this is the strongest form of the property that can be tested
-        // without reproducing the incident. It now asserts on
-        // `scan_attributed_in`, which is the function `run_clean` actually
-        // calls; `scan_entry_in` was its own near-duplicate and is gone.
+        // now takes `home` explicitly (M4 T1) rather than resolving
+        // `Roots::system()` on its own, so `run_clean`'s `home` argument does
+        // reach it — but that closes only the *home* seam. A guard stubbed
+        // out further down `run_clean`'s path — the unknown-id guard that
+        // caused the original incident, for one — is still live the moment
+        // `remove::execute` runs, and read-only `scan_attributed_in` has
+        // nothing in it for such a guard to delete. This is the strongest
+        // form of the property that can be tested without reproducing the
+        // incident. It asserts on `scan_attributed_in`, which is the
+        // function `run_clean` actually calls; `scan_entry_in` was its own
+        // near-duplicate and is gone.
         let home = tempfile::tempdir().unwrap();
         let caches = home.path().join("Library/Caches");
         std::fs::create_dir_all(&caches).unwrap();
