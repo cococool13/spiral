@@ -7,7 +7,7 @@ M1 and M2 shipped the app shell and the safety core. M3 is the first milestone t
 ## Decisions (settled with Cohen)
 
 1. **`clean_execute` takes category ids, never candidates.** The frontend sends the ids the user ticked. Rust validates each against the catalog, re-scans those categories, and builds the `Candidate` values itself. The webview never names a path or a justification.
-2. **Browser caches enter the catalog as five literal `~/Library/Caches` roots.** No globs, no profile directories. On macOS this already captures the bulk — Firefox's `cache2` and the Chromium disk caches all live there — and it keeps the catalog literal, as ADR-0006 requires.
+2. **Browser caches enter the catalog as four literal `~/Library/Caches` roots.** No globs, no profile directories. On macOS this already captures the bulk — Firefox's `cache2` and the Chromium disk caches all live there — and it keeps the catalog literal, as ADR-0006 requires. Safari is intentionally absent; its cache lives in a container protected by macOS beyond Full Disk Access.
 3. **Styling is brand-correct but not yet polished.** Fonts synced and applied, tokens driving colour and surface, real layout, visible focus, reduced-motion honoured. The concrete/glass material system and motion get their own pass once all four screens exist.
 4. **A short measured reclaim is explained only after checking.** Free space is read either side of the run. When the measured figure falls materially below the estimate, the app runs `tmutil listlocalsnapshots /` and reports what is actually true — never a guessed cause.
 
@@ -23,7 +23,7 @@ It also retires the exposure vector ADR-0011 describes for the `Catalog` route. 
 
 ## Catalog additions
 
-Six new entries, all `Disposition::Permanent`, all literal roots:
+Five new entries, all `Disposition::Permanent`, all literal roots:
 
 | id | Root |
 | --- | --- |
@@ -31,7 +31,6 @@ Six new entries, all `Disposition::Permanent`, all literal roots:
 | `brave-cache` | `~/Library/Caches/BraveSoftware/Brave-Browser` |
 | `edge-cache` | `~/Library/Caches/Microsoft Edge` |
 | `firefox-cache` | `~/Library/Caches/Firefox` |
-| `safari-cache` | `~/Library/Caches/com.apple.Safari` |
 | `trash` | `~/.Trash` |
 
 Cookies, history, passwords and profiles are never touched — none of these roots contains them, which is the point of keeping the catalog literal. Note that `~/.Trash` is not a `USER_CONTENT` root, so its contents are reachable while `~/.Trash` itself remains protected as a catalog root; emptying the Trash is exactly the intended behaviour.

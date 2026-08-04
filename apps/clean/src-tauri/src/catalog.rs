@@ -97,12 +97,6 @@ static CATALOG: &[CatalogEntry] = &[
         roots: &["~/Library/Caches/Firefox"],
         disposition: Disposition::Permanent,
     },
-    CatalogEntry {
-        id: "safari-cache",
-        label: "Safari cache",
-        roots: &["~/Library/Caches/com.apple.Safari"],
-        disposition: Disposition::Permanent,
-    },
     // ~/.Trash is not a USER_CONTENT root, so its contents are reachable while
     // ~/.Trash itself stays protected as a catalog root. Emptying the Trash is
     // exactly the intended behaviour.
@@ -194,7 +188,7 @@ mod tests {
     #[test]
     fn browser_caches_and_trash_are_present() {
         for id in ["chrome-cache", "brave-cache", "edge-cache",
-                   "firefox-cache", "safari-cache", "trash"] {
+                   "firefox-cache", "trash"] {
             assert!(find(id).is_some(), "{id} missing from the catalog");
         }
     }
@@ -205,7 +199,7 @@ mod tests {
         // History and Login Data. The catalog stays under ~/Library/Caches
         // precisely so no entry can ever be one typo from a profile.
         for id in ["chrome-cache", "brave-cache", "edge-cache",
-                   "firefox-cache", "safari-cache"] {
+                   "firefox-cache"] {
             for root in find(id).unwrap().roots {
                 assert!(root.starts_with("~/Library/Caches/"), "{id}: {root}");
                 assert!(!root.contains("Application Support"), "{id}: {root}");
