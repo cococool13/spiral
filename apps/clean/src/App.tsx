@@ -53,7 +53,7 @@ export default function App() {
 
   const Screen = SCREENS[active];
   return (
-    <div>
+    <div className="app">
       <Sidebar active={active} onSelect={setActive} />
       <main>
         <Screen />

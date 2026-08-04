@@ -90,7 +90,7 @@ started that way, and its ADRs still sit beside the code they became.
 | [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
 | [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
-| [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall. macOS only, unreleased. M1 and M2 shipped: the Tauri shell, the Full Disk Access gate, and the safety core (`catalog`, `scan`, `remove`, `exclude`, `history`) under a 95-test Rust suite. Screens land from M3. See the [design spec](apps/clean/docs/design-spec.md) and thirteen ADRs | working on the maintenance app |
+| [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall. macOS only, unreleased. M1–M3 shipped: the Tauri shell, the Full Disk Access gate, the safety core (`catalog`, `scan`, `remove`, `exclude`, `history`) under a 117-test Rust suite, and the Clean screen — the first that deletes anything. Uninstall, Optimize and Storage are still stubs. See the [design spec](apps/clean/docs/design-spec.md) and fourteen ADRs | working on the maintenance app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
@@ -117,6 +117,7 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | `pnpm build` | `apps/wallpaper` | hex-token guard → typecheck → Vite build |
 | `pnpm tauri build` | `apps/wallpaper` | release bundles (.app/.dmg, .exe/.msi) |
 | `pnpm build` | `apps/clean` | hex-token guard → typecheck → Vite build |
+| `pnpm test` | `apps/clean` | the frontend suite (Vitest). `pnpm build` does not run it |
 | `cargo test` | `apps/clean/src-tauri` | the safety-core suite — run it before any change to `remove`, `exclude`, or `paths` |
 | `pnpm build` | `collection` | static export into `out/` |
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |

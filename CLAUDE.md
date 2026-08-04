@@ -17,8 +17,9 @@ Current app release **v1.0.2** (Spiral Wallpaper).
 brand/         the design system. Every colour, font, and mark. Single source of truth.
 apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri, shipped)
                apps/slim = Spiral Slim (Python + Tauri wizard, shipped on macOS)
-               apps/clean = Spiral Clean (Tauri, macOS only, unreleased — M1+M2 shipped:
-                            shell, FDA gate, and the tested safety core)
+               apps/clean = Spiral Clean (Tauri, macOS only, unreleased — M1-M3 shipped:
+                            shell, FDA gate, the tested safety core, and the Clean
+                            screen. Uninstall/Optimize/Storage are still stubs)
 collection/    the spiral-collection.netlify.app website (Next.js, static export)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```
@@ -78,10 +79,12 @@ cd apps/clean
 pnpm install
 pnpm check:hex       # reject colors outside the approved token set
 pnpm build           # token check + TypeScript + Vite production build
+pnpm test            # the frontend suite (Vitest); `pnpm build` does not run it
 pnpm tauri dev       # native development app
 
 cd apps/clean/src-tauri
 cargo test           # the safety-core suite; the gate for every removal change
+cargo clippy --all-targets   # must stay warning-free; there is no crate-wide allow
 ```
 
 Spiral Clean releases on a `clean-v*` tag (`git tag clean-v0.1.0`), independent of
@@ -153,9 +156,10 @@ deployed to Netlify from CI on every push to `main`.
 App work: run `pnpm build`. For Rust, wallpaper-setting, cache, installer, updater, or
 platform changes, also run the relevant native smoke/build on the affected OS.
 
-In `apps/clean`, also run `cargo test` from `src-tauri` — always, not only for Rust
-changes. Anything touching `remove.rs`, `exclude.rs` or `paths.rs` additionally needs a
-mutation proof (ADR-0012): stub the guard, name the test that fails.
+In `apps/clean`, also run `pnpm test` and `cargo test` from `src-tauri` — always, not
+only for Rust changes. `pnpm build` runs neither. Anything touching `remove.rs`,
+`exclude.rs` or `paths.rs` additionally needs a mutation proof (ADR-0012): stub the
+guard, name the test that fails.
 
 Website work: run `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
 

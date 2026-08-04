@@ -143,7 +143,11 @@ impl ExclusionList {
     }
 
     /// Whether `candidate` is covered at all. `covering` is the one that can
-    /// tell the user why.
+    /// tell the user why — and because every caller in the app owes the user
+    /// that reason, `covering` is what production code uses and this predicate
+    /// has no non-test caller. `#[cfg(test)]` rather than an `allow`: saying it
+    /// is test-only is true, where claiming a future consumer would not be.
+    #[cfg(test)]
     pub fn covers(&self, candidate: &Path) -> bool {
         self.covering(candidate).is_some()
     }
@@ -214,6 +218,13 @@ impl ExclusionList {
     /// user had protected silently became deletable. The two halves of that
     /// defect are fixed together: this writes atomically, and `load` refuses
     /// to interpret a file it cannot parse.
+    // The writer for the exclusion list in Settings (design spec, decision 23),
+    // which lands with M5. Kept rather than deleted because `load` on the
+    // reading side already refuses anything this would not write — the two
+    // halves of the truncation defect were fixed together, and splitting them
+    // across milestones would leave the reader guarding against a writer that
+    // no longer exists.
+    #[allow(dead_code)]
     pub fn save(&self, dir: &Path) -> std::io::Result<()> {
         // Refused here as well as in `load`, so a malformed entry cannot
         // reach disk in the first place. Catching it only on the way back in

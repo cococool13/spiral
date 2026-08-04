@@ -238,6 +238,13 @@ jobs:
       - name: Build the frontend
         run: pnpm build
 
+      # `pnpm build` type-checks the frontend but runs none of its tests, so
+      # this job was green against a regression the local suite catches: revert
+      # format.ts to the loop that tested `value >= 1024` before rounding and
+      # the two 1024-rollover tests fail here, while CI reported nothing.
+      - name: Frontend tests
+        run: pnpm test
+
       - name: Rust safety suite
         working-directory: apps/clean/src-tauri
         run: cargo test

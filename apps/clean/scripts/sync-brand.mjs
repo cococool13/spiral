@@ -45,4 +45,24 @@ if (!existsSync(tokensFrom)) {
 }
 copyFileSync(tokensFrom, TOKENS);
 
-console.log(`sync-brand: copied ${SHIP.length} marks /brand -> src/assets/brand`);
+const FONTS = path.resolve(here, "../src/assets/fonts");
+const FONT_FILES = [
+  "archivo-latin-wdth-normal.woff2",
+  "ibm-plex-mono-latin-400-normal.woff2",
+  "ibm-plex-mono-latin-500-normal.woff2",
+];
+
+rmSync(FONTS, { recursive: true, force: true });
+mkdirSync(FONTS, { recursive: true });
+for (const name of FONT_FILES) {
+  const from = path.join(src, "fonts", name);
+  if (!existsSync(from)) {
+    console.error(`sync-brand: /brand/fonts/${name} is missing.`);
+    process.exit(1);
+  }
+  copyFileSync(from, path.join(FONTS, name));
+}
+
+console.log(
+  `sync-brand: copied ${SHIP.length} marks and ${FONT_FILES.length} fonts /brand -> src/assets`,
+);

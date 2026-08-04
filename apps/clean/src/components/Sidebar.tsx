@@ -37,7 +37,7 @@ export default function Sidebar({
   );
 
   return (
-    <nav aria-label="Sections">
+    <nav className="rail" aria-label="Sections">
       {VERBS.map(item)}
       <hr />
       {UTILITY.map(item)}
