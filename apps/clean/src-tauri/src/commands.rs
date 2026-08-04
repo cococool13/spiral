@@ -79,6 +79,19 @@ fn candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candid
         .collect()
 }
 
+/// A duplicated id would otherwise scan the same category twice: the second
+/// candidate for each path finds the file the first one already removed and
+/// lands in `failed`, showing the user a list of OS-level errors after what
+/// was actually a clean run. `dedup_by` only removes *adjacent* duplicates,
+/// so the sort has to come first; ordering afterward has no other meaning.
+fn dedup_by_id(
+    mut entries: Vec<(String, &'static catalog::CatalogEntry)>,
+) -> Vec<(String, &'static catalog::CatalogEntry)> {
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+    entries.dedup_by(|a, b| a.0 == b.0);
+    entries
+}
+
 fn snapshot_note(estimated: u64, measured: u64, snapshots: bool) -> Option<String> {
     if volume::shortfall_is_material(estimated, measured) && snapshots {
         Some(
@@ -114,6 +127,8 @@ fn run_clean(ids: Vec<String>, config_dir: &Path, home: &Path) -> Result<CleanRe
             }
         }
     }
+
+    let entries = dedup_by_id(entries);
 
     let before = volume::available_bytes(home);
 
@@ -154,7 +169,14 @@ fn run_clean(ids: Vec<String>, config_dir: &Path, home: &Path) -> Result<CleanRe
         }
     }
 
-    let note = snapshot_note(estimated_bytes, measured_bytes, volume::has_local_snapshots());
+    // `has_local_snapshots` shells out to `tmutil`; only pay for that when
+    // there is a shortfall it could actually explain, so an ordinary clean
+    // that reclaimed what it estimated spawns no subprocess at all.
+    let note = if volume::shortfall_is_material(estimated_bytes, measured_bytes) {
+        snapshot_note(estimated_bytes, measured_bytes, volume::has_local_snapshots())
+    } else {
+        None
+    };
 
     // A failed log write must not fail the run — the removal already happened,
     // and telling the user it failed would be false.
@@ -266,40 +288,52 @@ mod tests {
     }
 
     #[test]
-    fn run_clean_never_touches_anything_outside_the_home_it_is_given() {
-        // The seam this test exists to prove: `run_clean` takes `home` as an
-        // argument rather than resolving it internally, so nothing inside it
-        // — however broken — can reach the real machine's home directory. A
-        // valid id, a fake home, and a planted file under that fake home's
-        // corresponding catalog root; assert on the returned `CleanReport`,
-        // never on the real filesystem, per the coordinator's note.
-        let dir = tempfile::tempdir().unwrap();
+    fn duplicate_ids_are_deduplicated_before_scanning() {
+        // Pure function, no I/O: `dedup_by_id` never touches `scan` or
+        // `remove`, so this needs no tempdir and no fake home.
+        let user_caches = catalog::find("user-caches").unwrap();
+        let trash = catalog::find("trash").unwrap();
+        let entries = vec![
+            ("user-caches".to_string(), user_caches),
+            ("trash".to_string(), trash),
+            ("user-caches".to_string(), user_caches),
+        ];
+
+        let deduped = dedup_by_id(entries);
+
+        let ids: Vec<&str> = deduped.iter().map(|(id, _)| id.as_str()).collect();
+        assert_eq!(ids.len(), 2, "a duplicated id must not survive dedup: {ids:?}");
+        assert!(ids.contains(&"user-caches"));
+        assert!(ids.contains(&"trash"));
+    }
+
+    #[test]
+    fn scan_entry_in_only_sees_the_home_it_is_given() {
+        // This tests `scan_entry_in` directly, never `run_clean`, and that is
+        // deliberate: a test that reaches `remove::execute` can permanently
+        // delete real files whenever a guard somewhere along the way is
+        // stubbed out — mutation testing every guard is mandated practice in
+        // this codebase (ADR-0012), and running `run_clean` end to end
+        // against a real home already deleted 32,555 real files once, when
+        // an earlier version of this exact seam test's ancestor stubbed the
+        // unknown-id guard to prove it was load-bearing. `remove::execute`
+        // resolves `Roots::system()` — the real machine's home — regardless
+        // of what `home` is passed to `run_clean`, so no test that reaches it
+        // can ever be made safe to mutate around. `scan_entry_in` is
+        // read-only: there is nothing here for a stubbed guard to delete, so
+        // this is the strongest form of the property that can be tested
+        // without reproducing the incident.
         let home = tempfile::tempdir().unwrap();
         let caches = home.path().join("Library/Caches");
         std::fs::create_dir_all(&caches).unwrap();
-        std::fs::write(caches.join("planted.bin"), b"x").unwrap();
+        let planted = caches.join("planted.bin");
+        std::fs::write(&planted, b"x").unwrap();
 
-        let report = run_clean(vec!["user-caches".into()], dir.path(), home.path()).unwrap();
+        let entry = catalog::find("user-caches").unwrap();
+        let result = scan::scan_entry_in(entry, home.path());
 
-        // `remove::execute` evaluates its own containment bars against the
-        // *real* machine's home (`Roots::system()`), independently of the
-        // fake `home` passed to `run_clean`. A path under a fake home does
-        // not lie under any real catalog root, so every candidate here is
-        // denied by that containment check — never removed. That is the
-        // correct, safe outcome, not a workaround: the seam in `run_clean`
-        // only has to keep the *scan* from reaching outside `home`; the
-        // deletion boundary in `remove.rs` is a second, independent bar.
-        assert_eq!(report.removed, 0, "nothing under a fake home should ever be removed");
-        assert_eq!(report.excluded, 0);
-        assert_eq!(
-            report.failed.len(),
-            1,
-            "the planted file should have produced exactly one denied candidate: {:?}",
-            report.failed
-        );
-
-        // The planted file itself must still exist — nothing was deleted.
-        assert!(caches.join("planted.bin").exists());
+        assert_eq!(result.paths, vec![planted], "the scan must see only the injected home");
+        assert_eq!(result.items, 1);
     }
 
     #[test]
