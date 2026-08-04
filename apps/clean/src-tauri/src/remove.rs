@@ -189,163 +189,60 @@ fn normalize(path: &Path) -> Option<PathBuf> {
 }
 
 /// Resolve a root that *authorises deletion* — a catalog root, or an
-/// `AppBundle` scope root — and refuse it if resolution moved it somewhere
-/// its unresolved form did not claim to be.
+/// `AppBundle` scope root — and refuse it unless it resolves **exactly**
+/// where the catalog declared it.
 ///
 /// Round 4 resolved these roots and said so deliberately, and for a leaf
 /// *candidate* that reasoning was right. For a *root* it was exactly
 /// backwards, because a root does not merely describe a path — it grants
 /// permission over everything beneath it. Resolving one lets a symlink
-/// silently redefine what the catalog authorises:
+/// silently redefine what the catalog authorises, and every attempt to
+/// contain that damage while still honouring relocation failed the same way:
 ///
 /// ```text
-/// mv ~/Library/Caches ~/Library/Caches.real
-/// ln -s /opt/homebrew ~/Library/Caches
+/// ln -s /opt/homebrew ~/Library/Caches   # swept /opt/homebrew         (round 5)
+/// ln -s ~ ~/Library/Caches               # deleted ~/.ssh/id_rsa       (round 6)
+/// ln -s ~/Library ~/Library/Caches       # deleted login.keychain-db   (round 6)
+/// ln -s ~/Library/Keychains ~/Library/Developer  # ancestor of the declared root
 /// ```
 ///
-/// An ordinary `user-caches` sweep then returned `Removed(Permanent)` for
-/// files under `/opt/homebrew` — permanent, no Trash, no recovery.
+/// Rounds 5 and 6 each answered with a denylist — an anchor, then a ceiling,
+/// then container and top-level-home clauses — and each time the same attack
+/// was still live one level lower. Enumerating forbidden destinations cannot
+/// win: the attacker picks the destination.
 ///
-/// The rule: **a root must still lie inside the anchor its unresolved form
-/// named.** For a `~/`-rooted entry the anchor is the home directory, which
-/// keeps round 4's legitimate case working — a user who has symlinked
-/// `~/.gradle` to somewhere else *inside* their home is still swept — while
-/// refusing any root that has been pointed out of the home entirely. For an
-/// absolute root the anchor is the root path as written, so `/Applications`
-/// must still resolve to `/Applications`.
+/// **So the rule is relocation itself.** If a root does not resolve to the
+/// exact path the catalog declared, that root is not usable and its category
+/// is skipped. There is nothing left to enumerate. `~/.gradle` →
+/// `~/dev/gradle` and `~/.npm/_cacache` → `~/npmcache` are skipped too; that
+/// is intended, and the user is told why (see `disposition_for`).
 ///
-/// `None` means the root is not usable. Candidates that would have relied on
-/// it are denied rather than swept: the app declines to clean a location it
-/// cannot vouch for, which is the correct failure for a root that has been
-/// tampered with.
+/// Comparing the resolved path against the *lexical* declared path — not
+/// against some anchor derived from it — is what makes this catch a symlinked
+/// **ancestor** of the declared root, not just a symlinked final component.
 ///
-/// **Second rule: a root may not sit at or above the deletion ceiling.** The
-/// anchor alone was not enough, and round 5's report understated how badly.
-/// "Inside the home" includes the home *itself*, so a root repointed at a
-/// broad location still authorised sweeping almost everything a person has.
-/// All three of these were reproduced and destroyed real files:
-///
-/// ```text
-/// ln -s ~ ~/Library/Caches          # Catalog("user-caches") deleted ~/.ssh/id_rsa
-/// ln -s ~/Library ~/Library/Caches  # deleted ~/Library/Keychains/login.keychain-db
-/// ln -s ~ ~/Library                 # AppBundle deleted ~/.ssh/id_rsa
-/// ```
-///
-/// The reach was never "documents" — it was SSH keys, keychains,
-/// `Messages/chat.db`, Mail, Safari data, and every app's state. The middle
-/// case also shows why depth did not help: everything under
-/// `~/Library/Caches` → `~/Library` lands two or more levels down, clearing
-/// the container rule.
-///
-/// So a resolved root is refused when it **is, or is an ancestor of**, the
-/// home directory, `~/Library`, or any `USER_CONTENT` root — see
-/// `deletion_ceiling`. Note the direction: this asks whether the *root* sits
-/// at or above a protected location, the mirror of the containment checks
-/// elsewhere, and it reuses the same `starts_with_case_insensitive`.
-///
-/// `~/.gradle` → `~/dev/gradle` is none of those things and keeps working,
-/// as round 4 required.
-///
-/// **The ceiling applies only to a root that actually moved.** `~/Library`
-/// is itself both an `AppBundle` scope root *and* a ceiling entry, so
-/// applying the ceiling unconditionally would refuse `~/Library` for being
-/// `~/Library` and take every legitimate uninstall with it (caught by
-/// `one_apps_state_inside_a_container_is_still_permitted`). A root that
-/// resolves exactly where its unresolved form said it would is the location
-/// the hardcoded catalog chose, and the catalog is the authority (ADR-0006);
-/// the ceiling exists to catch *relocation*, so relocation is its trigger.
-fn authorizing_root(root: &str, home: &Path, limits: &RootLimits) -> Option<PathBuf> {
+/// An anchor check used to sit here and is now provably dead: `resolved ==
+/// declared` satisfies every anchor that could be derived from `declared`, so
+/// the branch was unreachable once relocation became the whole rule. Removed
+/// rather than left in — round 6 shipped a dead ceiling clause nobody caught.
+fn authorizing_root(root: &str, home: &Path) -> Option<PathBuf> {
     let lexical = catalog::expand(root, home);
     let declared = strip_firmlink(lexical.clone());
     let resolved = normalize(&lexical)?;
 
-    let anchor = if root.starts_with("~/") { home.to_path_buf() } else { declared.clone() };
-    if !starts_with_case_insensitive(&resolved, &anchor) {
-        return None;
-    }
-
     // Mutual prefix is equality, using the one case-insensitive comparison
     // this module owns rather than a fourth one.
-    let moved = !(starts_with_case_insensitive(&resolved, &declared)
-        && starts_with_case_insensitive(&declared, &resolved));
-    if moved && limits.forbids(&resolved) {
-        return None;
-    }
+    let where_declared = starts_with_case_insensitive(&resolved, &declared)
+        && starts_with_case_insensitive(&declared, &resolved);
 
-    Some(resolved)
+    where_declared.then_some(resolved)
 }
 
 /// True when `path` is `root` itself, or an immediate child of it — the one
-/// depth primitive this module owns. Used for two different containers
-/// (`~/Library` and `$HOME`) rather than being written out twice.
+/// depth primitive this module owns.
 fn is_at_or_just_below(path: &Path, root: &Path) -> bool {
     starts_with_case_insensitive(path, root)
         && path.components().count() <= root.components().count() + 1
-}
-
-/// Where a *relocated* authorising root may not land.
-struct RootLimits {
-    /// The resolved home directory.
-    home: PathBuf,
-    /// Locations a root may not be, nor sit above: the home directory,
-    /// `~/Library`, and every `USER_CONTENT` root. Resolved, so a ceiling
-    /// entry that is itself a symlink still matches what a tampered root
-    /// resolves to.
-    ceiling: Vec<PathBuf>,
-    /// `~/Library`, resolved — the anchor for the container-depth rule.
-    library: Option<PathBuf>,
-}
-
-impl RootLimits {
-    fn new(home: &Path) -> Self {
-        Self {
-            home: home.to_path_buf(),
-            ceiling: std::iter::once(home.to_path_buf())
-                .chain(std::iter::once(home.join("Library")))
-                .chain(USER_CONTENT.iter().map(|r| home.join(r)))
-                .filter_map(|p| normalize(&p))
-                .collect(),
-            library: normalize(&home.join("Library")),
-        }
-    }
-
-    /// True when a relocated root has landed somewhere it may not.
-    ///
-    /// One rule, three clauses: *a relocated root may not land at or above
-    /// anything protected, nor on a shared container, nor at the top level
-    /// of the home.*
-    ///
-    /// **Clause 1 (the ceiling)** is the fix the reviewer specified and
-    /// Cohen approved: home, `~/Library`, `USER_CONTENT`.
-    ///
-    /// **Clauses 2 and 3 are additions, flagged as such.** Clause 1 alone
-    /// closes the three reproduced attacks and nothing else; attacking it
-    /// found the same attack still live one level lower in each direction,
-    /// with the same consequence:
-    ///
-    /// - `~/Library/Caches` → `~/Library/Keychains` still deleted
-    ///   `login.keychain-db`. Not caught by the ceiling (`~/Library` is not
-    ///   an ancestor of `~/Library/Keychains`) and not caught at bar 1
-    ///   (candidates land two levels below `~/Library`, clearing the
-    ///   container rule). **Clause 2.**
-    /// - `~/Library/Caches` → `~/.ssh` still deleted `id_rsa`, and
-    ///   → `~/projects` still swept a source tree. **Clause 3.**
-    ///
-    /// Both are expressed with `is_at_or_just_below`, the same depth
-    /// primitive the container rule already uses, rather than a list of
-    /// directory names — round 5's lesson.
-    ///
-    /// **The trade-off in clause 3**, stated so it can be reversed in one
-    /// line if judged wrong: a cache root relocated to a *top-level* home
-    /// directory (`~/.npm/_cacache` → `~/npmcache`) is now refused, so that
-    /// category is skipped rather than swept. It fails closed — nothing is
-    /// deleted — and the mandated case still works, because
-    /// `~/.gradle` → `~/dev/gradle` leaves the root three levels down.
-    fn forbids(&self, resolved: &Path) -> bool {
-        self.ceiling.iter().any(|limit| starts_with_case_insensitive(limit, resolved))
-            || self.library.as_deref().is_some_and(|l| is_at_or_just_below(resolved, l))
-            || is_at_or_just_below(resolved, &self.home)
-    }
 }
 
 /// True when `path` (already normalised) is `~/Library` itself, or an
@@ -393,13 +290,12 @@ struct Roots {
     /// path belongs to the named `bundle_id`; that lands with `associate.rs`
     /// in M4. Every entry has passed `authorizing_root`.
     app_bundle_scope: Vec<PathBuf>,
-    /// Where a relocated authorising root may not land, plus the resolved
-    /// `~/Library` the container-depth rule counts from. That `~/Library` is
-    /// deliberately *not* `authorizing_root`-checked: it is used to deny, and
+    /// `~/Library`, resolved — what the container-depth rule counts from.
+    /// Deliberately *not* `authorizing_root`-checked: it is used to deny, and
     /// a `~/Library` pointed elsewhere should have its target's containers
     /// denied too. The authorising copy lives in `app_bundle_scope` and is
     /// checked.
-    limits: RootLimits,
+    library: Option<PathBuf>,
 }
 
 impl Roots {
@@ -442,17 +338,16 @@ impl Roots {
             USER_CONTENT.iter().filter_map(|r| normalize(&home.join(r))).collect();
         protected.extend(user_content.iter().cloned());
 
-        let limits = RootLimits::new(&home);
         let app_bundle_scope = ["/Applications", "~/Applications", "~/Library"]
             .into_iter()
-            .filter_map(|r| authorizing_root(r, &home, &limits))
+            .filter_map(|r| authorizing_root(r, &home))
             .collect();
 
         Some(Self {
             protected: protected.into_iter().filter_map(|r| normalize(&r)).collect(),
             user_content,
             app_bundle_scope,
-            limits,
+            library: normalize(&home.join("Library")),
             home,
         })
     }
@@ -490,7 +385,7 @@ impl Roots {
     /// immediate child of it. See the free `is_library_container` for the
     /// rule and why it is depth rather than a list of names.
     fn is_library_container(&self, path: &Path) -> bool {
-        is_library_container(path, self.limits.library.as_deref())
+        is_library_container(path, self.library.as_deref())
     }
 }
 
@@ -524,6 +419,17 @@ fn is_user_content(path: &Path, roots: &Roots) -> bool {
 /// Runs on the same normalised path as `is_user_content`, or `..`, case, a
 /// firmlink detour, or a symlink would defeat it exactly as they defeated
 /// bar 1.
+///
+/// The candidate must be in scope **both as written and as resolved**.
+/// Refusing a relocated scope root removes it from `app_bundle_scope`, but
+/// that alone did not stop
+/// `ln -s ~/Library/Containers/com.apple.mail/Data ~/Applications`: the
+/// candidate `~/Applications/Envelope Index` resolves *into* `~/Library`,
+/// which is a perfectly good scope root, so the resolved form passed on its
+/// own. Requiring the written form to be in scope too closes the route —
+/// `~/Applications` is no longer a usable root, so nothing named through it
+/// is in scope no matter where it lands. This is an extra conjunct, never an
+/// alternative, so it can only ever deny more.
 fn is_within_app_bundle_scope(path: &Path, roots: &Roots) -> bool {
     let normalized = match normalize(path) {
         Some(p) => p,
@@ -537,10 +443,11 @@ fn is_within_app_bundle_scope(path: &Path, roots: &Roots) -> bool {
         return false;
     }
 
-    roots
-        .app_bundle_scope
-        .iter()
-        .any(|scope| starts_with_case_insensitive(&normalized, scope))
+    let in_scope = |p: &Path| {
+        roots.app_bundle_scope.iter().any(|scope| starts_with_case_insensitive(p, scope))
+    };
+
+    in_scope(&normalized) && in_scope(&strip_firmlink(path.to_path_buf()))
 }
 
 /// True when `path` (already normalised) lies at or beneath one of
@@ -552,14 +459,37 @@ fn is_within_app_bundle_scope(path: &Path, roots: &Roots) -> bool {
 /// anything at all.
 ///
 /// Roots go through `authorizing_root`, not plain `normalize`: this is the
-/// function that grants permission, so a root that a symlink has moved out
-/// of the home directory is refused rather than swept.
+/// function that grants permission, so a root that has been relocated is
+/// refused rather than swept.
 fn is_within_catalog_entry(path: &Path, entry: &catalog::CatalogEntry, roots: &Roots) -> bool {
     entry.roots.iter().any(|root| {
-        authorizing_root(root, &roots.home, &roots.limits)
+        authorizing_root(root, &roots.home)
             .map(|r| starts_with_case_insensitive(path, &r))
             .unwrap_or(false)
     })
+}
+
+/// The roots of `entry` that have been relocated, described for the user:
+/// what the catalog declares, and where that path actually leads now.
+///
+/// The project rule is that everything material is stated in plain language.
+/// A skipped category is material — a user who deliberately moved a cache
+/// should be able to tell that Spiral Clean saw the move and stood down,
+/// rather than being handed a generic "not covered by this category" that
+/// reads like a bug.
+fn relocated_roots(entry: &catalog::CatalogEntry, home: &Path) -> Vec<String> {
+    entry
+        .roots
+        .iter()
+        .filter(|root| authorizing_root(root, home).is_none())
+        .map(|root| {
+            let declared = catalog::expand(root, home);
+            match normalize(&declared) {
+                Some(actual) => format!("{root} now leads to {}", actual.display()),
+                None => format!("{root} could not be resolved"),
+            }
+        })
+        .collect()
 }
 
 /// Disposition is derived here, never supplied by the caller. Two routes
@@ -578,10 +508,25 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
                 Some(normalized) if is_within_catalog_entry(&normalized, entry, roots) => {
                     Ok(entry.disposition)
                 }
-                _ => Err(format!(
-                    "{} is not covered by the \"{id}\" category. Nothing was removed.",
-                    path.display()
-                )),
+                _ => {
+                    // Name the category and the root, and say what is
+                    // actually wrong. "Not covered by this category" would be
+                    // true but useless to someone who moved the cache on
+                    // purpose and is wondering why nothing happened.
+                    let relocated = relocated_roots(entry, &roots.home);
+                    if relocated.is_empty() {
+                        Err(format!(
+                            "{} is not covered by the \"{id}\" category. Nothing was removed.",
+                            path.display()
+                        ))
+                    } else {
+                        Err(format!(
+                            "The \"{}\" category was skipped because it no longer resolves where Spiral Clean expects it: {}. Spiral Clean only removes a category from the exact location it declares, so nothing was removed.",
+                            entry.label,
+                            relocated.join("; ")
+                        ))
+                    }
+                }
             },
             None => Err(format!(
                 "\"{id}\" is not a category in this release. Nothing was removed."
@@ -1107,11 +1052,123 @@ mod tests {
     }
 
     #[test]
-    fn a_catalog_root_symlinked_within_the_home_is_still_swept() {
-        // The other side of the anchor rule, and the case round 4 was right
-        // about: a user who has moved `~/.gradle` somewhere else inside
-        // their own home still gets that cache swept. The rule refuses a
-        // root that leaves the home, not one that merely moves within it.
+    fn every_relocation_target_ever_reproduced_is_refused() {
+        // Rounds 5-7 in one table. Each row is `~/Library/Caches` symlinked
+        // at the named directory, then an ordinary `Catalog("user-caches")`
+        // clean of a file inside it. Every one of these returned
+        // `Removed(Permanent)` against real files at some point across the
+        // six previous rounds; the last six are the round-7 findings, which
+        // the ceiling missed by exactly one level.
+        for dir in [
+            "",                                       // $HOME itself
+            "Library",
+            "Library/Keychains",
+            "Library/Keychains/AAAA-BBBB-UUID",       // where keychain-2.db lives
+            "Library/Application Support",
+            "Library/Application Support/Signal",
+            "Library/Containers/com.apple.mail/Data",
+            "Library/Group Containers/group.com.apple.notes",
+            "Documents",
+            ".ssh",
+            ".config/gh",
+            ".local/share/keyrings",
+            "projects",
+        ] {
+            let home = fake_home();
+            let target =
+                if dir.is_empty() { home.path().to_path_buf() } else { home.path().join(dir) };
+            std::fs::create_dir_all(&target).unwrap();
+            std::fs::create_dir_all(home.path().join("Library")).unwrap();
+            let precious = file(&target, "precious.bin");
+            symlink(&target, &home.path().join("Library/Caches"));
+
+            let roots = Roots::rooted_at(home.path());
+            let reports = run(
+                vec![candidate(
+                    home.path().join("Library/Caches/precious.bin"),
+                    Justification::Catalog("user-caches".into()),
+                )],
+                &exclude::new(vec![]),
+                &roots,
+            );
+            assert!(
+                matches!(reports[0].outcome, Outcome::Denied(_)),
+                "a root relocated to ~/{dir} was swept: {:?}",
+                reports[0].outcome
+            );
+            assert!(precious.exists(), "~/{dir}/precious.bin was destroyed");
+        }
+    }
+
+    #[test]
+    fn a_relocated_ancestor_of_a_declared_root_is_refused() {
+        // `ln -s ~/Library/Keychains ~/Library/Developer` moves an
+        // *ancestor* of `xcode-derived-data`'s declared root
+        // (`~/Library/Developer/Xcode/DerivedData`), not its final
+        // component. Comparing the resolved path against the lexical
+        // declared path — rather than against an anchor derived from it —
+        // is what catches this.
+        let home = fake_home();
+        let keychains = home.path().join("Library/Keychains");
+        std::fs::create_dir_all(keychains.join("Xcode/DerivedData")).unwrap();
+        let keychain = file(&keychains, "keychain-2.db");
+        symlink(&keychains, &home.path().join("Library/Developer"));
+
+        let roots = Roots::rooted_at(home.path());
+        let reports = run(
+            vec![candidate(
+                home.path().join("Library/Developer/Xcode/DerivedData"),
+                Justification::Catalog("xcode-derived-data".into()),
+            )],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(
+            matches!(reports[0].outcome, Outcome::Denied(_)),
+            "a relocated ancestor of a declared root was swept: {:?}",
+            reports[0].outcome
+        );
+        assert!(keychain.exists(), "keychain-2.db was destroyed");
+    }
+
+    #[test]
+    fn a_relocated_applications_root_is_refused_under_app_bundle() {
+        // `ln -s ~/Library/Containers/com.apple.mail/Data ~/Applications`
+        // under `AppBundle`. The scope roots go through the same rule as
+        // catalog roots, so relocation refuses them identically.
+        let home = fake_home();
+        let mail = home.path().join("Library/Containers/com.apple.mail/Data");
+        std::fs::create_dir_all(&mail).unwrap();
+        let db = file(&mail, "Envelope Index");
+        symlink(&mail, &home.path().join("Applications"));
+
+        let roots = Roots::rooted_at(home.path());
+        let reports = run(
+            vec![candidate(
+                home.path().join("Applications/Envelope Index"),
+                Justification::AppBundle { bundle_id: "com.example.app".into() },
+            )],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(
+            matches!(reports[0].outcome, Outcome::Denied(_)),
+            "a relocated ~/Applications was swept: {:?}",
+            reports[0].outcome
+        );
+        assert!(db.exists(), "Mail's Envelope Index was destroyed");
+    }
+
+    #[test]
+    fn a_relocated_root_is_skipped_and_the_user_is_told_why() {
+        // Round 4 through 6 kept this relocation working — `~/.gradle`
+        // symlinked to `~/dev/gradle` — and every containment rule built
+        // around it was defeated one level lower. Cohen dropped the
+        // constraint in round 7: relocation itself is now the refusal.
+        //
+        // Skipping silently would be its own defect, so this also pins the
+        // message: it must name the category and the root and say what is
+        // actually wrong.
         let home = fake_home();
         let real = home.path().join("dev/gradle");
         std::fs::create_dir_all(real.join("caches")).unwrap();
@@ -1127,12 +1184,28 @@ mod tests {
             &exclude::new(vec![]),
             &roots,
         );
+
+        let why = match &reports[0].outcome {
+            Outcome::Denied(why) => why.clone(),
+            other => panic!("expected Denied, got {other:?}"),
+        };
+        assert!(p.exists(), "a relocated root was swept");
         assert!(
-            matches!(reports[0].outcome, Outcome::Removed(Disposition::Permanent)),
-            "a legitimately relocated cache root was refused: {:?}",
-            reports[0].outcome
+            why.contains("Package manager download caches"),
+            "the message does not name the category: {why}"
         );
-        assert!(!p.exists());
+        assert!(
+            why.contains("~/.gradle/caches"),
+            "the message does not name the relocated root: {why}"
+        );
+        assert!(
+            why.contains(&real.join("caches").to_string_lossy().to_string()),
+            "the message does not say where the root actually leads: {why}"
+        );
+        assert!(
+            why.contains("skipped"),
+            "the message does not say the category was skipped: {why}"
+        );
     }
 
     #[test]
@@ -1166,18 +1239,18 @@ mod tests {
     }
 
     #[test]
-    fn the_absolute_anchor_branch_refuses_a_moved_root() {
-        // The absolute half of the anchor rule, asserted on the helper
-        // because no call site can reach it today: every catalog entry is
-        // `~/`-rooted, and the one absolute scope root (`/Applications`) is
-        // a real directory this test cannot replace. `/tmp` is a symlink to
-        // `/private/tmp` on macOS, which makes it the available fixture for
-        // "the resolved root is not where the unresolved form said it
-        // lives". Named for what it actually proves.
+    fn an_absolute_root_that_is_a_symlink_is_refused() {
+        // Asserted on the helper because no call site can reach an absolute
+        // root today: every catalog entry is `~/`-rooted, and the one
+        // absolute scope root (`/Applications`) is a real directory this
+        // test cannot replace. `/tmp` is a symlink to `/private/tmp` on
+        // macOS, so it does not resolve where it is declared and is refused
+        // by the same rule as any other relocated root. Named for what it
+        // actually proves.
         let roots = system_roots();
-        assert_eq!(authorizing_root("/tmp", &roots.home, &roots.limits), None);
+        assert_eq!(authorizing_root("/tmp", &roots.home), None);
         assert_eq!(
-            authorizing_root("/Applications", &roots.home, &roots.limits),
+            authorizing_root("/Applications", &roots.home),
             Some("/Applications".into())
         );
     }
@@ -1243,13 +1316,12 @@ mod tests {
 
     #[test]
     fn a_catalog_root_relocated_onto_a_library_container_is_refused() {
-        // Found while attacking the ceiling: `~/Library/Caches` →
-        // `~/Library/Keychains` is the proven `→ ~/Library` attack aimed one
-        // level lower. The ceiling alone does not catch it — `~/Library` is
-        // not an ancestor of `~/Library/Keychains` — and the candidate lands
-        // two levels below `~/Library`, so the container rule does not catch
-        // it at bar 1 either. `RootLimits::forbids` refuses the *root* for
-        // landing on a container.
+        // `~/Library/Caches` → `~/Library/Keychains`: the proven
+        // `→ ~/Library` attack aimed one level lower. Round 6's ceiling
+        // missed it (`~/Library` is not an *ancestor* of
+        // `~/Library/Keychains`) and bar 1 misses it (the candidate lands two
+        // levels below `~/Library`, clearing the container rule). Refused
+        // now for the only reason that matters: the root moved.
         let home = fake_home();
         let keychains = home.path().join("Library/Keychains");
         std::fs::create_dir_all(&keychains).unwrap();
@@ -1275,11 +1347,10 @@ mod tests {
 
     #[test]
     fn a_catalog_root_relocated_to_a_top_level_home_directory_is_refused() {
-        // Clause 3, found by attacking the approved ceiling. `ln -s ~/.ssh
-        // ~/Library/Caches` is the `ln -s ~ ~/Library/Caches` attack aimed
-        // one level lower, and reached the same file: it returned
-        // `Removed(Permanent)` for `id_rsa` with the ceiling alone in place.
-        // `~/projects` is the same shape for a source tree.
+        // `ln -s ~/.ssh ~/Library/Caches` is the `ln -s ~ ~/Library/Caches`
+        // attack aimed one level lower, and reached the same file: it
+        // returned `Removed(Permanent)` for `id_rsa` under round 6's
+        // ceiling. `~/projects` is the same shape for a source tree.
         for (dir, leaf) in [(".ssh", "id_rsa"), ("projects", "src.rs")] {
             let home = fake_home();
             let target = home.path().join(dir);
@@ -1310,8 +1381,8 @@ mod tests {
     fn library_symlinked_to_the_home_is_refused_under_app_bundle() {
         // `ln -s ~ ~/Library` made every `AppBundle` candidate in the home
         // permanent-deletable, and destroyed `~/.ssh/id_rsa`. `~/Library` is
-        // an `AppBundle` scope root, so the same ceiling rule has to apply
-        // to the scope list, not only to catalog roots.
+        // an `AppBundle` scope root, so the same relocation rule has to
+        // apply to the scope list, not only to catalog roots.
         let home = fake_home();
         let ssh = home.path().join(".ssh");
         std::fs::create_dir_all(&ssh).unwrap();
@@ -1468,10 +1539,21 @@ mod tests {
 
     #[test]
     fn a_relative_path_is_denied() {
-        // `canonicalize` would resolve a relative path against the process's
+        // `canonicalize` resolves a relative path against the process's
         // working directory, which is not something this module may guess at.
+        //
+        // Asserted on `normalize`, and with a relative path that genuinely
+        // *exists* relative to the working directory. The previous version
+        // used `Documents/tax.pdf`, which does not exist, so `resolve`
+        // returned `None` on its own and the test passed with the guard
+        // deleted — it survived mutation. `Cargo.toml` is present in the
+        // crate root, which is `cargo test`'s working directory, so without
+        // the guard this resolves to a real path and the assertion fails.
+        assert_eq!(normalize(Path::new("Cargo.toml")), None, "a relative path resolved");
+        assert_eq!(normalize(Path::new("src")), None, "a relative directory resolved");
+
         let roots = system_roots();
-        assert!(is_user_content(Path::new("Documents/tax.pdf"), &roots));
+        assert!(is_user_content(Path::new("Cargo.toml"), &roots));
         assert!(!is_within_app_bundle_scope(Path::new("Example.app"), &roots));
     }
 
