@@ -76,12 +76,26 @@ main {
   padding: 2rem;
 }
 
-/* No element uses this class yet — Task 6 adds the components that show
-   sizes and paths in the Clean screen. Left in place deliberately; not
-   dead code. */
+/* Sizes and paths in the Clean screen (CategoryRow, ResultReport). */
 .size {
   font-family: var(--spiral-font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* Every button meets the 44px minimum touch target, not just the rail's. */
+button {
+  cursor: pointer;
+  font: inherit;
+  min-height: 44px;
+}
+
+/* A checkbox's clickable area is its wrapping <label> — give the label
+   itself the 44px minimum rather than the native checkbox glyph. */
+.check {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.5rem;
+  min-height: 44px;
 }
 
 :focus-visible {
