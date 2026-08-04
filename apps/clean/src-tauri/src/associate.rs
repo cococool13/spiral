@@ -70,7 +70,6 @@ const APPLE_OWNED_NAMES: &[&str] = &[
 /// is tied to the app being looked up.
 ///
 /// No caller yet — Task 5 (the read-only uninstall commands) wires this in.
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Associated {
     pub path: PathBuf,
@@ -200,7 +199,6 @@ fn size_of(path: &Path) -> u64 {
 /// `remove::execute`, not inside either one alone.
 ///
 /// No caller yet — Task 5 (the read-only uninstall commands) wires this in.
-#[allow(dead_code)]
 pub fn associate(bundle_id: &str, app_name: &str, home: &Path) -> Vec<Associated> {
     let library = home.join("Library");
     let mut found = Vec::new();

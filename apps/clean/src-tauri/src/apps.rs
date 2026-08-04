@@ -21,7 +21,6 @@ use std::path::{Path, PathBuf};
 ///
 /// Nothing outside this module's own tests constructs one yet — the
 /// commands that do are Task 5.
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstalledApp {
     pub name: String,
@@ -37,7 +36,6 @@ pub struct InstalledApp {
 ///
 /// Nothing outside this module's own tests constructs one yet — the
 /// commands that do are Task 5.
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Handoff {
     /// Installed by Homebrew Cask. Carries the cask token (e.g.
@@ -65,7 +63,6 @@ const HOMEBREW_CASKROOM: &str = "/opt/homebrew/Caskroom";
 /// with entries that can never be acted on.
 ///
 /// No caller yet — Task 5 wires this into a Tauri command.
-#[allow(dead_code)]
 pub fn discover(home: &Path) -> Vec<InstalledApp> {
     let roots = [PathBuf::from("/Applications"), home.join("Applications")];
     scan_roots(&roots)
@@ -116,7 +113,6 @@ fn scan_roots(roots: &[PathBuf]) -> Vec<InstalledApp> {
 /// exactly two string values and nothing else about the format.
 ///
 /// No caller yet — Task 5 wires this into a Tauri command.
-#[allow(dead_code)]
 pub fn read_bundle(path: &Path) -> Option<(String, String)> {
     let plist = std::fs::read_to_string(path.join("Contents/Info.plist")).ok()?;
     let bundle_id = extract_plist_string(&plist, "CFBundleIdentifier")?;
@@ -176,7 +172,6 @@ fn extract_plist_string(xml: &str, key: &str) -> Option<String> {
 /// that only wanted to know.
 ///
 /// No caller yet — Task 5 wires this into a Tauri command.
-#[allow(dead_code)]
 pub fn is_running(bundle_id: &str) -> bool {
     pgrep_running("pgrep", bundle_id)
 }

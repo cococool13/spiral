@@ -31,6 +31,8 @@ pub fn run() {
             commands::clean_categories,
             commands::clean_scan,
             commands::clean_execute,
+            commands::uninstall_list,
+            commands::uninstall_inspect,
             permissions::fda_status,
             permissions::open_privacy_settings
         ])

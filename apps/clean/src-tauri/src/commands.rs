@@ -3,7 +3,8 @@
 //! Tauri types stop here. `scan` and `remove` know nothing about commands,
 //! which is what lets them be tested without a running app.
 
-use crate::{catalog, exclude, history, remove, scan, volume};
+use crate::remove::Evidence;
+use crate::{apps, associate, catalog, exclude, history, remove, scan, volume};
 use std::path::Path;
 
 /// Max paths returned per category across the IPC bridge.
@@ -283,6 +284,129 @@ pub fn clean_execute(
     run_clean(ids, &dir, &home, started_at)
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct AppSummary {
+    pub name: String,
+    pub bundle_id: String,
+    pub bytes: u64,
+    pub handoff: Option<String>,
+    pub running: bool,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct InspectItem {
+    pub path: String,
+    pub bytes: u64,
+    pub evidence: Evidence,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct InspectResult {
+    pub bundle_id: String,
+    pub name: String,
+    pub items: Vec<InspectItem>,
+    pub handoff: Option<String>,
+    pub running: bool,
+}
+
+/// The text shown in place of a delete confirmation when an app carries a
+/// [`apps::Handoff`] (Task 7): a Homebrew cask gets the exact command that
+/// removes it without orphaning brew's own metadata; a system extension gets
+/// told why no file deletion here can remove it and where to go instead.
+fn handoff_label(handoff: &apps::Handoff) -> String {
+    match handoff {
+        apps::Handoff::HomebrewCask(token) => format!("brew uninstall --cask {token}"),
+        apps::Handoff::SystemExtension => {
+            "This app installs a system extension, which cannot be removed by deleting \
+             files. Open System Settings -> General -> Login Items & Extensions to remove \
+             it, then reopen Spiral Clean."
+                .to_string()
+        }
+    }
+}
+
+/// Logical size of an app bundle: the sum of every file beneath it, symlinks
+/// never followed. Mirrors `associate::size_of`'s policy exactly; duplicated
+/// rather than exported because that function is private to `associate.rs`
+/// and this task's brief bars editing that module beyond its dead-code
+/// allows.
+fn bundle_bytes(path: &Path) -> u64 {
+    walkdir::WalkDir::new(path)
+        .min_depth(1)
+        .follow_links(false)
+        .follow_root_links(false)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .filter_map(|entry| entry.metadata().ok().map(|m| m.len()))
+        .sum()
+}
+
+fn app_summary(app: &apps::InstalledApp) -> AppSummary {
+    AppSummary {
+        name: app.name.clone(),
+        bundle_id: app.bundle_id.clone(),
+        bytes: bundle_bytes(&app.path),
+        handoff: app.handoff.as_ref().map(handoff_label),
+        running: apps::is_running(&app.bundle_id),
+    }
+}
+
+/// Testable core of `uninstall_list`.
+fn list_apps_within(home: &Path) -> Vec<AppSummary> {
+    apps::discover(home).iter().map(app_summary).collect()
+}
+
+#[tauri::command]
+pub fn uninstall_list() -> Vec<AppSummary> {
+    match dirs::home_dir() {
+        Some(home) => list_apps_within(&home),
+        // No home to resolve means nothing can be reported — an empty list,
+        // not a panic or a guess at where to look instead.
+        None => Vec::new(),
+    }
+}
+
+/// Deterministic order. Task 6 addresses items by index into this list, so a
+/// shifting order would remove something other than what the user deselected.
+fn order_items(mut items: Vec<InspectItem>) -> Vec<InspectItem> {
+    items.sort_by(|a, b| a.path.cmp(&b.path));
+    items
+}
+
+/// Testable core of `uninstall_inspect`.
+fn inspect_within(bundle_id: &str, home: &Path) -> Result<InspectResult, String> {
+    let app = apps::discover(home)
+        .into_iter()
+        .find(|a| a.bundle_id == bundle_id)
+        .ok_or_else(|| {
+            format!(
+                "\"{bundle_id}\" is not an installed application. It may already have been \
+                 removed. Reopen Spiral Clean to refresh the list."
+            )
+        })?;
+
+    let items = associate::associate(bundle_id, &app.name, home)
+        .into_iter()
+        .map(|a| InspectItem { path: a.path.display().to_string(), bytes: a.bytes, evidence: a.evidence })
+        .collect();
+
+    Ok(InspectResult {
+        running: apps::is_running(&app.bundle_id),
+        handoff: app.handoff.as_ref().map(handoff_label),
+        bundle_id: app.bundle_id,
+        name: app.name,
+        items: order_items(items),
+    })
+}
+
+#[tauri::command]
+pub fn uninstall_inspect(bundle_id: String) -> Result<InspectResult, String> {
+    let home = dirs::home_dir()
+        .ok_or("Could not locate your home folder, so nothing was inspected.")?;
+    inspect_within(&bundle_id, &home)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -481,5 +605,96 @@ mod tests {
         assert!(snapshot_note(8_000_000_000, 7_000_000_000, true).is_none());
         // Short, but there are no snapshots — say nothing rather than guess.
         assert!(snapshot_note(8_000_000_000, 2_000_000_000, false).is_none());
+    }
+
+    #[test]
+    fn inspect_rejects_an_unknown_bundle_id() {
+        let home = tempfile::tempdir().unwrap();
+        let err = inspect_within("com.example.absent", home.path()).unwrap_err();
+        assert!(err.contains("com.example.absent"), "must name the id: {err}");
+    }
+
+    #[test]
+    fn inspect_items_are_ordered_deterministically() {
+        // Task 6 addresses these by index, so a shifting order would delete
+        // something other than what the user deselected. `order_items` is a
+        // pure function over `InspectItem`s, so no filesystem is needed here
+        // — the tempdir exists only to match the brief's given test shape.
+        let _home = tempfile::tempdir().unwrap();
+        let items = vec![
+            InspectItem { path: "/b".into(), bytes: 1, evidence: Evidence::Likely },
+            InspectItem { path: "/a".into(), bytes: 1, evidence: Evidence::Verified },
+        ];
+        let sorted = order_items(items);
+        assert_eq!(sorted[0].path, "/a");
+        assert_eq!(sorted[1].path, "/b");
+    }
+
+    fn plant_app(dir: &std::path::Path, name: &str, bundle_id: &str) -> PathBuf {
+        let app = dir.join(format!("{name}.app/Contents"));
+        std::fs::create_dir_all(&app).unwrap();
+        std::fs::write(
+            app.join("Info.plist"),
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>{bundle_id}</string>
+<key>CFBundleName</key><string>{name}</string>
+</dict></plist>"#
+            ),
+        )
+        .unwrap();
+        dir.join(format!("{name}.app"))
+    }
+
+    #[test]
+    fn inspect_finds_the_apps_own_associated_files_sorted_by_path() {
+        let home = tempfile::tempdir().unwrap();
+        let user_apps = home.path().join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        plant_app(&user_apps, "Foo", "com.example.foo");
+        let support = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&support).unwrap();
+        std::fs::write(support.join("com.example.foo"), b"x").unwrap();
+
+        let result = inspect_within("com.example.foo", home.path()).unwrap();
+
+        assert_eq!(result.bundle_id, "com.example.foo");
+        assert_eq!(result.name, "Foo");
+        assert!(!result.running);
+        assert_eq!(result.handoff, None);
+        assert!(
+            result.items.iter().any(|i| i.path.ends_with("com.example.foo")
+                && i.evidence == Evidence::Verified),
+            "the associated file must come back as a Verified item: {:?}",
+            result.items
+        );
+    }
+
+    #[test]
+    fn list_maps_discovered_apps_into_summaries() {
+        let home = tempfile::tempdir().unwrap();
+        let user_apps = home.path().join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        plant_app(&user_apps, "Foo", "com.example.foo");
+
+        let summaries = list_apps_within(home.path());
+        let foo = summaries.iter().find(|s| s.bundle_id == "com.example.foo").unwrap();
+        assert_eq!(foo.name, "Foo");
+        assert!(foo.bytes > 0, "the plist itself should be counted");
+        assert!(!foo.running);
+        assert_eq!(foo.handoff, None);
+    }
+
+    #[test]
+    fn handoff_label_shows_the_exact_brew_command() {
+        let label = handoff_label(&apps::Handoff::HomebrewCask("google-chrome".into()));
+        assert_eq!(label, "brew uninstall --cask google-chrome");
+    }
+
+    #[test]
+    fn handoff_label_points_a_system_extension_at_system_settings() {
+        let label = handoff_label(&apps::Handoff::SystemExtension);
+        assert!(label.contains("System Settings"), "{label}");
     }
 }
