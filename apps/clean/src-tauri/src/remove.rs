@@ -429,6 +429,46 @@ fn relocated_roots(entry: &catalog::CatalogEntry, home: &Path) -> Vec<String> {
         .collect()
 }
 
+/// True when `name` (already lowercased) is the final path component of a
+/// path that a `Verified` claim for `bundle_id` may legitimately explain.
+///
+/// This is deliberately **not** a substring test. `com.example.foo` is a
+/// literal prefix of `com.example.foobar` — a different application's own
+/// identifier — so `name.contains(bundle_id)` would let a `Verified` claim
+/// for one app permanently delete another app's state. That is the same bug
+/// class this codebase has already hit twice: `/tmp/keep` matching
+/// `/tmp/keepsake.txt` (`starts_with_case_insensitive`, in `paths.rs`), and
+/// `Foo` matching `Foo Helper` in this milestone's own "likely" association
+/// rule. The fix here is the same shape: match on a component boundary, not
+/// on raw containment.
+///
+/// A name carries `bundle_id` only if it is:
+/// - **equal to it** (`com.example.foo`) — the bundle id's own directory or
+///   file;
+/// - **equal to it plus a `.`-separated suffix** (`com.example.foo.plist`,
+///   `com.example.foo.savedState`) — a `.`-boundary keeps `com.example.foo`
+///   from matching `com.example.foobar`, which has no separator between the
+///   claimed id and what follows;
+/// - **exactly a known prefix plus it** (`group.com.example.foo`) — the one
+///   shape that is a *prefix* relationship rather than a suffix one, so it is
+///   handled as its own explicit case rather than folded into a generic
+///   "starts or ends with" test that would reopen the same hole from the
+///   other direction.
+///
+/// `bundle_id` empty is refused outright: an empty needle is a prefix and
+/// suffix of everything, and `disposition_for` denies it before this
+/// function is even reached (see the `Verified` arm), but the check is
+/// repeated here defensively since this function has no other way to refuse
+/// nonsense input.
+fn verified_name_matches(name: &str, bundle_id: &str) -> bool {
+    if bundle_id.is_empty() {
+        return false;
+    }
+    let name = name.to_lowercase();
+    let id = bundle_id.to_lowercase();
+    name == id || name.starts_with(&format!("{id}.")) || name == format!("group.{id}")
+}
+
 /// Disposition is derived here, never supplied by the caller. Two routes
 /// reach `Permanent`: a `Catalog` match whose path is actually under that
 /// entry's own roots (see `is_within_catalog_entry`), and an `AppBundle`
@@ -436,7 +476,8 @@ fn relocated_roots(entry: &catalog::CatalogEntry, home: &Path) -> Vec<String> {
 /// `AppBundle` is constrained to `/Applications`, `~/Applications`, and
 /// `~/Library`, the last of those only from two levels down (see
 /// `is_library_container`), and — for `Verified` — to a path whose own final
-/// component carries the claimed `bundle_id`. That second check is
+/// component carries the claimed `bundle_id` at a component boundary, not
+/// merely as a substring (see `verified_name_matches`). That second check is
 /// ADR-0011's guarantee made literal: a `Verified` claim the path cannot
 /// support is denied here, not merely flagged in a review sheet.
 /// `Evidence::Likely` clears only the location bar; a name match cannot be
@@ -492,10 +533,15 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
             match evidence {
                 Evidence::Likely => Ok(Disposition::Trash),
                 Evidence::Verified => {
-                    let needle = bundle_id.to_lowercase();
+                    if bundle_id.is_empty() {
+                        return Err(format!(
+                            "{} was claimed as a verified app-bundle item with an empty bundle id, which cannot be checked against anything. Nothing was removed.",
+                            path.display()
+                        ));
+                    }
                     let carries_bundle_id = normalize(path)
-                        .and_then(|p| p.file_name().and_then(|n| n.to_str().map(str::to_lowercase)))
-                        .is_some_and(|name| name.contains(&needle));
+                        .and_then(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_owned))
+                        .is_some_and(|name| verified_name_matches(&name, bundle_id));
                     if carries_bundle_id {
                         Ok(Disposition::Permanent)
                     } else {
@@ -2277,6 +2323,105 @@ mod tests {
             &Roots::rooted_at(&home),
         );
         assert!(d.is_err(), "a verified claim with no bundle id in the path must be denied");
+    }
+
+    #[test]
+    fn a_verified_claim_does_not_match_a_different_apps_id_by_prefix() {
+        // Reviewer-found: `com.example.foo` is a literal prefix of
+        // `com.example.foobar` — a different application's own bundle id.
+        // `name.contains(bundle_id)` let a `Verified` claim for the first
+        // permanently delete the second app's state. Same bug class as
+        // `/tmp/keep` matching `/tmp/keepsake.txt` and `Foo` matching
+        // `Foo Helper`: matching must land on a component boundary, not on
+        // raw containment.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.example.foobar");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert!(
+            d.is_err(),
+            "com.example.foo was accepted as a match for a different app's com.example.foobar: {d:?}"
+        );
+    }
+
+    #[test]
+    fn every_legitimate_verified_name_shape_still_matches() {
+        // The other side of the prefix fix: the component-boundary rule must
+        // not cost any of the shapes ADR-0011/CONTEXT.md actually specify —
+        // the bare id, an id-plus-suffix support file, and the one
+        // known-prefix form (`group.<id>`), which is a *prefix* relationship
+        // and is handled as its own explicit case rather than folded into a
+        // generic "starts or ends with" test.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in [
+            "com.example.foo",
+            "com.example.foo.plist",
+            "com.example.foo.savedState",
+            "group.com.example.foo",
+        ] {
+            let item = dir.join(name);
+            std::fs::write(&item, b"x").unwrap();
+            let d = disposition_for(
+                &item,
+                &Justification::AppBundle {
+                    bundle_id: "com.example.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            );
+            assert_eq!(d, Ok(Disposition::Permanent), "{name} was not recognised as a match");
+        }
+    }
+
+    #[test]
+    fn a_verified_applications_bundle_reaches_permanent() {
+        // Positive coverage for the app's primary uninstall path: a
+        // `Verified` app bundle under `/Applications` itself, not only under
+        // `~/Library/Application Support` in a temp home. Asserted through
+        // `disposition_for` directly, never through `execute` — `/Applications`
+        // is real, and routing a real path through `execute` risks the exact
+        // mistake this file's own test-fixture rules exist to prevent.
+        let roots = system_roots();
+        let d = disposition_for(
+            Path::new("/Applications/com.example.foo.app"),
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &roots,
+        );
+        assert_eq!(d, Ok(Disposition::Permanent));
+    }
+
+    #[test]
+    fn an_empty_bundle_id_is_refused_rather_than_matching_everything() {
+        // A bare substring test would have let `bundle_id: ""` match any
+        // name at all (every string contains the empty string), so any
+        // in-scope `Verified` candidate would reach `Permanent` regardless of
+        // what it actually was. Refused at the boundary, named explicitly.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("AnythingAtAll");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle { bundle_id: "".into(), evidence: Evidence::Verified },
+            &Roots::rooted_at(&home),
+        );
+        let why = d.expect_err("an empty bundle id matched an arbitrary path");
+        assert!(why.contains("empty"), "the denial does not name the problem: {why}");
     }
 }
 
