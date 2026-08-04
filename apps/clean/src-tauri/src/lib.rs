@@ -34,6 +34,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::clean_categories,
             commands::clean_scan,
+            commands::clean_execute,
             permissions::fda_status,
             permissions::open_privacy_settings
         ])

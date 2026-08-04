@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 /// user content (and anything above it) is denied no matter which variant
 /// is used, and `Catalog` can only reach `Permanent` through a real catalog
 /// entry whose own roots actually cover the path (see `disposition_for`).
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone)]
 pub enum Justification {
     /// Matched a safe-category catalog entry, by id.
     Catalog(String),
@@ -25,7 +25,7 @@ pub enum Justification {
     UserChosen,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Candidate {
     pub path: PathBuf,
     pub bytes: u64,
@@ -436,13 +436,14 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
         },
         // MERGE GATE — see docs/adr/0011-associate-gates-the-first-appbundle-producer.md.
         // `bundle_id` is ignored here: this arm's only constraint is *location*,
-        // and it returns `Permanent`, which does not go to the Trash. Because
-        // `Justification` derives `Deserialize`, the first `#[tauri::command]`
-        // that accepts `Vec<Candidate>` lets the webview name any in-scope path
-        // under any bundle id — `~/Library/Keychains/login.keychain-db` clears
-        // the container-depth rule. `associate.rs`, which proves a path belongs
-        // to the named app, must land in the same milestone as the first code
-        // that constructs an `AppBundle`. Neither merges alone.
+        // and it returns `Permanent`, which does not go to the Trash. `Justification`
+        // and `Candidate` no longer derive `Deserialize` — `clean_execute` (M3)
+        // accepts only category ids and constructs every `Candidate` itself, so
+        // the webview cannot name a path or a justification at all. The gate now
+        // binds because a future `AppBundle` producer would have to construct
+        // candidates in Rust: `associate.rs`, which proves a path belongs to the
+        // named app, must land in the same milestone as the first code that
+        // constructs an `AppBundle`. Neither merges alone.
         Justification::AppBundle { .. } => {
             if is_within_app_bundle_scope(path, roots) {
                 Ok(Disposition::Permanent)
