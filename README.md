@@ -82,22 +82,23 @@ docs/          product context, visual system, external reference
 ```
 
 This repo is the one true source for every Spiral product. Product planning
-material (ADRs, context docs) lives here even before there's code — see
-`apps/cleaner/` for an example.
+material (ADRs, context docs) lives here even before there's code — `apps/clean/`
+started that way, and its ADRs still sit beside the code they became.
 
 | Path | What | Start here when… |
 | --- | --- | --- |
 | [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
 | [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
-| [`apps/cleaner/`](apps/cleaner/) | Spiral Cleaner: a native macOS maintenance app (Optimize Mac workflow, app-uninstall with associated-file cleanup). Pre-code — only `CONTEXT.md` and `docs/adr/` exist so far | picking up planning work before any code is written |
+| [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall. macOS only, unreleased. M1 and M2 shipped: the Tauri shell, the Full Disk Access gate, and the safety core (`catalog`, `scan`, `remove`, `exclude`, `history`) under a 95-test Rust suite. Screens land from M3. See the [design spec](apps/clean/docs/design-spec.md) and thirteen ADRs | working on the maintenance app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
 
 **Brand assets are never duplicated.** Each surface copies what it needs out of
-`brand/` at build time into a gitignored folder — `collection/public/brand/` and
-`apps/wallpaper/src/assets/brand/`. Edit `brand/`, never a synced copy.
+`brand/` at build time into a gitignored folder — `collection/public/brand/`,
+`apps/wallpaper/src/assets/brand/`, and `apps/clean/src/assets/brand/` plus
+`apps/clean/src/styles/tokens.css`. Edit `brand/`, never a synced copy.
 
 ## Working on it
 
@@ -107,6 +108,7 @@ into the one you want.
 ```bash
 cd apps/wallpaper    && pnpm install && pnpm tauri dev   # the desktop app
 cd apps/slim/desktop && pnpm install && pnpm tauri dev   # the Brave wizard
+cd apps/clean        && pnpm install && pnpm tauri dev   # the maintenance app
 cd collection        && pnpm install && pnpm dev         # the website (localhost:3000)
 ```
 
@@ -114,9 +116,11 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | --- | --- | --- |
 | `pnpm build` | `apps/wallpaper` | hex-token guard → typecheck → Vite build |
 | `pnpm tauri build` | `apps/wallpaper` | release bundles (.app/.dmg, .exe/.msi) |
+| `pnpm build` | `apps/clean` | hex-token guard → typecheck → Vite build |
+| `cargo test` | `apps/clean/src-tauri` | the safety-core suite — run it before any change to `remove`, `exclude`, or `paths` |
 | `pnpm build` | `collection` | static export into `out/` |
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |
-| `pnpm sync-brand` | either | re-copy brand assets from `brand/` |
+| `pnpm sync-brand` | any app or `collection` | re-copy brand assets from `brand/` |
 
 The design system is eight colors, two fonts, two radii, and one easing
 curve, enforced by the build. When in doubt, open the brand guide at
@@ -128,8 +132,19 @@ Releases are tag-driven. Pushing a `v*` tag builds macOS (signed, notarized,
 universal) and Windows, then publishes both together with `latest.json` for the
 updater and `SHA256SUMS.txt` for anyone verifying a download.
 
+Each app owns a tag namespace, so one release never drags the others along:
+
+| App | Tag | Builds |
+| --- | --- | --- |
+| Spiral Wallpaper | `v*` | macOS + Windows, updater manifest |
+| Spiral Slim | `slim-v*` | macOS |
+| Spiral Clean | `clean-v*` | macOS only, no updater until M7 |
+
+All three call the same reusable `.github/workflows/release-app.yml`.
+
 ```bash
-# the tag must match apps/wallpaper/package.json and src-tauri/tauri.conf.json
+# the tag must match the app's package.json and src-tauri/tauri.conf.json —
+# `node scripts/version.mjs check` proves all four version files agree first
 git tag v1.0.2 && git push origin v1.0.2
 ```
 

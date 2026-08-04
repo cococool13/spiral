@@ -17,7 +17,8 @@ Current app release **v1.0.2** (Spiral Wallpaper).
 brand/         the design system. Every colour, font, and mark. Single source of truth.
 apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri, shipped)
                apps/slim = Spiral Slim (Python + Tauri wizard, shipped on macOS)
-               apps/cleaner = Spiral Cleaner (docs/ADRs only — pre-code, planning stage)
+               apps/clean = Spiral Clean (Tauri, macOS only, unreleased — M1+M2 shipped:
+                            shell, FDA gate, and the tested safety core)
 collection/    the spiral-collection.netlify.app website (Next.js, static export)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```
@@ -27,11 +28,12 @@ Don't leave product planning material (ADRs, context docs, specs) sitting only i
 Documents folder or a separate standalone repo; bring it in here, even pre-code.
 
 - **Never define a brand value outside `brand/`.** Each surface copies what it needs at build
-  time into a gitignored folder (`collection/public/brand/`, `apps/wallpaper/src/assets/brand/`)
-  via its own `scripts/sync-brand.mjs`. Editing a synced copy is always wrong — it is deleted
+  time into a gitignored folder (`collection/public/brand/`, `apps/wallpaper/src/assets/brand/`,
+  `apps/clean/src/assets/brand/` and `apps/clean/src/styles/tokens.css`) via its own
+  `scripts/sync-brand.mjs`. Editing a synced copy is always wrong — it is deleted
   on the next build.
-- **No root workspace.** `apps/wallpaper` and `collection` are independent pnpm projects;
-  `cd` into one before running anything.
+- **No root workspace.** `apps/wallpaper`, `apps/clean` and `collection` are independent pnpm
+  projects; `cd` into one before running anything.
 
 ## Apps and the website play by different rules
 
@@ -70,6 +72,22 @@ pnpm tauri dev       # native development app
 pnpm tauri build     # platform release bundles
 pnpm smoke           # end-to-end native smoke; exits non-zero on failure
 ```
+
+```bash
+cd apps/clean
+pnpm install
+pnpm check:hex       # reject colors outside the approved token set
+pnpm build           # token check + TypeScript + Vite production build
+pnpm tauri dev       # native development app
+
+cd apps/clean/src-tauri
+cargo test           # the safety-core suite; the gate for every removal change
+```
+
+Spiral Clean releases on a `clean-v*` tag (`git tag clean-v0.1.0`), independent of
+Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
+`.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,
+updater: false` — there is no updater until M7.
 
 ```bash
 cd collection
@@ -134,6 +152,10 @@ deployed to Netlify from CI on every push to `main`.
 
 App work: run `pnpm build`. For Rust, wallpaper-setting, cache, installer, updater, or
 platform changes, also run the relevant native smoke/build on the affected OS.
+
+In `apps/clean`, also run `cargo test` from `src-tauri` — always, not only for Rust
+changes. Anything touching `remove.rs`, `exclude.rs` or `paths.rs` additionally needs a
+mutation proof (ADR-0012): stub the guard, name the test that fails.
 
 Website work: run `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
 

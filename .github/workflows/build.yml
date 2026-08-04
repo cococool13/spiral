@@ -181,6 +181,67 @@ jobs:
           path: apps/wallpaper/src-tauri/target/release/bundle/nsis/*.sig
           if-no-files-found: error
 
+  # Spiral Clean's safety core is the whole point of the app: `remove.rs`,
+  # `exclude.rs` and `paths.rs` are the only thing standing between a wrong
+  # path and a permanent delete, and they are proven by a Rust test suite that
+  # until now ran nowhere but a developer's laptop. A regression there is not
+  # a broken build, it is deleted user data, so it gets the same per-push gate
+  # everything else in this repo has.
+  #
+  # macOS, not ubuntu: the app is macOS-only by decision, `paths.rs` encodes
+  # macOS firmlink behaviour, and `tauri` would need a webkit2gtk install on
+  # Linux to compile at all. No `if:` skipping tags either — Clean releases on
+  # `clean-v*`, which this workflow does not listen for, so there is no
+  # release build for this job to duplicate.
+  # Per-push CI, not a release build. Every app's tag is handled by its own
+  # release workflow, so running this on any tag just rebuilds what the
+  # release job is already building.
+  clean:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/clean
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/clean/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/clean/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/clean/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # src/styles/tokens.css and src/assets/brand are generated from /brand
+      # and gitignored, so they must exist before check-hex and tsc read them.
+      - name: Sync brand assets
+        run: pnpm sync-brand
+
+      - name: Quality gates (hex guard + typecheck)
+        run: pnpm check:hex && pnpm tsc --noEmit
+
+      # Before `cargo test`, not after: `tauri::generate_context!` resolves
+      # `frontendDist` (../dist) at compile time, so the Rust crate does not
+      # build at all until the Vite export exists.
+      - name: Build the frontend
+        run: pnpm build
+
+      - name: Rust safety suite
+        working-directory: apps/clean/src-tauri
+        run: cargo test
+
   # Everything below a tag is the shared workflow's job. It was extracted from
   # the copy that used to live here, and keeping both meant maintaining two of
   # them — the failure this repo keeps rediscovering, most recently when four

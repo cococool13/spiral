@@ -1,0 +1,35 @@
+name: release-clean
+
+# Spiral Clean releases on a `clean-v*` tag, independent of Wallpaper's bare
+# `v*` and Slim's `slim-v*`.
+#
+#   git tag clean-v0.1.0 && git push origin clean-v0.1.0
+#
+# macOS only — apps/clean/src-tauri/tauri.conf.json already targets only
+# ["app", "dmg"]. Updater is off: the updater plugin was removed from this app
+# until the signing key exists (see apps/clean's release notes / M7); the
+# reusable workflow's own comment warns that requiring a signed updater
+# bundle before the app ships one fails the release for no reason.
+
+on:
+  push:
+    tags: ["clean-v*"]
+  workflow_dispatch:
+
+jobs:
+  release:
+    # Without this the workflow does not merely fail — it never starts. A
+    # called workflow cannot hold more than its caller was granted, this
+    # repository defaults the token to read, and the shared workflow's publish
+    # job needs `contents: write` to create the release. See release-slim.yml
+    # for the same note.
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-app.yml
+    secrets: inherit
+    with:
+      app-dir: apps/clean
+      artifact-prefix: clean
+      macos: true
+      windows: false
+      updater: false
