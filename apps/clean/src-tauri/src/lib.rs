@@ -9,6 +9,7 @@
 // one.** The few items that genuinely have no caller yet carry their own
 // narrowly scoped `#[allow(dead_code)]` naming the milestone that consumes
 // them, so a warning here now means what it says.
+mod apps;
 mod catalog;
 mod commands;
 mod exclude;
