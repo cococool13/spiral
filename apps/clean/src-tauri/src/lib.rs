@@ -1,5 +1,6 @@
 mod catalog;
 mod exclude;
+mod paths;
 mod permissions;
 mod remove;
 

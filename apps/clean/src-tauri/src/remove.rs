@@ -1,5 +1,6 @@
 use crate::catalog::{self, Disposition};
 use crate::exclude::ExclusionList;
+use crate::paths::{normalize, resolve, starts_with_case_insensitive, strip_firmlink};
 use std::path::{Path, PathBuf};
 
 /// Why an item is eligible for removal. This is the caller's claim, not a
@@ -57,155 +58,6 @@ const USER_CONTENT: &[&str] = &[
     "Pictures",
     "Library/Mobile Documents",
 ];
-
-/// Case-insensitive equality for a single path component. This is the one
-/// place this module folds case, and both `starts_with_case_insensitive`
-/// and the firmlink strip in `strip_firmlink` go through it — one
-/// case-folding rule, used everywhere a comparison needs it, rather than a
-/// second almost-identical helper appearing later.
-fn component_eq_ignore_case(a: std::path::Component, b: std::path::Component) -> bool {
-    a.as_os_str()
-        .to_string_lossy()
-        .eq_ignore_ascii_case(&b.as_os_str().to_string_lossy())
-}
-
-/// Component-wise, case-insensitive `starts_with`. APFS is case-insensitive
-/// by default, so `~/documents` and `~/Documents` — and `/volumes` and
-/// `/Volumes`, and `/system/Volumes/Data` and `/System/Volumes/Data` — are
-/// the same path on disk, but a literal `starts_with` only catches one
-/// spelling. Comparing whole lowercased path *strings* would reintroduce
-/// the bug `exclude.rs` was specifically written to avoid — `/tmp/keep`
-/// matching `/tmp/keepsake.txt` — so this compares one component at a time
-/// instead. Every case-insensitive path comparison in this module must go
-/// through this function; a raw `starts_with` on a path that might vary in
-/// case is the exact defect this exists to close.
-fn starts_with_case_insensitive(path: &Path, prefix: &Path) -> bool {
-    let mut path_components = path.components();
-    for prefix_component in prefix.components() {
-        match path_components.next() {
-            Some(pc) if component_eq_ignore_case(pc, prefix_component) => {}
-            _ => return false,
-        }
-    }
-    true
-}
-
-/// Strip the `/System/Volumes/Data` firmlink prefix, however many times it
-/// appears. `realpath(3)` does *not* collapse this on macOS (verified:
-/// `realpath("/System/Volumes/Data/Users/<u>/Documents")` returns itself),
-/// so canonicalisation cannot replace this step — a firmlinked path shares a
-/// device+inode with `~/Documents` while matching no prefix of it as a
-/// string.
-///
-/// A loop, not a single strip: macOS does not nest this firmlink today
-/// (`/System/Volumes/Data/System/Volumes` does not exist, confirmed on the
-/// current macOS), so a doubled prefix cannot arise from a real resolved
-/// path — but it *can* arise from an unresolved tail re-appended by
-/// `resolve`, and stripping only once would leave it half-stripped. One
-/// extra loop condition is cheap insurance on a security-critical
-/// comparison.
-fn strip_firmlink(path: PathBuf) -> PathBuf {
-    const FIRMLINK_PREFIX: &str = "/System/Volumes/Data";
-    let prefix = Path::new(FIRMLINK_PREFIX);
-    let mut stripped = path;
-    while starts_with_case_insensitive(&stripped, prefix) {
-        let mut remaining = stripped.components();
-        for _ in prefix.components() {
-            remaining.next();
-        }
-        stripped = Path::new("/").join(remaining.as_path());
-    }
-    stripped
-}
-
-/// Resolve `path` to the location it actually *refers to*, following every
-/// symlink along the way.
-///
-/// Without this, every bar in this module is purely lexical and a symlink
-/// walks past all of them at once: `ln -s ~/Documents ~/Library/Caches/x`
-/// makes `~/Library/Caches/x/tax.pdf` read as an ordinary cache path to a
-/// string comparison, while `delete_permanent` — `WalkDir` follows a
-/// symlinked root even with `follow_links(false)` — destroys the contents of
-/// `~/Documents`. Any process that can write to `~/Library/Caches` can plant
-/// that link.
-///
-/// `std::fs::canonicalize` fails outright on a path that does not exist, and
-/// a candidate may legitimately not exist (it may have been removed since the
-/// scan). So this canonicalises the deepest ancestor that *does* exist and
-/// re-appends the remaining components to it.
-///
-/// The re-appended tail is **not** guaranteed to be symlink-free, and an
-/// earlier version of this comment claimed it was. `canonicalize` reports
-/// `NotFound` for two different situations: a component that genuinely does
-/// not exist, and a component that exists as a *dangling* symlink — a link
-/// whose target is missing. `ln -s ~/nowhere ~/.npm` used to be peeled and
-/// re-appended verbatim, so `~/.npm/_cacache` compared equal to the catalog's
-/// declared root and the relocation rule saw nothing wrong; creating
-/// `~/nowhere/_cacache` flipped the identical setup to refused. The verdict
-/// must not depend on whether a link's target happens to exist yet, so a
-/// peeled component that `symlink_metadata` can still stat is refused: it
-/// exists, it failed to canonicalise, and a dangling link is the only way
-/// both are true.
-///
-/// Returns `None` — which every caller must treat as "deny", never as "skip
-/// the check" — for that case, and when canonicalisation fails for any reason
-/// other than non-existence: a symlink loop (`ELOOP`), an unreadable ancestor
-/// (`EACCES`), a name too long. The code must never guess at what a path it
-/// could not resolve refers to.
-fn resolve(path: &Path) -> Option<PathBuf> {
-    let mut tail: Vec<std::ffi::OsString> = Vec::new();
-    let mut cursor = path;
-
-    loop {
-        match std::fs::canonicalize(cursor) {
-            Ok(base) => {
-                let mut resolved = base;
-                for name in tail.iter().rev() {
-                    resolved.push(name);
-                }
-                return Some(resolved);
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                // `lstat` succeeding where `realpath` said NotFound means the
-                // component is there but points nowhere — a dangling
-                // symlink. Peeling it would put an unresolved link back into
-                // the path every later comparison treats as resolved.
-                if std::fs::symlink_metadata(cursor).is_ok() {
-                    return None;
-                }
-                // Peel the last component and try the parent. `file_name`
-                // is `None` only at the filesystem root, which always
-                // canonicalises, so this terminates.
-                tail.push(cursor.file_name()?.to_os_string());
-                cursor = cursor.parent()?;
-            }
-            Err(_) => return None,
-        }
-    }
-}
-
-/// Put a path into the single normal form every comparison in this module
-/// uses: absolute, `..`-free, symlink-free, and firmlink-free.
-///
-/// `None` means "cannot be reasoned about safely" and must be treated as a
-/// denial by every caller. The `..` and relative-path rejections come first
-/// and deliberately: `Path::starts_with` compares components literally and
-/// does not resolve `..`, and `canonicalize` would silently *collapse* a
-/// `..` rather than reject it — so rejecting up front keeps the existing
-/// guarantee that a traversal path is refused on sight rather than
-/// quietly rewritten into something that happens to look safe.
-fn normalize(path: &Path) -> Option<PathBuf> {
-    use std::path::Component;
-
-    if path.is_relative() {
-        return None;
-    }
-    if path.components().any(|c| matches!(c, Component::ParentDir)) {
-        return None;
-    }
-
-    Some(strip_firmlink(resolve(path)?))
-}
 
 /// Resolve a root that *authorises deletion* — a catalog root, or an
 /// `AppBundle` scope root — and refuse it unless it resolves **exactly**
@@ -680,8 +532,18 @@ fn delete_permanent(path: &Path) -> Result<(), FailureKind> {
 /// justification — and no single failure aborts the batch, because a user who
 /// asked to reclaim twelve categories should not lose eleven of them to one
 /// unreadable file.
-pub fn execute(candidates: Vec<Candidate>, excl: &ExclusionList) -> Vec<Report> {
-    execute_within(candidates, excl, Roots::system().as_ref())
+///
+/// Takes `exclude::load`'s result rather than a list, so that an exclusion
+/// file which exists but cannot be read stops removal instead of quietly
+/// meaning "nothing is protected". Load it immediately before calling this —
+/// nothing here ties an in-memory list to what is actually on disk, and a
+/// stale copy could let a since-added exclusion go unrespected.
+pub fn execute(candidates: Vec<Candidate>, excl: &Result<ExclusionList, String>) -> Vec<Report> {
+    execute_within(
+        candidates,
+        excl.as_ref().map_err(String::as_str),
+        Roots::system().as_ref(),
+    )
 }
 
 /// The body of `execute`, against an explicit root set. `None` means the home
@@ -689,17 +551,22 @@ pub fn execute(candidates: Vec<Candidate>, excl: &ExclusionList) -> Vec<Report> 
 /// and nothing is removed.
 fn execute_within(
     candidates: Vec<Candidate>,
-    excl: &ExclusionList,
+    excl: Result<&ExclusionList, &str>,
     roots: Option<&Roots>,
 ) -> Vec<Report> {
     candidates
         .into_iter()
         .map(|c| {
-            let outcome = match roots {
-                None => Outcome::Denied(
+            let outcome = match (excl, roots) {
+                // First, and ahead of every other bar: with the exclusion
+                // list unreadable, Spiral Clean does not know what it has
+                // been forbidden to touch, so it may not touch anything. The
+                // message names the file and says how to fix or reset it.
+                (Err(why), _) => Outcome::Denied(why.to_string()),
+                (_, None) => Outcome::Denied(
                     "Spiral Clean could not determine your home directory, so it cannot prove any path is safe to remove. Nothing was removed.".into(),
                 ),
-                Some(roots) => {
+                (Ok(excl), Some(roots)) => {
                     if is_user_content(&c.path, roots) {
                         Outcome::Denied(format!(
                             "{} is your own content. Spiral Clean never removes it.",
@@ -775,7 +642,7 @@ mod tests {
     }
 
     fn run(candidates: Vec<Candidate>, excl: &ExclusionList, roots: &Roots) -> Vec<Report> {
-        execute_within(candidates, excl, Some(roots))
+        execute_within(candidates, Ok(excl), Some(roots))
     }
 
     /// The real machine's roots. Only ever handed to `is_user_content` and
@@ -846,6 +713,78 @@ mod tests {
         );
         assert!(matches!(reports[0].outcome, Outcome::Excluded));
         assert!(p.exists());
+    }
+
+    #[test]
+    fn an_excluded_path_is_skipped_however_it_is_spelled() {
+        // Bar 2 used to be the only bar in `execute` that did not normalise:
+        // it compared raw, literal, case-sensitive paths while bars 1 and 3
+        // resolved symlinks, folded case, and stripped firmlinks two lines
+        // away. A symlinked route to a protected file therefore cleared the
+        // exclusion and was deleted.
+        for spelling in ["link/precious.bin", "KEEP/precious.bin"] {
+            let home = fake_home();
+            let roots = Roots::rooted_at(home.path());
+            let caches = caches_dir(home.path());
+            let keep = caches.join("keep");
+            std::fs::create_dir(&keep).unwrap();
+            let precious = file(&keep, "precious.bin");
+            symlink(&keep, &caches.join("link"));
+
+            let reports = run(
+                vec![candidate(
+                    caches.join(spelling),
+                    Justification::Catalog("user-caches".into()),
+                )],
+                &exclude::new(vec![keep.clone()]),
+                &roots,
+            );
+            assert!(
+                matches!(reports[0].outcome, Outcome::Excluded),
+                "{spelling} escaped the exclusion: {:?}",
+                reports[0].outcome
+            );
+            assert!(precious.exists(), "an excluded file was destroyed via {spelling}");
+        }
+    }
+
+    #[test]
+    fn an_unreadable_exclusion_list_denies_every_candidate() {
+        // Fail closed. With the list unreadable, Spiral Clean does not know
+        // what it has been forbidden to touch, so it may not touch anything
+        // — and the denial has to name the file and say how to fix it, or
+        // the user is left with a batch that silently did nothing.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let caches = caches_dir(home.path());
+        let a = file(&caches, "a.bin");
+        let b = file(&caches, "b.bin");
+
+        // A real truncated file, read through the real `load`, so this
+        // covers the whole path from corrupt bytes to refused deletion.
+        let config = fake_home();
+        std::fs::write(config.path().join("exclusions.json"), b"{\"paths\": [\"/tmp/ke").unwrap();
+        let excl = exclude::load(config.path());
+        assert!(excl.is_err(), "a truncated exclusion file loaded as a list");
+
+        let reports = execute_within(
+            vec![
+                candidate(a.clone(), Justification::Catalog("user-caches".into())),
+                candidate(b.clone(), Justification::UserChosen),
+            ],
+            excl.as_ref().map_err(String::as_str),
+            Some(&roots),
+        );
+
+        assert_eq!(reports.len(), 2);
+        for report in &reports {
+            let why = match &report.outcome {
+                Outcome::Denied(why) => why,
+                other => panic!("expected Denied, got {other:?}"),
+            };
+            assert!(why.contains("exclusions.json"), "the denial does not name the file: {why}");
+        }
+        assert!(a.exists() && b.exists(), "a candidate was removed with the list unreadable");
     }
 
     #[test]
@@ -921,7 +860,7 @@ mod tests {
                 PathBuf::from("/Volumes/spiral-clean-no-such-volume/thing"),
                 Justification::UserChosen,
             )],
-            &exclude::new(vec![]),
+            &Ok(exclude::new(vec![])),
         );
         assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
     }
@@ -932,7 +871,7 @@ mod tests {
         let p = file(&caches_dir(home.path()), "cache.bin");
         let reports = execute_within(
             vec![candidate(p.clone(), Justification::Catalog("user-caches".into()))],
-            &exclude::new(vec![]),
+            Ok(&exclude::new(vec![])),
             None,
         );
         assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
