@@ -58,15 +58,48 @@ const USER_CONTENT: &[&str] = &[
     "Library/Mobile Documents",
 ];
 
-/// Normalise a path so `..` and the `/System/Volumes/Data` firmlink can't
-/// defeat a literal `starts_with` comparison. Returns `None` when the path
-/// cannot be reasoned about safely at all — relative, or containing a `..`
-/// component. Every caller must treat `None` as "deny", never as "skip the
-/// check": `Path::starts_with` compares components literally and does not
-/// resolve `..`, so `~/Library/Caches/../Documents/tax.pdf` would otherwise
-/// walk straight past a `starts_with(home.join("Documents"))` check, and
-/// `/System/Volumes/Data/Users/<u>/Documents` shares a device+inode with
-/// `~/Documents` without matching it as a string at all.
+/// Case-insensitive equality for a single path component. This is the one
+/// place this module folds case, and both `starts_with_case_insensitive`
+/// and the firmlink strip in `normalize` go through it — one case-folding
+/// rule, used everywhere a comparison needs it, rather than a second
+/// almost-identical helper appearing later.
+fn component_eq_ignore_case(a: std::path::Component, b: std::path::Component) -> bool {
+    a.as_os_str()
+        .to_string_lossy()
+        .eq_ignore_ascii_case(&b.as_os_str().to_string_lossy())
+}
+
+/// Component-wise, case-insensitive `starts_with`. APFS is case-insensitive
+/// by default, so `~/documents` and `~/Documents` — and `/volumes` and
+/// `/Volumes`, and `/system/Volumes/Data` and `/System/Volumes/Data` — are
+/// the same path on disk, but a literal `starts_with` only catches one
+/// spelling. Comparing whole lowercased path *strings* would reintroduce
+/// the bug `exclude.rs` was specifically written to avoid — `/tmp/keep`
+/// matching `/tmp/keepsake.txt` — so this compares one component at a time
+/// instead. Every case-insensitive path comparison in this module must go
+/// through this function; a raw `starts_with` on a path that might vary in
+/// case is the exact defect this exists to close.
+fn starts_with_case_insensitive(path: &Path, prefix: &Path) -> bool {
+    let mut path_components = path.components();
+    for prefix_component in prefix.components() {
+        match path_components.next() {
+            Some(pc) if component_eq_ignore_case(pc, prefix_component) => {}
+            _ => return false,
+        }
+    }
+    true
+}
+
+/// Normalise a path so `..`, case, and the `/System/Volumes/Data` firmlink
+/// can't defeat a case-sensitive, literal `starts_with` comparison. Returns
+/// `None` when the path cannot be reasoned about safely at all — relative,
+/// or containing a `..` component. Every caller must treat `None` as
+/// "deny", never as "skip the check": `Path::starts_with` compares
+/// components literally and does not resolve `..`, so
+/// `~/Library/Caches/../Documents/tax.pdf` would otherwise walk straight
+/// past a `starts_with(home.join("Documents"))` check, and
+/// `/system/Volumes/Data/Users/<u>/Documents` (any case) shares a
+/// device+inode with `~/Documents` without matching it as a string at all.
 fn normalize(path: &Path) -> Option<PathBuf> {
     use std::path::Component;
 
@@ -77,33 +110,19 @@ fn normalize(path: &Path) -> Option<PathBuf> {
         return None;
     }
 
-    Some(match path.strip_prefix("/System/Volumes/Data") {
-        Ok(rest) => Path::new("/").join(rest),
-        Err(_) => path.to_path_buf(),
-    })
-}
-
-/// Component-wise, case-insensitive `starts_with`. APFS is case-insensitive
-/// by default, so `~/documents` and `~/Documents` are the same folder on
-/// disk, but a literal `starts_with` only catches one spelling. Comparing
-/// whole lowercased path *strings* would reintroduce the bug `exclude.rs`
-/// was specifically written to avoid — `/tmp/keep` matching
-/// `/tmp/keepsake.txt` — so this compares one component at a time instead.
-fn starts_with_case_insensitive(path: &Path, prefix: &Path) -> bool {
-    let mut path_components = path.components();
-    for prefix_component in prefix.components() {
-        let matched = match path_components.next() {
-            Some(pc) => pc
-                .as_os_str()
-                .to_string_lossy()
-                .eq_ignore_ascii_case(&prefix_component.as_os_str().to_string_lossy()),
-            None => false,
-        };
-        if !matched {
-            return false;
+    const FIRMLINK_PREFIX: &str = "/System/Volumes/Data";
+    let prefix = Path::new(FIRMLINK_PREFIX);
+    let normalized = if starts_with_case_insensitive(path, prefix) {
+        let mut remaining = path.components();
+        for _ in prefix.components() {
+            remaining.next();
         }
-    }
-    true
+        Path::new("/").join(remaining.as_path())
+    } else {
+        path.to_path_buf()
+    };
+
+    Some(normalized)
 }
 
 fn is_user_content(path: &Path) -> bool {
@@ -112,7 +131,7 @@ fn is_user_content(path: &Path) -> bool {
         None => return true, // Cannot prove it is safe, so treat it as unsafe.
     };
 
-    if normalized.starts_with("/Volumes") {
+    if starts_with_case_insensitive(&normalized, Path::new("/Volumes")) {
         return true;
     }
 
@@ -128,15 +147,15 @@ fn is_user_content(path: &Path) -> bool {
 /// itself and its own app-managed state, nothing else. This is a
 /// containment floor, not full validation — it does not prove the path
 /// belongs to the named `bundle_id`; that lands with `associate.rs` in M4.
-/// Runs on the same normalised path as `is_user_content`, or `..` and a
-/// firmlink detour would defeat it exactly as they defeated bar 1.
+/// Runs on the same normalised path as `is_user_content`, or `..`, case,
+/// and a firmlink detour would defeat it exactly as they defeated bar 1.
 fn is_within_app_bundle_scope(path: &Path) -> bool {
     let normalized = match normalize(path) {
         Some(p) => p,
         None => return false, // Cannot prove it is in scope, so treat it as out of scope.
     };
 
-    if normalized.starts_with("/Applications") {
+    if starts_with_case_insensitive(&normalized, Path::new("/Applications")) {
         return true;
     }
 
@@ -211,9 +230,13 @@ fn delete_permanent(path: &Path) -> Result<(), FailureKind> {
     let mut removed_any = false;
     let mut first_err: Option<String> = None;
 
-    let walker = walkdir::WalkDir::new(path)
-        .contents_first(true)
-        .sort_by(|a, b| a.file_name().cmp(b.file_name()));
+    // No `.sort_by(...)` here on purpose: it would allocate and sort per
+    // directory on every permanent delete, and it buys nothing. The loop
+    // below never breaks early on an error, so every entry is attempted
+    // regardless of iteration order — `removed_any` and `first_err` end up
+    // the same either way. Ordering only matters for which error message
+    // survives when more than one entry fails, which callers don't rely on.
+    let walker = walkdir::WalkDir::new(path).contents_first(true);
 
     for entry in walker {
         match entry {
@@ -442,24 +465,63 @@ mod tests {
         // F3. `/System/Volumes/Data/Users/<u>/Documents` shares a
         // device+inode with `~/Documents` (verified with `stat -f %d:%i`)
         // but is neither under `/Volumes` nor under `home` as a literal
-        // string.
+        // string — and, per the case-insensitivity fix (F2), the firmlink
+        // prefix itself must be matched regardless of case too, or
+        // `/system/Volumes/Data/...` walks straight past it.
         let home = dirs::home_dir().unwrap();
         let home_tail = home.strip_prefix("/").expect("home is absolute");
-        let firmlink_path = Path::new("/System/Volumes/Data")
-            .join(home_tail)
-            .join("Documents/file.txt");
-        for j in [
-            Justification::Catalog("user-caches".into()),
-            Justification::Orphan { bundle_id: "x".into() },
-            Justification::AppBundle { bundle_id: "x".into() },
-            Justification::UserChosen,
-        ] {
-            let reports =
-                execute(vec![candidate(firmlink_path.clone(), j)], &exclude::new(vec![]));
+        for prefix in
+            ["/System/Volumes/Data", "/system/Volumes/Data", "/System/volumes/data"]
+        {
+            let firmlink_path =
+                Path::new(prefix).join(home_tail).join("Documents/file.txt");
+            for j in [
+                Justification::Catalog("user-caches".into()),
+                Justification::Orphan { bundle_id: "x".into() },
+                Justification::AppBundle { bundle_id: "x".into() },
+                Justification::UserChosen,
+            ] {
+                let reports =
+                    execute(vec![candidate(firmlink_path.clone(), j)], &exclude::new(vec![]));
+                assert!(
+                    matches!(reports[0].outcome, Outcome::Denied(_)),
+                    "{prefix} firmlink path was not denied"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn external_volumes_are_denied_regardless_of_case() {
+        // F2/F3: APFS is case-insensitive, so `/volumes` and `/VOLUMES` are
+        // the same mount point as `/Volumes` and must be denied too.
+        for prefix in ["/Volumes", "/volumes", "/VOLUMES"] {
+            let reports = execute(
+                vec![candidate(
+                    PathBuf::from(format!("{prefix}/Backup/thing")),
+                    Justification::UserChosen,
+                )],
+                &exclude::new(vec![]),
+            );
             assert!(
                 matches!(reports[0].outcome, Outcome::Denied(_)),
-                "firmlink path was not denied"
+                "{prefix} was not denied"
             );
+        }
+    }
+
+    #[test]
+    fn an_app_bundle_under_applications_is_permitted_regardless_of_case() {
+        // F2/F3 requirement 3: the same case-insensitivity fix applies to
+        // the AppBundle containment check, not just the user-content bar.
+        // This fails closed today (a false negative, not a hole), but it's
+        // the same bug and should be fixed with the others.
+        for path in ["/Applications/Example.app", "/applications/Example.app"] {
+            let result = disposition_for(
+                Path::new(path),
+                &Justification::AppBundle { bundle_id: "com.example.app".into() },
+            );
+            assert_eq!(result, Ok(Disposition::Permanent), "{path} was not permitted");
         }
     }
 
