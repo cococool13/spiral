@@ -2,7 +2,7 @@
   font-family: "Archivo";
   src: url("../assets/fonts/archivo-latin-wdth-normal.woff2") format("woff2");
   font-weight: 100 900;
-  font-stretch: 75% 125%;
+  font-stretch: 62.5% 125%;
   font-display: swap;
 }
 
@@ -76,6 +76,9 @@ main {
   padding: 2rem;
 }
 
+/* No element uses this class yet — Task 6 adds the components that show
+   sizes and paths in the Clean screen. Left in place deliberately; not
+   dead code. */
 .size {
   font-family: var(--spiral-font-mono);
   font-variant-numeric: tabular-nums;
