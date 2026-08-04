@@ -19,6 +19,24 @@ pub struct CategoryResult {
 /// the whole category. A root that does not exist measures as empty — most
 /// machines are missing several catalog roots (Gradle, npm, Xcode) and that
 /// is normal operation, not an error.
+///
+/// **Symlinks are never followed, at the root or inside the tree.**
+/// `follow_root_links` defaults to *true*, so a bare `WalkDir` walking a link
+/// to a directory yields the target's children — the identical defect
+/// `delete_permanent` fixed in `remove.rs`. Left as it was,
+/// `ln -s /opt/homebrew ~/Library/Caches` made Spiral Clean size and list
+/// every Homebrew file as "Application caches". `remove` would still have
+/// denied the deletion — `authorizing_root` refuses a relocated catalog root —
+/// but a scan that shows a user 4 GB of someone else's files under a category
+/// name is wrong on its own terms, before anything is selected. What the scan
+/// reports and what the boundary permits must describe the same set of files.
+///
+/// **Two known limits on the numbers this produces, both deliberate.** Only
+/// `is_file()` entries are counted, so a symlink contributes nothing (its
+/// target is counted only if it lies under the root in its own right), and a
+/// file with several hard links is counted once per name encountered while
+/// the disk holds one copy. Both are why sizing is always presented as a
+/// labeled estimate and the reported result is the measured free-space delta.
 fn measure(root: &Path) -> (u64, usize, Vec<PathBuf>) {
     if !root.exists() {
         return (0, 0, Vec::new());
@@ -28,6 +46,8 @@ fn measure(root: &Path) -> (u64, usize, Vec<PathBuf>) {
     let mut paths = Vec::new();
     for entry in walkdir::WalkDir::new(root)
         .min_depth(1)
+        .follow_links(false)
+        .follow_root_links(false)
         .into_iter()
         .filter_map(Result::ok)
     {
@@ -99,6 +119,45 @@ mod tests {
         let (bytes, items, _) = measure(std::path::Path::new("/nonexistent/spiral/root"));
         assert_eq!(bytes, 0);
         assert_eq!(items, 0);
+    }
+
+    #[test]
+    fn a_symlinked_root_is_not_walked_into() {
+        // `ln -s /opt/homebrew ~/Library/Caches`, in miniature. Without
+        // `follow_root_links(false)` this reports the target's contents under
+        // the catalog category's name — WalkDir follows a symlinked *root*
+        // even when `follow_links` is false.
+        let dir = tempfile::tempdir().unwrap();
+        let elsewhere = dir.path().join("elsewhere");
+        std::fs::create_dir(&elsewhere).unwrap();
+        std::fs::write(elsewhere.join("not-a-cache.bin"), vec![0u8; 4096]).unwrap();
+
+        let link = dir.path().join("root-link");
+        std::os::unix::fs::symlink(&elsewhere, &link).unwrap();
+
+        let (bytes, items, paths) = measure(&link);
+        assert_eq!(bytes, 0, "a symlinked root must not report its target's size");
+        assert_eq!(items, 0);
+        assert!(paths.is_empty());
+    }
+
+    #[test]
+    fn a_symlink_inside_the_tree_is_not_followed() {
+        // The interior case. The link itself is not a file, so it adds
+        // nothing; what must not happen is the target's contents appearing.
+        let dir = tempfile::tempdir().unwrap();
+        let elsewhere = dir.path().join("elsewhere");
+        std::fs::create_dir(&elsewhere).unwrap();
+        std::fs::write(elsewhere.join("not-a-cache.bin"), vec![0u8; 4096]).unwrap();
+
+        let root = dir.path().join("root");
+        std::fs::create_dir(&root).unwrap();
+        std::fs::write(root.join("real.bin"), vec![0u8; 10]).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, root.join("escape")).unwrap();
+
+        let (bytes, items, _) = measure(&root);
+        assert_eq!(bytes, 10, "only the real file under the root counts");
+        assert_eq!(items, 1);
     }
 
     #[test]
