@@ -114,7 +114,12 @@ fn snapshot_note(estimated: u64, measured: u64, snapshots: bool) -> Option<Strin
 /// than resolved in here — a test points both at a temp directory, so no
 /// guard in this function is the only thing standing between a broken test
 /// and the real filesystem.
-fn run_clean(ids: Vec<String>, config_dir: &Path, home: &Path) -> Result<CleanReport, String> {
+fn run_clean(
+    ids: Vec<String>,
+    config_dir: &Path,
+    home: &Path,
+    started_at: String,
+) -> Result<CleanReport, String> {
     if ids.is_empty() {
         return Err("No categories were selected. Tick at least one and try again.".into());
     }
@@ -202,7 +207,7 @@ fn run_clean(ids: Vec<String>, config_dir: &Path, home: &Path) -> Result<CleanRe
     let _ = history::append(
         config_dir,
         history::RunRecord {
-            started_at: String::new(),
+            started_at,
             screen: "clean".into(),
             removed,
             partially_removed,
@@ -224,7 +229,11 @@ fn run_clean(ids: Vec<String>, config_dir: &Path, home: &Path) -> Result<CleanRe
 }
 
 #[tauri::command]
-pub fn clean_execute(app: tauri::AppHandle, ids: Vec<String>) -> Result<CleanReport, String> {
+pub fn clean_execute(
+    app: tauri::AppHandle,
+    ids: Vec<String>,
+    started_at: String,
+) -> Result<CleanReport, String> {
     use tauri::Manager;
     let dir = app
         .path()
@@ -232,7 +241,7 @@ pub fn clean_execute(app: tauri::AppHandle, ids: Vec<String>) -> Result<CleanRep
         .map_err(|e| format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app."))?;
     let home = dirs::home_dir()
         .ok_or("Could not locate your home folder, so nothing was scanned.")?;
-    run_clean(ids, &dir, &home)
+    run_clean(ids, &dir, &home, started_at)
 }
 
 #[cfg(test)]
@@ -294,6 +303,7 @@ mod tests {
             vec!["user-caches".into(), "not-a-real-id".into()],
             dir.path(),
             home.path(),
+            "2026-08-04T12:00:00Z".into(),
         )
         .unwrap_err();
         assert!(err.contains("not-a-real-id"), "the message must name the id: {err}");
@@ -303,7 +313,7 @@ mod tests {
     fn an_empty_selection_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
         let home = tempfile::tempdir().unwrap();
-        assert!(run_clean(vec![], dir.path(), home.path()).is_err());
+        assert!(run_clean(vec![], dir.path(), home.path(), "2026-08-04T12:00:00Z".into()).is_err());
     }
 
     #[test]

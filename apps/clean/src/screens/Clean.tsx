@@ -63,7 +63,7 @@ export default function Clean() {
 
   const run = () => {
     setPhase("running");
-    invoke<CleanReport>("clean_execute", { ids: [...selected] })
+    invoke<CleanReport>("clean_execute", { ids: [...selected], startedAt: new Date().toISOString() })
       .then((r) => {
         setReport(r);
         setPhase("done");
