@@ -36,7 +36,11 @@ pub enum Outcome {
     /// were already destroyed before the failure — this must never be
     /// reported as `Failed`, which reads as "nothing happened".
     PartiallyRemoved(String),
-    Excluded,
+    /// Skipped because of the user's exclusion list, naming the entry
+    /// responsible. "Something you excluded" without saying which is not a
+    /// stated reason — and with the ancestor clause in `covers`, the entry
+    /// that matched may be *below* the candidate rather than above it.
+    Excluded(String),
     Denied(String),
     Failed(String),
 }
@@ -585,8 +589,8 @@ fn execute_within(
                             "{} is your own content. Spiral Clean never removes it.",
                             c.path.display()
                         ))
-                    } else if excl.covers(&c.path) {
-                        Outcome::Excluded
+                    } else if let Some(coverage) = excl.covering(&c.path) {
+                        Outcome::Excluded(coverage.reason())
                     } else {
                         match disposition_for(&c.path, &c.justification, roots) {
                             Err(why) => Outcome::Denied(why),
@@ -724,7 +728,7 @@ mod tests {
             &exclude::new(vec![caches.clone()]),
             &roots,
         );
-        assert!(matches!(reports[0].outcome, Outcome::Excluded));
+        assert!(matches!(reports[0].outcome, Outcome::Excluded(_)));
         assert!(p.exists());
     }
 
@@ -753,12 +757,61 @@ mod tests {
                 &roots,
             );
             assert!(
-                matches!(reports[0].outcome, Outcome::Excluded),
+                matches!(reports[0].outcome, Outcome::Excluded(_)),
                 "{spelling} escaped the exclusion: {:?}",
                 reports[0].outcome
             );
             assert!(precious.exists(), "an excluded file was destroyed via {spelling}");
         }
+    }
+
+    #[test]
+    fn an_exclusion_skip_names_the_entry_responsible() {
+        // "Excluded" on its own is not a stated reason, and the ancestor
+        // clause makes that acute: the entry that matched may sit *below* the
+        // candidate, which no user could work out from a bare verdict.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let caches = caches_dir(home.path());
+        let keep = caches.join("keep");
+        std::fs::create_dir(&keep).unwrap();
+        let inner = file(&keep, "f.bin");
+        let foo = caches.join("Foo");
+        std::fs::create_dir(&foo).unwrap();
+        let important = file(&foo, "important.cfg");
+
+        let why = |target: PathBuf, excluded: PathBuf| -> String {
+            let reports = run(
+                vec![candidate(target, Justification::Catalog("user-caches".into()))],
+                &exclude::new(vec![excluded]),
+                &roots,
+            );
+            match &reports[0].outcome {
+                Outcome::Excluded(why) => why.clone(),
+                other => panic!("expected Excluded, got {other:?}"),
+            }
+        };
+
+        // Beneath: the candidate is inside the excluded directory.
+        let beneath = why(inner.clone(), keep.clone());
+        assert!(
+            beneath.contains(&keep.display().to_string()),
+            "the skip does not name the exclusion: {beneath}"
+        );
+        assert!(beneath.contains("never to touch"), "{beneath}");
+
+        // Contains: the candidate is an ancestor of the excluded file.
+        let contains = why(foo.clone(), important.clone());
+        assert!(
+            contains.contains(&important.display().to_string()),
+            "the skip does not name the exclusion below it: {contains}"
+        );
+        assert!(
+            contains.contains("would also remove"),
+            "the skip does not explain the ancestor case: {contains}"
+        );
+
+        assert!(inner.exists() && important.exists(), "an excluded file was removed");
     }
 
     #[test]

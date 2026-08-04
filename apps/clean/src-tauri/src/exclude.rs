@@ -13,6 +13,34 @@ pub fn new(paths: Vec<PathBuf>) -> ExclusionList {
     ExclusionList { paths }
 }
 
+/// Why a candidate is covered, and by which entry. The two directions read
+/// very differently to a user, so they are kept apart rather than flattened
+/// into one sentence that is only half true either way.
+#[derive(Debug)]
+pub enum Coverage<'a> {
+    /// The candidate is the excluded path, or lives beneath it.
+    Beneath(&'a Path),
+    /// The candidate is an *ancestor* of the excluded path. Removing it would
+    /// take the excluded path with it.
+    Contains(&'a Path),
+}
+
+impl Coverage<'_> {
+    /// Plain language, naming the entry responsible.
+    pub fn reason(&self) -> String {
+        match self {
+            Coverage::Beneath(entry) => format!(
+                "Skipped because you asked Spiral Clean never to touch {}.",
+                entry.display()
+            ),
+            Coverage::Contains(entry) => format!(
+                "Skipped because removing it would also remove {}, which you asked Spiral Clean never to touch.",
+                entry.display()
+            ),
+        }
+    }
+}
+
 impl ExclusionList {
     /// True when `candidate` is an excluded path, lives beneath one, or is an
     /// ancestor of one.
@@ -48,15 +76,22 @@ impl ExclusionList {
     ///
     /// All three compare whole path *components*, never lowercased strings,
     /// so `/tmp/keep` still does not match `/tmp/keepsake.txt`.
-    pub fn covers(&self, candidate: &Path) -> bool {
+    ///
+    /// Returns *which* entry matched and in which direction, not merely that
+    /// one did. "Something you excluded" without saying which is not a stated
+    /// reason, and the ancestor clause makes that acute: a candidate of
+    /// `~/Library/Caches/Foo` being skipped because of
+    /// `~/Library/Caches/Foo/important.cfg` is not something a user can work
+    /// out from a bare "Excluded".
+    pub fn covering(&self, candidate: &Path) -> Option<Coverage<'_>> {
         let lexical_candidate = strip_firmlink(candidate.to_path_buf());
         let resolved_candidate = normalize(candidate);
 
-        self.paths.iter().any(|excluded| {
+        self.paths.iter().find_map(|excluded| {
             let lexical_excluded = strip_firmlink(excluded.clone());
 
             if starts_with_case_insensitive(&lexical_candidate, &lexical_excluded) {
-                return true;
+                return Some(Coverage::Beneath(excluded));
             }
 
             let resolved_match = match (&resolved_candidate, normalize(excluded)) {
@@ -68,7 +103,57 @@ impl ExclusionList {
                 _ => false,
             };
 
-            resolved_match || starts_with_case_insensitive(&lexical_excluded, &lexical_candidate)
+            if resolved_match {
+                Some(Coverage::Beneath(excluded))
+            } else if starts_with_case_insensitive(&lexical_excluded, &lexical_candidate) {
+                Some(Coverage::Contains(excluded))
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Whether `candidate` is covered at all. `covering` is the one that can
+    /// tell the user why.
+    pub fn covers(&self, candidate: &Path) -> bool {
+        self.covering(candidate).is_some()
+    }
+
+    /// The first entry that cannot mean what an exclusion has to mean,
+    /// described for the user. `None` when every entry is usable.
+    ///
+    /// Two shapes are rejected, and an **empty string is the one that
+    /// matters**: `starts_with_case_insensitive(anything, "")` is vacuously
+    /// true — the empty prefix has no components to disagree about — so a
+    /// single `""` in the file made `covers()` answer true for every
+    /// candidate and the app silently reclaimed nothing, with no way for the
+    /// user to tell why. A relative entry is rejected for the same reason
+    /// `normalize` rejects a relative candidate: the path it names depends on
+    /// a working directory this code may not guess at.
+    ///
+    /// **The decision, stated deliberately: a malformed entry makes the whole
+    /// file an error, not a dropped line.** Silently discarding an entry
+    /// would remove protection the user believes they have, which is the one
+    /// direction this feature may never fail. Blocking with an error that
+    /// names the entry produces the same conservative outcome the empty
+    /// string produced by accident — nothing is removed — but says why, and
+    /// keeps `load` to a single rule: if the file cannot be trusted whole, it
+    /// is not used at all.
+    fn malformed_entry(&self) -> Option<String> {
+        self.paths.iter().find_map(|p| {
+            if p.as_os_str().is_empty() {
+                Some(
+                    "it contains an empty entry, which would match every path and block every clean"
+                        .to_string(),
+                )
+            } else if p.is_relative() {
+                Some(format!(
+                    "the entry {} is not a full path starting at /",
+                    p.display()
+                ))
+            } else {
+                None
+            }
         })
     }
 
@@ -84,6 +169,18 @@ impl ExclusionList {
     /// defect are fixed together: this writes atomically, and `load` refuses
     /// to interpret a file it cannot parse.
     pub fn save(&self, dir: &Path) -> std::io::Result<()> {
+        // Refused here as well as in `load`, so a malformed entry cannot
+        // reach disk in the first place. Catching it only on the way back in
+        // would be honest but late: the user would add an exclusion, be told
+        // nothing, and discover on the next clean that the whole list had
+        // become unusable.
+        if let Some(why) = self.malformed_entry() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Spiral Clean did not save your exclusion list because {why}."),
+            ));
+        }
+
         std::fs::create_dir_all(dir)?;
         let json = serde_json::to_string_pretty(self)?;
 
@@ -121,7 +218,12 @@ impl ExclusionList {
 pub fn load(dir: &Path) -> Result<ExclusionList, String> {
     let path = dir.join(FILE);
     match std::fs::read_to_string(&path) {
-        Ok(text) => serde_json::from_str(&text).map_err(|e| unreadable(&path, &e.to_string())),
+        Ok(text) => serde_json::from_str::<ExclusionList>(&text)
+            .map_err(|e| unreadable(&path, &e.to_string()))
+            .and_then(|list| match list.malformed_entry() {
+                Some(why) => Err(unreadable(&path, &why)),
+                None => Ok(list),
+            }),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(ExclusionList::default()),
         Err(e) => Err(unreadable(&path, &e.to_string())),
     }
@@ -296,6 +398,61 @@ mod tests {
             why.contains("move it aside"),
             "the message does not say how to reset it: {why}"
         );
+    }
+
+    #[test]
+    fn an_empty_entry_makes_the_list_an_error_not_a_universal_match() {
+        // `starts_with_case_insensitive(anything, "")` is vacuously true, so
+        // one empty string used to make `covers()` answer true for every
+        // candidate: the app reclaimed nothing and said nothing. Same
+        // conservative outcome now, but the user is told why.
+        let dir = temp();
+        std::fs::write(dir.path().join(FILE), br#"{"paths": ["/tmp/keep", ""]}"#).unwrap();
+
+        let why = load(dir.path()).expect_err("a list with an empty entry loaded");
+        assert!(why.contains("empty entry"), "the message does not name the problem: {why}");
+        assert!(
+            why.contains(&dir.path().join(FILE).display().to_string()),
+            "the message does not name the file: {why}"
+        );
+    }
+
+    #[test]
+    fn a_relative_entry_makes_the_list_an_error() {
+        // A relative exclusion names a different path depending on the
+        // working directory, which this code may not guess at — the same
+        // reason `normalize` refuses a relative candidate.
+        let dir = temp();
+        std::fs::write(dir.path().join(FILE), br#"{"paths": ["some/where"]}"#).unwrap();
+
+        let why = load(dir.path()).expect_err("a relative entry loaded");
+        assert!(why.contains("some/where"), "the message does not name the entry: {why}");
+    }
+
+    #[test]
+    fn save_refuses_to_write_a_malformed_list() {
+        // The same rule on the way out, so a bad entry never reaches disk and
+        // the user is told at the moment they add it rather than at the next
+        // clean.
+        let dir = temp();
+        let err = new(vec![PathBuf::from("/tmp/keep"), PathBuf::new()])
+            .save(dir.path())
+            .expect_err("a list with an empty entry was written");
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+        assert!(!dir.path().join(FILE).exists(), "a malformed list was written anyway");
+    }
+
+    #[test]
+    fn an_ordinary_list_of_absolute_paths_still_loads() {
+        // The no-over-block side: validation must not reject a normal list.
+        let dir = temp();
+        new(vec![PathBuf::from("/tmp/keep"), PathBuf::from("/Users/someone/Notes")])
+            .save(dir.path())
+            .unwrap();
+        let list = load(dir.path()).expect("an ordinary list should load");
+        assert!(list.covers(Path::new("/tmp/keep/inner")));
+        assert!(list.covers(Path::new("/Users/someone/Notes")));
+        assert!(!list.covers(Path::new("/tmp/elsewhere")));
     }
 
     #[test]
