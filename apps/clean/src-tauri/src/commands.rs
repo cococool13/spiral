@@ -33,7 +33,11 @@ pub fn clean_categories() -> Vec<CategorySummary> {
 
 #[tauri::command]
 pub fn clean_scan() -> Vec<scan::CategoryResult> {
-    scan::scan_all()
+    // `scan_attributed`, not `scan_all`: catalog categories nest (a Chrome
+    // cache file sits under both "Chrome cache" and "Application caches"),
+    // and attributing each file to its single most specific category is what
+    // keeps the totals shown here honest — see scan.rs.
+    scan::scan_attributed()
         .into_iter()
         .map(|mut result| {
             // Cap paths at preview limit; keep true count (items) and total size (bytes).
@@ -132,12 +136,27 @@ fn run_clean(ids: Vec<String>, config_dir: &Path, home: &Path) -> Result<CleanRe
 
     let before = volume::available_bytes(home);
 
+    // Attribute against the full catalog once — not just the selected
+    // entries — then pull out only the ids the caller asked for. Anything
+    // else would let selecting only "Application caches" (without "Chrome
+    // cache") delete files a more specific, unselected category would have
+    // claimed, which is exactly the double-counting this scan exists to
+    // prevent. Using the attributed results here, rather than `clean_scan`,
+    // also matters because `clean_scan` truncates paths to `PATHS_PREVIEW_LIMIT`
+    // for the IPC bridge — deletion must see every path, not a preview.
+    let mut attributed: std::collections::HashMap<String, scan::CategoryResult> =
+        scan::scan_attributed_in(home)
+            .into_iter()
+            .map(|r| (r.id.clone(), r))
+            .collect();
+
     let mut candidates = Vec::new();
     let mut estimated_bytes = 0;
-    for (id, entry) in &entries {
-        let result = scan::scan_entry_in(entry, home);
-        estimated_bytes += result.bytes;
-        candidates.extend(candidates_for(id, &result));
+    for (id, _entry) in &entries {
+        if let Some(result) = attributed.remove(id) {
+            estimated_bytes += result.bytes;
+            candidates.extend(candidates_for(id, &result));
+        }
     }
 
     // Loaded here, immediately before the removal, and never held across
