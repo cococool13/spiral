@@ -193,7 +193,11 @@ jobs:
   # Linux to compile at all. No `if:` skipping tags either — Clean releases on
   # `clean-v*`, which this workflow does not listen for, so there is no
   # release build for this job to duplicate.
+  # Per-push CI, not a release build. Every app's tag is handled by its own
+  # release workflow, so running this on any tag just rebuilds what the
+  # release job is already building.
   clean:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: macos-latest
     defaults:
       run:
