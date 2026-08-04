@@ -21,12 +21,32 @@ const SCREENS: Record<Destination, () => JSX.Element> = {
 export default function App() {
   const [granted, setGranted] = useState<boolean | null>(null);
   const [active, setActive] = useState<Destination>("clean");
+  const [error, setError] = useState<string | null>(null);
 
   const check = useCallback(() => {
-    invoke<boolean>("fda_status").then(setGranted);
+    setError(null);
+    invoke<boolean>("fda_status")
+      .then(setGranted)
+      .catch((e) =>
+        setError(
+          `Could not check Full Disk Access status: ${e}. Try again, or open System Settings and grant access manually.`,
+        ),
+      );
   }, []);
 
   useEffect(check, [check]);
+
+  if (error) {
+    return (
+      <main>
+        <h1>Spiral Clean could not start</h1>
+        <p>{error}</p>
+        <button type="button" onClick={check}>
+          Try again
+        </button>
+      </main>
+    );
+  }
 
   if (granted === null) return <main aria-busy="true" />;
   if (!granted) return <FirstRun onRecheck={check} />;

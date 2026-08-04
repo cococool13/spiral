@@ -1,6 +1,14 @@
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 export default function FirstRun({ onRecheck }: { onRecheck: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+
+  const openSettings = () => {
+    setError(null);
+    invoke("open_privacy_settings").catch((e) => setError(String(e)));
+  };
+
   return (
     <section>
       <h1>Spiral Clean needs Full Disk Access</h1>
@@ -13,7 +21,8 @@ export default function FirstRun({ onRecheck }: { onRecheck: () => void }) {
         <strong>macOS will quit Spiral Clean the moment you grant access.</strong>{" "}
         That is expected. Reopen it and you are done.
       </p>
-      <button type="button" onClick={() => invoke("open_privacy_settings")}>
+      {error && <p role="alert">{error}</p>}
+      <button type="button" onClick={openSettings}>
         Open System Settings
       </button>
       <button type="button" onClick={onRecheck}>
