@@ -24,6 +24,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const APPS = {
   wallpaper: { dir: "apps/wallpaper", crate: "spiral-wallpaper" },
   slim: { dir: "apps/slim/desktop", crate: "spiral-slim" },
+  clean: { dir: "apps/clean", crate: "spiral-clean" },
 };
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
