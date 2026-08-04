@@ -567,7 +567,20 @@ fn execute_within(
                     "Spiral Clean could not determine your home directory, so it cannot prove any path is safe to remove. Nothing was removed.".into(),
                 ),
                 (Ok(excl), Some(roots)) => {
-                    if is_user_content(&c.path, roots) {
+                    // Ahead of the user-content bar, and only for the message.
+                    // `is_user_content` answers `true` both for real user
+                    // content and for a path it could not resolve at all, and
+                    // reporting the second as "this is your own content" told
+                    // the user something untrue about what the app believed —
+                    // a broken link in `~/Library/Caches` is not their
+                    // Documents folder. Same denial either way; this one says
+                    // what actually happened.
+                    if normalize(&c.path).is_none() {
+                        Outcome::Denied(format!(
+                            "Spiral Clean could not work out what {} refers to — a broken or looping symlink, or a folder it is not allowed to read — and it never removes a path it cannot identify. Check the path, then try again.",
+                            c.path.display()
+                        ))
+                    } else if is_user_content(&c.path, roots) {
                         Outcome::Denied(format!(
                             "{} is your own content. Spiral Clean never removes it.",
                             c.path.display()
@@ -1402,6 +1415,69 @@ mod tests {
             matches!(reports[0].outcome, Outcome::Denied(_)),
             "a path behind a dangling symlink was not denied: {:?}",
             reports[0].outcome
+        );
+    }
+
+    #[test]
+    fn a_dangling_symlink_candidate_is_still_reaped() {
+        // The other side of the refusal above, and a behaviour the first
+        // version of that guard broke: `~/Library/Caches/stale → gone` is a
+        // *stale cache symlink*, which is exactly what a cleaner should reap.
+        // Refusing it left it on disk forever and reported it as the user's
+        // own content, which is not true of a broken link in a cache
+        // directory. The link is the candidate, not an interior component —
+        // nothing lies beyond it to be misidentified.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let caches = caches_dir(home.path());
+        let stale = caches.join("stale");
+        symlink(&caches.join("gone"), &stale);
+
+        let reports = run(
+            vec![candidate(stale.clone(), Justification::Catalog("user-caches".into()))],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(
+            matches!(reports[0].outcome, Outcome::Removed(Disposition::Permanent)),
+            "a stale cache symlink was not reaped: {:?}",
+            reports[0].outcome
+        );
+        assert!(
+            std::fs::symlink_metadata(&stale).is_err(),
+            "the dangling symlink is still on disk"
+        );
+    }
+
+    #[test]
+    fn an_unresolvable_path_is_refused_without_calling_it_the_users_content() {
+        // The denial is right; the old wording was not. `is_user_content`
+        // answers `true` both for real user content and for a path that could
+        // not be resolved, so an unreadable or looping path was reported as
+        // "is your own content" — false, and it tells the user something
+        // untrue about what the app believes.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let caches = caches_dir(home.path());
+        symlink(&caches.join("b"), &caches.join("a"));
+        symlink(&caches.join("a"), &caches.join("b"));
+
+        let reports = run(
+            vec![candidate(caches.join("a"), Justification::Catalog("user-caches".into()))],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        let why = match &reports[0].outcome {
+            Outcome::Denied(why) => why.clone(),
+            other => panic!("expected Denied, got {other:?}"),
+        };
+        assert!(
+            !why.contains("your own content"),
+            "an unresolvable path was called the user's content: {why}"
+        );
+        assert!(
+            why.contains("could not work out what"),
+            "the message does not say what actually happened: {why}"
         );
     }
 

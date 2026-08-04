@@ -97,16 +97,29 @@ pub(crate) fn strip_firmlink(path: PathBuf) -> PathBuf {
 /// re-appended verbatim, so `~/.npm/_cacache` compared equal to the catalog's
 /// declared root and the relocation rule saw nothing wrong; creating
 /// `~/nowhere/_cacache` flipped the identical setup to refused. The verdict
-/// must not depend on whether a link's target happens to exist yet, so a
-/// peeled component that `symlink_metadata` can still stat is refused: it
-/// exists, it failed to canonicalise, and a dangling link is the only way
-/// both are true.
+/// must not depend on whether a link's target happens to exist yet.
+///
+/// **Where the dangling link sits decides the answer**, and a first version of
+/// this guard missed that distinction and refused both cases:
+///
+/// * A dangling link as an **interior** component (`tail` is non-empty — at
+///   least one component has already been peeled past it) is refused. That
+///   link stands between the caller and whatever it named; re-appending it
+///   would put an unresolved link back into a path every later comparison
+///   treats as resolved. This is the `~/.npm/_cacache` attack.
+/// * A dangling link that **is the candidate itself** (`tail` is empty, so
+///   nothing has been peeled yet) resolves normally: its ancestors are
+///   canonicalised and its own name is re-appended. Nothing lies beyond it to
+///   be misidentified — the name refers to the link, and unlinking a broken
+///   link in a cache directory is precisely the tidying this app exists to do.
+///   Refusing it made `~/Library/Caches/stale → gone` permanently
+///   un-cleanable and reported it as the user's own content, which was untrue.
 ///
 /// Returns `None` — which every caller must treat as "deny", never as "skip
-/// the check" — for that case, and when canonicalisation fails for any reason
-/// other than non-existence: a symlink loop (`ELOOP`), an unreadable ancestor
-/// (`EACCES`), a name too long. The code must never guess at what a path it
-/// could not resolve refers to.
+/// the check" — for the interior case, and when canonicalisation fails for any
+/// reason other than non-existence: a symlink loop (`ELOOP`), an unreadable
+/// ancestor (`EACCES`), a name too long. The code must never guess at what a
+/// path it could not resolve refers to.
 pub(crate) fn resolve(path: &Path) -> Option<PathBuf> {
     let mut tail: Vec<std::ffi::OsString> = Vec::new();
     let mut cursor = path;
@@ -122,10 +135,11 @@ pub(crate) fn resolve(path: &Path) -> Option<PathBuf> {
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 // `lstat` succeeding where `realpath` said NotFound means the
-                // component is there but points nowhere — a dangling
-                // symlink. Peeling it would put an unresolved link back into
-                // the path every later comparison treats as resolved.
-                if std::fs::symlink_metadata(cursor).is_ok() {
+                // component is there but points nowhere — a dangling symlink.
+                // Refused only when something has already been peeled past
+                // it, i.e. when it is an interior component of the path
+                // rather than the thing the path names. See above.
+                if !tail.is_empty() && std::fs::symlink_metadata(cursor).is_ok() {
                     return None;
                 }
                 // Peel the last component and try the parent. `file_name`
