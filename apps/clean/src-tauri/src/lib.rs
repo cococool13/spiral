@@ -16,6 +16,7 @@
 #![allow(dead_code)]
 
 mod catalog;
+mod commands;
 mod exclude;
 mod history;
 mod paths;
@@ -31,6 +32,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
+            commands::clean_categories,
+            commands::clean_scan,
             permissions::fda_status,
             permissions::open_privacy_settings
         ])
