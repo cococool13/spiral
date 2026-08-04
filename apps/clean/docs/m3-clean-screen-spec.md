@@ -1,6 +1,6 @@
 # Spiral Clean M3 — the Clean screen
 
-Date: 2026-08-04 · Status: approved by Cohen via Q&A · Builds on [`design-spec.md`](design-spec.md) and the thirteen ADRs in [`adr/`](adr/).
+Date: 2026-08-04 · Status: approved by Cohen via Q&A · Builds on [`design-spec.md`](design-spec.md) and the ADRs in [`adr/`](adr/).
 
 M1 and M2 shipped the app shell and the safety core. M3 is the first milestone that lets a user delete anything: it wires the Clean screen to `remove::execute`, adds the two catalog families ADR-0001 deferred, and makes the app look like Spiral rather than like unstyled HTML.
 

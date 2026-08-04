@@ -8,7 +8,7 @@
 
 **Tech Stack:** Tauri 2, Rust 2021, React 18, strict TypeScript, Vite, pnpm 11.9.0, `cargo test` with `tempfile`, Vitest.
 
-**Read before starting:** [`../m3-clean-screen-spec.md`](../m3-clean-screen-spec.md) — the four approved decisions. Also [`../design-spec.md`](../design-spec.md) and the thirteen ADRs in [`../adr/`](../adr/).
+**Read before starting:** [`../m3-clean-screen-spec.md`](../m3-clean-screen-spec.md) — the four approved decisions. Also [`../design-spec.md`](../design-spec.md) and the ADRs in [`../adr/`](../adr/).
 
 ## Global Constraints
 
