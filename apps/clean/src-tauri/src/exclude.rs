@@ -9,6 +9,18 @@ pub struct ExclusionList {
     paths: Vec<PathBuf>,
 }
 
+/// Build a list directly, skipping the deny-all validator that `save` and
+/// `load` both enforce.
+///
+/// `#[cfg(test)]`, and it must stay that way. Every one of its callers is a
+/// test, and that is the only place the shortcut is legitimate: a test wants
+/// to construct a list without a file behind it, and several deliberately
+/// construct malformed ones to prove `malformed_entry` rejects them. In
+/// production the validator is the point — `save` refuses to write a
+/// malformed entry and `load` refuses to interpret one, so a `pub` constructor
+/// that does neither is a way past both, sitting in the module whose entire
+/// job is "never touch this".
+#[cfg(test)]
 pub fn new(paths: Vec<PathBuf>) -> ExclusionList {
     ExclusionList { paths }
 }
@@ -83,6 +95,23 @@ impl ExclusionList {
     /// `~/Library/Caches/Foo` being skipped because of
     /// `~/Library/Caches/Foo/important.cfg` is not something a user can work
     /// out from a bare "Excluded".
+    ///
+    /// **Known limit: hard links defeat this.** Every clause above compares
+    /// *paths*, and a hard link is a second name for the same inode with no
+    /// path relationship to the first. Excluding `~/Library/Caches/a/keep.db`
+    /// therefore does not protect `~/Library/Caches/b/keep.db` hard-linked to
+    /// it, and deleting the second name would leave the excluded file's data
+    /// intact but its link count reduced — which is *usually* harmless, and is
+    /// data loss when the excluded name was the last one standing.
+    ///
+    /// This is not closed for the same reason the symlink clauses exist at
+    /// all: closing it means comparing `(dev, ino)` rather than paths, which
+    /// requires stat-ing every excluded entry and every candidate on every
+    /// check, and reports "excluded" for a path a user cannot see the link
+    /// to. Symlinks are handled instead because they are the shape an attacker
+    /// or a relocation actually produces; a hard link inside a cache directory
+    /// to a file the user separately protected is not a shape this app has
+    /// seen. Revisit if a real case appears.
     pub fn covering(&self, candidate: &Path) -> Option<Coverage<'_>> {
         let lexical_candidate = strip_firmlink(candidate.to_path_buf());
         let resolved_candidate = normalize(candidate);
