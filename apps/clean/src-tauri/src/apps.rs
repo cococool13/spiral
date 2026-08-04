@@ -128,17 +128,41 @@ pub fn read_bundle(path: &Path) -> Option<(String, String)> {
     Some((bundle_id, name))
 }
 
-/// Find `<key>{key}</key>` and return the text of the `<string>` that follows
-/// it. This is deliberately narrow: it does not understand plist structure at
-/// all, only "look for this key, then the next string value" — sufficient for
-/// `CFBundleIdentifier` and `CFBundleName`, which are always flat string
-/// values in a real `Info.plist`, and nothing else this module reads.
+/// Find `<key>{key}</key>` and return the text of the `<string>` that is
+/// *this key's own value* — never a later key's.
+///
+/// The search is bounded to the region between this `<key>` and the next
+/// `<key>` (or end of file, if this is the last key). Without that bound, a
+/// malformed or hostile plist where this key's value is not a `<string>` at
+/// all (e.g. `<integer>`) would let the scan run on past it and pick up an
+/// unrelated *later* key's string — most plausibly `CFBundleName`'s, if this
+/// is `CFBundleIdentifier`. That would hand back an identifier that belongs
+/// to a different key, which `read_bundle` cannot distinguish from a
+/// genuine one, and which flows straight into `Justification::AppBundle` in
+/// `remove.rs`: the exact cross-app-deletion risk "never guess a bundle id"
+/// exists to close, reached by a route that rule's wording didn't name.
+///
+/// An empty `<string></string>` also returns `None` rather than `Some("")`:
+/// an empty identifier or name was never validly assigned by whatever wrote
+/// this plist, and nothing should be *discovered* carrying one.
+///
+/// This is deliberately narrow otherwise: it does not understand plist
+/// structure at all beyond this one bound, only "look for this key, then
+/// its own string value" — sufficient for `CFBundleIdentifier` and
+/// `CFBundleName`, which are always flat string values in a real
+/// `Info.plist`, and nothing else this module reads.
 fn extract_plist_string(xml: &str, key: &str) -> Option<String> {
     let key_tag = format!("<key>{key}</key>");
     let after_key = &xml[xml.find(&key_tag)? + key_tag.len()..];
-    let value_start = after_key.find("<string>")? + "<string>".len();
-    let value_end = after_key[value_start..].find("</string>")?;
-    Some(after_key[value_start..value_start + value_end].to_string())
+    let region_end = after_key.find("<key>").unwrap_or(after_key.len());
+    let region = &after_key[..region_end];
+    let value_start = region.find("<string>")? + "<string>".len();
+    let value_end = region[value_start..].find("</string>")?;
+    let value = &region[value_start..value_start + value_end];
+    if value.is_empty() {
+        return None;
+    }
+    Some(value.to_string())
 }
 
 /// True when a process whose command line mentions `bundle_id` is currently
@@ -294,6 +318,66 @@ mod tests {
             read_bundle(&dir.path().join("Foo.app")),
             Some(("com.example.foo".into(), "Foo".into()))
         );
+    }
+
+    #[test]
+    fn a_non_string_identifier_value_does_not_leak_a_later_keys_string() {
+        // CFBundleIdentifier's own value is not a <string> at all (malformed
+        // or hostile). A later key, CFBundleName, does have one. An
+        // unbounded scan for "the next <string> anywhere after this key"
+        // would wrongly return CFBundleName's value as the identifier —
+        // reviewer finding 1.
+        let dir = tempfile::tempdir().unwrap();
+        let contents = dir.path().join("Foo.app/Contents");
+        std::fs::create_dir_all(&contents).unwrap();
+        std::fs::write(
+            contents.join("Info.plist"),
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><integer>1</integer>
+<key>CFBundleName</key><string>Foo</string>
+</dict></plist>"#,
+        )
+        .unwrap();
+        assert_eq!(read_bundle(&dir.path().join("Foo.app")), None);
+    }
+
+    #[test]
+    fn an_identifier_key_with_no_value_at_all_is_not_guessed_from_a_later_key() {
+        // CFBundleIdentifier is the last key in the plist, with no value
+        // following it whatsoever — nothing for an unbounded scan to
+        // over-run into here, but this proves the "last key" edge of the
+        // same bound rather than assuming it from the case above.
+        let dir = tempfile::tempdir().unwrap();
+        let contents = dir.path().join("Foo.app/Contents");
+        std::fs::create_dir_all(&contents).unwrap();
+        std::fs::write(
+            contents.join("Info.plist"),
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>Foo</string>
+<key>CFBundleIdentifier</key>
+</dict></plist>"#,
+        )
+        .unwrap();
+        assert_eq!(read_bundle(&dir.path().join("Foo.app")), None);
+    }
+
+    #[test]
+    fn an_empty_identifier_string_is_not_a_valid_identifier() {
+        let dir = tempfile::tempdir().unwrap();
+        let contents = dir.path().join("Foo.app/Contents");
+        std::fs::create_dir_all(&contents).unwrap();
+        std::fs::write(
+            contents.join("Info.plist"),
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string></string>
+<key>CFBundleName</key><string>Foo</string>
+</dict></plist>"#,
+        )
+        .unwrap();
+        assert_eq!(read_bundle(&dir.path().join("Foo.app")), None);
     }
 
     #[test]
