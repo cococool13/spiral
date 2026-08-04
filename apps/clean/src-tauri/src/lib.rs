@@ -22,6 +22,7 @@ mod paths;
 mod permissions;
 mod remove;
 mod scan;
+mod volume;
 
 // The updater plugin is registered at M7, not here. It reads
 // plugins.updater.pubkey at init and panics without it, so it cannot be
