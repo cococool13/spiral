@@ -10,6 +10,7 @@
 // narrowly scoped `#[allow(dead_code)]` naming the milestone that consumes
 // them, so a warning here now means what it says.
 mod apps;
+mod associate;
 mod catalog;
 mod commands;
 mod exclude;
