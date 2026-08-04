@@ -14,4 +14,11 @@ describe("formatBytes", () => {
   it("stops at terabytes", () => {
     expect(formatBytes(5 * 1024 ** 4)).toBe("5.0 TB");
   });
+  it("rolls a value that rounds to 1024 into the next unit (KB to MB)", () => {
+    // 1023.9 KB rounds to "1024" in its own unit — must land in MB instead.
+    expect(formatBytes(1023.9 * 1024)).toBe("1.0 MB");
+  });
+  it("rolls a value that rounds to 1024 into the next unit (MB to GB)", () => {
+    expect(formatBytes(1023.9 * 1024 ** 2)).toBe("1.0 GB");
+  });
 });
