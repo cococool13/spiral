@@ -1,3 +1,4 @@
+mod catalog;
 mod permissions;
 
 // The updater plugin is registered at M7, not here. It reads
