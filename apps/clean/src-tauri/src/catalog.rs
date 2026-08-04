@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum Disposition {
@@ -83,12 +83,16 @@ pub fn find(id: &str) -> Option<&'static CatalogEntry> {
     CATALOG.iter().find(|e| e.id == id)
 }
 
-/// Resolve a catalog root. Only a leading `~/` is special; everything else is
-/// taken literally so a root can never be built from user input.
-pub fn expand(root: &str) -> Option<PathBuf> {
+/// Resolve a catalog root against a given home directory. Only a leading `~/`
+/// is special; everything else is taken literally so a root can never be built
+/// from user input. `home` is passed in rather than read from `dirs::home_dir`
+/// so that `remove.rs` resolves every root against the *same* home it validates
+/// candidates against — and so its tests can substitute a temporary directory
+/// without touching the real one.
+pub fn expand(root: &str, home: &Path) -> PathBuf {
     match root.strip_prefix("~/") {
-        Some(rest) => dirs::home_dir().map(|h| h.join(rest)),
-        None => Some(PathBuf::from(root)),
+        Some(rest) => home.join(rest),
+        None => PathBuf::from(root),
     }
 }
 
@@ -136,7 +140,15 @@ mod tests {
 
     #[test]
     fn expand_resolves_the_home_prefix() {
-        let home = dirs::home_dir().expect("home directory should resolve in tests");
-        assert_eq!(expand("~/Library/Caches"), Some(home.join("Library/Caches")));
+        let home = PathBuf::from("/somewhere/else");
+        assert_eq!(expand("~/Library/Caches", &home), home.join("Library/Caches"));
+    }
+
+    #[test]
+    fn expand_takes_a_non_tilde_root_literally() {
+        // A root without `~/` must not acquire the home prefix by accident;
+        // `/Applications` means `/Applications`, whoever is logged in.
+        let home = PathBuf::from("/somewhere/else");
+        assert_eq!(expand("/Applications", &home), PathBuf::from("/Applications"));
     }
 }
