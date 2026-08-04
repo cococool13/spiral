@@ -182,11 +182,16 @@ fn is_library_container(path: &Path, library: Option<&Path>) -> bool {
 
 /// The set of real directories every bar is evaluated against.
 ///
-/// Built with `Roots::rooted_at`, always over a home the caller supplies —
-/// `execute`'s caller resolves the real home for production use, and a test
-/// points it at a temporary directory instead, which is what lets a unit
-/// test exercise *genuine* containment: the check is not weakened, it is
-/// simply pointed at a home that is not the developer's.
+/// `execute` builds this with the fallible `Roots::new(home)`, over whatever
+/// home its caller supplies, and denies with an explanatory message rather
+/// than panicking if that home cannot be resolved (a symlink loop, or an
+/// unreadable ancestor — `dirs::home_dir()` returning `Some` guarantees
+/// only that a path was found, not that it resolves). Tests build it over a
+/// temporary directory with `Roots::rooted_at`, which panics on failure — a
+/// test home genuinely should always resolve, so a resolution failure there
+/// is a bug in the test, not a case to handle gracefully. Either way the
+/// check itself is not weakened: it is simply pointed at a home that is not
+/// the developer's.
 struct Roots {
     /// Already resolved, so that roots derived from it are directly
     /// comparable with resolved candidates.
@@ -265,6 +270,7 @@ impl Roots {
         })
     }
 
+    #[cfg(test)]
     fn rooted_at(home: &Path) -> Self {
         Self::new(home).expect("a test home directory should resolve")
     }
@@ -601,11 +607,18 @@ fn delete_permanent(path: &Path) -> Result<(), FailureKind> {
 /// 32,555 real files under a developer's `~/Library/Caches` — a stubbed
 /// guard downstream was the only thing standing between a unit test and the
 /// real disk.
+///
+/// Builds its roots with the fallible `Roots::new`, not the panicking
+/// `Roots::rooted_at` — `home` reaching this function does not guarantee it
+/// resolves (a symlink loop, or an unreadable ancestor), and a panic in the
+/// setup of the app's deletion path is not an acceptable failure mode. A
+/// `home` that cannot be resolved denies every candidate with the same
+/// explanatory message as any other bar, rather than crashing.
 pub fn execute(candidates: Vec<Candidate>, excl: &Result<ExclusionList, String>, home: &Path) -> Vec<Report> {
     execute_within(
         candidates,
         excl.as_ref().map_err(String::as_str),
-        Some(&Roots::rooted_at(home)),
+        Roots::new(home).as_ref(),
     )
 }
 
@@ -1064,6 +1077,37 @@ mod tests {
         );
         assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
         assert!(p.exists());
+    }
+
+    #[test]
+    fn execute_denies_rather_than_panics_when_the_given_home_cannot_be_resolved() {
+        // The test above proves `execute_within`'s `None` branch in
+        // isolation; this one proves the public `execute` can actually reach
+        // it. `dirs::home_dir()` returning `Some` only means a path was
+        // found, not that it resolves — a symlink loop or an unreadable
+        // ancestor still fails inside `Roots::new`. `execute` must build its
+        // roots with the fallible `Roots::new`, not the panicking
+        // `Roots::rooted_at`, or this genuinely reachable case would crash
+        // the app instead of denying with an explanation.
+        let base = tempfile::tempdir().unwrap();
+        let home_a = base.path().join("home_a");
+        let home_b = base.path().join("home_b");
+        symlink(&home_b, &home_a);
+        symlink(&home_a, &home_b);
+
+        let reports = execute(
+            vec![candidate(
+                PathBuf::from("/tmp/spiral-clean-unresolvable-home-probe"),
+                Justification::UserChosen,
+            )],
+            &Ok(exclude::new(vec![])),
+            &home_a,
+        );
+        assert!(
+            matches!(reports[0].outcome, Outcome::Denied(_)),
+            "execute did not fail closed on an unresolvable home: {:?}",
+            reports[0].outcome
+        );
     }
 
     // ---- Symlink resolution (CRITICAL) ----------------------------------
