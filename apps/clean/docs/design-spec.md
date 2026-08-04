@@ -10,8 +10,8 @@ Spiral Clean is a native macOS maintenance app: the third product in the Spiral 
 - **Platform:** macOS only. No Windows or Linux build.
 - **Stack:** Tauri 2 + Rust backend, React 18 + strict TypeScript frontend, Vite, pnpm 11.9 — mirroring `apps/wallpaper` exactly. Independent pnpm project; no root workspace.
 - **Brand:** consumed from `brand/` at build time via `apps/clean/scripts/sync-brand.mjs` into gitignored `src/styles/tokens.css` and `src/assets/brand/`. `check-hex.mjs` gates the build. No brand value is ever defined inside `apps/clean/`.
-- **Release:** the shared reusable pipeline. A thin `.github/workflows/release-clean.yml` calls `release-app.yml` with `app-dir: apps/clean`, `artifact-prefix: clean`, `macos: true`, `windows: false`, `updater: true`. Signed with the existing Developer ID (`CU8NTJWQ43`), notarized, universal. Tag namespace `clean-v*`. `scripts/version.mjs check` covers its four version files.
-- **Updater:** Tauri updater plugin, same shape as Wallpaper. A wrong catalog entry must be fixable on every installed machine same-day; that is the specific justification for shipping an updater on a tool that deletes files permanently.
+- **Release:** the shared reusable pipeline. A thin `.github/workflows/release-clean.yml` calls `release-app.yml` with `app-dir: apps/clean`, `artifact-prefix: clean`, `macos: true`, `windows: false`, `updater: false`. Signed with the existing Developer ID (`CU8NTJWQ43`), notarized, universal. Tag namespace `clean-v*`. `scripts/version.mjs check` covers its four version files.
+- **Updater: not shipped, and deliberately absent until M7.** The reasoning below still stands — a wrong catalog entry must be fixable on every installed machine same-day, and that is the justification for an updater on a tool that deletes files permanently. What has changed is the sequencing. The Tauri updater plugin reads `plugins.updater.pubkey` at init and panics without it, so it cannot be registered before the signing key exists; `lib.rs` therefore registers only `tauri_plugin_process`, and `release-clean.yml` passes `updater: false` so the shared workflow does not fail a release waiting for a `.sig` the app does not produce. Anything in this spec that assumes an update channel — including the "wrong catalog entry" recovery path — is M7 work, not something v0.1 has.
 
 ## Decisions (settled with Cohen)
 
@@ -19,8 +19,10 @@ Each numbered item was a distinct decision. Where the choice went against the re
 
 1. **Scope:** all three original subsystems ship in v1.0, not sequentially. *(Against recommendation of cleanup-first.)*
 2. **Full Disk Access:** required up front, gated at first run. *(Against recommendation of graceful degradation.)*
-3. **Catalog families:** app/system caches and logs · browser caches · Trash · library-resident developer artifacts.
-4. **Developer artifacts are library-resident only.** Xcode DerivedData, iOS DeviceSupport, Simulator caches, SwiftPM/Gradle/npm download caches — all under `~/Library`, all rebuild offline. `node_modules` and Docker are excluded entirely, preserving ADR-0005's bar on scanning project folders.
+3. **Catalog families:** app/system caches and logs · browser caches · Trash · developer artifacts.
+
+   **Corrected 2026-08-04, to what M2 actually shipped.** The catalog in `src-tauri/src/catalog.rs` has eight entries covering two of those four families: caches and logs (`user-caches`, `user-logs`, `crash-reports`, `saved-state`) and developer artifacts (`xcode-derived-data`, `ios-device-support`, `simulator-caches`, `package-manager-caches`). **Browser caches and Trash are not in it.** They are M3 work, and each needs its own decision before it lands — a browser cache entry has to name specific per-browser paths rather than a family, and Trash is the destination for recoverable cleanup (ADR-0001), so emptying it is a different act from the removals every other entry describes and cannot simply be another `Permanent` root. Adding either is a catalog change, which ADR-0006 makes a deliberate release decision.
+4. **Developer artifacts are library-resident where they can be.** Xcode DerivedData, iOS DeviceSupport, Simulator caches and the SwiftPM download cache are under `~/Library`. `~/.gradle/caches` and `~/.npm/_cacache` are not — they are dotfile directories at the top of the home folder, and the shipped catalog declares them there. The property that matters is the one they all share: each rebuilds offline, and none is user-created content. `node_modules` and Docker are excluded entirely, preserving ADR-0005's bar on scanning project folders.
 5. **Disposition split:** caches, logs, browser caches and dev artifacts delete permanently. Orphaned app leftovers go to Trash, because they can hold licenses or settings. Without this split the recoverable tier would be dead code in v1.
 6. **Clean screen:** category rows with size and item count, all preselected, each expandable to the actual paths.
 7. **App discovery:** `/Applications` and `~/Applications`. `/System/Applications` excluded — SIP-protected, always fails. Homebrew casks are detected via `/opt/homebrew/Caskroom/<token>` and are never deleted directly; the review shows the `brew uninstall --cask` command instead.
@@ -52,7 +54,7 @@ Each numbered item was a distinct decision. Where the choice went against the re
 | **Optimize** | Health · Startup Items · 14 maintenance actions | N/A |
 | **Uninstall** | Installed apps · Leftovers · PKG receipts · drag-and-drop | Apps permanent · rest → Trash |
 | History | Past runs and disk usage trend | — |
-| Settings | FDA status · exclusion list · history retention · updates · version | — |
+| Settings | FDA status · exclusion list · history retention · updates (M7) · version | — |
 
 ### Rust modules (`apps/clean/src-tauri/src/`)
 
@@ -129,7 +131,7 @@ Native behavior (wallpaper-equivalent operations: actual deletion, admin escalat
 - Unused language file (`.lproj`) stripping — breaks code signatures on some apps with no local recovery.
 - Xcode simulator runtimes.
 - Duplicate-file and large-old-file finders — both require scanning user content.
-- Telemetry, accounts, and any network call other than the updater check.
+- Telemetry, accounts, and any network call other than the updater check — and until M7 registers the updater, no network call at all.
 - Windows and Linux.
 
 ## Build order

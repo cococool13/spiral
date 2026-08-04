@@ -96,8 +96,12 @@ export const apps: SpiralApp[] = [
     iconPath: "M3 4h18v16H3zM3 10h8M11 4v16M11 14h10",
   },
   {
-    slug: "cleaner",
-    name: "Spiral Cleaner",
+    // "Spiral Clean", never "Spiral Cleaner" — apps/clean/CONTEXT.md names the
+    // latter as the term to avoid, and this file is what the live site renders.
+    // The slug moves with it, so the eventual /apps/clean route matches the
+    // directory and the tag namespace (`clean-v*`) rather than contradicting both.
+    slug: "clean",
+    name: "Spiral Clean",
     tagline: "Deletes caches. Nothing else.",
     status: "coming-soon",
     iconPath: "M12 3v6M8 9h8l1 12H7zM9 13v4M12 13v4M15 13v4",
