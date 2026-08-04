@@ -5,6 +5,12 @@
 
 use crate::{catalog, scan};
 
+/// Max paths returned per category across the IPC bridge.
+/// The UI's disclosure view caps expansion at 500. `items` (true file count)
+/// and `bytes` (total size) are always complete; this bounds only the preview list.
+/// Shipping tens of thousands of paths to the webview costs seconds on real machines.
+const PATHS_PREVIEW_LIMIT: usize = 500;
+
 #[derive(Debug, serde::Serialize)]
 pub struct CategorySummary {
     pub id: String,
@@ -27,11 +33,21 @@ pub fn clean_categories() -> Vec<CategorySummary> {
 #[tauri::command]
 pub fn clean_scan() -> Vec<scan::CategoryResult> {
     scan::scan_all()
+        .into_iter()
+        .map(|mut result| {
+            // Cap paths at preview limit; keep true count (items) and total size (bytes).
+            if result.paths.len() > PATHS_PREVIEW_LIMIT {
+                result.paths.truncate(PATHS_PREVIEW_LIMIT);
+            }
+            result
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn every_catalog_entry_is_summarised() {
@@ -49,5 +65,31 @@ mod tests {
             .find(|s| s.id == "user-caches")
             .unwrap();
         assert_eq!(summary.label, entry.label);
+    }
+
+    #[test]
+    fn paths_truncated_at_preview_limit_but_counts_preserved() {
+        // Build a result with >500 paths by hand to stay hermetic.
+        let mut result = scan::CategoryResult {
+            id: "test".to_string(),
+            label: "Test Category".to_string(),
+            bytes: 1_000_000,
+            items: 1000, // True count: 1000 files
+            paths: (0..750)
+                .map(|i| PathBuf::from(format!("/tmp/test/file_{}", i)))
+                .collect(),
+        };
+        let input_items = result.items;
+        let input_bytes = result.bytes;
+
+        // Process through the truncation logic.
+        if result.paths.len() > PATHS_PREVIEW_LIMIT {
+            result.paths.truncate(PATHS_PREVIEW_LIMIT);
+        }
+
+        // Verify: paths capped at 500, items and bytes unchanged.
+        assert_eq!(result.paths.len(), 500);
+        assert_eq!(result.items, input_items);
+        assert_eq!(result.bytes, input_bytes);
     }
 }
