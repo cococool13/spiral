@@ -62,7 +62,12 @@ pub struct CleanReport {
     /// Actual change in volume free space. This is the reported result.
     pub measured_bytes: u64,
     pub removed: usize,
-    pub partially_removed: usize,
+    /// Items where *some* of the contents were destroyed and the rest remain.
+    /// Its own list, not folded into `failed`: `failed` is headed "could not be
+    /// removed" in the report, and telling a user nothing happened to something
+    /// that was partly destroyed is exactly the false reading `Outcome`
+    /// distinguishes these two cases to prevent.
+    pub partially_removed: Vec<FailedItem>,
     pub excluded: usize,
     pub failed: Vec<FailedItem>,
     /// Present only when a material shortfall was explained by a real snapshot.
@@ -71,6 +76,26 @@ pub struct CleanReport {
 
 /// Build the candidates for one category. Every candidate carries the
 /// justification of the category it came from — the frontend never supplies one.
+///
+/// **Only files become candidates, so no directory is ever removed.**
+/// `scan::walk_files` yields `is_file()` entries alone, so `result.paths`
+/// contains no directories and nothing here can invent one. The consequence is
+/// visible: emptying the Trash leaves the folder skeleton in Finder, and
+/// `~/Library/Caches` keeps the (now empty) directories its files sat in — the
+/// residue a real machine accumulates in the hundreds.
+///
+/// **Directory pruning is deferred deliberately, not forgotten.** Removing a
+/// directory is new destructive behaviour: it needs its own decision about what
+/// counts as safe to prune (an emptied catalog directory only, never one that
+/// merely looks empty because its contents were excluded or failed), its own
+/// guards, and its own review gate. Adding it as a side effect of a cleanup
+/// pass is the exact shape of change this milestone exists to refuse.
+///
+/// One further consequence, and the reason `run_clean` still handles the case:
+/// `Outcome::PartiallyRemoved` can only arise from a directory removal that
+/// failed partway, so it is unreachable while candidates are files only. It is
+/// reported honestly rather than dropped, because the day a producer of
+/// directory candidates lands, silence would be the worst possible default.
 fn candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candidate> {
     result
         .paths
@@ -80,6 +105,37 @@ fn candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candid
             justification: remove::Justification::Catalog(id.to_string()),
         })
         .collect()
+}
+
+/// What a batch of `remove::Report`s adds up to. Split out of `run_clean` so
+/// it can be tested against hand-built outcomes: `run_clean` reaches
+/// `remove::execute`, which resolves the real machine's home no matter what
+/// `home` it is handed, and must never be exercised by a test.
+#[derive(Default)]
+struct Tally {
+    removed: usize,
+    partially_removed: Vec<FailedItem>,
+    excluded: usize,
+    failed: Vec<FailedItem>,
+}
+
+fn tally(reports: Vec<remove::Report>) -> Tally {
+    let mut t = Tally::default();
+    for remove::Report { path, outcome } in reports {
+        let path = path.display().to_string();
+        match outcome {
+            remove::Outcome::Removed(_) => t.removed += 1,
+            // Not `failed`. Something *was* destroyed here.
+            remove::Outcome::PartiallyRemoved(reason) => {
+                t.partially_removed.push(FailedItem { path, reason })
+            }
+            remove::Outcome::Excluded(_) => t.excluded += 1,
+            remove::Outcome::Denied(reason) | remove::Outcome::Failed(reason) => {
+                t.failed.push(FailedItem { path, reason })
+            }
+        }
+    }
+    t
 }
 
 /// A duplicated id would otherwise scan the same category twice: the second
@@ -174,23 +230,7 @@ fn run_clean(
         _ => 0,
     };
 
-    let mut removed = 0;
-    let mut partially_removed = 0;
-    let mut excluded = 0;
-    let mut failed = Vec::new();
-    for report in reports {
-        match report.outcome {
-            remove::Outcome::Removed(_) => removed += 1,
-            remove::Outcome::PartiallyRemoved(reason) => {
-                partially_removed += 1;
-                failed.push(FailedItem { path: report.path.display().to_string(), reason });
-            }
-            remove::Outcome::Excluded(_) => excluded += 1,
-            remove::Outcome::Denied(reason) | remove::Outcome::Failed(reason) => {
-                failed.push(FailedItem { path: report.path.display().to_string(), reason })
-            }
-        }
-    }
+    let Tally { removed, partially_removed, excluded, failed } = tally(reports);
 
     // `has_local_snapshots` shells out to `tmutil`; only pay for that when
     // there is a shortfall it could actually explain, so an ordinary clean
@@ -209,7 +249,7 @@ fn run_clean(
             started_at,
             screen: "clean".into(),
             removed,
-            partially_removed,
+            partially_removed: partially_removed.len(),
             estimated_bytes,
             measured_bytes,
             interrupted: false,
@@ -366,6 +406,44 @@ mod tests {
         assert_eq!(result.items, 1);
         let total: usize = results.iter().map(|r| r.items).sum();
         assert_eq!(total, 1, "no other category may claim anything outside the injected home");
+    }
+
+    /// Build a `remove::Report` without going anywhere near the filesystem.
+    fn report(path: &str, outcome: remove::Outcome) -> remove::Report {
+        remove::Report { path: PathBuf::from(path), outcome }
+    }
+
+    #[test]
+    fn a_partial_removal_is_not_reported_as_a_failure() {
+        // `failed` is headed "could not be removed" in the report. A
+        // `PartiallyRemoved` item filed there tells the user nothing happened
+        // to something that was in fact partly destroyed — the precise false
+        // reading `Outcome` keeps the two cases apart to prevent. This is why
+        // `tally` exists as its own function: `run_clean` cannot be called
+        // from a test, so the bucketing had to be reachable without it.
+        let t = tally(vec![
+            report("/tmp/a", remove::Outcome::Removed(catalog::Disposition::Permanent)),
+            report("/tmp/b", remove::Outcome::PartiallyRemoved("half of it went".into())),
+            report("/tmp/c", remove::Outcome::Failed("nothing went".into())),
+            report("/tmp/d", remove::Outcome::Denied("your own content".into())),
+            report("/tmp/e", remove::Outcome::Excluded("you excluded it".into())),
+        ]);
+
+        assert_eq!(t.removed, 1);
+        assert_eq!(t.excluded, 1);
+        assert_eq!(
+            t.partially_removed.len(),
+            1,
+            "a partial removal must have its own bucket: {:?}",
+            t.partially_removed
+        );
+        assert_eq!(t.partially_removed[0].path, "/tmp/b");
+        let failed: Vec<&str> = t.failed.iter().map(|f| f.path.as_str()).collect();
+        assert_eq!(
+            failed,
+            vec!["/tmp/c", "/tmp/d"],
+            "only outcomes where nothing was removed belong in `failed`"
+        );
     }
 
     #[test]

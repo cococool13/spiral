@@ -96,6 +96,9 @@ FDA gate → Clean screen mounts → `clean_scan()` → category rows, all prese
 
 ## Out of scope
 
+- **Directory removal.** `scan` yields `is_file()` entries only, so `commands` builds file candidates only, so no directory is ever removed. Emptying the Trash leaves the folder skeleton in Finder, and `~/Library/Caches` keeps the now-empty directories its files sat in — real machines accumulate this residue in the hundreds. Pruning them is new destructive behaviour and gets its own design and its own review gate rather than arriving as a side effect: it needs a rule for what may be pruned (a catalog directory this run actually emptied, never one that merely *looks* empty because its contents were excluded or failed), and guards proven by mutation like every other. Recorded here so the limitation is a decision on the record, not an oversight.
+
+  One consequence follows: `Outcome::PartiallyRemoved` cannot arise from a Clean run, because only a directory removal can fail partway. It is still reported — in its own bucket, worded as a partial removal, never under "could not be removed" — so that the first producer of directory candidates does not have to discover that the report was lying about it.
 - Storage, Optimize and Uninstall screens stay stubs.
 - The History screen stays a stub. The log is written by `clean_execute` and not yet read; the History view lands with the usage-trend work.
 - No `AppBundle` producer, so ADR-0011's gate is untouched.

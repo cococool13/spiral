@@ -19,7 +19,7 @@ export interface CleanReport {
   estimated_bytes: number;
   measured_bytes: number;
   removed: number;
-  partially_removed: number;
+  partially_removed: FailedItem[];
   excluded: number;
   failed: FailedItem[];
   snapshot_note: string | null;
