@@ -73,6 +73,45 @@ static CATALOG: &[CatalogEntry] = &[
         ],
         disposition: Disposition::Permanent,
     },
+    CatalogEntry {
+        id: "chrome-cache",
+        label: "Chrome cache",
+        roots: &["~/Library/Caches/Google/Chrome"],
+        disposition: Disposition::Permanent,
+    },
+    CatalogEntry {
+        id: "brave-cache",
+        label: "Brave cache",
+        roots: &["~/Library/Caches/BraveSoftware/Brave-Browser"],
+        disposition: Disposition::Permanent,
+    },
+    CatalogEntry {
+        id: "edge-cache",
+        label: "Edge cache",
+        roots: &["~/Library/Caches/Microsoft Edge"],
+        disposition: Disposition::Permanent,
+    },
+    CatalogEntry {
+        id: "firefox-cache",
+        label: "Firefox cache",
+        roots: &["~/Library/Caches/Firefox"],
+        disposition: Disposition::Permanent,
+    },
+    CatalogEntry {
+        id: "safari-cache",
+        label: "Safari cache",
+        roots: &["~/Library/Caches/com.apple.Safari"],
+        disposition: Disposition::Permanent,
+    },
+    // ~/.Trash is not a USER_CONTENT root, so its contents are reachable while
+    // ~/.Trash itself stays protected as a catalog root. Emptying the Trash is
+    // exactly the intended behaviour.
+    CatalogEntry {
+        id: "trash",
+        label: "Trash",
+        roots: &["~/.Trash"],
+        disposition: Disposition::Permanent,
+    },
 ];
 
 pub fn catalog() -> &'static [CatalogEntry] {
@@ -150,5 +189,27 @@ mod tests {
         // `/Applications` means `/Applications`, whoever is logged in.
         let home = PathBuf::from("/somewhere/else");
         assert_eq!(expand("/Applications", &home), PathBuf::from("/Applications"));
+    }
+
+    #[test]
+    fn browser_caches_and_trash_are_present() {
+        for id in ["chrome-cache", "brave-cache", "edge-cache",
+                   "firefox-cache", "safari-cache", "trash"] {
+            assert!(find(id).is_some(), "{id} missing from the catalog");
+        }
+    }
+
+    #[test]
+    fn browser_entries_never_reach_a_profile_directory() {
+        // Chromium keeps a Cache folder inside each profile, beside Cookies,
+        // History and Login Data. The catalog stays under ~/Library/Caches
+        // precisely so no entry can ever be one typo from a profile.
+        for id in ["chrome-cache", "brave-cache", "edge-cache",
+                   "firefox-cache", "safari-cache"] {
+            for root in find(id).unwrap().roots {
+                assert!(root.starts_with("~/Library/Caches/"), "{id}: {root}");
+                assert!(!root.contains("Application Support"), "{id}: {root}");
+            }
+        }
     }
 }
