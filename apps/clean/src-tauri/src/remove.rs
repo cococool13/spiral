@@ -132,12 +132,24 @@ fn strip_firmlink(path: PathBuf) -> PathBuf {
 /// `std::fs::canonicalize` fails outright on a path that does not exist, and
 /// a candidate may legitimately not exist (it may have been removed since the
 /// scan). So this canonicalises the deepest ancestor that *does* exist and
-/// re-appends the remaining components to it — the resolved part is real, the
-/// unresolved tail cannot contain a symlink because it does not exist yet.
+/// re-appends the remaining components to it.
+///
+/// The re-appended tail is **not** guaranteed to be symlink-free, and an
+/// earlier version of this comment claimed it was. `canonicalize` reports
+/// `NotFound` for two different situations: a component that genuinely does
+/// not exist, and a component that exists as a *dangling* symlink — a link
+/// whose target is missing. `ln -s ~/nowhere ~/.npm` used to be peeled and
+/// re-appended verbatim, so `~/.npm/_cacache` compared equal to the catalog's
+/// declared root and the relocation rule saw nothing wrong; creating
+/// `~/nowhere/_cacache` flipped the identical setup to refused. The verdict
+/// must not depend on whether a link's target happens to exist yet, so a
+/// peeled component that `symlink_metadata` can still stat is refused: it
+/// exists, it failed to canonicalise, and a dangling link is the only way
+/// both are true.
 ///
 /// Returns `None` — which every caller must treat as "deny", never as "skip
-/// the check" — when canonicalisation fails for any reason other than
-/// non-existence: a symlink loop (`ELOOP`), an unreadable ancestor
+/// the check" — for that case, and when canonicalisation fails for any reason
+/// other than non-existence: a symlink loop (`ELOOP`), an unreadable ancestor
 /// (`EACCES`), a name too long. The code must never guess at what a path it
 /// could not resolve refers to.
 fn resolve(path: &Path) -> Option<PathBuf> {
@@ -154,6 +166,13 @@ fn resolve(path: &Path) -> Option<PathBuf> {
                 return Some(resolved);
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // `lstat` succeeding where `realpath` said NotFound means the
+                // component is there but points nowhere — a dangling
+                // symlink. Peeling it would put an unresolved link back into
+                // the path every later comparison treats as resolved.
+                if std::fs::symlink_metadata(cursor).is_ok() {
+                    return None;
+                }
                 // Peel the last component and try the parent. `file_name`
                 // is `None` only at the filesystem root, which always
                 // canonicalises, so this terminates.
@@ -1404,6 +1423,68 @@ mod tests {
             reports[0].outcome
         );
         assert!(key.exists(), "~/.ssh/id_rsa was destroyed");
+    }
+
+    #[test]
+    fn a_dangling_symlink_component_is_refused_not_re_appended() {
+        // `resolve` peels to the deepest *existing* ancestor and re-appends
+        // the unresolved tail verbatim. A **dangling** symlink canonicalises
+        // as `NotFound` — indistinguishable, to that loop, from a component
+        // that was never created — so it was peeled and re-appended as
+        // itself, and every comparison downstream then reasoned about a
+        // lexical path that the filesystem would never produce.
+        //
+        //     ln -s ~/nowhere ~/.npm
+        //
+        // made `authorizing_root("~/.npm/_cacache")` return the *lexical*
+        // path, so the relocated-root rule saw a root sitting exactly where
+        // the catalog declared it. `mkdir ~/nowhere/_cacache` flipped the
+        // same setup to refused, which is the tell: the verdict depended on
+        // whether the link's target happened to exist yet.
+        let home = fake_home();
+        symlink(&home.path().join("nowhere"), &home.path().join(".npm"));
+        let roots = Roots::rooted_at(home.path());
+
+        assert_eq!(
+            authorizing_root("~/.npm/_cacache", &roots.home),
+            None,
+            "a root behind a dangling symlink was authorised"
+        );
+
+        let reports = run(
+            vec![candidate(
+                home.path().join(".npm/_cacache/x"),
+                Justification::Catalog("package-manager-caches".into()),
+            )],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(
+            matches!(reports[0].outcome, Outcome::Denied(_)),
+            "a path behind a dangling symlink was not denied: {:?}",
+            reports[0].outcome
+        );
+    }
+
+    #[test]
+    fn a_genuinely_absent_path_still_resolves_through_its_existing_ancestor() {
+        // The other side of the dangling-symlink refusal: a candidate that
+        // simply does not exist — removed since the scan, or a catalog root
+        // this machine never created — must still resolve through its
+        // deepest existing ancestor. Refusing *every* non-existent path
+        // would silently disable whole catalog categories.
+        let home = fake_home();
+        let caches = caches_dir(home.path());
+        // Compared against the *resolved* caches directory: `tempfile` hands
+        // back `/var/folders/...`, which is itself a symlink to
+        // `/private/var/folders/...` on macOS, so the expected value has to
+        // be resolved too or this asserts the wrong thing.
+        let expected = normalize(&caches).unwrap().join("gone/deeper.bin");
+        assert_eq!(
+            normalize(&caches.join("gone/deeper.bin")),
+            Some(expected),
+            "an absent tail under a real directory did not resolve"
+        );
     }
 
     #[test]
