@@ -21,17 +21,33 @@ pub enum Justification {
     /// the variant stays rather than being deleted and rebuilt worse.
     #[allow(dead_code)]
     Orphan { bundle_id: String },
-    /// The application bundle and its associated files (ADR-0004). `bundle_id`
-    /// is carried but not yet checked against the path — see the merge gate in
-    /// `disposition_for` and ADR-0011 before adding anything that constructs
-    /// this variant. The first producer lands in M4, and only together with
-    /// `associate.rs`.
+    /// The application bundle and its associated files (ADR-0004, as
+    /// amended). `evidence` is the caller's claim about how `bundle_id` was
+    /// established — `disposition_for` does not trust it blindly: for
+    /// `Evidence::Verified` it re-checks that the path itself carries
+    /// `bundle_id` before granting `Permanent`, and denies the candidate
+    /// outright if it does not. This is the enforcement ADR-0011 gated on;
+    /// the first producer lands in M4, together with `associate.rs`.
     #[allow(dead_code)]
-    AppBundle { bundle_id: String },
+    AppBundle { bundle_id: String, evidence: Evidence },
     /// The user selected this specific item, e.g. an iOS device backup —
     /// constructed by the Storage screen in M6.
     #[allow(dead_code)]
     UserChosen,
+}
+
+/// How strongly a path is tied to the application being removed.
+///
+/// `Verified` means the path itself carries the bundle id — the evidence is
+/// in the name, and `disposition_for` re-checks it rather than trusting the
+/// caller. `Likely` means only the app's display name matched, which cannot
+/// be validated against anything, so it carries the weaker consequence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum Evidence {
+    #[allow(dead_code)]
+    Verified,
+    #[allow(dead_code)]
+    Likely,
 }
 
 /// One path `execute` has been asked to remove, and the claim that authorises
@@ -203,10 +219,10 @@ struct Roots {
     user_content: Vec<PathBuf>,
     /// Where an `AppBundle` justification may point (ADR-0004): the
     /// application itself and its own app-managed state, nothing else. This
-    /// is a containment floor, not full validation — it does not prove the
-    /// path belongs to the named `bundle_id`; that lands with `associate.rs`,
-    /// gated to the first `AppBundle` producer by ADR-0011. Every entry has
-    /// passed `authorizing_root`.
+    /// remains a containment floor, not identity proof — it authorises
+    /// *location*, never *whose* state a path is. Bundle-id validation for
+    /// `Evidence::Verified` happens in `disposition_for` itself, not here
+    /// (see ADR-0011). Every entry has passed `authorizing_root`.
     app_bundle_scope: Vec<PathBuf>,
     /// `~/Library`, resolved — what the container-depth rule counts from.
     /// Deliberately *not* `authorizing_root`-checked: it is used to deny, and
@@ -415,14 +431,16 @@ fn relocated_roots(entry: &catalog::CatalogEntry, home: &Path) -> Vec<String> {
 
 /// Disposition is derived here, never supplied by the caller. Two routes
 /// reach `Permanent`: a `Catalog` match whose path is actually under that
-/// entry's own roots (see `is_within_catalog_entry`), and `AppBundle`
-/// (ADR-0004) — an app uninstall is permanent by design. `AppBundle` is
-/// constrained to `/Applications`, `~/Applications`, and `~/Library`, the
-/// last of those only from two levels down (see `is_library_container`); it
-/// does not yet prove the path belongs to the named `bundle_id` — that lands
-/// with `associate.rs`, which ADR-0011 gates to the same milestone as the
-/// first `AppBundle` producer. Until then this is a containment floor, not
-/// full validation.
+/// entry's own roots (see `is_within_catalog_entry`), and an `AppBundle`
+/// candidate whose evidence is `Evidence::Verified` (ADR-0004, as amended).
+/// `AppBundle` is constrained to `/Applications`, `~/Applications`, and
+/// `~/Library`, the last of those only from two levels down (see
+/// `is_library_container`), and — for `Verified` — to a path whose own final
+/// component carries the claimed `bundle_id`. That second check is
+/// ADR-0011's guarantee made literal: a `Verified` claim the path cannot
+/// support is denied here, not merely flagged in a review sheet.
+/// `Evidence::Likely` clears only the location bar; a name match cannot be
+/// validated against anything stronger, so it is routed to `Trash` instead.
 fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disposition, String> {
     match j {
         Justification::Catalog(id) => match catalog::find(id) {
@@ -454,24 +472,39 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
                 "\"{id}\" is not a category in this release. Nothing was removed."
             )),
         },
-        // MERGE GATE — see docs/adr/0011-associate-gates-the-first-appbundle-producer.md.
-        // `bundle_id` is ignored here: this arm's only constraint is *location*,
-        // and it returns `Permanent`, which does not go to the Trash. `Justification`
-        // and `Candidate` no longer derive `Deserialize` — `clean_execute` (M3)
-        // accepts only category ids and constructs every `Candidate` itself, so
-        // the webview cannot name a path or a justification at all. The gate now
-        // binds because a future `AppBundle` producer would have to construct
-        // candidates in Rust: `associate.rs`, which proves a path belongs to the
-        // named app, must land in the same milestone as the first code that
-        // constructs an `AppBundle`. Neither merges alone.
-        Justification::AppBundle { .. } => {
-            if is_within_app_bundle_scope(path, roots) {
-                Ok(Disposition::Permanent)
-            } else {
-                Err(format!(
+        // ADR-0011, satisfied — see
+        // docs/adr/0011-associate-gates-the-first-appbundle-producer.md. The
+        // location bar runs first and unconditionally, exactly as it always
+        // has. What is new is that `bundle_id` is no longer ignored:
+        // `Evidence::Verified` is re-checked against the path itself before
+        // `Permanent` is granted, so a caller cannot merely assert
+        // provenance — it must be present in the name. `Evidence::Likely`
+        // cannot be checked this way (a name match has no bundle id to
+        // compare), so it is routed to `Trash` instead, per ADR-0004 as
+        // amended.
+        Justification::AppBundle { bundle_id, evidence } => {
+            if !is_within_app_bundle_scope(path, roots) {
+                return Err(format!(
                     "{} is outside the locations an app uninstall may touch. Only the app bundle and its own support files can be removed.",
                     path.display()
-                ))
+                ));
+            }
+            match evidence {
+                Evidence::Likely => Ok(Disposition::Trash),
+                Evidence::Verified => {
+                    let needle = bundle_id.to_lowercase();
+                    let carries_bundle_id = normalize(path)
+                        .and_then(|p| p.file_name().and_then(|n| n.to_str().map(str::to_lowercase)))
+                        .is_some_and(|name| name.contains(&needle));
+                    if carries_bundle_id {
+                        Ok(Disposition::Permanent)
+                    } else {
+                        Err(format!(
+                            "{} does not carry the bundle id \"{bundle_id}\" in its name. A verified app-bundle claim must be provable from the path itself, so nothing was removed.",
+                            path.display()
+                        ))
+                    }
+                }
             }
         }
         Justification::Orphan { .. } => Ok(Disposition::Trash),
@@ -1166,7 +1199,7 @@ mod tests {
             for j in [
                 Justification::Catalog("user-caches".into()),
                 Justification::Orphan { bundle_id: "x".into() },
-                Justification::AppBundle { bundle_id: "x".into() },
+                Justification::AppBundle { bundle_id: "x".into(), evidence: Evidence::Likely },
                 Justification::UserChosen,
             ] {
                 assert!(
@@ -1336,7 +1369,10 @@ mod tests {
         let reports = run(
             vec![candidate(
                 home.path().join("Applications/Envelope Index"),
-                Justification::AppBundle { bundle_id: "com.example.app".into() },
+                Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
             )],
             &exclude::new(vec![]),
             &roots,
@@ -1420,7 +1456,10 @@ mod tests {
         assert!(
             disposition_for(
                 &home.path().join("Applications/Example.app"),
-                &Justification::AppBundle { bundle_id: "com.example.app".into() },
+                &Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
                 &roots,
             )
             .is_err(),
@@ -1583,7 +1622,10 @@ mod tests {
         let reports = run(
             vec![candidate(
                 home.path().join("Library/.ssh/id_rsa"),
-                Justification::AppBundle { bundle_id: "com.example.app".into() },
+                Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
             )],
             &exclude::new(vec![]),
             &roots,
@@ -2012,8 +2054,12 @@ mod tests {
             let path = roots.home.join("Library").join(name);
             assert!(is_user_content(&path, &roots), "~/Library/{name} was not denied");
             assert!(
-                disposition_for(&path, &Justification::AppBundle { bundle_id: "x".into() }, &roots)
-                    .is_err(),
+                disposition_for(
+                    &path,
+                    &Justification::AppBundle { bundle_id: "x".into(), evidence: Evidence::Likely },
+                    &roots
+                )
+                .is_err(),
                 "~/Library/{name} was permitted under AppBundle"
             );
         }
@@ -2024,6 +2070,15 @@ mod tests {
         // The depth rule must not cost the app its actual job: an uninstall
         // reaches *into* a container. Two levels below `~/Library` is the
         // shallowest legitimate target.
+        //
+        // `bundle_id: "x"` is a placeholder that does not literally appear in
+        // any of these names — it never had to, before this task, because
+        // `AppBundle` did not read `bundle_id` at all. That makes this a name-
+        // only claim under the new rule, so it is asserted here as
+        // `Evidence::Likely`, and the expected disposition is `Trash` rather
+        // than the `Permanent` this test asserted before Task 2. What the
+        // test still proves is unchanged: the container-depth rule does not
+        // block a legitimate target two levels down.
         let roots = system_roots();
         for path in [
             roots.home.join("Library/Application Support/Slack"),
@@ -2033,8 +2088,12 @@ mod tests {
         ] {
             assert!(!is_user_content(&path, &roots), "{} was wrongly denied", path.display());
             assert_eq!(
-                disposition_for(&path, &Justification::AppBundle { bundle_id: "x".into() }, &roots),
-                Ok(Disposition::Permanent),
+                disposition_for(
+                    &path,
+                    &Justification::AppBundle { bundle_id: "x".into(), evidence: Evidence::Likely },
+                    &roots
+                ),
+                Ok(Disposition::Trash),
                 "{} was not permitted under AppBundle",
                 path.display()
             );
@@ -2057,14 +2116,24 @@ mod tests {
     fn an_app_bundle_under_applications_is_permitted_regardless_of_case() {
         // F2/F3 requirement 3: the same case-insensitivity fix applies to
         // the AppBundle containment check, not just the user-content bar.
+        //
+        // `bundle_id: "com.example.app"` does not literally appear in
+        // "Example.app" — this test predates evidence-level routing and was
+        // never about bundle-id matching, only about scope case-folding.
+        // That makes it a name-only claim under the new rule: `Likely`, and
+        // `Trash` rather than the `Permanent` asserted before Task 2. The
+        // case-insensitivity this test proves is otherwise unchanged.
         let roots = system_roots();
         for path in ["/Applications/Example.app", "/applications/Example.app"] {
             let result = disposition_for(
                 Path::new(path),
-                &Justification::AppBundle { bundle_id: "com.example.app".into() },
+                &Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
                 &roots,
             );
-            assert_eq!(result, Ok(Disposition::Permanent), "{path} was not permitted");
+            assert_eq!(result, Ok(Disposition::Trash), "{path} was not permitted");
         }
     }
 
@@ -2074,7 +2143,10 @@ mod tests {
         let roots = system_roots();
         let result = disposition_for(
             Path::new("/tmp/Example.app"),
-            &Justification::AppBundle { bundle_id: "com.example.app".into() },
+            &Justification::AppBundle {
+                bundle_id: "com.example.app".into(),
+                evidence: Evidence::Likely,
+            },
             &roots,
         );
         assert!(result.is_err());
@@ -2119,6 +2191,92 @@ mod tests {
                 path.display()
             );
         }
+    }
+
+    // ---- Evidence-level routing (ADR-0011 becoming enforcement) ---------
+
+    /// The brief's three evidence tests build `home` from a bare
+    /// `tempfile::tempdir()` and then pass `home.path()` both to build the
+    /// candidate and to `Roots::rooted_at`. On macOS that path is reached via
+    /// `/var`, which is itself an ordinary symlink to `/private/var` — not
+    /// the `/System/Volumes/Data` firmlink `strip_firmlink` knows about, and
+    /// nothing this module's guards are meant to weaken for. `Roots::new`
+    /// canonicalises `home` internally (as it must, so a symlinked catalog
+    /// root is recognised for what it really is), so `roots.home` ends up
+    /// `/private/var/...` while a candidate built straight from
+    /// `home.path()` is still lexically `/var/...`. `is_within_app_bundle_scope`'s
+    /// written-form conjunct — the one that catches
+    /// `ln -s ~/Library/Containers/com.apple.mail/Data ~/Applications` —
+    /// then, correctly and as designed, refuses a candidate whose written
+    /// prefix does not lexically match an authorised root. That is not a
+    /// relocation; it is two spellings of the same real directory, and the
+    /// mismatch is an artefact of the test's own home, not of anything
+    /// `disposition_for` gets wrong. Canonicalising once here, before either
+    /// side derives anything from it, removes the artefact without touching
+    /// `is_within_app_bundle_scope` at all.
+    fn canonical_tempdir() -> (tempfile::TempDir, PathBuf) {
+        let home = tempfile::tempdir().unwrap();
+        let canonical = home.path().canonicalize().unwrap();
+        (home, canonical)
+    }
+
+    #[test]
+    fn a_verified_app_bundle_item_is_removed_permanently() {
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.example.foo");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert_eq!(d, Ok(Disposition::Permanent));
+    }
+
+    #[test]
+    fn a_likely_app_bundle_item_goes_to_the_trash() {
+        // Name-matched evidence cannot be validated against a bundle id, so
+        // it carries the weaker consequence. ADR-0004 as amended.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("Foo");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Likely,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert_eq!(d, Ok(Disposition::Trash));
+    }
+
+    #[test]
+    fn a_verified_claim_the_path_does_not_support_is_denied() {
+        // ADR-0011 becoming enforcement: claiming Verified for a path that
+        // does not carry the bundle id must fail at the boundary, not merely
+        // look wrong in the review sheet.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Keychains");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("login.keychain-db");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert!(d.is_err(), "a verified claim with no bundle id in the path must be denied");
     }
 }
 
