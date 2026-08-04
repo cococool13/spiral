@@ -5,4 +5,5 @@ src-tauri/gen/
 
 # Synced from /brand at build time. Never edit — deleted on the next build.
 src/assets/brand/
+src/assets/fonts/
 src/styles/tokens.css
