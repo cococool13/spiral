@@ -102,6 +102,21 @@ const USER_CONTENT: &[&str] = &[
 /// rather than left in — round 6 shipped a dead ceiling clause nobody caught.
 fn authorizing_root(root: &str, home: &Path) -> Option<PathBuf> {
     let lexical = catalog::expand(root, home);
+
+    // A root that is itself a broken symlink is not usable. `resolve` lets a
+    // dangling *final component* through on purpose — unlinking a broken link
+    // is legitimate tidying — but a root has a stricter job than a candidate:
+    // it grants permission over everything beneath it, and there is no
+    // "beneath" a link that points nowhere. Refusing it grants nothing new
+    // (every candidate under such a root already hits the interior-component
+    // guard in `resolve`, and the root itself is protected), but it keeps this
+    // category in `relocated_roots`, so the user gets one clear "this category
+    // was skipped" instead of a per-candidate "could not work out what this
+    // refers to".
+    if crate::paths::is_dangling(&lexical) {
+        return None;
+    }
+
     let declared = strip_firmlink(lexical.clone());
     let resolved = normalize(&lexical)?;
 
@@ -359,6 +374,13 @@ fn relocated_roots(entry: &catalog::CatalogEntry, home: &Path) -> Vec<String> {
         .filter(|root| authorizing_root(root, home).is_none())
         .map(|root| {
             let declared = catalog::expand(root, home);
+            // The dangling case is checked before `normalize`, because
+            // `normalize` resolves a broken link's own name happily and would
+            // report "now leads to <itself>", which is worse than saying
+            // nothing.
+            if crate::paths::is_dangling(&declared) {
+                return format!("{root} is a broken symlink and points nowhere");
+            }
             match normalize(&declared) {
                 Some(actual) => format!("{root} now leads to {}", actual.display()),
                 None => format!("{root} could not be resolved"),
@@ -812,6 +834,44 @@ mod tests {
         );
 
         assert!(inner.exists() && important.exists(), "an excluded file was removed");
+    }
+
+    #[test]
+    fn a_parent_dir_exclusion_entry_stops_the_clean_rather_than_protecting_nothing() {
+        // End-to-end proof of the gap and its fix. `/…/keep/../keep` used to
+        // pass `save`, pass `load`, and then match no clause of `covering` —
+        // so this exact setup returned `Removed(Permanent)` and destroyed the
+        // file the user had explicitly protected. The list must now be
+        // refused as unusable, which denies every candidate instead.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let caches = caches_dir(home.path());
+        let keep = caches.join("keep");
+        std::fs::create_dir(&keep).unwrap();
+        let protected = file(&keep, "p.bin");
+
+        let config = fake_home();
+        let entry = format!("{}/../keep", keep.display());
+        std::fs::write(
+            config.path().join("exclusions.json"),
+            serde_json::to_vec(&serde_json::json!({ "paths": [entry] })).unwrap(),
+        )
+        .unwrap();
+
+        let excl = exclude::load(config.path());
+        assert!(excl.is_err(), "an entry containing `..` loaded as a usable list");
+
+        let reports = execute_within(
+            vec![candidate(protected.clone(), Justification::Catalog("user-caches".into()))],
+            excl.as_ref().map_err(String::as_str),
+            Some(&roots),
+        );
+        assert!(
+            matches!(reports[0].outcome, Outcome::Denied(_)),
+            "a candidate was acted on with an unusable exclusion list: {:?}",
+            reports[0].outcome
+        );
+        assert!(protected.exists(), "the protected file was destroyed");
     }
 
     #[test]
@@ -1531,6 +1591,44 @@ mod tests {
         assert!(
             why.contains("could not work out what"),
             "the message does not say what actually happened: {why}"
+        );
+    }
+
+    #[test]
+    fn a_catalog_root_that_is_a_broken_symlink_is_reported_as_skipped() {
+        // Fallout from the `tail.is_empty()` carve-out, caught in review:
+        // `authorizing_root("~/Library/Caches")` started returning `Some` when
+        // that root was itself a dangling link, because `resolve` now lets a
+        // dangling final component through. It granted nothing — every
+        // candidate beneath hits the interior-component guard — but the
+        // category dropped out of `relocated_roots`, so the user got a
+        // per-candidate "could not work out what this refers to" instead of
+        // one clear statement that the category was skipped.
+        let home = fake_home();
+        std::fs::create_dir_all(home.path().join("Library")).unwrap();
+        symlink(&home.path().join("nowhere"), &home.path().join("Library/Caches"));
+
+        let roots = Roots::rooted_at(home.path());
+        assert_eq!(
+            authorizing_root("~/Library/Caches", &roots.home),
+            None,
+            "a catalog root that points nowhere was still authorising"
+        );
+
+        let why = disposition_for(
+            &home.path().join("Library/Caches/thing.bin"),
+            &Justification::Catalog("user-caches".into()),
+            &roots,
+        )
+        .expect_err("a broken catalog root still authorised a deletion");
+        assert!(why.contains("skipped"), "the message does not say it was skipped: {why}");
+        assert!(
+            why.contains("broken symlink"),
+            "the message does not say the root points nowhere: {why}"
+        );
+        assert!(
+            why.contains("Application caches"),
+            "the message does not name the category: {why}"
         );
     }
 

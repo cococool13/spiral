@@ -153,6 +153,18 @@ pub(crate) fn resolve(path: &Path) -> Option<PathBuf> {
     }
 }
 
+/// True when `path` exists as a symlink whose target does not — a broken
+/// link. `lstat` succeeds where `realpath` does not, and that pair of answers
+/// has no other cause.
+///
+/// `resolve` deliberately lets a dangling link *as the final component*
+/// through, because unlinking a broken link is legitimate work. A caller that
+/// needs the stricter question — "is this thing actually there?", which is
+/// what an authorising root has to ask — uses this.
+pub(crate) fn is_dangling(path: &Path) -> bool {
+    std::fs::symlink_metadata(path).is_ok() && std::fs::canonicalize(path).is_err()
+}
+
 /// Put a path into the single normal form every comparison in Spiral Clean
 /// uses: absolute, `..`-free, symlink-free, and firmlink-free.
 ///

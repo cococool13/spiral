@@ -122,14 +122,26 @@ impl ExclusionList {
     /// The first entry that cannot mean what an exclusion has to mean,
     /// described for the user. `None` when every entry is usable.
     ///
-    /// Two shapes are rejected, and an **empty string is the one that
-    /// matters**: `starts_with_case_insensitive(anything, "")` is vacuously
-    /// true — the empty prefix has no components to disagree about — so a
-    /// single `""` in the file made `covers()` answer true for every
-    /// candidate and the app silently reclaimed nothing, with no way for the
-    /// user to tell why. A relative entry is rejected for the same reason
-    /// `normalize` rejects a relative candidate: the path it names depends on
-    /// a working directory this code may not guess at.
+    /// Three shapes are rejected, and each fails in a different direction:
+    ///
+    /// * **Empty.** `starts_with_case_insensitive(anything, "")` is vacuously
+    ///   true — the empty prefix has no components to disagree about — so a
+    ///   single `""` in the file made `covers()` answer true for every
+    ///   candidate and the app silently reclaimed nothing, with no way for
+    ///   the user to tell why.
+    /// * **Relative.** Rejected for the same reason `normalize` rejects a
+    ///   relative candidate: the path it names depends on a working directory
+    ///   this code may not guess at.
+    /// * **Contains `..`.** The opposite failure to the empty entry, and the
+    ///   worse one: such an entry matched **nothing**. Clauses 1 and 3 of
+    ///   `covering` compare components literally, so `..` never equals a real
+    ///   directory name, and clause 2's `normalize(excluded)` returns `None`
+    ///   for any `ParentDir` path — so `/…/keep/../keep` passed both
+    ///   validators, protected nothing, and the file the user had explicitly
+    ///   excluded came back `Removed(Permanent)`. Refusing `..` here is what
+    ///   makes the deny-all rule below actually mean something: deny-all is
+    ///   only correct if this validator is complete, and a shape that slips
+    ///   through is worse than one that is loudly refused.
     ///
     /// **The decision, stated deliberately: a malformed entry makes the whole
     /// file an error, not a dropped line.** Silently discarding an entry
@@ -149,6 +161,11 @@ impl ExclusionList {
             } else if p.is_relative() {
                 Some(format!(
                     "the entry {} is not a full path starting at /",
+                    p.display()
+                ))
+            } else if p.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                Some(format!(
+                    "the entry {} contains \"..\", so it cannot be matched against anything and would protect nothing",
                     p.display()
                 ))
             } else {
@@ -438,6 +455,34 @@ mod tests {
         let err = new(vec![PathBuf::from("/tmp/keep"), PathBuf::new()])
             .save(dir.path())
             .expect_err("a list with an empty entry was written");
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+        assert!(!dir.path().join(FILE).exists(), "a malformed list was written anyway");
+    }
+
+    #[test]
+    fn a_parent_dir_entry_makes_the_list_an_error() {
+        // The gap the deny-all ruling depends on closing. An absolute entry
+        // containing `..` passed both validators and then matched *no* clause
+        // of `covering`: clauses 1 and 3 compare components literally, so
+        // `..` never equals a real directory name, and clause 2's
+        // `normalize(excluded)` returns `None` for any `ParentDir` path. The
+        // user got an exclusion that protected nothing, silently — which is
+        // exactly the failure deny-all exists to prevent. Deny-all is only
+        // correct if the validator is complete.
+        let dir = temp();
+        std::fs::write(dir.path().join(FILE), br#"{"paths": ["/tmp/keep/../keep"]}"#).unwrap();
+
+        let why = load(dir.path()).expect_err("an entry containing `..` loaded");
+        assert!(why.contains("/tmp/keep/../keep"), "the message does not name the entry: {why}");
+        assert!(why.contains(".."), "the message does not name the problem: {why}");
+    }
+
+    #[test]
+    fn save_refuses_to_write_a_parent_dir_entry() {
+        let dir = temp();
+        let err = new(vec![PathBuf::from("/tmp/keep/../keep")])
+            .save(dir.path())
+            .expect_err("an entry containing `..` was written");
         assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
         assert!(!dir.path().join(FILE).exists(), "a malformed list was written anyway");
     }
