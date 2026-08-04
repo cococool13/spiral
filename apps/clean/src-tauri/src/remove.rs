@@ -16,7 +16,10 @@ pub enum Justification {
     Catalog(String),
     /// App-managed state whose owning app is gone (ADR-0007).
     Orphan { bundle_id: String },
-    /// The application bundle and its associated files (ADR-0004).
+    /// The application bundle and its associated files (ADR-0004). `bundle_id`
+    /// is carried but not yet checked against the path — see the merge gate in
+    /// `disposition_for` and ADR-0011 before adding anything that constructs
+    /// this variant.
     AppBundle { bundle_id: String },
     /// The user selected this specific item, e.g. an iOS device backup.
     UserChosen,
@@ -177,8 +180,9 @@ struct Roots {
     /// Where an `AppBundle` justification may point (ADR-0004): the
     /// application itself and its own app-managed state, nothing else. This
     /// is a containment floor, not full validation — it does not prove the
-    /// path belongs to the named `bundle_id`; that lands with `associate.rs`
-    /// in M4. Every entry has passed `authorizing_root`.
+    /// path belongs to the named `bundle_id`; that lands with `associate.rs`,
+    /// gated to the first `AppBundle` producer by ADR-0011. Every entry has
+    /// passed `authorizing_root`.
     app_bundle_scope: Vec<PathBuf>,
     /// `~/Library`, resolved — what the container-depth rule counts from.
     /// Deliberately *not* `authorizing_root`-checked: it is used to deny, and
@@ -396,8 +400,9 @@ fn relocated_roots(entry: &catalog::CatalogEntry, home: &Path) -> Vec<String> {
 /// constrained to `/Applications`, `~/Applications`, and `~/Library`, the
 /// last of those only from two levels down (see `is_library_container`); it
 /// does not yet prove the path belongs to the named `bundle_id` — that lands
-/// with `associate.rs` in M4, so this is a containment floor, not full
-/// validation.
+/// with `associate.rs`, which ADR-0011 gates to the same milestone as the
+/// first `AppBundle` producer. Until then this is a containment floor, not
+/// full validation.
 fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disposition, String> {
     match j {
         Justification::Catalog(id) => match catalog::find(id) {
@@ -429,6 +434,15 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
                 "\"{id}\" is not a category in this release. Nothing was removed."
             )),
         },
+        // MERGE GATE — see docs/adr/0011-associate-gates-the-first-appbundle-producer.md.
+        // `bundle_id` is ignored here: this arm's only constraint is *location*,
+        // and it returns `Permanent`, which does not go to the Trash. Because
+        // `Justification` derives `Deserialize`, the first `#[tauri::command]`
+        // that accepts `Vec<Candidate>` lets the webview name any in-scope path
+        // under any bundle id — `~/Library/Keychains/login.keychain-db` clears
+        // the container-depth rule. `associate.rs`, which proves a path belongs
+        // to the named app, must land in the same milestone as the first code
+        // that constructs an `AppBundle`. Neither merges alone.
         Justification::AppBundle { .. } => {
             if is_within_app_bundle_scope(path, roots) {
                 Ok(Disposition::Permanent)
@@ -478,7 +492,8 @@ fn delete(path: &Path, how: Disposition) -> Result<(), FailureKind> {
 /// which also bounds the damage if a directory validated a moment ago is
 /// swapped for a symlink before this runs.
 ///
-/// **Known residual, accepted deliberately (round 5).** The window between
+/// **Known residual, accepted deliberately (round 5; recorded as ADR-0013).**
+/// The window between
 /// validation in `execute` and deletion here is narrowed, not closed. A
 /// directory swapped for a *symlink* in that window is caught by the check
 /// below; a directory swapped for a *different real directory* is not, and
