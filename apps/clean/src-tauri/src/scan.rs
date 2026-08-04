@@ -1,4 +1,4 @@
-use crate::catalog::{self, CatalogEntry};
+use crate::catalog;
 use crate::paths::starts_with_case_insensitive;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -15,12 +15,19 @@ pub struct CategoryResult {
     pub paths: Vec<PathBuf>,
 }
 
-/// Walk `root`, returning total logical bytes, file count, and the individual
-/// file paths found. Unreadable entries are skipped rather than failing the
-/// walk: a permission error on one file is not a reason to report nothing for
-/// the whole category. A root that does not exist measures as empty — most
-/// machines are missing several catalog roots (Gradle, npm, Xcode) and that
-/// is normal operation, not an error.
+/// Walk `root`, yielding every file found with its logical size. Unreadable
+/// entries are skipped rather than failing the walk: a permission error on one
+/// file is not a reason to report nothing for the whole category. A root that
+/// does not exist walks as empty — most machines are missing several catalog
+/// roots (Gradle, npm, Xcode) and that is normal operation, not an error.
+///
+/// This is the module's **only** walker. It used to have a twin, `measure`,
+/// which ran the identical traversal and returned the aggregate
+/// `(bytes, items, paths)` instead — so the same symlink rules had to be
+/// stated, and kept true, in two places. Attribution needs each file
+/// individually (a file must be assigned to a category *before* it can be
+/// summed), and aggregating this is one `fold`, so the aggregate form was the
+/// one that could go.
 ///
 /// **Symlinks are never followed, at the root or inside the tree.**
 /// `follow_root_links` defaults to *true*, so a bare `WalkDir` walking a link
@@ -39,85 +46,10 @@ pub struct CategoryResult {
 /// file with several hard links is counted once per name encountered while
 /// the disk holds one copy. Both are why sizing is always presented as a
 /// labeled estimate and the reported result is the measured free-space delta.
-fn measure(root: &Path) -> (u64, usize, Vec<PathBuf>) {
-    if !root.exists() {
-        return (0, 0, Vec::new());
-    }
-    let mut bytes = 0;
-    let mut items = 0;
-    let mut paths = Vec::new();
-    for entry in walkdir::WalkDir::new(root)
-        .min_depth(1)
-        .follow_links(false)
-        .follow_root_links(false)
-        .into_iter()
-        .filter_map(Result::ok)
-    {
-        if entry.file_type().is_file() {
-            if let Ok(meta) = entry.metadata() {
-                bytes += meta.len();
-                items += 1;
-                paths.push(entry.into_path());
-            }
-        }
-    }
-    (bytes, items, paths)
-}
-
-/// Measure every root of a single catalog entry against an explicit `home`.
-/// `catalog::expand` is safe here because `entry.roots` comes only from
-/// `catalog::catalog()` — never from user input or a scan result.
 ///
-/// Taking `home` explicitly, rather than resolving it internally, is what
-/// lets a caller (a test, or `commands::run_clean`) point a scan at a
-/// confined directory instead of the real machine's home.
-pub fn scan_entry_in(entry: &CatalogEntry, home: &Path) -> CategoryResult {
-    let mut bytes = 0;
-    let mut items = 0;
-    let mut paths = Vec::new();
-    for root in entry.roots {
-        let path = catalog::expand(root, home);
-        let (b, i, mut p) = measure(&path);
-        bytes += b;
-        items += i;
-        paths.append(&mut p);
-    }
-    CategoryResult {
-        id: entry.id.to_string(),
-        label: entry.label.to_string(),
-        bytes,
-        items,
-        paths,
-    }
-}
-
-/// `scan_entry_in` against the real machine's home. If the home directory
-/// can't be resolved, the entry measures as empty rather than panicking.
-pub fn scan_entry(entry: &CatalogEntry) -> CategoryResult {
-    match dirs::home_dir() {
-        Some(home) => scan_entry_in(entry, &home),
-        None => CategoryResult {
-            id: entry.id.to_string(),
-            label: entry.label.to_string(),
-            bytes: 0,
-            items: 0,
-            paths: Vec::new(),
-        },
-    }
-}
-
-/// Scan every catalog entry. Read-only: this module never deletes, moves, or
-/// modifies anything, and never calls into `remove.rs`.
-pub fn scan_all() -> Vec<CategoryResult> {
-    catalog::catalog().iter().map(scan_entry).collect()
-}
-
-/// Walk `root` with exactly the same symlink handling as `measure` — a root
-/// link is never followed, an interior link is never followed, a missing
-/// root walks as empty — but yield each file's path and size individually
-/// instead of aggregating them. `measure` is untouched; this exists because
-/// `scan_attributed_in` has to attribute a file *before* it can be summed,
-/// which `measure`'s aggregate return can't express.
+/// **Directories are not yielded at all** — see the note in
+/// `commands::candidates_for`. Only files are ever removed, so an emptied
+/// category leaves its folder skeleton behind.
 fn walk_files(root: &Path) -> Vec<(PathBuf, u64)> {
     if !root.exists() {
         return Vec::new();
@@ -251,7 +183,12 @@ pub fn scan_attributed() -> Vec<CategoryResult> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::catalog::{CatalogEntry, Disposition};
+
+    /// The aggregate `measure` used to return, folded from the one walker.
+    fn measured(root: &Path) -> (u64, usize) {
+        let files = walk_files(root);
+        (files.iter().map(|(_, size)| size).sum(), files.len())
+    }
 
     #[test]
     fn sums_bytes_and_counts_items_recursively() {
@@ -260,19 +197,35 @@ mod tests {
         std::fs::create_dir(dir.path().join("nested")).unwrap();
         std::fs::write(dir.path().join("nested/b.bin"), vec![0u8; 50]).unwrap();
 
-        let (bytes, items, paths) = measure(dir.path());
+        let (bytes, items) = measured(dir.path());
         assert_eq!(bytes, 150);
         assert_eq!(items, 2);
-        assert_eq!(paths.len(), 2);
     }
 
     #[test]
     fn a_missing_root_measures_as_empty_rather_than_failing() {
         // Not every Mac has Gradle or Xcode installed. A missing root is
         // normal, not an error to report.
-        let (bytes, items, _) = measure(std::path::Path::new("/nonexistent/spiral/root"));
+        let (bytes, items) = measured(std::path::Path::new("/nonexistent/spiral/root"));
         assert_eq!(bytes, 0);
         assert_eq!(items, 0);
+    }
+
+    #[test]
+    fn a_directory_is_never_yielded_as_a_file() {
+        // Why `~/Library/Caches` keeps its folder skeleton after a clean, and
+        // why `Outcome::PartiallyRemoved` cannot arise from a Clean run: the
+        // walker yields files only, so `commands` only ever builds file
+        // candidates. Pinned as a test because deleting directories is a
+        // deliberate future decision, not an oversight to be quietly fixed.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("empty")).unwrap();
+        std::fs::create_dir(dir.path().join("holds")).unwrap();
+        std::fs::write(dir.path().join("holds/a.bin"), vec![0u8; 8]).unwrap();
+
+        let files = walk_files(dir.path());
+        assert_eq!(files.len(), 1, "only the file is yielded: {files:?}");
+        assert_eq!(files[0].0, dir.path().join("holds/a.bin"));
     }
 
     #[test]
@@ -289,10 +242,10 @@ mod tests {
         let link = dir.path().join("root-link");
         std::os::unix::fs::symlink(&elsewhere, &link).unwrap();
 
-        let (bytes, items, paths) = measure(&link);
+        let (bytes, items) = measured(&link);
         assert_eq!(bytes, 0, "a symlinked root must not report its target's size");
         assert_eq!(items, 0);
-        assert!(paths.is_empty());
+        assert!(walk_files(&link).is_empty());
     }
 
     #[test]
@@ -309,35 +262,9 @@ mod tests {
         std::fs::write(root.join("real.bin"), vec![0u8; 10]).unwrap();
         std::os::unix::fs::symlink(&elsewhere, root.join("escape")).unwrap();
 
-        let (bytes, items, _) = measure(&root);
+        let (bytes, items) = measured(&root);
         assert_eq!(bytes, 10, "only the real file under the root counts");
         assert_eq!(items, 1);
-    }
-
-    #[test]
-    fn scan_entry_reports_the_entry_identity() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("x.bin"), vec![0u8; 10]).unwrap();
-        // CatalogEntry holds &'static roots because the real catalog is static
-        // data. A temp path is not 'static, so leak it — the allocation lives
-        // for the test process, which is exactly what's wanted here.
-        let root: String = dir.path().to_string_lossy().into_owned();
-        let leaked: &'static str = Box::leak(root.into_boxed_str());
-        let roots: &'static [&'static str] = Box::leak(vec![leaked].into_boxed_slice());
-        let entry = CatalogEntry {
-            id: "test-entry",
-            label: "Test entry",
-            roots,
-            disposition: Disposition::Permanent,
-        };
-        let result = scan_entry(&entry);
-        assert_eq!(result.id, "test-entry");
-        assert_eq!(result.bytes, 10);
-    }
-
-    #[test]
-    fn scan_all_covers_every_catalog_entry() {
-        assert_eq!(scan_all().len(), crate::catalog::catalog().len());
     }
 
     fn result_for<'a>(results: &'a [CategoryResult], id: &str) -> &'a CategoryResult {

@@ -77,7 +77,6 @@ fn candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candid
         .iter()
         .map(|p| remove::Candidate {
             path: p.clone(),
-            bytes: 0,
             justification: remove::Justification::Catalog(id.to_string()),
         })
         .collect()
@@ -337,8 +336,8 @@ mod tests {
     }
 
     #[test]
-    fn scan_entry_in_only_sees_the_home_it_is_given() {
-        // This tests `scan_entry_in` directly, never `run_clean`, and that is
+    fn the_scan_only_sees_the_home_it_is_given() {
+        // This tests `scan_attributed_in` directly, never `run_clean`, and that is
         // deliberate: a test that reaches `remove::execute` can permanently
         // delete real files whenever a guard somewhere along the way is
         // stubbed out — mutation testing every guard is mandated practice in
@@ -351,18 +350,22 @@ mod tests {
         // can ever be made safe to mutate around. `scan_entry_in` is
         // read-only: there is nothing here for a stubbed guard to delete, so
         // this is the strongest form of the property that can be tested
-        // without reproducing the incident.
+        // without reproducing the incident. It now asserts on
+        // `scan_attributed_in`, which is the function `run_clean` actually
+        // calls; `scan_entry_in` was its own near-duplicate and is gone.
         let home = tempfile::tempdir().unwrap();
         let caches = home.path().join("Library/Caches");
         std::fs::create_dir_all(&caches).unwrap();
         let planted = caches.join("planted.bin");
         std::fs::write(&planted, b"x").unwrap();
 
-        let entry = catalog::find("user-caches").unwrap();
-        let result = scan::scan_entry_in(entry, home.path());
+        let results = scan::scan_attributed_in(home.path());
+        let result = results.iter().find(|r| r.id == "user-caches").unwrap();
 
         assert_eq!(result.paths, vec![planted], "the scan must see only the injected home");
         assert_eq!(result.items, 1);
+        let total: usize = results.iter().map(|r| r.items).sum();
+        assert_eq!(total, 1, "no other category may claim anything outside the injected home");
     }
 
     #[test]

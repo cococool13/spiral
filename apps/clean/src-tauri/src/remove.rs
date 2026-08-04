@@ -12,23 +12,41 @@ use std::path::{Path, PathBuf};
 /// entry whose own roots actually cover the path (see `disposition_for`).
 #[derive(Debug, Clone)]
 pub enum Justification {
-    /// Matched a safe-category catalog entry, by id.
+    /// Matched a safe-category catalog entry, by id. The only variant M3
+    /// constructs — `commands::candidates_for` builds every candidate with it.
     Catalog(String),
-    /// App-managed state whose owning app is gone (ADR-0007).
+    /// App-managed state whose owning app is gone (ADR-0007). Constructed by
+    /// the leftovers sweep in M4 (Uninstall); the disposition and containment
+    /// rules it relies on are already built and mutation-proved, which is why
+    /// the variant stays rather than being deleted and rebuilt worse.
+    #[allow(dead_code)]
     Orphan { bundle_id: String },
     /// The application bundle and its associated files (ADR-0004). `bundle_id`
     /// is carried but not yet checked against the path — see the merge gate in
     /// `disposition_for` and ADR-0011 before adding anything that constructs
-    /// this variant.
+    /// this variant. The first producer lands in M4, and only together with
+    /// `associate.rs`.
+    #[allow(dead_code)]
     AppBundle { bundle_id: String },
-    /// The user selected this specific item, e.g. an iOS device backup.
+    /// The user selected this specific item, e.g. an iOS device backup —
+    /// constructed by the Storage screen in M6.
+    #[allow(dead_code)]
     UserChosen,
 }
 
+/// One path `execute` has been asked to remove, and the claim that authorises
+/// it.
+///
+/// **There is deliberately no `bytes` field.** One existed and was written as
+/// a constant `0` by the only producer (`commands::candidates_for`), read by
+/// nobody, and serialised nowhere — a trap for whoever first tried to use it.
+/// Sizing is reported from the scan's own per-category totals
+/// (`CategoryResult::bytes`) and, for what actually landed, from the measured
+/// free-space delta; neither needs a per-candidate figure. Add one back only
+/// alongside a caller that reads it and a producer that fills it truthfully.
 #[derive(Debug, Clone)]
 pub struct Candidate {
     pub path: PathBuf,
-    pub bytes: u64,
     pub justification: Justification,
 }
 
@@ -677,7 +695,7 @@ mod tests {
     }
 
     fn candidate(path: PathBuf, j: Justification) -> Candidate {
-        Candidate { path, bytes: 1, justification: j }
+        Candidate { path, justification: j }
     }
 
     /// A temporary stand-in for the user's home directory.

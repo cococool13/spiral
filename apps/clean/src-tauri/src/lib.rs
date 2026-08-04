@@ -13,8 +13,6 @@
 // **Remove this attribute at M3**, when the Clean screen wires `scan` and
 // `remove` to real commands. From that point a `dead_code` warning means what
 // it says, and leaving the allow in place would hide it.
-#![allow(dead_code)]
-
 mod catalog;
 mod commands;
 mod exclude;
