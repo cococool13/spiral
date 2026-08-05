@@ -56,7 +56,7 @@ Searched under the user's home, literally, in this order:
 
 - **`uninstall_list() -> Vec<AppSummary>`** — installed apps with name, bundle id, size, and any handoff flag.
 - **`uninstall_inspect(bundle_id: String) -> InspectResult`** — the associated items, each with path, size and evidence level, in a stable order.
-- **`uninstall_execute(bundle_id: String, deselected: Vec<usize>) -> UninstallReport`** — re-inspects, drops the deselected indices, builds candidates, and calls `remove::execute`.
+- **`uninstall_execute(bundle_id: String, deselected: Vec<usize>, displayed: Vec<String>) -> UninstallReport`** — re-inspects, drops the deselected indices, builds candidates, and calls `remove::execute`.
 
 **The webview names indices, never paths.** This is M3's rule carried forward: `clean_execute` takes category ids so the frontend cannot name a path, and the review sheet's per-item deselection is expressed as positions into a list Rust produced.
 
