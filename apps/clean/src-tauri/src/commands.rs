@@ -293,6 +293,16 @@ pub struct AppSummary {
     pub bytes: u64,
     pub handoff: Option<String>,
     pub running: bool,
+    /// Read-only display data, never authority: `uninstall_inspect` and
+    /// `uninstall_execute` still take only a `bundle_id` and re-derive
+    /// everything else themselves via a fresh `apps::discover` call, exactly
+    /// as before this field existed. Added so the Uninstall screen's drop
+    /// handler can resolve a dropped bundle by the path Finder actually
+    /// handed it, rather than by display name — two installed apps can
+    /// share a `CFBundleName` (e.g. a Setapp vendor-subfolder install
+    /// alongside a top-level one, the case M4b Task 1's widened discovery
+    /// exists to support), and a name match alone cannot tell them apart.
+    pub path: String,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -351,6 +361,7 @@ fn app_summary(app: &apps::InstalledApp) -> AppSummary {
         bytes: bundle_bytes(&app.path),
         handoff: app.handoff.as_ref().map(handoff_label),
         running: apps::is_running(&app.bundle_id),
+        path: app.path.display().to_string(),
     }
 }
 
@@ -1228,7 +1239,7 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         let user_apps = home.path().join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
-        plant_app(&user_apps, "Foo", "com.example.foo");
+        let app_path = plant_app(&user_apps, "Foo", "com.example.foo");
 
         let summaries = list_apps_within(home.path());
         let foo = summaries.iter().find(|s| s.bundle_id == "com.example.foo").unwrap();
@@ -1236,6 +1247,33 @@ mod tests {
         assert!(foo.bytes > 0, "the plist itself should be counted");
         assert!(!foo.running);
         assert_eq!(foo.handoff, None);
+        // `path` (added for the Uninstall screen's drop handler to resolve a
+        // dropped bundle unambiguously — two apps can share a display name,
+        // never a path) must be the app's own real bundle path, not
+        // anything else derived from it.
+        assert_eq!(foo.path, app_path.display().to_string());
+    }
+
+    #[test]
+    fn two_apps_sharing_a_display_name_get_distinct_paths() {
+        // The exact shape review found the Uninstall screen's drop handler
+        // resolving wrong before `path` existed: a vendor-subfolder install
+        // (Setapp) and a top-level install can share a `CFBundleName`. Name
+        // alone cannot tell them apart; `path` must.
+        let home = tempfile::tempdir().unwrap();
+        let top_level = home.path().join("Applications");
+        let nested = top_level.join("Setapp");
+        std::fs::create_dir_all(&nested).unwrap();
+        let top_path = plant_app(&top_level, "Vendor App", "com.vendor.top");
+        let nested_path = plant_app(&nested, "Vendor App", "com.vendor.nested");
+
+        let summaries = list_apps_within(home.path());
+        let top = summaries.iter().find(|s| s.bundle_id == "com.vendor.top").unwrap();
+        let nested = summaries.iter().find(|s| s.bundle_id == "com.vendor.nested").unwrap();
+        assert_eq!(top.name, nested.name, "both share a display name by construction");
+        assert_eq!(top.path, top_path.display().to_string());
+        assert_eq!(nested.path, nested_path.display().to_string());
+        assert_ne!(top.path, nested.path, "distinct install locations must resolve to distinct paths");
     }
 
     #[test]

@@ -18,6 +18,11 @@ export interface AppSummary {
   bytes: number;
   handoff: string | null;
   running: boolean;
+  // Read-only display data, never authority — see `path`'s doc comment on
+  // the Rust struct. Lets the drop handler below resolve a dropped bundle
+  // by its actual path rather than its display name, which two installed
+  // apps can share.
+  path: string;
 }
 
 export interface InspectItem {
@@ -71,18 +76,32 @@ function isHandoffCommand(handoff: string): boolean {
   return handoff.startsWith("brew ");
 }
 
-// Extracts a candidate app display name from a path Finder handed the
-// drop event, or `null` when the dropped item isn't a `.app` bundle at all.
-// This is the only signal the webview can read off a dropped path without a
-// new Rust command — there is no IPC call in `commands.rs` that resolves an
-// arbitrary filesystem path to a bundle id, and adding one is out of scope
-// for this task. Matching the stripped name against the already-loaded
-// `apps` list (see `handleDroppedPaths`) is what actually resolves it to a
-// bundle id, reusing exactly the data `uninstall_list` already returned.
-function appNameFromDroppedPath(path: string): string | null {
-  const base = path.split("/").pop() ?? path;
-  if (!base.toLowerCase().endsWith(".app")) return null;
-  return base.slice(0, -".app".length);
+// The path's last path component, with a trailing slash (Finder can hand
+// either `/Applications/Foo.app` or `/Applications/Foo.app/` for the same
+// drop) stripped first so it is never read as an empty string.
+function basenameOf(path: string): string {
+  const trimmed = path.endsWith("/") ? path.slice(0, -1) : path;
+  return trimmed.split("/").pop() ?? trimmed;
+}
+
+// True when `path` names a `.app` bundle by extension — the only signal
+// available before it is resolved against the installed-applications list.
+// Says nothing about whether the bundle is actually installed;
+// `handleDroppedPaths` decides that by comparing against `AppSummary.path`.
+function looksLikeAppBundle(path: string): boolean {
+  return basenameOf(path).toLowerCase().endsWith(".app");
+}
+
+// A path identifies a bundle; a display name does not — two installed apps
+// can share a `CFBundleName` (a Setapp vendor-subfolder install alongside a
+// top-level one is the case M4b Task 1's widened discovery exists to
+// support), but never the same path. Case-insensitive because APFS is
+// case-insensitive by default, so `/Applications/Foo.app` and
+// `/Applications/foo.app` name the same directory; trailing-slash-normalised
+// for the same reason `basenameOf` strips one.
+function normalisePath(path: string): string {
+  const trimmed = path.endsWith("/") ? path.slice(0, -1) : path;
+  return trimmed.toLowerCase();
 }
 
 export default function Uninstall() {
@@ -169,62 +188,42 @@ export default function Uninstall() {
 
   // Resolves a dropped path to a listed app and opens its review sheet via
   // `inspect`, or refuses with a stated reason and never opens one. Refused,
-  // in order: more than one item dropped at once (see below); not a `.app`
-  // bundle at all; a `.app` name that matches no installed application, or
-  // matches more than one (see below); an Apple application (`com.apple.*`),
-  // which this screen never offers to remove.
+  // in order: more than one item dropped at once (a silently-partial batch
+  // drop is worse than no batch support — acting on the first item and
+  // saying nothing about the rest reads as "all of them were handled");
+  // not a `.app` bundle at all; a path that matches no `AppSummary.path` in
+  // the installed-applications list `uninstall_list` already returned; an
+  // Apple application (`com.apple.*`), which this screen never offers to
+  // remove.
   //
-  // **Matching is on display name, not on the dropped path itself, and that
-  // is a known, reviewed limitation, not an oversight.** `AppSummary`
-  // (commands.rs) carries `name`, `bundle_id`, `bytes`, `handoff` and
-  // `running` — no `path` — so once two installed apps share a display name
-  // (M4b Task 1 widened discovery into vendor subfolders precisely so a
-  // shape like `/Applications/Vendor App.app` and
-  // `/Applications/Setapp/Vendor App.app` both get discovered, and both can
-  // report the same `CFBundleName`), there is no field this screen already
-  // has that tells the two apart. Matching on the *first* same-named app —
-  // this function's original approach — silently resolved to whichever one
-  // happened to sort first, which review proved could send the wrong app's
-  // files to the Trash. The correct fix is to compare the dropped path
-  // itself against each app's own path, but that needs `AppSummary` to
-  // carry one, which needs a Rust change, which is out of this task's
-  // scope. Refusing on ambiguity is the safe alternative available without
-  // one: never guess between two candidates, only ever act on an
-  // unambiguous name match.
+  // Matching is on the dropped path against each `AppSummary.path`, not on
+  // display name — see `normalisePath`'s comment for why. Two installed
+  // apps can share a `CFBundleName` and still resolve unambiguously here,
+  // because they cannot share a path; an earlier version of this function
+  // matched on name alone and review found it could silently open the
+  // review sheet for a *different* app than the one actually dropped.
   const handleDroppedPaths = useCallback(
     (paths: string[]) => {
       setDropError(null);
       if (paths.length === 0) return;
-      // A silently-partial batch drop is worse than no batch support at
-      // all: acting on the first item and saying nothing about the rest
-      // reads as "all of them were handled." Refusing states the limit
-      // instead.
       if (paths.length > 1) {
         setDropError(`Dropped ${paths.length} items — drop one application at a time.`);
         return;
       }
       const path = paths[0];
-      const base = path.split("/").pop() ?? path;
-      const name = appNameFromDroppedPath(path);
-      if (name === null) {
+      const base = basenameOf(path);
+      if (!looksLikeAppBundle(path)) {
         setDropError(`"${base}" is not an application. Drop a .app bundle to uninstall it.`);
         return;
       }
-      const candidates = appsRef.current.filter((a) => a.name === name);
-      if (candidates.length === 0) {
+      const target = normalisePath(path);
+      const match = appsRef.current.find((a) => normalisePath(a.path) === target);
+      if (!match) {
         setDropError(
           `"${base}" is not in Spiral Clean's list of installed applications. Reopen the list and try again.`,
         );
         return;
       }
-      if (candidates.length > 1) {
-        setDropError(
-          `More than one installed application is named "${name}" — Spiral Clean can't tell which one ` +
-            `was dropped. Use its Review button in the list above instead.`,
-        );
-        return;
-      }
-      const match = candidates[0];
       if (match.bundle_id.toLowerCase().startsWith("com.apple.")) {
         setDropError(`"${match.name}" is an Apple application and cannot be uninstalled here.`);
         return;

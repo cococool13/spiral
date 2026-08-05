@@ -78,6 +78,7 @@ const APP: AppSummary = {
   bytes: 4096,
   handoff: null,
   running: false,
+  path: "/Applications/Foo.app",
 };
 
 // Three items, in the order `uninstall_inspect` would already have sorted
@@ -103,6 +104,7 @@ const CASK_APP: AppSummary = {
   bytes: 2048,
   handoff: "brew uninstall --cask caskname",
   running: false,
+  path: "/Applications/Casky.app",
 };
 
 const CASK_INSPECTED: InspectResult = {
@@ -122,6 +124,7 @@ const APPLE_APP: AppSummary = {
   bytes: 8192,
   handoff: null,
   running: false,
+  path: "/Applications/Finder.app",
 };
 
 // Item 0 owns two paths, item 1 owns one — the shape decision 3 in
@@ -405,44 +408,65 @@ describe("Uninstall screen — the drop handler", () => {
     expect(mockInvoke.mock.calls.some(([command]) => command === "uninstall_inspect")).toBe(false);
   });
 
-  // The Critical fix from review: two installed applications sharing a
-  // display name at different install locations — exactly the shape M4b
-  // Task 1's widened discovery produces (`/Applications/Vendor App.app` and
-  // `/Applications/Setapp/Vendor App.app`, both reporting the same
-  // `CFBundleName`). The previous implementation matched on name with
-  // `.find`, which resolves to whichever entry happens to come first —
-  // proven, in review, to invoke `uninstall_inspect` for the *other* app's
-  // bundle id than the one actually dropped. `AppSummary` carries no `path`
-  // field to disambiguate by (see `handleDroppedPaths`'s comment on why
-  // that would need a Rust change this task does not make), so the correct,
-  // safe behaviour available today is to refuse rather than guess. This
-  // proves the refusal, not a resolution the frontend cannot yet make
-  // correctly.
-  it("refuses a dropped .app whose display name matches more than one installed application, rather than guessing which one was dropped", async () => {
-    const first: AppSummary = {
+  // The Critical fix from review, now resolved rather than merely refused:
+  // two installed applications sharing a display name at different install
+  // locations — exactly the shape M4b Task 1's widened discovery produces
+  // (`/Applications/Vendor App.app` and `/Applications/Setapp/Vendor
+  // App.app`, both reporting the same `CFBundleName`). An earlier version
+  // of `handleDroppedPaths` matched on name with `.find`, which resolves to
+  // whichever entry happens to come first — proven, in review, to invoke
+  // `uninstall_inspect` for the *other* app's bundle id than the one
+  // actually dropped. `AppSummary` now carries its own `path`
+  // (`commands.rs`), so this proves the fix directly: dropping the
+  // vendor-subfolder copy resolves to *that* copy's bundle id, never the
+  // top-level one's, even though both share a name.
+  it("resolves a dropped .app by its path, not its display name, when two installed applications share a name", async () => {
+    const topLevel: AppSummary = {
       name: "Vendor App",
       bundle_id: "com.vendor.app",
       bytes: 1024,
       handoff: null,
       running: false,
+      path: "/Applications/Vendor App.app",
     };
-    const second: AppSummary = {
+    const setappCopy: AppSummary = {
       name: "Vendor App",
       bundle_id: "com.vendor.app.setapp",
-      bytes: 1024,
+      bytes: 2048,
+      handoff: null,
+      running: false,
+      path: "/Applications/Setapp/Vendor App.app",
+    };
+    const setappInspected: InspectResult = {
+      bundle_id: setappCopy.bundle_id,
+      name: setappCopy.name,
+      items: [{ path: setappCopy.path, bytes: setappCopy.bytes, evidence: "Verified" }],
       handoff: null,
       running: false,
     };
-    respondTo([first, second], {});
+    respondTo([topLevel, setappCopy], { [setappCopy.bundle_id]: setappInspected });
     const handleDrop = await dropAndCapture();
 
-    handleDrop({ payload: { type: "drop", paths: ["/Applications/Setapp/Vendor App.app"] } });
+    handleDrop({ payload: { type: "drop", paths: [setappCopy.path] } });
 
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Vendor App");
-    expect(screen.queryByRole("button", { name: "Uninstall" })).toBeNull();
-    // Neither candidate's bundle id may be inspected — an ambiguous match
-    // must never fall back to "just pick one."
-    expect(mockInvoke.mock.calls.some(([command]) => command === "uninstall_inspect")).toBe(false);
+    // The review sheet opened for the dropped copy specifically.
+    await screen.findByRole("button", { name: "Uninstall" });
+    expect(mockInvoke).toHaveBeenCalledWith("uninstall_inspect", { bundleId: setappCopy.bundle_id });
+    expect(mockInvoke.mock.calls.some(([command, args]) =>
+      command === "uninstall_inspect" && (args as { bundleId: string }).bundleId === topLevel.bundle_id,
+    )).toBe(false);
+  });
+
+  it("resolves a dropped .app path case-insensitively and with a trailing slash normalised away", async () => {
+    respondTo([APP], { [APP.bundle_id]: INSPECTED });
+    const handleDrop = await dropAndCapture();
+
+    // `APP.path` is "/Applications/Foo.app" — drop a differently-cased,
+    // trailing-slashed spelling of the same directory. APFS is
+    // case-insensitive by default, so these name the same bundle.
+    handleDrop({ payload: { type: "drop", paths: ["/APPLICATIONS/foo.APP/"] } });
+
+    await screen.findByRole("button", { name: "Uninstall" });
+    expect(mockInvoke).toHaveBeenCalledWith("uninstall_inspect", { bundleId: APP.bundle_id });
   });
 });
