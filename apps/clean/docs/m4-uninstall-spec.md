@@ -60,9 +60,13 @@ Searched under the user's home, literally, in this order:
 
 **The webview names indices, never paths.** This is M3's rule carried forward: `clean_execute` takes category ids so the frontend cannot name a path, and the review sheet's per-item deselection is expressed as positions into a list Rust produced.
 
+**Amended during execution: the frontend also echoes the paths it displayed, as a checksum.** An index is a reference to a *list*, not to a thing, and `run_uninstall` re-inspects — so if the item set changes between inspect and execute, `order_items` re-sorts and every index shifts. A review found the concrete consequence: deselect the plist at index 1 to keep it, let the still-running app write a cache file that sorts into slot 1, and the plist becomes index 2 and is permanently deleted while the file you never chose is spared.
+
+So `uninstall_execute` takes `displayed: Vec<String>` as well, and **any mismatch in length, content or order denies the entire call**. The paths remain a checksum and never authority — candidates are still built solely from the fresh inspection, and nothing the frontend sends is ever used as a path to delete. The rule is unchanged; what is added is proof of *which* list the user was looking at.
+
 ### Data flow
 
-Uninstall screen → `uninstall_list()` → user picks an app → `uninstall_inspect(bundle_id)` → mandatory review sheet showing every item, its size and its evidence level → confirm → `uninstall_execute(bundle_id, deselected)` → report.
+Uninstall screen → `uninstall_list()` → user picks an app → `uninstall_inspect(bundle_id)` → mandatory review sheet showing every item, its size and its evidence level → confirm → `uninstall_execute(bundle_id, deselected, displayed)` → report.
 
 ## Handoffs, not half-removals
 
