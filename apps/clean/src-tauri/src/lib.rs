@@ -36,6 +36,7 @@ pub fn run() {
             commands::uninstall_inspect,
             commands::uninstall_execute,
             commands::leftovers_scan,
+            commands::leftovers_remove,
             permissions::fda_status,
             permissions::open_privacy_settings
         ])
