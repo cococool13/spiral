@@ -26,6 +26,8 @@ Even with those guards, an orphan is a **judgement**, not a proof. An entry with
 
 That is precisely why ADR-0007 sends orphans to the Trash rather than deleting them. The disposition is the compensating control for an inference the app cannot make with certainty, and nothing in this milestone changes it.
 
+**Amendment, 2026-08-05, after the whole-branch review.** The detection this milestone shipped rests on two hardcoded lists in `orphans.rs`, and they fail in opposite directions: a missing top-level domain costs a leftover left behind, while a missing system-owned identifier costs live data moved to the Trash. Nothing in the build prompts a review of either when macOS ships a new one. Recorded as **ADR-0016**, together with why the Trash disposition is what makes that residual acceptable — and why widening discovery to `/System/Applications` cannot substitute for the refusal list.
+
 ## Architecture
 
 ### New Rust module
