@@ -6,7 +6,7 @@ M4 shipped uninstall for applications that are still installed. M4b covers what 
 
 ## Decisions (settled with Cohen)
 
-1. **An orphan is a bundle-id-shaped entry no discovered app declares.** Only entries whose name is reverse-DNS or `group.<id>` are considered. A plain-name folder like `Slack` is never proposed: a name proves far too little to infer that something is dead.
+1. **An orphan is a bundle-id-shaped entry no discovered app declares.** Only entries whose name is reverse-DNS or `group.<id>` are considered. A plain-name folder like `Slack` is never proposed: a name proves far too little to infer that something is dead. See [the amendment](#amendment-2026-08-05--what-reverse-dns-had-to-mean) for what "reverse-DNS" turned out to have to mean.
 2. **PKG receipts are cut from M4b entirely.** Removing a receipt reclaims no space — it only makes the system forget a package was installed, and a stale receipt is safer than a missing one when an installer next runs. The app's promise is honest reclaimed space, and this delivers none.
 3. **Discovery widens by one level, and `com.apple.*` is never proposed.** `apps::discover` also scans one level under `/Applications` and `~/Applications`.
 4. **Leftovers get their own section on the Uninstall screen**, with their own review sheet — satisfying ADR-0007 without forcing two different flows down one path.
@@ -52,10 +52,14 @@ It gains its own `com.apple.*` refusal. M4's whole-branch review found that a sp
 
 ### Commands
 
-- **`leftovers_scan() -> Vec<Leftover>`** — bundle id, paths, total size, in a stable order.
+- **`leftovers_scan() -> Vec<LeftoverItem>`** — bundle id, paths, total size, in a stable order. `orphans::Leftover` is the Rust-side type carrying `PathBuf`s; `LeftoverItem` is what crosses the IPC boundary, with each path as a `String`.
 - **`leftovers_remove(deselected: Vec<usize>, displayed: Vec<String>) -> UninstallReport`** — re-scans, compares the echo, drops the deselected, and calls `remove::execute`.
 
 The drift checksum from M4 applies unchanged and for the same reason: an index is a reference to a list, the command re-scans, and the list can change between the two calls.
+
+**`uninstall_inspect` canonicalises `home` before it inspects.** `uninstall_execute` already did so internally, `uninstall_inspect` did not, and on a firmlinked `$HOME` every path the inspection showed the user failed to match its re-inspected counterpart — so `echo_matches_inspection` denied every uninstall. `leftovers_for_display` has the same fix for the same reason. Canonicalisation that itself fails falls back to the raw `home` rather than surfacing the removal path's wording on a read-only command.
+
+**`AppSummary` carries `path`.** The Uninstall screen's drop handler needs to resolve a dropped bundle by the path Finder actually handed it, rather than by display name — two applications may share a name. The field is read-only display data and never authority: `uninstall_inspect` and `uninstall_execute` still take only a `bundle_id` and re-derive everything else from a fresh `apps::discover`.
 
 ### UI
 
@@ -86,3 +90,26 @@ A **Leftovers** section below the app list on the Uninstall screen. Its own revi
 - Clean's directory pruning still needs its own design, as recorded in M3.
 - Signing, notarization and a `clean-v*` tag remain M7.
 - Neither the Clean nor the Uninstall screen has yet been seen rendered by anyone. That remains true after this milestone and still gates any release tag.
+
+## Amendment (2026-08-05) — what "reverse-DNS" had to mean
+
+The whole-branch review found the milestone's Critical here, and it is worth recording in full because the mistake was not a typo but a reading of decision 1 that seemed obviously right.
+
+`orphans.rs` implemented "bundle-id-shaped" as **at least two non-empty dot-separated components**. Every name that cleared that bar and matched no known suffix or `group.` prefix became its own bundle id — the entry's whole name was taken as the id it proved.
+
+**That defeated the boundary check.** `remove.rs`'s `Orphan` arm calls `verified_name_matches(name, bundle_id)` to confirm a path really carries the id claimed for it. When the id was derived *from* that name, the call reduced to `name == name`, which cannot fail. The re-check defends against a **wrong** id and is structurally incapable of catching a **self-derived** one. Both sides looked correct in isolation; the gap only existed between them.
+
+**What it cost.** macOS names Group Containers `<TeamID>.<name>` at least as often as `group.<id>`. On the reviewing machine 43 of 161 entries in `~/Library/Group Containers` were not prefixed `group.`, and the reviewer proved the path end to end: `UBF8T346G9.Office` — Microsoft Office's live group container — was proposed as dead **with Word installed**, and reached `Ok(Trash)`. A first real run would have moved roughly 43 live containers to the Trash and broken Office, 1Password and Podcasts state. It was recoverable, because ADR-0007 routes orphans to the Trash and that compensating control did its job. The app would still have been confidently, visibly wrong about a user's data.
+
+`243LU875E5.groups.com.apple.podcasts` also escaped the Apple refusal outright, because that refusal tested `starts_with("com.apple.")` and this id carries a Team ID in front.
+
+**The fix, and the reasoning behind it.**
+
+- **A name this module does not understand resolves to nothing.** The whole-name fallback is gone. Absence of a recognised shape is not evidence — the same posture that already makes an unreadable directory skipped rather than counted empty, and zero discovered applications propose nothing rather than everything. Refusing to propose costs a leftover left behind; proposing wrongly costs working software.
+- **"Reverse-DNS" now means what it says: the first component is a top-level domain.** Every country-code TLD is exactly two ASCII letters and no other TLD is two characters, so the whole ccTLD space is one rule; generic TLDs are a short explicit list. A Team ID is ten uppercase alphanumerics and is admitted by neither. "Contains a dot" was the wrong test because `UBF8T346G9.Office` contains a dot and no application anywhere declares that string — "no installed app declares it" is *vacuously* true of it and says nothing about whether Office is installed.
+- **The Apple refusal applies at every component boundary**, not only at the start, so a team-prefixed Apple id is refused. It compares whole components, never a substring, so `com.applesomething.foo` stays proposable. This codebase has shipped a substring-where-a-component-was-meant bug four separate times, and each one read as a safe simplification of exactly this shape.
+- **All known trailing tokens are stripped, repeatedly.** `.binarycookies` joined `.plist`, `.savedState` and `.lockfile`, and stripping now repeats, so `com.example.gone.plist.lockfile` resolves to one id. This was the branch review's deferred minor 2: one dead application used to surface as several rows with ids like `com.example.gone.binarycookies`. Same root cause, same fix.
+
+**What is proposable after the amendment:** a reverse-DNS id (`com.example.gone`), that id behind a `group.` prefix (`group.com.example.gone`), and that id followed by known trailing tokens (`com.example.gone.plist`, `.savedState`, `.binarycookies`, `.lockfile`, stacked). Nothing else — not a Team-ID-prefixed container, not a plain name, not a dotted name whose first component is not a TLD, and not a `group.` prefix and a suffix at once, which `verified_name_matches` could never confirm.
+
+**What this gives up, on purpose:** a genuine leftover under a generic TLD absent from the list is left behind. That is the intended direction of the trade, and the list is to be kept to labels that plausibly begin a real bundle id rather than reached toward completeness.

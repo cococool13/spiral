@@ -17,6 +17,16 @@
 //! as dead, which on a real Mac is not a handful of near-misses but hundreds
 //! of entries.
 //!
+//! **A name this module does not understand is evidence of nothing.** Only
+//! the three shapes [`resolve_verifiable_id`] names resolve to an id at all;
+//! anything else is skipped. `UBF8T346G9.Office` is dotted, is not
+//! `com.apple.*`, and matches no installed app's id — and it is Microsoft
+//! Office's live group container, named after Microsoft's Team ID rather
+//! than after any `CFBundleIdentifier`. Nothing declares that string, so
+//! "no installed app declares it" is vacuously true of it. macOS names
+//! group containers `<TeamID>.<name>` at least as often as `group.<id>`, so
+//! this is not a rare shape: it is a large fraction of one whole location.
+//!
 //! **Discovery finding no installed applications at all makes this report
 //! nothing, not everything.** An empty installed set is far more likely
 //! evidence that `apps::discover_in` could not read `/Applications` than
@@ -39,33 +49,140 @@ pub struct Leftover {
     pub bytes: u64,
 }
 
-/// Every identifier Apple's own software is published under lives beneath
-/// this prefix — the same rule `associate.rs` and `remove.rs` each apply on
-/// their own side of the boundary. Duplicated here rather than exported from
-/// either: both are read-only, security-relevant modules this task is
-/// expressly barred from editing beyond what the brief names.
-const APPLE_BUNDLE_PREFIX: &str = "com.apple.";
+/// The two components every identifier Apple's own software is published
+/// under carries, in this order — the same rule `associate.rs` and `remove.rs`
+/// each apply on their own side of the boundary. Duplicated here rather than
+/// exported from either: both are read-only, security-relevant modules this
+/// task is expressly barred from editing beyond what the brief names.
+const APPLE_BUNDLE_SEGMENTS: (&str, &str) = ("com", "apple");
 
 /// True when `bundle_id` is one of Apple's own, case-insensitively.
-fn is_apple_bundle_id(bundle_id: &str) -> bool {
-    bundle_id.to_lowercase().starts_with(APPLE_BUNDLE_PREFIX)
-}
-
-/// Strip a trailing `.plist` or `.savedState` suffix, returning `None` when
-/// neither is present.
-fn strip_known_suffix(name: &str) -> Option<&str> {
-    name.strip_suffix(".plist").or_else(|| name.strip_suffix(".savedState"))
-}
-
-/// The id `name` would prove, or `None` when `name` is not a shape
-/// `remove.rs::verified_name_matches` can ever verify against any id.
 ///
-/// Two of the three shapes that function accepts each have a name-level
-/// transform here: a known suffix stripped (`com.foo.bar.plist` ->
-/// `com.foo.bar`, matching `verified_name_matches`'s "id plus a
-/// `.`-separated suffix" arm) or a `group.` prefix stripped
-/// (`group.com.foo.bar` -> `com.foo.bar`, matching its "exact `group.<id>`"
-/// arm). **The two are never combined.** A name like
+/// **Tested at every `.`-separated component boundary, not only at the
+/// start.** A group container is named `<TeamID>.<id>` at least as often as
+/// `group.<id>`, so Apple's own Podcasts state is on disk as
+/// `243LU875E5.groups.com.apple.podcasts` — an identifier that is Apple's
+/// beyond any doubt and that a `starts_with("com.apple.")` test does not
+/// refuse at all. Sliding a two-component window over the id refuses it, and
+/// refuses any other Apple id however it is prefixed.
+///
+/// **Components, never substrings.** `com.applesomething.foo` is a
+/// third-party id that merely begins the same way, and it must keep being
+/// proposable: comparing whole components rather than searching for the text
+/// `com.apple` is what separates the two. This codebase has shipped a
+/// substring-where-a-component-was-meant bug four separate times, and every
+/// one of them read as a safe simplification of exactly this shape.
+fn is_apple_bundle_id(bundle_id: &str) -> bool {
+    let segments: Vec<String> = bundle_id.split('.').map(str::to_lowercase).collect();
+    segments
+        .windows(2)
+        .any(|pair| pair[0] == APPLE_BUNDLE_SEGMENTS.0 && pair[1] == APPLE_BUNDLE_SEGMENTS.1)
+}
+
+/// Trailing components macOS appends to a bundle id to name a *file about*
+/// that app, rather than components of the id itself.
+///
+/// Each is a file-format token, never a component of a real
+/// `CFBundleIdentifier`: `~/Library/HTTPStorages/com.example.foo.binarycookies`
+/// is the cookie jar belonging to `com.example.foo`, not an app called
+/// `com.example.foo.binarycookies`. Stripping them is what makes one dead
+/// application one row instead of several.
+///
+/// Kept deliberately short. A token added here is a token that can no longer
+/// end a bundle id this module will resolve, so the bar for adding one is
+/// that macOS itself generates the name — not that it looks file-like.
+const KNOWN_SUFFIXES: &[&str] = &[".plist", ".savedState", ".binarycookies", ".lockfile"];
+
+/// Strip every trailing [`KNOWN_SUFFIXES`] token, returning `name` unchanged
+/// when it carries none.
+///
+/// Repeated rather than single, because macOS stacks them:
+/// `~/Library/Preferences` holds `com.example.foo.plist.lockfile` while a
+/// preference write is in flight, and stripping only the outer token would
+/// leave `com.example.foo.plist` as a second, phantom application.
+fn strip_known_suffixes(name: &str) -> &str {
+    let mut current = name;
+    'outer: loop {
+        for suffix in KNOWN_SUFFIXES {
+            if let Some(stripped) = current.strip_suffix(suffix) {
+                current = stripped;
+                continue 'outer;
+            }
+        }
+        return current;
+    }
+}
+
+/// Generic top-level domains a bundle id may begin with. Country-code TLDs
+/// are not listed: every one of them is exactly two ASCII letters and no
+/// other TLD is two characters long, so [`is_top_level_domain`] admits the
+/// whole ccTLD space with one rule instead of 250 entries.
+///
+/// **An omission here costs a leftover left behind, never a wrong removal.**
+/// That is the trade this list is chosen to make, so keep it to labels that
+/// plausibly begin a real bundle id rather than reaching for completeness.
+const GENERIC_TLDS: &[&str] = &[
+    "com", "org", "net", "edu", "gov", "mil", "int", "info", "biz", "name", "pro", "mobi",
+    "asia", "cat", "coop", "aero", "jobs", "museum", "travel", "post", "tel", "app", "dev",
+    "page", "site", "online", "store", "shop", "blog", "cloud", "tech", "space", "world",
+    "life", "live", "art", "design", "studio", "digital", "media", "agency", "systems",
+    "solutions", "software", "tools", "works", "group", "team", "zone", "network", "email",
+    "chat", "games", "link", "codes", "technology", "academy", "social", "expert", "center",
+    "global", "company", "foundation", "institute", "xyz", "wiki", "one", "plus", "run",
+    "club", "fun", "host",
+];
+
+/// True when `segment` is a top-level domain label — the first component of
+/// a reverse-DNS name.
+fn is_top_level_domain(segment: &str) -> bool {
+    let segment = segment.to_lowercase();
+    if segment.len() == 2 && segment.chars().all(|c| c.is_ascii_alphabetic()) {
+        return true;
+    }
+    GENERIC_TLDS.contains(&segment.as_str())
+}
+
+/// True when `id` is reverse-DNS shaped: a top-level domain label, then at
+/// least one further non-empty component, every component drawn from the
+/// characters an identifier may contain.
+///
+/// **This is the whole of what makes an entry evidence.** "Contains a dot" is
+/// not — `UBF8T346G9.Office` contains a dot, and it is Microsoft Office's
+/// live group container, named after Microsoft's Team ID rather than after
+/// any `CFBundleIdentifier`. No application anywhere declares that string, so
+/// "no installed app declares it" is vacuously true of it and says nothing
+/// whatever about whether Office is installed. Requiring the first component
+/// to be a TLD is what separates a name an application could have declared
+/// from a name that only looks dotted.
+fn is_reverse_dns(id: &str) -> bool {
+    let mut segments = id.split('.');
+    let Some(first) = segments.next() else {
+        return false;
+    };
+    if !is_top_level_domain(first) {
+        return false;
+    }
+    let rest: Vec<&str> = segments.collect();
+    !rest.is_empty()
+        && rest.iter().all(|segment| {
+            !segment.is_empty()
+                && segment.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        })
+}
+
+/// The id `name` proves, or `None` when `name` is not one of the shapes this
+/// module understands.
+///
+/// Three shapes resolve, and nothing else does:
+///
+/// * a reverse-DNS name itself (`com.foo.bar`), matching
+///   `remove.rs::verified_name_matches`'s "name is the id" arm;
+/// * that name plus [`KNOWN_SUFFIXES`] (`com.foo.bar.plist`), matching its
+///   "id plus a `.`-separated suffix" arm;
+/// * that name behind a `group.` prefix (`group.com.foo.bar`), matching its
+///   "exact `group.<id>`" arm.
+///
+/// **The prefix and the suffix are never combined.** A name like
 /// `group.com.foo.bar.plist` looks tempting to resolve to `com.foo.bar` by
 /// stripping both, but `verified_name_matches("group.com.foo.bar.plist",
 /// "com.foo.bar")` is `false` under all three of its own arms — the removal
@@ -74,43 +191,27 @@ fn strip_known_suffix(name: &str) -> Option<&str> {
 /// (the exact failure mode the module doc comments in `associate.rs` and
 /// `remove.rs` were each written to prevent), so a name shaped like both at
 /// once resolves to nothing at all rather than a guess.
+///
+/// **A name this function does not understand resolves to nothing, never to
+/// itself.** It used to fall through to the whole name as the id, and that
+/// single line defeated the boundary check on the other side of the removal:
+/// `remove.rs` re-checks `verified_name_matches(name, bundle_id)` to confirm
+/// a path carries its claimed id, but an id *derived from* that name reduces
+/// that call to `name == name`, which cannot fail. The re-check defends
+/// against a wrong id and is structurally incapable of catching a
+/// self-derived one, so the refusal has to happen here. Refusing costs a
+/// leftover left behind; the fallback cost `UBF8T346G9.Office` — Microsoft
+/// Office's live group container — being proposed as dead with Word
+/// installed.
 fn resolve_verifiable_id(name: &str) -> Option<&str> {
-    if let Some(stripped) = strip_known_suffix(name) {
-        if stripped.starts_with("group.") {
-            return None;
-        }
-        return Some(stripped);
+    let stripped = strip_known_suffixes(name);
+    if stripped.len() < name.len() {
+        // A suffix was stripped, so the `group.` arm is out of reach: see
+        // "never combined" above.
+        return (!stripped.starts_with("group.") && is_reverse_dns(stripped)).then_some(stripped);
     }
-    name.strip_prefix("group.").or(Some(name))
-}
-
-/// The id `name` proves, if it is both a [`resolve_verifiable_id`]-able shape
-/// and looks like a bundle id at all: at least two non-empty, dot-separated
-/// segments, and no leading dot. `None` covers both failure modes — the
-/// unrepresentable combined shape and an ordinary plain name — with the same
-/// "when in doubt, propose nothing" answer.
-///
-/// The one place both [`looks_like_bundle_id`] and [`find_in`] derive an id
-/// from a name, so the two can never disagree about what a name resolves to
-/// or whether it counts.
-fn shaped_bundle_id(name: &str) -> Option<&str> {
-    let candidate = resolve_verifiable_id(name)?;
-    if candidate.is_empty() || candidate.starts_with('.') {
-        return None;
-    }
-    let mut segments = candidate.split('.');
-    (segments.clone().count() >= 2 && segments.all(|segment| !segment.is_empty())).then_some(candidate)
-}
-
-/// True when `name` is shaped like a bundle id — see [`shaped_bundle_id`].
-///
-/// Deliberately strict. A plain-name folder like `Slack` proves far too
-/// little to infer that something is dead, so it is never proposed — when in
-/// doubt, this returns `false`.
-// No caller yet — `commands::leftovers_scan` (M4b Task 4) wires this in.
-#[allow(dead_code)]
-pub fn looks_like_bundle_id(name: &str) -> bool {
-    shaped_bundle_id(name).is_some()
+    let candidate = name.strip_prefix("group.").unwrap_or(name);
+    is_reverse_dns(candidate).then_some(candidate)
 }
 
 /// True when `id` is one of `installed` itself, or extends one of them with
@@ -194,8 +295,6 @@ pub fn find(home: &Path) -> Vec<Leftover> {
 /// location is not evidence anything under it is dead. If discovery finds no
 /// installed applications at all, this returns nothing at all — see the
 /// module doc comment.
-// No caller yet — `commands::leftovers_scan` (M4b Task 4) wires this in.
-#[allow(dead_code)]
 pub fn find_in(home: &Path, app_roots: &[PathBuf]) -> Vec<Leftover> {
     let installed: HashSet<String> =
         apps::discover_in(app_roots).into_iter().map(|app| app.bundle_id.to_lowercase()).collect();
@@ -222,7 +321,7 @@ pub fn find_in(home: &Path, app_roots: &[PathBuf]) -> Vec<Leftover> {
             let name = entry.file_name();
             let name = name.to_string_lossy();
 
-            let Some(id) = shaped_bundle_id(&name) else {
+            let Some(id) = resolve_verifiable_id(&name) else {
                 continue;
             };
             if is_apple_bundle_id(id) {
@@ -403,17 +502,121 @@ mod tests {
     }
 
     #[test]
-    fn looks_like_bundle_id_rejects_plain_names() {
-        assert!(looks_like_bundle_id("com.example.foo"));
-        assert!(looks_like_bundle_id("group.com.example.foo"));
-        assert!(!looks_like_bundle_id("Slack"));
-        assert!(!looks_like_bundle_id(""));
-        assert!(!looks_like_bundle_id(".hidden"));
+    fn a_team_prefixed_group_container_of_an_installed_app_is_never_proposed() {
+        // macOS names Group Containers `<TeamID>.<name>` at least as often as
+        // `group.<id>`. `UBF8T346G9.Office` is Microsoft Office's live group
+        // container, and no application on earth declares that string as its
+        // `CFBundleIdentifier` — so "no installed app declares it" is
+        // vacuously true of it and proves nothing at all. Deriving the id
+        // from the whole name also made `remove.rs`'s
+        // `verified_name_matches(name, bundle_id)` re-check degenerate to
+        // `name == name`, which cannot fail. This must resolve to nothing.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        crate::apps::tests_support::plant_app(&apps, "Microsoft Word", "com.microsoft.Word");
+        plant(home.path(), "Group Containers/UBF8T346G9.Office");
+        assert!(
+            find_in(home.path(), &[apps]).is_empty(),
+            "a team-prefixed group container must never be proposed as dead"
+        );
     }
 
     #[test]
-    fn looks_like_bundle_id_rejects_a_combined_group_and_suffix_shape() {
-        assert!(!looks_like_bundle_id("group.com.example.gone.plist"));
-        assert!(!looks_like_bundle_id("group.com.example.gone.savedState"));
+    fn a_team_prefixed_apple_group_container_is_never_proposed() {
+        // `243LU875E5.groups.com.apple.podcasts` is Apple's own, but it does
+        // not *start* `com.apple.`, so a prefix-only refusal misses it
+        // entirely.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
+        plant(home.path(), "Group Containers/243LU875E5.groups.com.apple.podcasts");
+        assert!(
+            find_in(home.path(), &[apps]).is_empty(),
+            "a team-prefixed Apple group container must never be proposed as dead"
+        );
+    }
+
+    #[test]
+    fn an_apple_id_is_refused_at_every_segment_boundary() {
+        // Directly on the guard, so this test fails when the refusal is
+        // narrowed back to a leading-prefix test — the shape check in
+        // `resolve_verifiable_id` also refuses the team-prefixed name, and
+        // an end-to-end test alone could not tell the two guards apart.
+        assert!(is_apple_bundle_id("com.apple.finder"));
+        assert!(is_apple_bundle_id("243LU875E5.groups.com.apple.podcasts"));
+        assert!(is_apple_bundle_id("group.com.apple.notes"));
+        // Component boundary, never a substring: the four substring-vs-
+        // component bugs this codebase has shipped all looked like this.
+        assert!(!is_apple_bundle_id("com.applesomething.foo"));
+        assert!(!is_apple_bundle_id("com.example.apple"));
+        assert!(!is_apple_bundle_id("com.notapple.foo"));
+    }
+
+    #[test]
+    fn a_name_that_is_not_reverse_dns_resolves_to_nothing() {
+        // Absence of a shape this module understands is not evidence of
+        // anything. Each of these once became its own bundle id.
+        assert_eq!(resolve_verifiable_id("UBF8T346G9.Office"), None);
+        assert_eq!(resolve_verifiable_id("243LU875E5.groups.com.apple.podcasts"), None);
+        assert_eq!(resolve_verifiable_id("9BNSXJN65R.group.io.example"), None);
+        assert_eq!(resolve_verifiable_id("Slack"), None);
+        assert_eq!(resolve_verifiable_id("Unity.Editor"), None);
+        assert_eq!(resolve_verifiable_id(""), None);
+        assert_eq!(resolve_verifiable_id(".hidden"), None);
+        assert_eq!(resolve_verifiable_id("com."), None);
+    }
+
+    #[test]
+    fn a_reverse_dns_name_still_resolves_to_its_id() {
+        assert_eq!(resolve_verifiable_id("com.example.gone"), Some("com.example.gone"));
+        assert_eq!(resolve_verifiable_id("group.com.example.gone"), Some("com.example.gone"));
+        assert_eq!(resolve_verifiable_id("com.example.gone.plist"), Some("com.example.gone"));
+        assert_eq!(
+            resolve_verifiable_id("com.example.gone.savedState"),
+            Some("com.example.gone")
+        );
+        // Every country-code TLD is two ASCII letters, so the whole ccTLD
+        // space is admitted by one rule rather than an enumeration.
+        assert_eq!(resolve_verifiable_id("de.example.gone"), Some("de.example.gone"));
+        assert_eq!(resolve_verifiable_id("io.example.gone"), Some("io.example.gone"));
+        assert_eq!(resolve_verifiable_id("org.example.gone"), Some("org.example.gone"));
+    }
+
+    #[test]
+    fn stacked_suffixes_strip_down_to_the_one_id() {
+        // `~/Library/Preferences` holds `com.example.gone.plist.lockfile`
+        // while a preference write is in flight. Stripping only the outer
+        // token would leave `com.example.gone.plist` as a second, phantom
+        // application beside the real one.
+        assert_eq!(
+            resolve_verifiable_id("com.example.gone.plist.lockfile"),
+            Some("com.example.gone")
+        );
+        assert_eq!(resolve_verifiable_id("com.example.gone.binarycookies"), Some("com.example.gone"));
+    }
+
+    #[test]
+    fn a_combined_group_and_suffix_shape_resolves_to_nothing() {
+        assert_eq!(resolve_verifiable_id("group.com.example.gone.plist"), None);
+        assert_eq!(resolve_verifiable_id("group.com.example.gone.savedState"), None);
+    }
+
+    #[test]
+    fn one_dead_app_is_one_row_however_its_entries_are_suffixed() {
+        // Deferred minor 2: `com.example.gone.binarycookies` used to become
+        // its own leftover with its own odd id, so one dead application
+        // surfaced as several rows the user had to recognise as one thing.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
+        plant(home.path(), "Application Support/com.example.gone");
+        plant(home.path(), "HTTPStorages/com.example.gone.binarycookies");
+        plant(home.path(), "Preferences/com.example.gone.plist");
+        plant(home.path(), "Saved Application State/com.example.gone.savedState");
+        let found = find_in(home.path(), &[apps]);
+        assert_eq!(found.len(), 1, "one dead application must be one row: {found:?}");
+        assert_eq!(found[0].bundle_id, "com.example.gone");
+        assert_eq!(found[0].paths.len(), 4, "every entry must be attributed to the one id");
     }
 }
