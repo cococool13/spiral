@@ -26,8 +26,10 @@ pub enum Justification {
     /// established — `disposition_for` does not trust it blindly: for
     /// `Evidence::Verified` it re-checks that the path itself carries
     /// `bundle_id` before granting `Permanent`, and denies the candidate
-    /// outright if it does not. This is the enforcement ADR-0011 gated on;
-    /// the first producer lands in M4, together with `associate.rs`.
+    /// outright if it does not. An Apple bundle id is refused at that
+    /// boundary whatever the evidence. This is the enforcement ADR-0011
+    /// gated on; the first producer lands in M4, together with
+    /// `associate.rs`.
     #[allow(dead_code)]
     AppBundle { bundle_id: String, evidence: Evidence },
     /// The user selected this specific item, e.g. an iOS device backup —
@@ -44,9 +46,7 @@ pub enum Justification {
 /// be validated against anything, so it carries the weaker consequence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum Evidence {
-    #[allow(dead_code)]
     Verified,
-    #[allow(dead_code)]
     Likely,
 }
 
@@ -469,15 +469,42 @@ fn verified_name_matches(name: &str, bundle_id: &str) -> bool {
     name == id || name.starts_with(&format!("{id}.")) || name == format!("group.{id}")
 }
 
+/// Every identifier Apple's own software is published under lives beneath
+/// this prefix.
+const APPLE_BUNDLE_PREFIX: &str = "com.apple.";
+
+/// True when `bundle_id` is one of Apple's own.
+///
+/// `associate.rs` already refuses a **name** match onto an Apple-owned path,
+/// so a third-party "Mail" cannot claim Apple's Mail data through the weak,
+/// `Likely` branch. That guard had no counterpart on the strong one, and the
+/// strong one is the branch that deletes permanently: an `Info.plist`
+/// declaring `CFBundleIdentifier = com.apple.finder` makes
+/// `~/Library/Preferences/com.apple.finder.plist` a genuine `Verified` match
+/// — the path really does carry the claimed id — and `disposition_for`
+/// answered `Permanent`. Planting such a bundle needs no privilege beyond
+/// writing a directory into `~/Applications`.
+///
+/// The refusal therefore lives here, at the removal boundary, and applies to
+/// **both** evidence levels and to every `AppBundle` candidate regardless of
+/// where it sits, so no producer — present or future — can route around it by
+/// classifying differently or by pointing somewhere else. It is a bar in the
+/// same sense as the user-content bar: unconditional, and no justification
+/// lifts it.
+fn is_apple_bundle_id(bundle_id: &str) -> bool {
+    bundle_id.to_lowercase().starts_with(APPLE_BUNDLE_PREFIX)
+}
+
 /// Disposition is derived here, never supplied by the caller. Two routes
 /// reach `Permanent`: a `Catalog` match whose path is actually under that
 /// entry's own roots (see `is_within_catalog_entry`), and an `AppBundle`
 /// candidate whose evidence is `Evidence::Verified` (ADR-0004, as amended).
-/// `AppBundle` is constrained to `/Applications`, `~/Applications`, and
-/// `~/Library`, the last of those only from two levels down (see
+/// `AppBundle` is refused outright for any Apple bundle id (see
+/// `is_apple_bundle_id`), constrained to `/Applications`, `~/Applications`,
+/// and `~/Library`, the last of those only from two levels down (see
 /// `is_library_container`), and — for `Verified` — to a path whose own final
 /// component carries the claimed `bundle_id` at a component boundary, not
-/// merely as a substring (see `verified_name_matches`). That second check is
+/// merely as a substring (see `verified_name_matches`). That check is
 /// ADR-0011's guarantee made literal: a `Verified` claim the path cannot
 /// support is denied here, not merely flagged in a review sheet.
 /// `Evidence::Likely` clears only the location bar; a name match cannot be
@@ -524,6 +551,14 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
         // compare), so it is routed to `Trash` instead, per ADR-0004 as
         // amended.
         Justification::AppBundle { bundle_id, evidence } => {
+            // First, ahead of scope and of either evidence level: Apple's own
+            // software is never an uninstall target here, however convincing
+            // the evidence for it looks. See `is_apple_bundle_id`.
+            if is_apple_bundle_id(bundle_id) {
+                return Err(format!(
+                    "\"{bundle_id}\" is one of Apple's own bundle identifiers, and Spiral Clean never removes Apple software or the data belonging to it — a third-party bundle can claim any identifier it likes. Nothing was removed. Remove Apple software through the App Store or System Settings instead.",
+                ));
+            }
             if !is_within_app_bundle_scope(path, roots) {
                 return Err(format!(
                     "{} is outside the locations an app uninstall may touch. Only the app bundle and its own support files can be removed.",
@@ -2402,6 +2437,84 @@ mod tests {
             &roots,
         );
         assert_eq!(d, Ok(Disposition::Permanent));
+    }
+
+    // ---- Apple's own software is never an uninstall target -------------
+
+    #[test]
+    fn an_apple_bundle_id_is_refused_at_both_evidence_levels() {
+        // The hole this closes: `associate.rs` refuses a *name* match onto an
+        // Apple-owned path, so a third-party "Mail" cannot claim Apple's Mail
+        // data through the `Likely` branch — but the `Verified` branch had no
+        // counterpart, and it is the branch that deletes permanently. An
+        // `Info.plist` declaring `CFBundleIdentifier = com.apple.finder`
+        // makes `~/Library/Preferences/com.apple.finder.plist` a genuine
+        // `Verified` match (the path really does carry the claimed id), and
+        // `disposition_for` answered `Ok(Permanent)`.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Preferences");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.apple.finder.plist");
+        std::fs::write(&item, b"x").unwrap();
+        let roots = Roots::rooted_at(&home);
+
+        for evidence in [Evidence::Verified, Evidence::Likely] {
+            let d = disposition_for(
+                &item,
+                &Justification::AppBundle { bundle_id: "com.apple.finder".into(), evidence },
+                &roots,
+            );
+            let why = d.expect_err("an Apple bundle id was accepted as an uninstall target");
+            assert!(why.contains("com.apple.finder"), "the denial does not name the id: {why}");
+            assert!(
+                why.contains("System Settings") || why.contains("App Store"),
+                "the denial does not offer a next step: {why}"
+            );
+        }
+        assert!(item.exists());
+    }
+
+    #[test]
+    fn an_apple_bundle_id_is_refused_wherever_the_candidate_sits() {
+        // The refusal runs ahead of the scope bar deliberately, so it cannot
+        // be sidestepped by a producer that points somewhere else. Asserted
+        // on an out-of-scope path (`/tmp`) whose *scope* denial would
+        // otherwise mask which guard fired: the message must be the Apple one.
+        let roots = system_roots();
+        let why = disposition_for(
+            Path::new("/tmp/Whatever"),
+            &Justification::AppBundle {
+                bundle_id: "com.apple.Safari".into(),
+                evidence: Evidence::Verified,
+            },
+            &roots,
+        )
+        .expect_err("an Apple bundle id was accepted outside the uninstall scope");
+        assert!(why.contains("Apple"), "the scope bar answered instead of the Apple bar: {why}");
+    }
+
+    #[test]
+    fn a_third_party_id_that_merely_begins_like_apples_is_not_refused() {
+        // The other side of the bar: `com.appleseed.foo` is a third party's
+        // own identifier and shares no component boundary with `com.apple.`,
+        // so the refusal must not swallow it. A `starts_with("com.apple")`
+        // written without the trailing dot would.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.appleseed.foo");
+        std::fs::write(&item, b"x").unwrap();
+        assert_eq!(
+            disposition_for(
+                &item,
+                &Justification::AppBundle {
+                    bundle_id: "com.appleseed.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            ),
+            Ok(Disposition::Permanent),
+        );
     }
 
     #[test]
