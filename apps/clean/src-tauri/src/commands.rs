@@ -78,25 +78,27 @@ pub struct CleanReport {
 /// Build the candidates for one category. Every candidate carries the
 /// justification of the category it came from — the frontend never supplies one.
 ///
-/// **Only files become candidates, so no directory is ever removed.**
-/// `scan::walk_files` yields `is_file()` entries alone, so `result.paths`
-/// contains no directories and nothing here can invent one. The consequence is
-/// visible: emptying the Trash leaves the folder skeleton in Finder, and
-/// `~/Library/Caches` keeps the (now empty) directories its files sat in — the
-/// residue a real machine accumulates in the hundreds.
+/// **Only files become candidates here, so a Clean run never removes a
+/// directory.** `scan::walk_files` yields `is_file()` entries alone, so
+/// `result.paths` contains no directories and nothing here can invent one. The
+/// consequence is visible: emptying the Trash leaves the folder skeleton in
+/// Finder, and `~/Library/Caches` keeps the (now empty) directories its files
+/// sat in — the residue a real machine accumulates in the hundreds.
 ///
-/// **Directory pruning is deferred deliberately, not forgotten.** Removing a
-/// directory is new destructive behaviour: it needs its own decision about what
-/// counts as safe to prune (an emptied catalog directory only, never one that
-/// merely looks empty because its contents were excluded or failed), its own
-/// guards, and its own review gate. Adding it as a side effect of a cleanup
-/// pass is the exact shape of change this milestone exists to refuse.
+/// **Directory pruning on the Clean screen is deferred deliberately, not
+/// forgotten.** Pruning an emptied *catalog* directory needs its own decision
+/// about what counts as safe to prune — one this run actually emptied, never
+/// one that merely looks empty because its contents were excluded or failed —
+/// its own guards, and its own review gate.
 ///
-/// One further consequence, and the reason `run_clean` still handles the case:
-/// `Outcome::PartiallyRemoved` can only arise from a directory removal that
-/// failed partway, so it is unreachable while candidates are files only. It is
-/// reported honestly rather than dropped, because the day a producer of
-/// directory candidates lands, silence would be the worst possible default.
+/// That is a statement about this function, not about the application.
+/// Uninstall *does* remove directories: an app's `Containers/<id>`,
+/// `Group Containers/group.<id>`, `<id>.savedState` and the `.app` bundle
+/// itself are all directories, and removing them is what uninstalling an app
+/// means (ADR-0015). So `Outcome::PartiallyRemoved` is reachable — from an
+/// uninstall, never from a Clean run — which is why `run_clean` and
+/// `run_uninstall` both keep it in its own bucket rather than folding it into
+/// "could not be removed".
 fn catalog_candidates_for(id: &str, result: &scan::CategoryResult) -> Vec<remove::Candidate> {
     result
         .paths
@@ -386,10 +388,39 @@ fn inspect_within(bundle_id: &str, home: &Path) -> Result<InspectResult, String>
             )
         })?;
 
-    let items = associate::associate(bundle_id, &app.name, home)
+    let mut items: Vec<InspectItem> = associate::associate(bundle_id, &app.name, home)
         .into_iter()
         .map(|a| InspectItem { path: a.path.display().to_string(), bytes: a.bytes, evidence: a.evidence })
         .collect();
+
+    // The application itself, listed as an item like any other — same row,
+    // same size, same checkbox, same index space. An uninstall that left the
+    // `.app` in `/Applications` was not an uninstall; the app stayed
+    // installed and stayed in this very list.
+    //
+    // It carries `Evidence::Verified` because it is verifiable — but this
+    // function does not do the verifying, and nothing here is taken as
+    // authority. `remove::disposition_for` opens the bundle's own
+    // `Contents/Info.plist` and grants `Permanent` only if the identifier
+    // declared there is this one; a path that does not is denied at the
+    // boundary exactly as any other unsupportable claim is.
+    //
+    // **A handoff app never contributes its bundle.** A Homebrew cask must be
+    // removed with `brew uninstall --cask`, or brew's metadata is orphaned
+    // and its next upgrade breaks; a system extension cannot be removed by
+    // deleting files at all. Both are shown their handoff instead of a
+    // delete, and neither may have its bundle deleted behind the owner's
+    // back. (The boundary refuses a cask's bundle a second time on its own,
+    // because a cask install *is* a symlink into the Caskroom and
+    // `bundle_declares_id` refuses a symlinked bundle — but this is the
+    // statement of intent, not an accident of shape.)
+    if app.handoff.is_none() {
+        items.push(InspectItem {
+            path: app.path.display().to_string(),
+            bytes: bundle_bytes(&app.path),
+            evidence: Evidence::Verified,
+        });
+    }
 
     Ok(InspectResult {
         running: apps::is_running(&app.bundle_id),
@@ -452,13 +483,15 @@ fn canonical_home(home: &Path) -> Result<PathBuf, String> {
 /// caller's bare word for it, the same discipline `commands::catalog_candidates_for`
 /// applies to the Clean screen's own candidates.
 ///
-/// **Only the items `inspect_within` found become candidates — never the
-/// `.app` bundle itself.** `associate::associate` never returns the bundle
-/// path (its search is `home/Library` only; see its own doc comment), and
-/// M4 deliberately leaves directory removal unimplemented (see the plan's
-/// "what M4 leaves out") — a `.app` bundle is itself a directory. This task
-/// removes an app's leftover files; removing the bundle awaits directory
-/// removal landing.
+/// **The `.app` bundle is one of those items** (see `inspect_within`), so it
+/// goes through this function like everything else: the same justification,
+/// the same evidence field, the same index space the review sheet
+/// deselects against. There is deliberately no separate path, no extra
+/// parameter and no exemption flag for it — a mechanism by which this module
+/// could mark a path as trusted is precisely what ADR-0011 exists to
+/// prevent. What makes the bundle removable is not anything said here but
+/// what `remove::disposition_for` reads out of the bundle's own
+/// `Info.plist`.
 fn candidates_for(bundle_id: &str, items: &[InspectItem]) -> Vec<remove::Candidate> {
     items
         .iter()
@@ -962,9 +995,12 @@ mod tests {
         }
     }
 
-    /// Plant a real, discoverable app with exactly one associated item, so a
-    /// test can reach the range check itself rather than being denied
-    /// earlier by `inspect_within`'s unknown-bundle-id guard.
+    /// Plant a real, discoverable app with exactly one associated item under
+    /// `~/Library`, so a test can reach the range check itself rather than
+    /// being denied earlier by `inspect_within`'s unknown-bundle-id guard.
+    ///
+    /// **`inspect_within` reports two items for such an app, not one:** the
+    /// associated file, and the `.app` bundle itself. Tests below count both.
     ///
     /// `bundle_id` is a caller-supplied parameter, not a shared constant,
     /// because `apps::is_running` shells out to `pgrep -f <bundle_id>`
@@ -1016,17 +1052,19 @@ mod tests {
         plant_app_with_one_item(home.path(), "com.example.uninstall-range");
         let displayed = fresh_paths("com.example.uninstall-range", home.path());
 
+        assert_eq!(displayed.len(), 2, "sanity: the associated file plus the bundle");
+
         let err = run_uninstall(
             "com.example.uninstall-range",
-            vec![1],
+            vec![2],
             displayed,
             cfg.path(),
             home.path(),
         )
         .unwrap_err();
-        assert!(err.contains('1'), "must name the out-of-range index: {err}");
+        assert!(err.contains('2'), "must name the out-of-range index: {err}");
         assert!(
-            err.contains("1 associated item"),
+            err.contains("2 associated items"),
             "must name the true list length: {err}"
         );
     }
@@ -1039,6 +1077,8 @@ mod tests {
         let cfg = tempfile::tempdir().unwrap();
         plant_app_with_one_item(home.path(), "com.example.uninstall-dup");
         let displayed = fresh_paths("com.example.uninstall-dup", home.path());
+        assert_eq!(displayed.len(), 2, "sanity: the associated file plus the bundle");
+        let kept = displayed[1].clone();
 
         let report = run_uninstall(
             "com.example.uninstall-dup",
@@ -1048,10 +1088,11 @@ mod tests {
             home.path(),
         )
         .unwrap();
-        assert_eq!(report.removed, 0);
+        assert_eq!(report.removed, 1, "the one item not deselected: {report:?}");
         assert_eq!(report.excluded, 0);
         assert!(report.failed.is_empty());
         assert!(report.partially_removed.is_empty());
+        assert!(!PathBuf::from(&kept).exists());
     }
 
     #[test]
@@ -1060,7 +1101,8 @@ mod tests {
         let cfg = tempfile::tempdir().unwrap();
         plant_app_with_one_item(home.path(), "com.example.uninstall-empty");
         let item = home.path().join("Library/Application Support/com.example.uninstall-empty");
-        assert!(item.exists());
+        let bundle = home.path().join("Applications/Foo.app");
+        assert!(item.exists() && bundle.exists());
         let displayed = fresh_paths("com.example.uninstall-empty", home.path());
 
         let report = run_uninstall(
@@ -1071,8 +1113,9 @@ mod tests {
             home.path(),
         )
         .unwrap();
-        assert_eq!(report.removed, 1, "the sole item should have been removed: {report:?}");
+        assert_eq!(report.removed, 2, "the item and the bundle: {report:?}");
         assert!(!item.exists());
+        assert!(!bundle.exists(), "the application itself is still installed");
     }
 
     #[test]
@@ -1081,11 +1124,13 @@ mod tests {
         let cfg = tempfile::tempdir().unwrap();
         plant_app_with_one_item(home.path(), "com.example.uninstall-all");
         let item = home.path().join("Library/Application Support/com.example.uninstall-all");
+        let bundle = home.path().join("Applications/Foo.app");
         let displayed = fresh_paths("com.example.uninstall-all", home.path());
+        let every = (0..displayed.len()).collect();
 
         let report = run_uninstall(
             "com.example.uninstall-all",
-            vec![0],
+            every,
             displayed,
             cfg.path(),
             home.path(),
@@ -1095,17 +1140,20 @@ mod tests {
         assert_eq!(report.excluded, 0);
         assert!(report.failed.is_empty());
         assert!(item.exists(), "a deselected item must survive");
+        assert!(bundle.exists(), "a deselected bundle must survive");
     }
 
     #[test]
-    fn an_app_with_no_associated_files_uninstalls_cleanly() {
+    fn an_app_with_no_leftover_files_still_removes_its_bundle() {
+        // The whole point of item 3: even with nothing under `~/Library` to
+        // sweep, "uninstall" has to mean the application is gone afterwards.
         let home = tempfile::tempdir().unwrap();
         let cfg = tempfile::tempdir().unwrap();
         let user_apps = home.path().join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
-        plant_app(&user_apps, "Foo", "com.example.uninstall-none");
+        let bundle = plant_app(&user_apps, "Foo", "com.example.uninstall-none");
         let displayed = fresh_paths("com.example.uninstall-none", home.path());
-        assert!(displayed.is_empty(), "sanity: this app has no associated items");
+        assert_eq!(displayed.len(), 1, "sanity: the bundle and nothing else");
 
         let report = run_uninstall(
             "com.example.uninstall-none",
@@ -1115,9 +1163,10 @@ mod tests {
             home.path(),
         )
         .unwrap();
-        assert_eq!(report.removed, 0);
-        assert!(report.failed.is_empty());
+        assert_eq!(report.removed, 1, "{report:?}");
+        assert!(report.failed.is_empty(), "{report:?}");
         assert!(report.partially_removed.is_empty());
+        assert!(!bundle.exists(), "the application itself is still installed");
     }
 
     #[test]
@@ -1155,7 +1204,7 @@ mod tests {
         let inspected = inspect_within(bundle_id, &canonical).unwrap();
         let candidates = candidates_for(bundle_id, &inspected.items);
         let reports = remove::execute(candidates, &Ok(exclude::new(vec![])), &canonical);
-        assert_eq!(reports.len(), 2);
+        assert_eq!(reports.len(), 3, "the two associated items plus the bundle");
 
         let outcome_for = |p: &std::path::Path| {
             &reports.iter().find(|r| r.path == p).expect("candidate missing from report").outcome
@@ -1177,8 +1226,17 @@ mod tests {
             "likely item should go to the Trash: {:?}",
             outcome_for(&support.join("Foo"))
         );
+        assert!(
+            matches!(
+                outcome_for(&canonical.join("Applications/Foo.app")),
+                remove::Outcome::Removed(catalog::Disposition::Permanent)
+            ),
+            "the bundle should be removed permanently: {:?}",
+            outcome_for(&canonical.join("Applications/Foo.app"))
+        );
         assert!(!support.join(bundle_id).exists());
         assert!(!support.join("Foo").exists());
+        assert!(!canonical.join("Applications/Foo.app").exists());
     }
 
     #[test]
@@ -1200,7 +1258,7 @@ mod tests {
         let runs = history::read(cfg.path()).unwrap();
         assert_eq!(runs.len(), 1);
         assert_eq!(runs[0].screen, "uninstall");
-        assert_eq!(runs[0].removed, 1);
+        assert_eq!(runs[0].removed, 2, "the associated item and the bundle");
     }
 
     #[test]
@@ -1225,8 +1283,33 @@ mod tests {
         let report =
             run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path()).unwrap();
         assert_eq!(report.excluded, 1);
-        assert_eq!(report.removed, 0);
+        assert_eq!(report.removed, 1, "the bundle, which was not excluded: {report:?}");
         assert!(item.exists(), "an excluded item was removed via uninstall");
+    }
+
+    #[test]
+    fn an_exclusion_protects_the_app_bundle_itself() {
+        // The exclusion bar binds on the bundle exactly as on any other item
+        // — the new candidate goes through `remove::execute` like the rest,
+        // so there is no second path for it to take.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-bundle-exclusion";
+        plant_app_with_one_item(home.path(), bundle_id);
+        let bundle = canonical_home(home.path()).unwrap().join("Applications/Foo.app");
+        let displayed = fresh_paths(bundle_id, home.path());
+
+        std::fs::write(
+            cfg.path().join("exclusions.json"),
+            serde_json::to_vec(&serde_json::json!({ "paths": [bundle.to_string_lossy()] }))
+                .unwrap(),
+        )
+        .unwrap();
+
+        let report =
+            run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path()).unwrap();
+        assert_eq!(report.excluded, 1, "{report:?}");
+        assert!(bundle.exists(), "an excluded app bundle was removed");
     }
 
     #[test]
@@ -1258,11 +1341,11 @@ mod tests {
         let bundle_id = "com.example.uninstall-echo-match";
         plant_two_items(home.path(), bundle_id);
         let displayed = fresh_paths(bundle_id, home.path());
-        assert_eq!(displayed.len(), 2, "sanity: this app has two associated items");
+        assert_eq!(displayed.len(), 3, "sanity: two associated items plus the bundle");
 
         let report =
             run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path()).unwrap();
-        assert_eq!(report.removed, 2, "{report:?}");
+        assert_eq!(report.removed, 3, "{report:?}");
     }
 
     #[test]
@@ -1314,7 +1397,7 @@ mod tests {
         let bundle_id = "com.example.uninstall-echo-order";
         plant_two_items(home.path(), bundle_id);
         let mut displayed = fresh_paths(bundle_id, home.path());
-        assert_eq!(displayed.len(), 2);
+        assert_eq!(displayed.len(), 3);
         displayed.reverse();
 
         let err = run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path())
@@ -1339,9 +1422,92 @@ mod tests {
         assert!(item.exists(), "nothing should be removed when denied");
     }
 
+    // ---- The application bundle itself (item 3) -------------------------
+
+    #[test]
+    fn the_app_bundle_is_listed_as_an_item_like_any_other() {
+        // The review sheet has to show it — same row shape, its own size,
+        // its own checkbox — or a user confirms a removal they were never
+        // shown. It is a `Verified` item because it is verifiable: the
+        // boundary reads its `Info.plist`, which is what actually grants the
+        // permanent delete.
+        let home = tempfile::tempdir().unwrap();
+        let user_apps = home.path().join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        let bundle = plant_app(&user_apps, "Foo", "com.example.uninstall-bundle-item");
+
+        let result = inspect_within("com.example.uninstall-bundle-item", home.path()).unwrap();
+        let item = result
+            .items
+            .iter()
+            .find(|i| i.path == bundle.display().to_string())
+            .expect("the app bundle is missing from the review sheet");
+        assert_eq!(item.evidence, Evidence::Verified);
+        assert!(item.bytes > 0, "the bundle must be sized: {item:?}");
+    }
+
+    #[test]
+    fn a_handoff_app_never_contributes_its_bundle() {
+        // A Homebrew cask must go through `brew uninstall --cask` or brew's
+        // metadata is orphaned; a system extension cannot be removed by
+        // deleting files at all. Neither may have its bundle deleted behind
+        // the owner's back, so neither contributes one as a candidate.
+        // Asserted through the system-extension handoff, which is detectable
+        // from a planted directory; the cask handoff takes the identical
+        // branch and is additionally refused at the boundary, because a cask
+        // install is a symlink and `bundle_declares_id` refuses those.
+        let home = tempfile::tempdir().unwrap();
+        let user_apps = home.path().join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        let bundle = plant_app(&user_apps, "Foo", "com.example.uninstall-sysext");
+        std::fs::create_dir_all(bundle.join("Contents/Library/SystemExtensions")).unwrap();
+
+        let result = inspect_within("com.example.uninstall-sysext", home.path()).unwrap();
+        assert!(result.handoff.is_some(), "sanity: this app has a handoff");
+        assert!(
+            !result.items.iter().any(|i| i.path == bundle.display().to_string()),
+            "a handoff app offered its own bundle for deletion: {:?}",
+            result.items
+        );
+    }
+
+    #[test]
+    fn nothing_in_this_module_can_mark_a_path_as_exempt() {
+        // The design constraint, asserted rather than asserted-in-prose: a
+        // candidate this module builds for a path that is *not* the app's
+        // bundle — no `Info.plist`, no name carrying the id — is denied by
+        // `remove::disposition_for` even though this module claimed
+        // `Evidence::Verified` for it. There is no channel by which
+        // `commands.rs` can say "trust me".
+        let home = tempfile::tempdir().unwrap();
+        let canonical = canonical_home(home.path()).unwrap();
+        let user_apps = canonical.join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        let impostor = user_apps.join("NotAnApp.app");
+        std::fs::create_dir_all(&impostor).unwrap();
+
+        let items = vec![InspectItem {
+            path: impostor.display().to_string(),
+            bytes: 0,
+            evidence: Evidence::Verified,
+        }];
+        let reports = remove::execute(
+            candidates_for("com.example.impostor", &items),
+            &Ok(exclude::new(vec![])),
+            &canonical,
+        );
+        assert!(
+            matches!(reports[0].outcome, remove::Outcome::Denied(_)),
+            "an unverifiable bundle claim was honoured: {:?}",
+            reports[0].outcome
+        );
+        assert!(impostor.exists());
+    }
+
     /// Plant a real app with two associated items — one `Verified` (its own
     /// bundle id), one `Likely` (its display name) — so echo tests have a
-    /// list worth reordering, truncating, or extending.
+    /// list worth reordering, truncating, or extending. `inspect_within`
+    /// reports three items for such an app: these two, plus the bundle.
     fn plant_two_items(home: &std::path::Path, bundle_id: &str) {
         let user_apps = home.join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
