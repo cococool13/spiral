@@ -17,9 +17,9 @@ Current app release **v1.0.2** (Spiral Wallpaper).
 brand/         the design system. Every colour, font, and mark. Single source of truth.
 apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri, shipped)
                apps/slim = Spiral Slim (Python + Tauri wizard, shipped on macOS)
-               apps/clean = Spiral Clean (Tauri, macOS only, unreleased — M1-M3 shipped:
-                            shell, FDA gate, the tested safety core, and the Clean
-                            screen. Uninstall/Optimize/Storage are still stubs)
+               apps/clean = Spiral Clean (Tauri, macOS only, unreleased — M1-M4 shipped:
+                            shell, FDA gate, the tested safety core, the Clean screen,
+                            and Uninstall. Optimize/Storage are still stubs)
 collection/    the spiral-collection.netlify.app website (Next.js, static export)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```

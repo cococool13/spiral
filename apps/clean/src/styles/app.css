@@ -111,3 +111,44 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Uninstall screen (AppRow, ItemRow): evidence and status badges. Border and
+   text color only, never a fill — the same rule tokens.css documents for
+   --spiral-red itself. */
+.badge {
+  border: 1px solid var(--spiral-conc-03);
+  font-family: var(--spiral-font-mono);
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+}
+
+/* Verified items are removed permanently — the same accent used for
+   warnings elsewhere in the brand. */
+.badge-verified {
+  border-color: var(--spiral-red);
+  color: var(--spiral-red);
+}
+
+/* Likely items go to the Trash, and a "needs handoff" app can't be deleted
+   by this screen at all — both are the calmer, non-final case. */
+.badge-likely,
+.badge-handoff {
+  border-color: var(--spiral-steel);
+  color: var(--spiral-steel);
+}
+
+.badge-warn {
+  border-color: var(--spiral-oxblood);
+  color: var(--spiral-oxblood);
+}
+
+/* The uninstall review dialog's handoff command (Uninstall.tsx). */
+dialog pre {
+  background: var(--spiral-conc-02);
+  overflow-x: auto;
+  padding: 0.75rem;
+}
+
+dialog code {
+  font-family: var(--spiral-font-mono);
+}

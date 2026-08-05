@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub enum Justification {
     /// Matched a safe-category catalog entry, by id. The only variant M3
-    /// constructs — `commands::candidates_for` builds every candidate with it.
+    /// constructs — `commands::catalog_candidates_for` builds every candidate with it.
     Catalog(String),
     /// App-managed state whose owning app is gone (ADR-0007). Constructed by
     /// the leftovers sweep in M4 (Uninstall); the disposition and containment
@@ -21,24 +21,41 @@ pub enum Justification {
     /// the variant stays rather than being deleted and rebuilt worse.
     #[allow(dead_code)]
     Orphan { bundle_id: String },
-    /// The application bundle and its associated files (ADR-0004). `bundle_id`
-    /// is carried but not yet checked against the path — see the merge gate in
-    /// `disposition_for` and ADR-0011 before adding anything that constructs
-    /// this variant. The first producer lands in M4, and only together with
-    /// `associate.rs`.
+    /// The application bundle and its associated files (ADR-0004, as
+    /// amended). `evidence` is the caller's claim about how `bundle_id` was
+    /// established — `disposition_for` does not trust it blindly: for
+    /// `Evidence::Verified` it re-checks that the path itself proves the tie
+    /// (its name carries `bundle_id`, or it is an app bundle declaring it)
+    /// before granting `Permanent`, and denies the candidate outright if it
+    /// does not. An Apple bundle id is refused at that boundary whatever the
+    /// evidence. This is the enforcement ADR-0011 gated on; the first
+    /// producer lands in M4, together with `associate.rs`.
     #[allow(dead_code)]
-    AppBundle { bundle_id: String },
+    AppBundle { bundle_id: String, evidence: Evidence },
     /// The user selected this specific item, e.g. an iOS device backup —
     /// constructed by the Storage screen in M6.
     #[allow(dead_code)]
     UserChosen,
 }
 
+/// How strongly a path is tied to the application being removed.
+///
+/// `Verified` means the path itself proves the tie — either its name carries
+/// the bundle id, or it is an app bundle whose own `Info.plist` declares it —
+/// and `disposition_for` re-checks that rather than trusting the caller.
+/// `Likely` means only the app's display name matched, which cannot be
+/// validated against anything, so it carries the weaker consequence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum Evidence {
+    Verified,
+    Likely,
+}
+
 /// One path `execute` has been asked to remove, and the claim that authorises
 /// it.
 ///
 /// **There is deliberately no `bytes` field.** One existed and was written as
-/// a constant `0` by the only producer (`commands::candidates_for`), read by
+/// a constant `0` by the only producer (`commands::catalog_candidates_for`), read by
 /// nobody, and serialised nowhere — a trap for whoever first tried to use it.
 /// Sizing is reported from the scan's own per-category totals
 /// (`CategoryResult::bytes`) and, for what actually landed, from the measured
@@ -182,10 +199,16 @@ fn is_library_container(path: &Path, library: Option<&Path>) -> bool {
 
 /// The set of real directories every bar is evaluated against.
 ///
-/// Production builds this from the machine (`Roots::system`). Tests build it
-/// over a temporary directory (`Roots::rooted_at`), which is what lets a unit
-/// test exercise *genuine* containment — the check is not weakened, it is
-/// simply pointed at a home that is not the developer's.
+/// `execute` builds this with the fallible `Roots::new(home)`, over whatever
+/// home its caller supplies, and denies with an explanatory message rather
+/// than panicking if that home cannot be resolved (a symlink loop, or an
+/// unreadable ancestor — `dirs::home_dir()` returning `Some` guarantees
+/// only that a path was found, not that it resolves). Tests build it over a
+/// temporary directory with `Roots::rooted_at`, which panics on failure — a
+/// test home genuinely should always resolve, so a resolution failure there
+/// is a bug in the test, not a case to handle gracefully. Either way the
+/// check itself is not weakened: it is simply pointed at a home that is not
+/// the developer's.
 struct Roots {
     /// Already resolved, so that roots derived from it are directly
     /// comparable with resolved candidates.
@@ -197,10 +220,10 @@ struct Roots {
     user_content: Vec<PathBuf>,
     /// Where an `AppBundle` justification may point (ADR-0004): the
     /// application itself and its own app-managed state, nothing else. This
-    /// is a containment floor, not full validation — it does not prove the
-    /// path belongs to the named `bundle_id`; that lands with `associate.rs`,
-    /// gated to the first `AppBundle` producer by ADR-0011. Every entry has
-    /// passed `authorizing_root`.
+    /// remains a containment floor, not identity proof — it authorises
+    /// *location*, never *whose* state a path is. Bundle-id validation for
+    /// `Evidence::Verified` happens in `disposition_for` itself, not here
+    /// (see ADR-0011). Every entry has passed `authorizing_root`.
     app_bundle_scope: Vec<PathBuf>,
     /// `~/Library`, resolved — what the container-depth rule counts from.
     /// Deliberately *not* `authorizing_root`-checked: it is used to deny, and
@@ -262,10 +285,6 @@ impl Roots {
             library: normalize(&home.join("Library")),
             home,
         })
-    }
-
-    fn system() -> Option<Self> {
-        Self::new(&dirs::home_dir()?)
     }
 
     #[cfg(test)]
@@ -411,16 +430,135 @@ fn relocated_roots(entry: &catalog::CatalogEntry, home: &Path) -> Vec<String> {
         .collect()
 }
 
+/// True when `name` (already lowercased) is the final path component of a
+/// path that a `Verified` claim for `bundle_id` may legitimately explain.
+///
+/// This is deliberately **not** a substring test. `com.example.foo` is a
+/// literal prefix of `com.example.foobar` — a different application's own
+/// identifier — so `name.contains(bundle_id)` would let a `Verified` claim
+/// for one app permanently delete another app's state. That is the same bug
+/// class this codebase has already hit twice: `/tmp/keep` matching
+/// `/tmp/keepsake.txt` (`starts_with_case_insensitive`, in `paths.rs`), and
+/// `Foo` matching `Foo Helper` in this milestone's own "likely" association
+/// rule. The fix here is the same shape: match on a component boundary, not
+/// on raw containment.
+///
+/// A name carries `bundle_id` only if it is:
+/// - **equal to it** (`com.example.foo`) — the bundle id's own directory or
+///   file;
+/// - **equal to it plus a `.`-separated suffix** (`com.example.foo.plist`,
+///   `com.example.foo.savedState`) — a `.`-boundary keeps `com.example.foo`
+///   from matching `com.example.foobar`, which has no separator between the
+///   claimed id and what follows;
+/// - **exactly a known prefix plus it** (`group.com.example.foo`) — the one
+///   shape that is a *prefix* relationship rather than a suffix one, so it is
+///   handled as its own explicit case rather than folded into a generic
+///   "starts or ends with" test that would reopen the same hole from the
+///   other direction.
+///
+/// `bundle_id` empty is refused outright: an empty needle is a prefix and
+/// suffix of everything, and `disposition_for` denies it before this
+/// function is even reached (see the `Verified` arm), but the check is
+/// repeated here defensively since this function has no other way to refuse
+/// nonsense input.
+fn verified_name_matches(name: &str, bundle_id: &str) -> bool {
+    if bundle_id.is_empty() {
+        return false;
+    }
+    let name = name.to_lowercase();
+    let id = bundle_id.to_lowercase();
+    name == id || name.starts_with(&format!("{id}.")) || name == format!("group.{id}")
+}
+
+/// Every identifier Apple's own software is published under lives beneath
+/// this prefix.
+const APPLE_BUNDLE_PREFIX: &str = "com.apple.";
+
+/// True when `bundle_id` is one of Apple's own.
+///
+/// `associate.rs` already refuses a **name** match onto an Apple-owned path,
+/// so a third-party "Mail" cannot claim Apple's Mail data through the weak,
+/// `Likely` branch. That guard had no counterpart on the strong one, and the
+/// strong one is the branch that deletes permanently: an `Info.plist`
+/// declaring `CFBundleIdentifier = com.apple.finder` makes
+/// `~/Library/Preferences/com.apple.finder.plist` a genuine `Verified` match
+/// — the path really does carry the claimed id — and `disposition_for`
+/// answered `Permanent`. Planting such a bundle needs no privilege beyond
+/// writing a directory into `~/Applications`.
+///
+/// The refusal therefore lives here, at the removal boundary, and applies to
+/// **both** evidence levels and to every `AppBundle` candidate regardless of
+/// where it sits, so no producer — present or future — can route around it by
+/// classifying differently or by pointing somewhere else. It is a bar in the
+/// same sense as the user-content bar: unconditional, and no justification
+/// lifts it.
+fn is_apple_bundle_id(bundle_id: &str) -> bool {
+    bundle_id.to_lowercase().starts_with(APPLE_BUNDLE_PREFIX)
+}
+
+/// True when `path` is itself an application bundle that **declares**
+/// `bundle_id` as its own `CFBundleIdentifier`.
+///
+/// This is the second shape of evidence a `Verified` claim may rest on, and
+/// it exists because the first one cannot cover the application itself:
+/// `Foo.app` does not carry `com.example.foo` anywhere in its name, so
+/// `verified_name_matches` denies it, and without this the app that uninstall
+/// is named after was the one thing an uninstall could never remove.
+///
+/// **It is verification, not assertion.** Nothing about the caller's claim is
+/// taken on trust: this function opens the candidate's own
+/// `Contents/Info.plist` — through `apps::read_bundle`, the same reader that
+/// identified the app in the first place, so there is exactly one parser and
+/// one notion of what an identifier is — and grants the claim only if the
+/// bundle's own declared identifier *is* the claimed one. A caller that names
+/// a path which does not declare that id gets the same denial it always did.
+///
+/// Two narrowings keep the evidence honest:
+///
+/// * **`.app` only.** A plain directory with an `Info.plist` planted inside it
+///   is not an application bundle, and admitting one would turn "carries a
+///   file" into a way to nominate arbitrary directories.
+/// * **A real directory, never a symlink.** The plist is read after
+///   `normalize`, which follows links — so without this, a link planted at
+///   `/Applications/Evil.app` pointing at another app's state directory would
+///   have that directory's contents examined and, if a plist were planted
+///   there too, removed. Requiring the candidate as written to be a real
+///   directory removes the indirection entirely. It also refuses a Homebrew
+///   cask's bundle for free: a cask install *is* a symlink into the Caskroom,
+///   and a cask must be handed to `brew`, never deleted behind its back.
+fn bundle_declares_id(path: &Path, bundle_id: &str) -> bool {
+    if bundle_id.is_empty() {
+        return false;
+    }
+    let Some(normalized) = normalize(path) else {
+        return false;
+    };
+    if !normalized.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("app")) {
+        return false;
+    }
+    if !std::fs::symlink_metadata(path).is_ok_and(|md| md.file_type().is_dir()) {
+        return false;
+    }
+    crate::apps::read_bundle(&normalized)
+        .is_some_and(|(declared, _)| declared.eq_ignore_ascii_case(bundle_id))
+}
+
 /// Disposition is derived here, never supplied by the caller. Two routes
 /// reach `Permanent`: a `Catalog` match whose path is actually under that
-/// entry's own roots (see `is_within_catalog_entry`), and `AppBundle`
-/// (ADR-0004) — an app uninstall is permanent by design. `AppBundle` is
-/// constrained to `/Applications`, `~/Applications`, and `~/Library`, the
-/// last of those only from two levels down (see `is_library_container`); it
-/// does not yet prove the path belongs to the named `bundle_id` — that lands
-/// with `associate.rs`, which ADR-0011 gates to the same milestone as the
-/// first `AppBundle` producer. Until then this is a containment floor, not
-/// full validation.
+/// entry's own roots (see `is_within_catalog_entry`), and an `AppBundle`
+/// candidate whose evidence is `Evidence::Verified` (ADR-0004, as amended).
+/// `AppBundle` is refused outright for any Apple bundle id (see
+/// `is_apple_bundle_id`), constrained to `/Applications`, `~/Applications`,
+/// and `~/Library`, the last of those only from two levels down (see
+/// `is_library_container`), and — for `Verified` — to a path the claim is
+/// actually provable against: its final component carries the claimed
+/// `bundle_id` at a component boundary, not merely as a substring (see
+/// `verified_name_matches`), or it is an app bundle whose own `Info.plist`
+/// declares that id (see `bundle_declares_id`). Those checks are ADR-0011's
+/// guarantee made literal: a `Verified` claim the path cannot support is
+/// denied here, not merely flagged in a review sheet.
+/// `Evidence::Likely` clears only the location bar; a name match cannot be
+/// validated against anything stronger, so it is routed to `Trash` instead.
 fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disposition, String> {
     match j {
         Justification::Catalog(id) => match catalog::find(id) {
@@ -452,24 +590,56 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
                 "\"{id}\" is not a category in this release. Nothing was removed."
             )),
         },
-        // MERGE GATE — see docs/adr/0011-associate-gates-the-first-appbundle-producer.md.
-        // `bundle_id` is ignored here: this arm's only constraint is *location*,
-        // and it returns `Permanent`, which does not go to the Trash. `Justification`
-        // and `Candidate` no longer derive `Deserialize` — `clean_execute` (M3)
-        // accepts only category ids and constructs every `Candidate` itself, so
-        // the webview cannot name a path or a justification at all. The gate now
-        // binds because a future `AppBundle` producer would have to construct
-        // candidates in Rust: `associate.rs`, which proves a path belongs to the
-        // named app, must land in the same milestone as the first code that
-        // constructs an `AppBundle`. Neither merges alone.
-        Justification::AppBundle { .. } => {
-            if is_within_app_bundle_scope(path, roots) {
-                Ok(Disposition::Permanent)
-            } else {
-                Err(format!(
+        // ADR-0011, satisfied — see
+        // docs/adr/0011-associate-gates-the-first-appbundle-producer.md. The
+        // location bar runs first and unconditionally, exactly as it always
+        // has. What is new is that `bundle_id` is no longer ignored:
+        // `Evidence::Verified` is re-checked against the path itself before
+        // `Permanent` is granted, so a caller cannot merely assert
+        // provenance — it must be present in the name. `Evidence::Likely`
+        // cannot be checked this way (a name match has no bundle id to
+        // compare), so it is routed to `Trash` instead, per ADR-0004 as
+        // amended.
+        Justification::AppBundle { bundle_id, evidence } => {
+            // First, ahead of scope and of either evidence level: Apple's own
+            // software is never an uninstall target here, however convincing
+            // the evidence for it looks. See `is_apple_bundle_id`.
+            if is_apple_bundle_id(bundle_id) {
+                return Err(format!(
+                    "\"{bundle_id}\" is one of Apple's own bundle identifiers, and Spiral Clean never removes Apple software or the data belonging to it — a third-party bundle can claim any identifier it likes. Nothing was removed. Remove Apple software through the App Store or System Settings instead.",
+                ));
+            }
+            if !is_within_app_bundle_scope(path, roots) {
+                return Err(format!(
                     "{} is outside the locations an app uninstall may touch. Only the app bundle and its own support files can be removed.",
                     path.display()
-                ))
+                ));
+            }
+            match evidence {
+                Evidence::Likely => Ok(Disposition::Trash),
+                Evidence::Verified => {
+                    if bundle_id.is_empty() {
+                        return Err(format!(
+                            "{} was claimed as a verified app-bundle item with an empty bundle id, which cannot be checked against anything. Nothing was removed.",
+                            path.display()
+                        ));
+                    }
+                    // Two shapes of evidence, both re-checked here rather
+                    // than trusted: the path's own name carries the id, or
+                    // the path *is* an app bundle whose `Info.plist` declares
+                    // it. Neither is anything the caller says.
+                    let carries_bundle_id = normalize(path)
+                        .and_then(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_owned))
+                        .is_some_and(|name| verified_name_matches(&name, bundle_id));
+                    if carries_bundle_id || bundle_declares_id(path, bundle_id) {
+                        Ok(Disposition::Permanent)
+                    } else {
+                        Err(format!(
+                            "{} neither carries the bundle id \"{bundle_id}\" in its name nor declares it as its own CFBundleIdentifier. A verified app-bundle claim must be provable from the path itself, so nothing was removed.",
+                            path.display()
+                        ))
+                    }
+                }
             }
         }
         Justification::Orphan { .. } => Ok(Disposition::Trash),
@@ -598,11 +768,25 @@ fn delete_permanent(path: &Path) -> Result<(), FailureKind> {
 /// meaning "nothing is protected". Load it immediately before calling this —
 /// nothing here ties an in-memory list to what is actually on disk, and a
 /// stale copy could let a since-added exclusion go unrespected.
-pub fn execute(candidates: Vec<Candidate>, excl: &Result<ExclusionList, String>) -> Vec<Report> {
+///
+/// `home` is supplied by the caller rather than resolved in here, so every
+/// destructive path this function can reach is confinable in a test. This
+/// exists because a test harness without that seam once permanently deleted
+/// 32,555 real files under a developer's `~/Library/Caches` — a stubbed
+/// guard downstream was the only thing standing between a unit test and the
+/// real disk.
+///
+/// Builds its roots with the fallible `Roots::new`, not the panicking
+/// `Roots::rooted_at` — `home` reaching this function does not guarantee it
+/// resolves (a symlink loop, or an unreadable ancestor), and a panic in the
+/// setup of the app's deletion path is not an acceptable failure mode. A
+/// `home` that cannot be resolved denies every candidate with the same
+/// explanatory message as any other bar, rather than crashing.
+pub fn execute(candidates: Vec<Candidate>, excl: &Result<ExclusionList, String>, home: &Path) -> Vec<Report> {
     execute_within(
         candidates,
         excl.as_ref().map_err(String::as_str),
-        Roots::system().as_ref(),
+        Roots::new(home).as_ref(),
     )
 }
 
@@ -721,7 +905,8 @@ mod tests {
     /// The real machine's roots. Only ever handed to `is_user_content` and
     /// `disposition_for`, which perform no I/O beyond `canonicalize`.
     fn system_roots() -> Roots {
-        Roots::system().expect("home directory should resolve in tests")
+        let home = dirs::home_dir().expect("home directory should resolve in tests");
+        Roots::rooted_at(&home)
     }
 
     fn symlink(target: &Path, link: &Path) {
@@ -1015,14 +1200,38 @@ mod tests {
         // this one proves `execute` actually consults bar 1 — using a path
         // that is protected (`/Volumes`) but certain not to exist, so a
         // regression here fails the assertion instead of destroying data.
+        let home = fake_home();
         let reports = execute(
             vec![candidate(
                 PathBuf::from("/Volumes/spiral-clean-no-such-volume/thing"),
                 Justification::UserChosen,
             )],
             &Ok(exclude::new(vec![])),
+            home.path(),
         );
         assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+    }
+
+    #[test]
+    fn execute_confines_itself_to_the_home_it_is_given() {
+        // The seam. With a temp home, no bar may consult the real one — so a
+        // stubbed guard downstream can destroy only the tempdir.
+        let home = tempfile::tempdir().unwrap();
+        let caches = home.path().join("Library/Caches");
+        std::fs::create_dir_all(&caches).unwrap();
+        let victim = caches.join("a.bin");
+        std::fs::write(&victim, b"x").unwrap();
+
+        let reports = execute(
+            vec![Candidate {
+                path: victim.clone(),
+                justification: Justification::Catalog("user-caches".into()),
+            }],
+            &Ok(crate::exclude::new(vec![])),
+            home.path(),
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Removed(_)));
+        assert!(!victim.exists());
     }
 
     #[test]
@@ -1036,6 +1245,37 @@ mod tests {
         );
         assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
         assert!(p.exists());
+    }
+
+    #[test]
+    fn execute_denies_rather_than_panics_when_the_given_home_cannot_be_resolved() {
+        // The test above proves `execute_within`'s `None` branch in
+        // isolation; this one proves the public `execute` can actually reach
+        // it. `dirs::home_dir()` returning `Some` only means a path was
+        // found, not that it resolves — a symlink loop or an unreadable
+        // ancestor still fails inside `Roots::new`. `execute` must build its
+        // roots with the fallible `Roots::new`, not the panicking
+        // `Roots::rooted_at`, or this genuinely reachable case would crash
+        // the app instead of denying with an explanation.
+        let base = tempfile::tempdir().unwrap();
+        let home_a = base.path().join("home_a");
+        let home_b = base.path().join("home_b");
+        symlink(&home_b, &home_a);
+        symlink(&home_a, &home_b);
+
+        let reports = execute(
+            vec![candidate(
+                PathBuf::from("/tmp/spiral-clean-unresolvable-home-probe"),
+                Justification::UserChosen,
+            )],
+            &Ok(exclude::new(vec![])),
+            &home_a,
+        );
+        assert!(
+            matches!(reports[0].outcome, Outcome::Denied(_)),
+            "execute did not fail closed on an unresolvable home: {:?}",
+            reports[0].outcome
+        );
     }
 
     // ---- Symlink resolution (CRITICAL) ----------------------------------
@@ -1094,7 +1334,7 @@ mod tests {
             for j in [
                 Justification::Catalog("user-caches".into()),
                 Justification::Orphan { bundle_id: "x".into() },
-                Justification::AppBundle { bundle_id: "x".into() },
+                Justification::AppBundle { bundle_id: "x".into(), evidence: Evidence::Likely },
                 Justification::UserChosen,
             ] {
                 assert!(
@@ -1264,7 +1504,10 @@ mod tests {
         let reports = run(
             vec![candidate(
                 home.path().join("Applications/Envelope Index"),
-                Justification::AppBundle { bundle_id: "com.example.app".into() },
+                Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
             )],
             &exclude::new(vec![]),
             &roots,
@@ -1348,7 +1591,10 @@ mod tests {
         assert!(
             disposition_for(
                 &home.path().join("Applications/Example.app"),
-                &Justification::AppBundle { bundle_id: "com.example.app".into() },
+                &Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
                 &roots,
             )
             .is_err(),
@@ -1511,7 +1757,10 @@ mod tests {
         let reports = run(
             vec![candidate(
                 home.path().join("Library/.ssh/id_rsa"),
-                Justification::AppBundle { bundle_id: "com.example.app".into() },
+                Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
             )],
             &exclude::new(vec![]),
             &roots,
@@ -1940,8 +2189,12 @@ mod tests {
             let path = roots.home.join("Library").join(name);
             assert!(is_user_content(&path, &roots), "~/Library/{name} was not denied");
             assert!(
-                disposition_for(&path, &Justification::AppBundle { bundle_id: "x".into() }, &roots)
-                    .is_err(),
+                disposition_for(
+                    &path,
+                    &Justification::AppBundle { bundle_id: "x".into(), evidence: Evidence::Likely },
+                    &roots
+                )
+                .is_err(),
                 "~/Library/{name} was permitted under AppBundle"
             );
         }
@@ -1952,6 +2205,15 @@ mod tests {
         // The depth rule must not cost the app its actual job: an uninstall
         // reaches *into* a container. Two levels below `~/Library` is the
         // shallowest legitimate target.
+        //
+        // `bundle_id: "x"` is a placeholder that does not literally appear in
+        // any of these names — it never had to, before this task, because
+        // `AppBundle` did not read `bundle_id` at all. That makes this a name-
+        // only claim under the new rule, so it is asserted here as
+        // `Evidence::Likely`, and the expected disposition is `Trash` rather
+        // than the `Permanent` this test asserted before Task 2. What the
+        // test still proves is unchanged: the container-depth rule does not
+        // block a legitimate target two levels down.
         let roots = system_roots();
         for path in [
             roots.home.join("Library/Application Support/Slack"),
@@ -1961,8 +2223,12 @@ mod tests {
         ] {
             assert!(!is_user_content(&path, &roots), "{} was wrongly denied", path.display());
             assert_eq!(
-                disposition_for(&path, &Justification::AppBundle { bundle_id: "x".into() }, &roots),
-                Ok(Disposition::Permanent),
+                disposition_for(
+                    &path,
+                    &Justification::AppBundle { bundle_id: "x".into(), evidence: Evidence::Likely },
+                    &roots
+                ),
+                Ok(Disposition::Trash),
                 "{} was not permitted under AppBundle",
                 path.display()
             );
@@ -1985,14 +2251,24 @@ mod tests {
     fn an_app_bundle_under_applications_is_permitted_regardless_of_case() {
         // F2/F3 requirement 3: the same case-insensitivity fix applies to
         // the AppBundle containment check, not just the user-content bar.
+        //
+        // `bundle_id: "com.example.app"` does not literally appear in
+        // "Example.app" — this test predates evidence-level routing and was
+        // never about bundle-id matching, only about scope case-folding.
+        // That makes it a name-only claim under the new rule: `Likely`, and
+        // `Trash` rather than the `Permanent` asserted before Task 2. The
+        // case-insensitivity this test proves is otherwise unchanged.
         let roots = system_roots();
         for path in ["/Applications/Example.app", "/applications/Example.app"] {
             let result = disposition_for(
                 Path::new(path),
-                &Justification::AppBundle { bundle_id: "com.example.app".into() },
+                &Justification::AppBundle {
+                    bundle_id: "com.example.app".into(),
+                    evidence: Evidence::Likely,
+                },
                 &roots,
             );
-            assert_eq!(result, Ok(Disposition::Permanent), "{path} was not permitted");
+            assert_eq!(result, Ok(Disposition::Trash), "{path} was not permitted");
         }
     }
 
@@ -2002,7 +2278,10 @@ mod tests {
         let roots = system_roots();
         let result = disposition_for(
             Path::new("/tmp/Example.app"),
-            &Justification::AppBundle { bundle_id: "com.example.app".into() },
+            &Justification::AppBundle {
+                bundle_id: "com.example.app".into(),
+                evidence: Evidence::Likely,
+            },
             &roots,
         );
         assert!(result.is_err());
@@ -2047,6 +2326,411 @@ mod tests {
                 path.display()
             );
         }
+    }
+
+    // ---- Evidence-level routing (ADR-0011 becoming enforcement) ---------
+
+    /// The brief's three evidence tests build `home` from a bare
+    /// `tempfile::tempdir()` and then pass `home.path()` both to build the
+    /// candidate and to `Roots::rooted_at`. On macOS that path is reached via
+    /// `/var`, which is itself an ordinary symlink to `/private/var` — not
+    /// the `/System/Volumes/Data` firmlink `strip_firmlink` knows about, and
+    /// nothing this module's guards are meant to weaken for. `Roots::new`
+    /// canonicalises `home` internally (as it must, so a symlinked catalog
+    /// root is recognised for what it really is), so `roots.home` ends up
+    /// `/private/var/...` while a candidate built straight from
+    /// `home.path()` is still lexically `/var/...`. `is_within_app_bundle_scope`'s
+    /// written-form conjunct — the one that catches
+    /// `ln -s ~/Library/Containers/com.apple.mail/Data ~/Applications` —
+    /// then, correctly and as designed, refuses a candidate whose written
+    /// prefix does not lexically match an authorised root. That is not a
+    /// relocation; it is two spellings of the same real directory, and the
+    /// mismatch is an artefact of the test's own home, not of anything
+    /// `disposition_for` gets wrong. Canonicalising once here, before either
+    /// side derives anything from it, removes the artefact without touching
+    /// `is_within_app_bundle_scope` at all.
+    fn canonical_tempdir() -> (tempfile::TempDir, PathBuf) {
+        let home = tempfile::tempdir().unwrap();
+        let canonical = home.path().canonicalize().unwrap();
+        (home, canonical)
+    }
+
+    #[test]
+    fn a_verified_app_bundle_item_is_removed_permanently() {
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.example.foo");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert_eq!(d, Ok(Disposition::Permanent));
+    }
+
+    #[test]
+    fn a_likely_app_bundle_item_goes_to_the_trash() {
+        // Name-matched evidence cannot be validated against a bundle id, so
+        // it carries the weaker consequence. ADR-0004 as amended.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("Foo");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Likely,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert_eq!(d, Ok(Disposition::Trash));
+    }
+
+    #[test]
+    fn a_verified_claim_the_path_does_not_support_is_denied() {
+        // ADR-0011 becoming enforcement: claiming Verified for a path that
+        // does not carry the bundle id must fail at the boundary, not merely
+        // look wrong in the review sheet.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Keychains");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("login.keychain-db");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert!(d.is_err(), "a verified claim with no bundle id in the path must be denied");
+    }
+
+    #[test]
+    fn a_verified_claim_does_not_match_a_different_apps_id_by_prefix() {
+        // Reviewer-found: `com.example.foo` is a literal prefix of
+        // `com.example.foobar` — a different application's own bundle id.
+        // `name.contains(bundle_id)` let a `Verified` claim for the first
+        // permanently delete the second app's state. Same bug class as
+        // `/tmp/keep` matching `/tmp/keepsake.txt` and `Foo` matching
+        // `Foo Helper`: matching must land on a component boundary, not on
+        // raw containment.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.example.foobar");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &Roots::rooted_at(&home),
+        );
+        assert!(
+            d.is_err(),
+            "com.example.foo was accepted as a match for a different app's com.example.foobar: {d:?}"
+        );
+    }
+
+    #[test]
+    fn every_legitimate_verified_name_shape_still_matches() {
+        // The other side of the prefix fix: the component-boundary rule must
+        // not cost any of the shapes ADR-0011/CONTEXT.md actually specify —
+        // the bare id, an id-plus-suffix support file, and the one
+        // known-prefix form (`group.<id>`), which is a *prefix* relationship
+        // and is handled as its own explicit case rather than folded into a
+        // generic "starts or ends with" test.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in [
+            "com.example.foo",
+            "com.example.foo.plist",
+            "com.example.foo.savedState",
+            "group.com.example.foo",
+        ] {
+            let item = dir.join(name);
+            std::fs::write(&item, b"x").unwrap();
+            let d = disposition_for(
+                &item,
+                &Justification::AppBundle {
+                    bundle_id: "com.example.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            );
+            assert_eq!(d, Ok(Disposition::Permanent), "{name} was not recognised as a match");
+        }
+    }
+
+    #[test]
+    fn a_verified_applications_bundle_reaches_permanent() {
+        // Positive coverage for the app's primary uninstall path: a
+        // `Verified` app bundle under `/Applications` itself, not only under
+        // `~/Library/Application Support` in a temp home. Asserted through
+        // `disposition_for` directly, never through `execute` — `/Applications`
+        // is real, and routing a real path through `execute` risks the exact
+        // mistake this file's own test-fixture rules exist to prevent.
+        let roots = system_roots();
+        let d = disposition_for(
+            Path::new("/Applications/com.example.foo.app"),
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &roots,
+        );
+        assert_eq!(d, Ok(Disposition::Permanent));
+    }
+
+    // ---- Apple's own software is never an uninstall target -------------
+
+    #[test]
+    fn an_apple_bundle_id_is_refused_at_both_evidence_levels() {
+        // The hole this closes: `associate.rs` refuses a *name* match onto an
+        // Apple-owned path, so a third-party "Mail" cannot claim Apple's Mail
+        // data through the `Likely` branch — but the `Verified` branch had no
+        // counterpart, and it is the branch that deletes permanently. An
+        // `Info.plist` declaring `CFBundleIdentifier = com.apple.finder`
+        // makes `~/Library/Preferences/com.apple.finder.plist` a genuine
+        // `Verified` match (the path really does carry the claimed id), and
+        // `disposition_for` answered `Ok(Permanent)`.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Preferences");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.apple.finder.plist");
+        std::fs::write(&item, b"x").unwrap();
+        let roots = Roots::rooted_at(&home);
+
+        for evidence in [Evidence::Verified, Evidence::Likely] {
+            let d = disposition_for(
+                &item,
+                &Justification::AppBundle { bundle_id: "com.apple.finder".into(), evidence },
+                &roots,
+            );
+            let why = d.expect_err("an Apple bundle id was accepted as an uninstall target");
+            assert!(why.contains("com.apple.finder"), "the denial does not name the id: {why}");
+            assert!(
+                why.contains("System Settings") || why.contains("App Store"),
+                "the denial does not offer a next step: {why}"
+            );
+        }
+        assert!(item.exists());
+    }
+
+    #[test]
+    fn an_apple_bundle_id_is_refused_wherever_the_candidate_sits() {
+        // The refusal runs ahead of the scope bar deliberately, so it cannot
+        // be sidestepped by a producer that points somewhere else. Asserted
+        // on an out-of-scope path (`/tmp`) whose *scope* denial would
+        // otherwise mask which guard fired: the message must be the Apple one.
+        let roots = system_roots();
+        let why = disposition_for(
+            Path::new("/tmp/Whatever"),
+            &Justification::AppBundle {
+                bundle_id: "com.apple.Safari".into(),
+                evidence: Evidence::Verified,
+            },
+            &roots,
+        )
+        .expect_err("an Apple bundle id was accepted outside the uninstall scope");
+        assert!(why.contains("Apple"), "the scope bar answered instead of the Apple bar: {why}");
+    }
+
+    #[test]
+    fn a_third_party_id_that_merely_begins_like_apples_is_not_refused() {
+        // The other side of the bar: `com.appleseed.foo` is a third party's
+        // own identifier and shares no component boundary with `com.apple.`,
+        // so the refusal must not swallow it. A `starts_with("com.apple")`
+        // written without the trailing dot would.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.appleseed.foo");
+        std::fs::write(&item, b"x").unwrap();
+        assert_eq!(
+            disposition_for(
+                &item,
+                &Justification::AppBundle {
+                    bundle_id: "com.appleseed.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            ),
+            Ok(Disposition::Permanent),
+        );
+    }
+
+    // ---- The app bundle itself (verified from its own Info.plist) -------
+
+    /// Plant an application bundle at `path` declaring `bundle_id`. Written
+    /// here rather than reused from `apps.rs`'s tests, which are private to
+    /// that module.
+    fn plant_bundle(path: &Path, bundle_id: &str) {
+        std::fs::create_dir_all(path.join("Contents")).unwrap();
+        std::fs::write(
+            path.join("Contents/Info.plist"),
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>{bundle_id}</string>
+<key>CFBundleName</key><string>Foo</string>
+</dict></plist>"#
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn a_bundle_declaring_the_claimed_id_reaches_permanent() {
+        // `Foo.app` carries `com.example.foo` nowhere in its name, so the
+        // name rule denies it — which is why uninstall could not remove the
+        // application it is named after. The bundle's own `Info.plist` is the
+        // honest evidence, and this reads it rather than taking the caller's
+        // word.
+        let (_home, home) = canonical_tempdir();
+        let apps = home.join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let bundle = apps.join("Foo.app");
+        plant_bundle(&bundle, "com.example.foo");
+
+        assert_eq!(
+            disposition_for(
+                &bundle,
+                &Justification::AppBundle {
+                    bundle_id: "com.example.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            ),
+            Ok(Disposition::Permanent),
+        );
+    }
+
+    #[test]
+    fn a_bundle_declaring_a_different_id_is_denied() {
+        let (_home, home) = canonical_tempdir();
+        let apps = home.join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let bundle = apps.join("Foo.app");
+        plant_bundle(&bundle, "com.example.other");
+
+        let why = disposition_for(
+            &bundle,
+            &Justification::AppBundle {
+                bundle_id: "com.example.foo".into(),
+                evidence: Evidence::Verified,
+            },
+            &Roots::rooted_at(&home),
+        )
+        .expect_err("a bundle declaring another app's id was accepted");
+        assert!(why.contains("CFBundleIdentifier"), "the denial does not say why: {why}");
+    }
+
+    #[test]
+    fn a_bundle_with_no_readable_plist_is_denied_not_guessed_from_its_name() {
+        let (_home, home) = canonical_tempdir();
+        let apps = home.join("Applications");
+        std::fs::create_dir_all(apps.join("Foo.app/Contents")).unwrap();
+
+        assert!(
+            disposition_for(
+                &apps.join("Foo.app"),
+                &Justification::AppBundle {
+                    bundle_id: "com.example.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            )
+            .is_err(),
+            "a bundle with no Info.plist was accepted"
+        );
+    }
+
+    #[test]
+    fn a_symlinked_bundle_is_not_verified_by_whatever_it_points_at() {
+        // The plist is read after `normalize`, which follows links — so a
+        // link planted at `~/Applications/Foo.app` pointing into another
+        // app's state directory would have *that* directory examined, and
+        // permanently removed if a plist were planted there too. Requiring
+        // the candidate as written to be a real directory removes the
+        // indirection. It is also exactly the shape of a Homebrew cask
+        // install (a symlink into the Caskroom), which must be handed to
+        // `brew` rather than deleted behind its back.
+        let (_home, home) = canonical_tempdir();
+        let victim = home.join("Library/Application Support/Real.app");
+        plant_bundle(&victim, "com.example.foo");
+        let apps = home.join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let link = apps.join("Foo.app");
+        symlink(&victim, &link);
+
+        assert!(
+            disposition_for(
+                &link,
+                &Justification::AppBundle {
+                    bundle_id: "com.example.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            )
+            .is_err(),
+            "a symlinked bundle was verified from its target's plist"
+        );
+        assert!(victim.exists());
+    }
+
+    #[test]
+    fn a_plain_directory_with_a_planted_plist_is_not_an_app_bundle() {
+        // Without the `.app` narrowing, "contains a Contents/Info.plist"
+        // becomes a way to nominate an arbitrary directory for permanent
+        // deletion — anything writable inside the uninstall scope.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support/Slack");
+        plant_bundle(&dir, "com.example.foo");
+
+        assert!(
+            disposition_for(
+                &dir,
+                &Justification::AppBundle {
+                    bundle_id: "com.example.foo".into(),
+                    evidence: Evidence::Verified,
+                },
+                &Roots::rooted_at(&home),
+            )
+            .is_err(),
+            "a plain directory with a planted plist was treated as an app bundle"
+        );
+    }
+
+    #[test]
+    fn an_empty_bundle_id_is_refused_rather_than_matching_everything() {
+        // A bare substring test would have let `bundle_id: ""` match any
+        // name at all (every string contains the empty string), so any
+        // in-scope `Verified` candidate would reach `Permanent` regardless of
+        // what it actually was. Refused at the boundary, named explicitly.
+        let (_home, home) = canonical_tempdir();
+        let dir = home.join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("AnythingAtAll");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::AppBundle { bundle_id: "".into(), evidence: Evidence::Verified },
+            &Roots::rooted_at(&home),
+        );
+        let why = d.expect_err("an empty bundle id matched an arbitrary path");
+        assert!(why.contains("empty"), "the denial does not name the problem: {why}");
     }
 }
 

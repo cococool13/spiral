@@ -9,6 +9,8 @@
 // one.** The few items that genuinely have no caller yet carry their own
 // narrowly scoped `#[allow(dead_code)]` naming the milestone that consumes
 // them, so a warning here now means what it says.
+mod apps;
+mod associate;
 mod catalog;
 mod commands;
 mod exclude;
@@ -29,6 +31,9 @@ pub fn run() {
             commands::clean_categories,
             commands::clean_scan,
             commands::clean_execute,
+            commands::uninstall_list,
+            commands::uninstall_inspect,
+            commands::uninstall_execute,
             permissions::fda_status,
             permissions::open_privacy_settings
         ])
