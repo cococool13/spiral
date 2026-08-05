@@ -472,6 +472,33 @@ fn candidates_for(bundle_id: &str, items: &[InspectItem]) -> Vec<remove::Candida
         .collect()
 }
 
+/// True when `displayed` names exactly the paths `inspect_within` just
+/// found, in the same order.
+///
+/// **This is a checksum, never authority.** Nothing here is written into a
+/// `Candidate` — every path `remove::execute` ever sees still comes solely
+/// from the fresh `items` this function is handed, exactly as before. What
+/// this answers is a narrower question: is the webview still looking at the
+/// same list `deselected`'s indices were chosen against? Indices are only
+/// meaningful relative to one specific ordering of one specific list, and
+/// `inspect_within` re-inspects from scratch on every call — `order_items`
+/// re-sorts whatever it finds, so a file the still-running app wrote,
+/// deleted, or renamed between `uninstall_inspect` and `uninstall_execute`
+/// can shift every later index without changing the list's length. A review
+/// that showed `[a, b]` with `b` deselected, followed by the app writing a
+/// new file that sorts between them, produces `[a, c, b]` on re-inspection —
+/// index 1 is now `c`, not the item the user chose to keep, and `b` (now
+/// index 2) would be silently acted on instead.
+///
+/// The comparison is positional and exact — same length, same path, same
+/// order — not a set-membership test: a mere reordering changes which index
+/// means what just as surely as an addition or removal does, so it is
+/// refused identically.
+fn echo_matches_inspection(displayed: &[String], items: &[InspectItem]) -> bool {
+    displayed.len() == items.len()
+        && displayed.iter().zip(items.iter()).all(|(shown, item)| *shown == item.path)
+}
+
 /// A UTC timestamp for the run log, `YYYY-MM-DDTHH:MM:SSZ` — the same shape
 /// the webview sends `clean_execute` via `Date.toISOString()`. Generated
 /// here rather than accepted as a parameter, because `uninstall_execute`'s
@@ -502,9 +529,16 @@ fn now_iso8601() -> String {
 /// webview might echo back — `bundle_id` is the only thing it takes on
 /// faith, and that is re-resolved to a real installed app by
 /// `inspect_within` before anything else happens.
+///
+/// `displayed` is the list of paths `uninstall_inspect` showed the user,
+/// in the order it showed them — an echo, not a path to act on. It exists
+/// solely so this function can catch the list having drifted between the
+/// two calls (see `echo_matches_inspection`) before `deselected`'s indices,
+/// meaningful only against that exact list, are trusted at all.
 fn run_uninstall(
     bundle_id: &str,
     deselected: Vec<usize>,
+    displayed: Vec<String>,
     config_dir: &Path,
     home: &Path,
 ) -> Result<UninstallReport, String> {
@@ -514,6 +548,21 @@ fn run_uninstall(
     let home = canonical_home(home)?;
 
     let inspected = inspect_within(bundle_id, &home)?;
+
+    // The echo check runs before anything about `deselected` is trusted:
+    // an index is only meaningful relative to the exact list it was chosen
+    // against, and a length match alone is not enough — see
+    // `echo_matches_inspection`.
+    if !echo_matches_inspection(&displayed, &inspected.items) {
+        return Err(format!(
+            "The list of items for this app has changed since it was shown \
+             ({} item{} shown, {} found just now). Reopen the review and try again.",
+            displayed.len(),
+            if displayed.len() == 1 { "" } else { "s" },
+            inspected.items.len()
+        ));
+    }
+
     let total = inspected.items.len();
 
     // A frontend and backend disagreeing about list length must not resolve
@@ -581,6 +630,7 @@ pub fn uninstall_execute(
     app: tauri::AppHandle,
     bundle_id: String,
     deselected: Vec<usize>,
+    displayed: Vec<String>,
 ) -> Result<UninstallReport, String> {
     use tauri::Manager;
     let dir = app
@@ -589,7 +639,7 @@ pub fn uninstall_execute(
         .map_err(|e| format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app."))?;
     let home = dirs::home_dir()
         .ok_or("Could not locate your home folder, so nothing was uninstalled.")?;
-    run_uninstall(&bundle_id, deselected, &dir, &home)
+    run_uninstall(&bundle_id, deselected, displayed, &dir, &home)
 }
 
 #[cfg(test)]
@@ -889,7 +939,7 @@ mod tests {
         // resolve into a deletion of the wrong item.
         let home = tempfile::tempdir().unwrap();
         let cfg = tempfile::tempdir().unwrap();
-        let err = run_uninstall("com.example.absent", vec![99], cfg.path(), home.path())
+        let err = run_uninstall("com.example.absent", vec![99], vec![], cfg.path(), home.path())
             .unwrap_err();
         assert!(!err.is_empty());
     }
@@ -940,6 +990,16 @@ mod tests {
         std::fs::write(support.join(bundle_id), b"x").unwrap();
     }
 
+    /// The `displayed` echo a well-behaved caller would send: exactly what
+    /// `inspect_within` finds right now, in its own order. Built the same
+    /// way `run_uninstall` itself will re-inspect — canonicalising `home`
+    /// first — so a positive test's echo matches what the function under
+    /// test actually computes, not a string that merely looks similar.
+    fn fresh_paths(bundle_id: &str, home: &std::path::Path) -> Vec<String> {
+        let canonical = canonical_home(home).unwrap();
+        inspect_within(bundle_id, &canonical).unwrap().items.into_iter().map(|i| i.path).collect()
+    }
+
     #[test]
     fn an_out_of_range_index_against_a_real_app_is_caught_and_named() {
         // The brief's own test above (`an_out_of_range_deselection_denies_the_
@@ -954,9 +1014,16 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         let cfg = tempfile::tempdir().unwrap();
         plant_app_with_one_item(home.path(), "com.example.uninstall-range");
+        let displayed = fresh_paths("com.example.uninstall-range", home.path());
 
-        let err = run_uninstall("com.example.uninstall-range", vec![1], cfg.path(), home.path())
-            .unwrap_err();
+        let err = run_uninstall(
+            "com.example.uninstall-range",
+            vec![1],
+            displayed,
+            cfg.path(),
+            home.path(),
+        )
+        .unwrap_err();
         assert!(err.contains('1'), "must name the out-of-range index: {err}");
         assert!(
             err.contains("1 associated item"),
@@ -971,10 +1038,12 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         let cfg = tempfile::tempdir().unwrap();
         plant_app_with_one_item(home.path(), "com.example.uninstall-dup");
+        let displayed = fresh_paths("com.example.uninstall-dup", home.path());
 
         let report = run_uninstall(
             "com.example.uninstall-dup",
             vec![0, 0],
+            displayed,
             cfg.path(),
             home.path(),
         )
@@ -992,9 +1061,16 @@ mod tests {
         plant_app_with_one_item(home.path(), "com.example.uninstall-empty");
         let item = home.path().join("Library/Application Support/com.example.uninstall-empty");
         assert!(item.exists());
+        let displayed = fresh_paths("com.example.uninstall-empty", home.path());
 
-        let report =
-            run_uninstall("com.example.uninstall-empty", vec![], cfg.path(), home.path()).unwrap();
+        let report = run_uninstall(
+            "com.example.uninstall-empty",
+            vec![],
+            displayed,
+            cfg.path(),
+            home.path(),
+        )
+        .unwrap();
         assert_eq!(report.removed, 1, "the sole item should have been removed: {report:?}");
         assert!(!item.exists());
     }
@@ -1005,9 +1081,16 @@ mod tests {
         let cfg = tempfile::tempdir().unwrap();
         plant_app_with_one_item(home.path(), "com.example.uninstall-all");
         let item = home.path().join("Library/Application Support/com.example.uninstall-all");
+        let displayed = fresh_paths("com.example.uninstall-all", home.path());
 
-        let report =
-            run_uninstall("com.example.uninstall-all", vec![0], cfg.path(), home.path()).unwrap();
+        let report = run_uninstall(
+            "com.example.uninstall-all",
+            vec![0],
+            displayed,
+            cfg.path(),
+            home.path(),
+        )
+        .unwrap();
         assert_eq!(report.removed, 0);
         assert_eq!(report.excluded, 0);
         assert!(report.failed.is_empty());
@@ -1021,9 +1104,17 @@ mod tests {
         let user_apps = home.path().join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
         plant_app(&user_apps, "Foo", "com.example.uninstall-none");
+        let displayed = fresh_paths("com.example.uninstall-none", home.path());
+        assert!(displayed.is_empty(), "sanity: this app has no associated items");
 
-        let report =
-            run_uninstall("com.example.uninstall-none", vec![], cfg.path(), home.path()).unwrap();
+        let report = run_uninstall(
+            "com.example.uninstall-none",
+            vec![],
+            displayed,
+            cfg.path(),
+            home.path(),
+        )
+        .unwrap();
         assert_eq!(report.removed, 0);
         assert!(report.failed.is_empty());
         assert!(report.partially_removed.is_empty());
@@ -1032,12 +1123,18 @@ mod tests {
     #[test]
     fn a_likely_item_goes_to_the_trash_a_verified_item_is_permanent() {
         // End-to-end proof that the evidence carried on each `InspectItem`
-        // reaches `remove::execute` and determines disposition there, not in
-        // this module — `Verified` items are the app's own bundle id in the
-        // name and are removed permanently; `Likely` items match only by
-        // display name and go to the Trash (ADR-0004, as amended).
+        // reaches `remove::execute` and determines *disposition* there —
+        // `Verified` items are the app's own bundle id in the name and are
+        // removed permanently; `Likely` items match only by display name and
+        // go to the Trash (ADR-0004, as amended). Calls `remove::execute`
+        // directly (via `candidates_for`, not through `run_uninstall`) so
+        // each item's actual `Outcome::Removed(Disposition)` is visible:
+        // `UninstallReport.removed` is a single count that both dispositions
+        // feed, so asserting only `removed == 2` would still pass even if
+        // both items landed on the wrong side of the Trash/Permanent split
+        // — this must assert the split itself, not just that something
+        // happened.
         let home = tempfile::tempdir().unwrap();
-        let cfg = tempfile::tempdir().unwrap();
         let bundle_id = "com.example.uninstall-evidence";
         let user_apps = home.path().join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
@@ -1047,8 +1144,39 @@ mod tests {
         std::fs::write(support.join(bundle_id), b"x").unwrap();
         std::fs::write(support.join("Foo"), b"x").unwrap();
 
-        let report = run_uninstall(bundle_id, vec![], cfg.path(), home.path()).unwrap();
-        assert_eq!(report.removed, 2, "{report:?}");
+        // Candidates carry canonical paths (`inspect_within` is called with
+        // `canonical_home`'s output, matching `run_uninstall`'s own
+        // sequencing) — so the paths this test looks the outcomes up by must
+        // be built from the same canonical `home`, not the raw tempdir path,
+        // or the lookup below would miss on a machine where the two differ
+        // (e.g. `/var` vs `/private/var`).
+        let canonical = canonical_home(home.path()).unwrap();
+        let support = canonical.join("Library/Application Support");
+        let inspected = inspect_within(bundle_id, &canonical).unwrap();
+        let candidates = candidates_for(bundle_id, &inspected.items);
+        let reports = remove::execute(candidates, &Ok(exclude::new(vec![])), &canonical);
+        assert_eq!(reports.len(), 2);
+
+        let outcome_for = |p: &std::path::Path| {
+            &reports.iter().find(|r| r.path == p).expect("candidate missing from report").outcome
+        };
+
+        assert!(
+            matches!(
+                outcome_for(&support.join(bundle_id)),
+                remove::Outcome::Removed(catalog::Disposition::Permanent)
+            ),
+            "verified item should be removed permanently: {:?}",
+            outcome_for(&support.join(bundle_id))
+        );
+        assert!(
+            matches!(
+                outcome_for(&support.join("Foo")),
+                remove::Outcome::Removed(catalog::Disposition::Trash)
+            ),
+            "likely item should go to the Trash: {:?}",
+            outcome_for(&support.join("Foo"))
+        );
         assert!(!support.join(bundle_id).exists());
         assert!(!support.join("Foo").exists());
     }
@@ -1058,8 +1186,16 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         let cfg = tempfile::tempdir().unwrap();
         plant_app_with_one_item(home.path(), "com.example.uninstall-history");
+        let displayed = fresh_paths("com.example.uninstall-history", home.path());
 
-        run_uninstall("com.example.uninstall-history", vec![], cfg.path(), home.path()).unwrap();
+        run_uninstall(
+            "com.example.uninstall-history",
+            vec![],
+            displayed,
+            cfg.path(),
+            home.path(),
+        )
+        .unwrap();
 
         let runs = history::read(cfg.path()).unwrap();
         assert_eq!(runs.len(), 1);
@@ -1078,6 +1214,7 @@ mod tests {
         let bundle_id = "com.example.uninstall-exclusion";
         plant_app_with_one_item(home.path(), bundle_id);
         let item = home.path().join("Library/Application Support").join(bundle_id);
+        let displayed = fresh_paths(bundle_id, home.path());
 
         std::fs::write(
             cfg.path().join("exclusions.json"),
@@ -1085,7 +1222,8 @@ mod tests {
         )
         .unwrap();
 
-        let report = run_uninstall(bundle_id, vec![], cfg.path(), home.path()).unwrap();
+        let report =
+            run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path()).unwrap();
         assert_eq!(report.excluded, 1);
         assert_eq!(report.removed, 0);
         assert!(item.exists(), "an excluded item was removed via uninstall");
@@ -1106,7 +1244,111 @@ mod tests {
         let cfg = tempfile::tempdir().unwrap();
 
         let err =
-            run_uninstall("com.example.unresolvable", vec![], cfg.path(), &home_a).unwrap_err();
+            run_uninstall("com.example.unresolvable", vec![], vec![], cfg.path(), &home_a)
+                .unwrap_err();
         assert!(!err.is_empty());
+    }
+
+    // ---- The echo check (indices drift between inspect and execute) -----
+
+    #[test]
+    fn a_matching_echo_proceeds_normally() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-echo-match";
+        plant_two_items(home.path(), bundle_id);
+        let displayed = fresh_paths(bundle_id, home.path());
+        assert_eq!(displayed.len(), 2, "sanity: this app has two associated items");
+
+        let report =
+            run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 2, "{report:?}");
+    }
+
+    #[test]
+    fn an_echo_missing_an_item_is_denied() {
+        // The app wrote or removed nothing here — this simulates the review
+        // sheet having shown fewer items than actually exist right now (a
+        // shorter, stale echo), which must be refused exactly like a longer
+        // one: index 0 no longer necessarily means what it meant.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-echo-missing";
+        plant_two_items(home.path(), bundle_id);
+        let mut displayed = fresh_paths(bundle_id, home.path());
+        displayed.truncate(1);
+
+        let err = run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path())
+            .unwrap_err();
+        assert!(!err.is_empty());
+        let support = home.path().join("Library/Application Support");
+        assert!(support.join(bundle_id).exists(), "nothing should be removed when denied");
+        assert!(support.join("Foo").exists());
+    }
+
+    #[test]
+    fn an_echo_with_an_extra_item_is_denied() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-echo-extra";
+        plant_two_items(home.path(), bundle_id);
+        let mut displayed = fresh_paths(bundle_id, home.path());
+        displayed.push("/tmp/spiral-clean-echo-extra-item-not-really-found".into());
+
+        let err = run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path())
+            .unwrap_err();
+        assert!(!err.is_empty());
+        let support = home.path().join("Library/Application Support");
+        assert!(support.join(bundle_id).exists(), "nothing should be removed when denied");
+        assert!(support.join("Foo").exists());
+    }
+
+    #[test]
+    fn an_echo_in_a_different_order_is_denied() {
+        // Same items, same length, reversed order. A pure length or
+        // set-membership check would let this through; the guard must be
+        // positional, because a reordering changes which index means what
+        // just as surely as an addition or removal does.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-echo-order";
+        plant_two_items(home.path(), bundle_id);
+        let mut displayed = fresh_paths(bundle_id, home.path());
+        assert_eq!(displayed.len(), 2);
+        displayed.reverse();
+
+        let err = run_uninstall(bundle_id, vec![], displayed, cfg.path(), home.path())
+            .unwrap_err();
+        assert!(!err.is_empty());
+        let support = home.path().join("Library/Application Support");
+        assert!(support.join(bundle_id).exists(), "nothing should be removed when denied");
+        assert!(support.join("Foo").exists());
+    }
+
+    #[test]
+    fn an_empty_echo_against_a_non_empty_inspection_is_denied() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let bundle_id = "com.example.uninstall-echo-empty";
+        plant_app_with_one_item(home.path(), bundle_id);
+
+        let err = run_uninstall(bundle_id, vec![], vec![], cfg.path(), home.path())
+            .unwrap_err();
+        assert!(!err.is_empty());
+        let item = home.path().join("Library/Application Support").join(bundle_id);
+        assert!(item.exists(), "nothing should be removed when denied");
+    }
+
+    /// Plant a real app with two associated items — one `Verified` (its own
+    /// bundle id), one `Likely` (its display name) — so echo tests have a
+    /// list worth reordering, truncating, or extending.
+    fn plant_two_items(home: &std::path::Path, bundle_id: &str) {
+        let user_apps = home.join("Applications");
+        std::fs::create_dir_all(&user_apps).unwrap();
+        plant_app(&user_apps, "Foo", bundle_id);
+        let support = home.join("Library/Application Support");
+        std::fs::create_dir_all(&support).unwrap();
+        std::fs::write(support.join(bundle_id), b"x").unwrap();
+        std::fs::write(support.join("Foo"), b"x").unwrap();
     }
 }

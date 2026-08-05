@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub enum Justification {
     /// Matched a safe-category catalog entry, by id. The only variant M3
-    /// constructs — `commands::candidates_for` builds every candidate with it.
+    /// constructs — `commands::catalog_candidates_for` builds every candidate with it.
     Catalog(String),
     /// App-managed state whose owning app is gone (ADR-0007). Constructed by
     /// the leftovers sweep in M4 (Uninstall); the disposition and containment
@@ -54,7 +54,7 @@ pub enum Evidence {
 /// it.
 ///
 /// **There is deliberately no `bytes` field.** One existed and was written as
-/// a constant `0` by the only producer (`commands::candidates_for`), read by
+/// a constant `0` by the only producer (`commands::catalog_candidates_for`), read by
 /// nobody, and serialised nowhere — a trap for whoever first tried to use it.
 /// Sizing is reported from the scan's own per-category totals
 /// (`CategoryResult::bytes`) and, for what actually landed, from the measured
