@@ -693,8 +693,6 @@ fn order_leftovers(mut items: Vec<LeftoverItem>) -> Vec<LeftoverItem> {
     items
 }
 
-/// Testable core of `leftovers_scan`.
-///
 /// Converts each `orphans::Leftover`'s `PathBuf`s to `String`s — one
 /// directional, as in M4: the webview only ever displays these, and Task 5's
 /// `leftovers_remove` rebuilds real paths from its own fresh
@@ -702,8 +700,13 @@ fn order_leftovers(mut items: Vec<LeftoverItem>) -> Vec<LeftoverItem> {
 /// IPC boundary. Each leftover's own paths are sorted too, since Task 5's
 /// checksum compares them element-wise and an unordered set could reorder
 /// between calls and deny a legitimate removal.
-fn scan_leftovers_within(home: &Path) -> Vec<LeftoverItem> {
-    let items = orphans::find(home)
+///
+/// Factored out from `scan_leftovers_within` so a test can drive this same
+/// mapping-and-ordering logic from `orphans::find_in` with a temp root — the
+/// hermetic seam `orphans.rs` itself provides — without ever going through
+/// `orphans::find` and its real `/Applications` root.
+fn leftover_items_from(leftovers: Vec<orphans::Leftover>) -> Vec<LeftoverItem> {
+    let items = leftovers
         .into_iter()
         .map(|leftover| {
             let mut paths: Vec<String> =
@@ -713,6 +716,13 @@ fn scan_leftovers_within(home: &Path) -> Vec<LeftoverItem> {
         })
         .collect();
     order_leftovers(items)
+}
+
+/// Testable core of `leftovers_scan`. The only place that calls
+/// `orphans::find` (and, through it, names the real `/Applications`) — see
+/// [`leftover_items_from`] for the hermetically testable half of this.
+fn scan_leftovers_within(home: &Path) -> Vec<LeftoverItem> {
+    leftover_items_from(orphans::find(home))
 }
 
 #[tauri::command]
@@ -1579,5 +1589,74 @@ mod tests {
         let sorted = order_leftovers(items);
         assert_eq!(sorted[0].bundle_id, "com.a");
         assert_eq!(sorted[1].bundle_id, "com.b");
+    }
+
+    #[test]
+    fn leftover_items_sort_by_size_descending_first() {
+        // Distinct sizes, deliberately paired against the bundle-id
+        // alphabetical order so the two keys disagree: if `order_leftovers`
+        // sorted by size ascending (the opposite of what the user needs —
+        // biggest reclaim first), "com.a" (the smaller item) would still
+        // come first, same as it does alphabetically, and this test would
+        // not notice. Mutation-proven: reversing the comparator to
+        // `a.bytes.cmp(&b.bytes)` makes this fail (see task-4-report.md).
+        let items = vec![
+            LeftoverItem { bundle_id: "com.a".into(), paths: vec![], bytes: 10 },
+            LeftoverItem { bundle_id: "com.b".into(), paths: vec![], bytes: 100 },
+        ];
+        let sorted = order_leftovers(items);
+        assert_eq!(sorted[0].bundle_id, "com.b", "the bigger item must sort first");
+        assert_eq!(sorted[1].bundle_id, "com.a");
+    }
+
+    #[test]
+    fn scan_leftovers_within_sorts_each_items_own_paths() {
+        // `leftover_items_from` is the mapping-and-ordering half of
+        // `scan_leftovers_within`, factored out precisely so this can run
+        // through `orphans::find_in` with a temp root — never
+        // `orphans::find`, which is the only place the real `/Applications`
+        // is named.
+        //
+        // `LOCATIONS` iterates "Logs" before "HTTPStorages", but
+        // "HTTPStorages" sorts before "Logs" lexically — planting the same
+        // id under both, in that iteration order, comes back sorted only if
+        // `paths.sort()` inside `leftover_items_from` actually ran. Task 5's
+        // checksum compares displayed paths element-wise, so an unsorted
+        // (or accidentally-already-sorted) set here would deny a legitimate
+        // removal without this test catching it.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        crate::apps::tests_support::plant_app(&apps, "Decoy", "com.example.decoy");
+
+        let logs = home.path().join("Library/Logs");
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::write(logs.join("com.example.multi"), b"x").unwrap();
+
+        let http_storages = home.path().join("Library/HTTPStorages");
+        std::fs::create_dir_all(&http_storages).unwrap();
+        std::fs::write(http_storages.join("com.example.multi"), b"x").unwrap();
+
+        let items = leftover_items_from(orphans::find_in(home.path(), &[apps]));
+        let item = items
+            .iter()
+            .find(|i| i.bundle_id == "com.example.multi")
+            .expect("the planted leftover must be reported");
+
+        assert_eq!(item.paths.len(), 2, "both locations must be attributed to the one id");
+        assert!(
+            item.paths[0].contains("HTTPStorages") && item.paths[1].contains("Logs"),
+            "paths must come back sorted, not in LOCATIONS iteration order: {:?}",
+            item.paths
+        );
+    }
+
+    #[test]
+    fn an_empty_scan_reports_an_empty_list_not_an_error() {
+        // Nothing to clean is a normal, good outcome — the state most users
+        // will be in on a second run, not a failure to surface as one.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        crate::apps::tests_support::plant_app(&apps, "Decoy", "com.example.decoy");
+        assert!(leftover_items_from(orphans::find_in(home.path(), &[apps])).is_empty());
     }
 }
