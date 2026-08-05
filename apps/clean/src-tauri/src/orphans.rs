@@ -3,9 +3,27 @@
 //!
 //! This module never deletes and never calls into `remove.rs` — it only
 //! proposes. It reuses `associate::LOCATIONS` (one bounded list, one place to
-//! change) and `apps::discover` (the only seam that names the real
-//! `/Applications`); nothing here resolves a real home or scans a real
-//! directory on its own.
+//! change) and `apps::discover_in` (never `apps::discover` — see [`find_in`])
+//! so nothing here resolves a real home or scans a real directory on its own.
+//!
+//! **An entry belongs to an installed app whenever its id equals that app's
+//! own id, or extends it with a `.`-separated suffix** — the same rule
+//! `remove.rs::verified_name_matches` uses on the other side of the removal
+//! boundary. Apple *requires* an app extension, helper, or updater to be
+//! named this way, so `com.example.foo.SafariExtension` is not an edge case
+//! of `com.example.foo` being installed — it is how Apple's own naming
+//! convention represents "belongs to." Matching only exact equality here
+//! would report every extension, helper, and updater of every installed app
+//! as dead, which on a real Mac is not a handful of near-misses but hundreds
+//! of entries.
+//!
+//! **Discovery finding no installed applications at all makes this report
+//! nothing, not everything.** An empty installed set is far more likely
+//! evidence that `apps::discover_in` could not read `/Applications` than
+//! evidence that zero applications exist — and treating it as the latter
+//! would make a permissions problem look like license to propose every
+//! bundle-id-shaped entry on the machine as dead. This module fails closed,
+//! the same way the rest of this app does.
 
 use crate::apps;
 use crate::associate::LOCATIONS;
@@ -33,41 +51,85 @@ fn is_apple_bundle_id(bundle_id: &str) -> bool {
     bundle_id.to_lowercase().starts_with(APPLE_BUNDLE_PREFIX)
 }
 
-/// Strip a trailing `.plist` or `.savedState` suffix, if present.
-fn strip_known_suffix(name: &str) -> &str {
-    name.strip_suffix(".plist").or_else(|| name.strip_suffix(".savedState")).unwrap_or(name)
+/// Strip a trailing `.plist` or `.savedState` suffix, returning `None` when
+/// neither is present.
+fn strip_known_suffix(name: &str) -> Option<&str> {
+    name.strip_suffix(".plist").or_else(|| name.strip_suffix(".savedState"))
 }
 
-/// Strip a leading `group.` prefix, if present.
-fn strip_group_prefix(name: &str) -> &str {
-    name.strip_prefix("group.").unwrap_or(name)
+/// The id `name` would prove, or `None` when `name` is not a shape
+/// `remove.rs::verified_name_matches` can ever verify against any id.
+///
+/// Two of the three shapes that function accepts each have a name-level
+/// transform here: a known suffix stripped (`com.foo.bar.plist` ->
+/// `com.foo.bar`, matching `verified_name_matches`'s "id plus a
+/// `.`-separated suffix" arm) or a `group.` prefix stripped
+/// (`group.com.foo.bar` -> `com.foo.bar`, matching its "exact `group.<id>`"
+/// arm). **The two are never combined.** A name like
+/// `group.com.foo.bar.plist` looks tempting to resolve to `com.foo.bar` by
+/// stripping both, but `verified_name_matches("group.com.foo.bar.plist",
+/// "com.foo.bar")` is `false` under all three of its own arms — the removal
+/// boundary can never confirm that path carries that id. Proposing it anyway
+/// would show the user a leftover that silently does nothing when acted on
+/// (the exact failure mode the module doc comments in `associate.rs` and
+/// `remove.rs` were each written to prevent), so a name shaped like both at
+/// once resolves to nothing at all rather than a guess.
+fn resolve_verifiable_id(name: &str) -> Option<&str> {
+    if let Some(stripped) = strip_known_suffix(name) {
+        if stripped.starts_with("group.") {
+            return None;
+        }
+        return Some(stripped);
+    }
+    name.strip_prefix("group.").or(Some(name))
 }
 
-/// The bundle id `name` would resolve to, before any shape check: strip a
-/// known suffix, then a `group.` prefix, so `com.foo.bar.plist` and
-/// `group.com.foo.bar` both resolve to `com.foo.bar`. This is a pure string
-/// transform — it says nothing about whether the result actually looks like
-/// a bundle id; [`looks_like_bundle_id`] and [`find`] each apply that check
-/// to this same resolved value, so the two never disagree about what a name
-/// resolves to.
-fn resolved(name: &str) -> &str {
-    strip_group_prefix(strip_known_suffix(name))
+/// The id `name` proves, if it is both a [`resolve_verifiable_id`]-able shape
+/// and looks like a bundle id at all: at least two non-empty, dot-separated
+/// segments, and no leading dot. `None` covers both failure modes — the
+/// unrepresentable combined shape and an ordinary plain name — with the same
+/// "when in doubt, propose nothing" answer.
+///
+/// The one place both [`looks_like_bundle_id`] and [`find_in`] derive an id
+/// from a name, so the two can never disagree about what a name resolves to
+/// or whether it counts.
+fn shaped_bundle_id(name: &str) -> Option<&str> {
+    let candidate = resolve_verifiable_id(name)?;
+    if candidate.is_empty() || candidate.starts_with('.') {
+        return None;
+    }
+    let mut segments = candidate.split('.');
+    (segments.clone().count() >= 2 && segments.all(|segment| !segment.is_empty())).then_some(candidate)
 }
 
-/// True when `name` — after stripping a known suffix and a `group.` prefix,
-/// see [`resolved`] — is shaped like a bundle id: at least two non-empty,
-/// dot-separated segments, and no leading dot.
+/// True when `name` is shaped like a bundle id — see [`shaped_bundle_id`].
 ///
 /// Deliberately strict. A plain-name folder like `Slack` proves far too
 /// little to infer that something is dead, so it is never proposed — when in
 /// doubt, this returns `false`.
+// No caller yet — `commands::leftovers_scan` (M4b Task 4) wires this in.
+#[allow(dead_code)]
 pub fn looks_like_bundle_id(name: &str) -> bool {
-    let candidate = resolved(name);
-    if candidate.is_empty() || candidate.starts_with('.') {
-        return false;
-    }
-    let mut segments = candidate.split('.');
-    segments.clone().count() >= 2 && segments.all(|segment| !segment.is_empty())
+    shaped_bundle_id(name).is_some()
+}
+
+/// True when `id` is one of `installed` itself, or extends one of them with
+/// a `.`-separated suffix — the same shape `remove.rs::verified_name_matches`
+/// uses to decide a *path* carries a bundle id, applied here to decide
+/// whether an *id* belongs to an installed app's own namespace: an
+/// extension, helper, or updater Apple requires to be named
+/// `<app id>.<component>`.
+///
+/// **Deliberately not the reverse test** (`installed.starts_with(id)`), and
+/// not `contains`. Either would let an installed `com.example.foobar` claim
+/// a shorter, *different* app's `com.example.foo` — the identical bug class
+/// `verified_name_matches`'s own doc comment records this codebase having
+/// shipped once already, reached here from the opposite direction: this
+/// function decides "is this id already accounted for," and the reverse test
+/// would answer yes for two unrelated apps that merely share a prefix.
+fn belongs_to_installed(id: &str, installed: &HashSet<String>) -> bool {
+    let id = id.to_lowercase();
+    installed.iter().any(|inst| id == *inst || id.starts_with(&format!("{inst}.")))
 }
 
 /// Logical size of `path`: its own length if it is a file, or the sum of
@@ -101,23 +163,49 @@ fn size_of(path: &Path) -> u64 {
         .sum()
 }
 
-/// Find every leftover under `home/Library`: a bundle-id-shaped entry, in one
-/// of [`LOCATIONS`], that resolves to an id no installed application
-/// declares and that is not one of Apple's own.
-///
-/// Calls `apps::discover(home)` exactly once to learn what is installed, then
-/// walks each `LOCATIONS` entry's **immediate children only — no
-/// recursion**, matching declared ids by resolved id, whole-string and
-/// case-insensitively (never by prefix or `contains`). Entries that resolve
-/// to the same id (e.g. `com.foo.bar` and `group.com.foo.bar`) are grouped
-/// into one [`Leftover`]. An unreadable directory is skipped, not fatal — a
-/// permission error on one location is not evidence anything under it is
-/// dead.
+/// [`find_in`] against the real machine: the real `/Applications` and
+/// `home.join("Applications")`, matching `apps::discover`'s own two roots
+/// exactly. This is the only place either real path is named — see the
+/// module doc comment on [`find_in`] for why every test goes through that
+/// function directly instead.
 // No caller yet — `commands::leftovers_scan` (M4b Task 4) wires this in.
 #[allow(dead_code)]
 pub fn find(home: &Path) -> Vec<Leftover> {
+    find_in(home, &[PathBuf::from("/Applications"), home.join("Applications")])
+}
+
+/// Find every leftover under `home/Library`: a bundle-id-shaped entry, in one
+/// of [`LOCATIONS`], that resolves to an id no application discovered under
+/// `app_roots` declares and that is not one of Apple's own.
+///
+/// `app_roots` names every root `apps::discover_in` should scan for
+/// installed applications — [`find`] is the only caller that ever names the
+/// real `/Applications`; this function resolves nothing on its own, the same
+/// seam `apps::discover_in` itself provides over `apps::discover`. A test
+/// wanting deterministic, hermetic coverage calls this directly with fake
+/// roots.
+///
+/// Walks each `LOCATIONS` entry's **immediate children only — no
+/// recursion**, matching declared ids by [`belongs_to_installed`] rather than
+/// exact equality, so an installed app's own extensions and helpers are
+/// never proposed as dead. Entries that resolve to the same id (e.g.
+/// `com.foo.bar` and `group.com.foo.bar`) are grouped into one [`Leftover`].
+/// An unreadable directory is skipped, not fatal — a permission error on one
+/// location is not evidence anything under it is dead. If discovery finds no
+/// installed applications at all, this returns nothing at all — see the
+/// module doc comment.
+// No caller yet — `commands::leftovers_scan` (M4b Task 4) wires this in.
+#[allow(dead_code)]
+pub fn find_in(home: &Path, app_roots: &[PathBuf]) -> Vec<Leftover> {
     let installed: HashSet<String> =
-        apps::discover(home).into_iter().map(|app| app.bundle_id.to_lowercase()).collect();
+        apps::discover_in(app_roots).into_iter().map(|app| app.bundle_id.to_lowercase()).collect();
+
+    // Fail closed: see the module doc comment. An empty installed set almost
+    // always means discovery could not read the disk, not that this Mac has
+    // no applications at all.
+    if installed.is_empty() {
+        return Vec::new();
+    }
 
     let library = home.join("Library");
     let mut by_id: HashMap<String, Leftover> = HashMap::new();
@@ -134,14 +222,13 @@ pub fn find(home: &Path) -> Vec<Leftover> {
             let name = entry.file_name();
             let name = name.to_string_lossy();
 
-            if !looks_like_bundle_id(&name) {
+            let Some(id) = shaped_bundle_id(&name) else {
                 continue;
-            }
-            let id = resolved(&name);
+            };
             if is_apple_bundle_id(id) {
                 continue;
             }
-            if installed.contains(&id.to_lowercase()) {
+            if belongs_to_installed(id, &installed) {
                 continue;
             }
 
@@ -171,11 +258,23 @@ mod tests {
         p
     }
 
+    /// Every positive-path test needs at least one installed app just to
+    /// clear the fail-closed guard (see the module doc comment) — this plants
+    /// one that is unrelated to whatever the test is actually exercising, so
+    /// a passing test still proves the thing it names, not an accident of
+    /// the guard tripping.
+    fn decoy_app(apps_root: &std::path::Path) {
+        std::fs::create_dir_all(apps_root).unwrap();
+        crate::apps::tests_support::plant_app(apps_root, "Decoy", "com.example.decoy");
+    }
+
     #[test]
     fn a_bundle_id_entry_with_no_installed_app_is_a_leftover() {
         let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
         plant(home.path(), "Application Support/com.example.gone");
-        let found = find(home.path());
+        let found = find_in(home.path(), &[apps]);
         assert!(found.iter().any(|l| l.bundle_id == "com.example.gone"));
     }
 
@@ -186,30 +285,100 @@ mod tests {
         std::fs::create_dir_all(&apps).unwrap();
         crate::apps::tests_support::plant_app(&apps, "Here", "com.example.here");
         plant(home.path(), "Application Support/com.example.here");
-        assert!(find(home.path()).iter().all(|l| l.bundle_id != "com.example.here"));
+        assert!(find_in(home.path(), &[apps]).iter().all(|l| l.bundle_id != "com.example.here"));
+    }
+
+    #[test]
+    fn an_extension_of_an_installed_app_is_not_a_leftover() {
+        // Apple requires an app extension, helper, or updater's bundle id to
+        // be prefixed with its container app's id — this is not an edge
+        // case, it is how they are named. Exact-equality matching would
+        // report every one of these as dead.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        crate::apps::tests_support::plant_app(&apps, "Here", "com.example.here");
+        plant(home.path(), "Containers/com.example.here.SafariExtension");
+        plant(home.path(), "Caches/com.example.here.ShipIt");
+        plant(home.path(), "HTTPStorages/com.example.here.binarycookies");
+        assert!(
+            find_in(home.path(), &[apps]).is_empty(),
+            "an installed app's own extensions and helpers must not be proposed as dead"
+        );
+    }
+
+    #[test]
+    fn a_bundle_id_that_merely_shares_a_prefix_with_an_installed_app_is_still_a_leftover() {
+        // The bug class the reverse or `contains` test would reopen: an
+        // installed `com.example.foobar` must not be allowed to claim a
+        // shorter, unrelated app's `com.example.foo`.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        crate::apps::tests_support::plant_app(&apps, "FooBar", "com.example.foobar");
+        plant(home.path(), "Application Support/com.example.foo");
+        let found = find_in(home.path(), &[apps]);
+        assert!(
+            found.iter().any(|l| l.bundle_id == "com.example.foo"),
+            "a shorter id that only shares a prefix with an installed app must still be a leftover"
+        );
     }
 
     #[test]
     fn a_plain_name_folder_is_never_proposed() {
         // A name proves far too little to infer that something is dead.
         let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
         plant(home.path(), "Application Support/Slack");
-        assert!(find(home.path()).is_empty());
+        assert!(find_in(home.path(), &[apps]).is_empty());
     }
 
     #[test]
     fn an_apple_id_is_never_proposed() {
         let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
         plant(home.path(), "Preferences/com.apple.finder.plist");
-        assert!(find(home.path()).is_empty());
+        assert!(find_in(home.path(), &[apps]).is_empty());
     }
 
     #[test]
     fn a_group_container_is_recognised_and_attributed_to_its_id() {
         let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
         plant(home.path(), "Group Containers/group.com.example.gone");
-        let found = find(home.path());
+        let found = find_in(home.path(), &[apps]);
         assert!(found.iter().any(|l| l.bundle_id == "com.example.gone"));
+    }
+
+    #[test]
+    fn a_group_prefixed_name_with_a_suffix_is_never_proposed() {
+        // `group.com.example.gone.plist` resolves to `com.example.gone` by
+        // stripping both the prefix and the suffix, but
+        // `verified_name_matches` cannot verify that path against that id
+        // under any of its three shapes — proposing it would show the user a
+        // leftover that silently does nothing when acted on.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
+        plant(home.path(), "Preferences/group.com.example.gone.plist");
+        assert!(find_in(home.path(), &[apps]).is_empty());
+    }
+
+    #[test]
+    fn an_empty_installed_set_proposes_nothing() {
+        // No installed app anywhere — not even an unrelated decoy. An empty
+        // discovery result is far more likely evidence that `/Applications`
+        // could not be read than evidence this Mac has zero applications, so
+        // this must report nothing rather than treat every bundle-id-shaped
+        // entry as fair game.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        plant(home.path(), "Application Support/com.example.gone");
+        assert!(find_in(home.path(), &[apps]).is_empty());
     }
 
     #[test]
@@ -219,5 +388,11 @@ mod tests {
         assert!(!looks_like_bundle_id("Slack"));
         assert!(!looks_like_bundle_id(""));
         assert!(!looks_like_bundle_id(".hidden"));
+    }
+
+    #[test]
+    fn looks_like_bundle_id_rejects_a_combined_group_and_suffix_shape() {
+        assert!(!looks_like_bundle_id("group.com.example.gone.plist"));
+        assert!(!looks_like_bundle_id("group.com.example.gone.savedState"));
     }
 }
