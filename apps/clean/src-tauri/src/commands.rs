@@ -440,9 +440,21 @@ fn inspect_within(bundle_id: &str, home: &Path) -> Result<InspectResult, String>
 /// uninstall — the identical failure mode `leftovers_for_display`'s doc
 /// comment describes, found by the same review and fixed the same way while
 /// already in this file for M4b Task 5.
+///
+/// **Falls back to the raw `home` if canonicalisation itself fails**, rather
+/// than surfacing `canonical_home`'s own error text here. Before this task
+/// added canonicalisation, `uninstall_inspect` had no such failure mode at
+/// all — a home that could not be resolved simply fell through to
+/// `inspect_within`'s call to `apps::discover`, which reports the requested
+/// bundle id as not found, the ordinary M4 "is not an installed application"
+/// message. `canonical_home`'s own wording ("nothing was uninstalled") is
+/// written for the removal path and would be both wrong and a change to M4
+/// behaviour on this read-only one — this task's authorisation was to fix
+/// the normalisation mismatch, not to change what the uninstall flow tells
+/// the user on an unrelated failure.
 fn inspect_for_display(bundle_id: &str, home: &Path) -> Result<InspectResult, String> {
-    let home = canonical_home(home)?;
-    inspect_within(bundle_id, &home)
+    let display_home = canonical_home(home).unwrap_or_else(|_| home.to_path_buf());
+    inspect_within(bundle_id, &display_home)
 }
 
 #[tauri::command]
@@ -1925,16 +1937,19 @@ mod tests {
     /// `run_leftovers` scans against the *canonical* one — on macOS,
     /// `tempfile::tempdir()` sits under `/var/...`, which `strip_firmlink`
     /// resolves to `/private/var/...` (see `canonical_home`'s doc comment).
-    /// That mismatch alone denies the call via `echo_matches_leftovers`,
-    /// before the range check ever runs. Verified directly: with the range
-    /// check stubbed to never deny (`if false` in place of
-    /// `if index >= total`), this test still passed — its only assertion,
-    /// `assert!(!err.is_empty())`, is satisfied by the echo denial alone, and
-    /// it never checks that the file survived. What it actually proves is
-    /// that a raw/canonical path mismatch in the echo denies the call — a
-    /// real property, just not the one its original name claimed. See
+    /// That mismatch alone denies the call via `echo_matches_leftovers`.
+    /// `deselected` is deliberately empty: the brief's original version of
+    /// this test passed `vec![99]`, an out-of-range index, which meant that
+    /// stubbing `echo_matches_leftovers` to always match still left the
+    /// range check standing — the test kept passing under a mutation of the
+    /// wrong guard, satisfying its old name for the wrong reason (the exact
+    /// defect this file's other renamed test, one review round earlier, was
+    /// about). With no indices to range-check, the echo is the only guard
+    /// that can deny this call. Verified directly: stubbing
+    /// `echo_matches_leftovers` to `return true` makes this test fail (the
+    /// file is actually removed); see
     /// `an_out_of_range_index_against_a_real_leftover_is_caught_and_named`
-    /// below for a test that isolates the range check itself.
+    /// below for the test that isolates the range check instead.
     #[test]
     fn a_raw_vs_canonical_home_mismatch_in_the_echo_denies_the_call() {
         let home = tempfile::tempdir().unwrap();
@@ -1943,7 +1958,7 @@ mod tests {
         std::fs::create_dir_all(&apps).unwrap();
         std::fs::write(apps.join("com.example.gone"), b"x").unwrap();
         let displayed = vec![apps.join("com.example.gone").display().to_string()];
-        let err = run_leftovers(vec![99], displayed, cfg.path(), home.path()).unwrap_err();
+        let err = run_leftovers(vec![], displayed, cfg.path(), home.path()).unwrap_err();
         assert!(!err.is_empty());
         assert!(apps.join("com.example.gone").exists(), "nothing may be removed when denied");
     }
