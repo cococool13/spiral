@@ -4,7 +4,7 @@
 //! which is what lets them be tested without a running app.
 
 use crate::remove::Evidence;
-use crate::{apps, associate, catalog, exclude, history, paths, remove, scan, volume};
+use crate::{apps, associate, catalog, exclude, history, orphans, paths, remove, scan, volume};
 use std::path::{Path, PathBuf};
 
 /// Max paths returned per category across the IPC bridge.
@@ -673,6 +673,56 @@ pub fn uninstall_execute(
     let home = dirs::home_dir()
         .ok_or("Could not locate your home folder, so nothing was uninstalled.")?;
     run_uninstall(&bundle_id, deselected, displayed, &dir, &home)
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct LeftoverItem {
+    pub bundle_id: String,
+    pub paths: Vec<String>,
+    pub bytes: u64,
+}
+
+/// Deterministic order. Task 5 addresses these by index into this list, and
+/// re-scans before removing — so a shifting order would remove something
+/// other than what the user deselected. Size descending surfaces the
+/// biggest reclaim first; bundle id ascending is the tie-break that makes
+/// the order total rather than left to chance whenever two leftovers happen
+/// to be the same size.
+fn order_leftovers(mut items: Vec<LeftoverItem>) -> Vec<LeftoverItem> {
+    items.sort_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.bundle_id.cmp(&b.bundle_id)));
+    items
+}
+
+/// Testable core of `leftovers_scan`.
+///
+/// Converts each `orphans::Leftover`'s `PathBuf`s to `String`s — one
+/// directional, as in M4: the webview only ever displays these, and Task 5's
+/// `leftovers_remove` rebuilds real paths from its own fresh
+/// `orphans::find` call rather than trusting anything handed back across the
+/// IPC boundary. Each leftover's own paths are sorted too, since Task 5's
+/// checksum compares them element-wise and an unordered set could reorder
+/// between calls and deny a legitimate removal.
+fn scan_leftovers_within(home: &Path) -> Vec<LeftoverItem> {
+    let items = orphans::find(home)
+        .into_iter()
+        .map(|leftover| {
+            let mut paths: Vec<String> =
+                leftover.paths.iter().map(|p| p.display().to_string()).collect();
+            paths.sort();
+            LeftoverItem { bundle_id: leftover.bundle_id, paths, bytes: leftover.bytes }
+        })
+        .collect();
+    order_leftovers(items)
+}
+
+#[tauri::command]
+pub fn leftovers_scan() -> Vec<LeftoverItem> {
+    match dirs::home_dir() {
+        Some(home) => scan_leftovers_within(&home),
+        // No home to resolve means nothing can be reported — an empty list,
+        // not a panic or a guess at where to look instead.
+        None => Vec::new(),
+    }
 }
 
 #[cfg(test)]
@@ -1516,5 +1566,18 @@ mod tests {
         std::fs::create_dir_all(&support).unwrap();
         std::fs::write(support.join(bundle_id), b"x").unwrap();
         std::fs::write(support.join("Foo"), b"x").unwrap();
+    }
+
+    #[test]
+    fn leftover_items_are_ordered_deterministically() {
+        // Task 5 addresses these by index, so a shifting order would remove
+        // something other than what the user deselected.
+        let items = vec![
+            LeftoverItem { bundle_id: "com.b".into(), paths: vec![], bytes: 1 },
+            LeftoverItem { bundle_id: "com.a".into(), paths: vec![], bytes: 1 },
+        ];
+        let sorted = order_leftovers(items);
+        assert_eq!(sorted[0].bundle_id, "com.a");
+        assert_eq!(sorted[1].bundle_id, "com.b");
     }
 }

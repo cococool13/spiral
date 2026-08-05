@@ -168,8 +168,8 @@ fn size_of(path: &Path) -> u64 {
 /// exactly. This is the only place either real path is named — see the
 /// module doc comment on [`find_in`] for why every test goes through that
 /// function directly instead.
-// No caller yet — `commands::leftovers_scan` (M4b Task 4) wires this in.
-#[allow(dead_code)]
+///
+/// Called by `commands::leftovers_scan`.
 pub fn find(home: &Path) -> Vec<Leftover> {
     find_in(home, &[PathBuf::from("/Applications"), home.join("Applications")])
 }
