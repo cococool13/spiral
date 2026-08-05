@@ -70,30 +70,46 @@ pub fn discover(home: &Path) -> Vec<InstalledApp> {
 
 /// The walk `discover` performs, taking its roots as a parameter so tests can
 /// exercise it against fake directories without touching the real
-/// `/Applications`. Each root is scanned one level deep only — an app bundle
-/// is a direct child, never nested further, of either root.
+/// `/Applications`. Each root is scanned one level deep for app bundles, plus
+/// one further level into any subdirectory that is not itself a bundle — see
+/// `scan_dir`.
 fn scan_roots(roots: &[PathBuf]) -> Vec<InstalledApp> {
     let mut found = Vec::new();
     for root in roots {
-        let Ok(entries) = std::fs::read_dir(root) else {
-            // A root that does not exist (most machines have no
-            // `~/Applications`) contributes nothing — that is normal, not an
-            // error worth reporting.
-            continue;
-        };
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-            if path.extension().and_then(|ext| ext.to_str()) != Some("app") {
-                continue;
-            }
+        scan_dir(root, true, &mut found);
+    }
+    found
+}
+
+/// Scan `dir`'s immediate entries for app bundles, collecting matches into
+/// `found`. When `descend` is set, a subdirectory that is not itself a bundle
+/// (its name does not end in `.app`) is scanned the same way, one level
+/// deeper, so vendor subfolders like `/Applications/Setapp/` are found —
+/// Setapp and several other vendors install this way, and every one of those
+/// apps' support files would otherwise look orphaned. `descend` is false on
+/// that recursive call so the walk goes exactly one level past each
+/// Applications root and no further: a `.app` bundle's own `Contents` is
+/// never a folder of apps, and nothing past a vendor subfolder is either.
+fn scan_dir(dir: &Path, descend: bool, found: &mut Vec<InstalledApp>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        // A root that does not exist (most machines have no
+        // `~/Applications`) contributes nothing — that is normal, not an
+        // error worth reporting.
+        return;
+    };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        let is_bundle = path.extension().and_then(|ext| ext.to_str()) == Some("app");
+        if is_bundle {
             let Some((bundle_id, name)) = read_bundle(&path) else {
                 continue;
             };
             let handoff = detect_handoff(&path);
             found.push(InstalledApp { name, bundle_id, path, handoff });
+        } else if descend && path.is_dir() {
+            scan_dir(&path, false, found);
         }
     }
-    found
 }
 
 /// Read `path/Contents/Info.plist` for its bundle id and display name.
@@ -464,5 +480,33 @@ mod tests {
             "definitely-not-a-real-binary-xyz123",
             "anything"
         ));
+    }
+
+    #[test]
+    fn an_app_in_a_vendor_subfolder_is_discovered() {
+        // Setapp installs into /Applications/Setapp/. Without this, every
+        // Setapp app's support files look orphaned while the app sits there.
+        let home = tempfile::tempdir().unwrap();
+        let nested = home.path().join("Applications/Setapp");
+        std::fs::create_dir_all(&nested).unwrap();
+        plant_app(&nested, "Nested", "com.example.nested");
+        let found = discover(home.path());
+        assert!(found.iter().any(|a| a.bundle_id == "com.example.nested"));
+    }
+
+    #[test]
+    fn a_bundles_own_contents_is_not_descended_into() {
+        // Foo.app/Contents must never be treated as a folder of apps.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let outer = plant_app(&apps, "Outer", "com.example.outer");
+        plant_app(&outer.join("Contents"), "Inner", "com.example.inner");
+        let found = discover(home.path());
+        assert!(found.iter().any(|a| a.bundle_id == "com.example.outer"));
+        assert!(
+            !found.iter().any(|a| a.bundle_id == "com.example.inner"),
+            "a bundle's own Contents is not a folder of apps"
+        );
     }
 }

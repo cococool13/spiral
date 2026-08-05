@@ -145,6 +145,24 @@ fn is_apple_owned(name: &str) -> bool {
     APPLE_OWNED_NAMES.iter().any(|owned| owned.eq_ignore_ascii_case(name))
 }
 
+/// True when `bundle_id` is one of Apple's own (`com.apple.*`,
+/// case-insensitive).
+///
+/// `remove.rs` has its own `is_apple_bundle_id` doing the same check at the
+/// removal boundary, but it is a private `fn` there and this task's brief
+/// forbids editing `remove.rs` to expose it. Duplicated locally rather than
+/// widened across modules — worth sharing (e.g. moving into a common home
+/// both modules can reach) the next time `remove.rs` is opened for other
+/// reasons.
+///
+/// Refusing here, in `associate`, means a spoofed `com.apple.*` app is never
+/// even listed: without this, its items pass discovery and are only denied
+/// later at `remove::execute`, showing the user a list nothing on it can
+/// actually remove.
+fn is_apple_bundle_id(bundle_id: &str) -> bool {
+    bundle_id.to_lowercase().starts_with("com.apple.")
+}
+
 /// Logical size of `path`: its own length if it is a file, or the sum of
 /// every file beneath it (symlinks never followed, at the root or inside
 /// the tree) if it is a directory.
@@ -200,6 +218,14 @@ fn size_of(path: &Path) -> u64 {
 ///
 /// No caller yet — Task 5 (the read-only uninstall commands) wires this in.
 pub fn associate(bundle_id: &str, app_name: &str, home: &Path) -> Vec<Associated> {
+    // Refused before any search happens, not merely excluded from the
+    // results: a spoofed com.apple.* app must never even be listed, since
+    // everything a listing would show is denied later anyway at the removal
+    // boundary. See `is_apple_bundle_id`.
+    if is_apple_bundle_id(bundle_id) {
+        return Vec::new();
+    }
+
     let library = home.join("Library");
     let mut found = Vec::new();
 
@@ -326,5 +352,25 @@ mod tests {
         let found = associate("com.example.foo", "Foo", home.path());
         let hit = found.iter().find(|a| a.path == dir).expect("not found");
         assert_eq!(hit.bytes, 150);
+    }
+
+    #[test]
+    fn an_apple_bundle_id_is_never_associated() {
+        // A spoofed com.apple.* app should be refused here, not shown a list
+        // whose every item is denied later at execute.
+        let home = tempfile::tempdir().unwrap();
+        let p = home.path().join("Library/Preferences");
+        std::fs::create_dir_all(&p).unwrap();
+        std::fs::write(p.join("com.apple.finder.plist"), b"x").unwrap();
+        assert!(associate("com.apple.finder", "Finder", home.path()).is_empty());
+    }
+
+    #[test]
+    fn the_apple_refusal_is_case_insensitive_here_too() {
+        let home = tempfile::tempdir().unwrap();
+        let p = home.path().join("Library/Preferences");
+        std::fs::create_dir_all(&p).unwrap();
+        std::fs::write(p.join("COM.APPLE.FINDER.plist"), b"x").unwrap();
+        assert!(associate("COM.APPLE.Finder", "Finder", home.path()).is_empty());
     }
 }
