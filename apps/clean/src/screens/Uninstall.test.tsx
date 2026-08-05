@@ -374,14 +374,75 @@ describe("Uninstall screen — the drop handler", () => {
     expect(mockInvoke.mock.calls.some(([command]) => command === "uninstall_inspect")).toBe(false);
   });
 
-  it("refuses a dropped .app that is not in the installed applications list and never calls uninstall_inspect", async () => {
+  it("refuses a dropped .app that is not in the installed applications list, naming it, and never calls uninstall_inspect", async () => {
     respondTo([APP], { [APP.bundle_id]: INSPECTED });
     const handleDrop = await dropAndCapture();
 
     handleDrop({ payload: { type: "drop", paths: ["/Applications/Unknown.app"] } });
 
-    await screen.findByRole("alert");
+    // Not just "an alert appeared" — the alert must actually name what was
+    // dropped, or a regression to a bare error code would pass this test.
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Unknown.app");
     expect(screen.queryByRole("button", { name: "Uninstall" })).toBeNull();
+    expect(mockInvoke.mock.calls.some(([command]) => command === "uninstall_inspect")).toBe(false);
+  });
+
+  it("refuses a multi-item drop by name, rather than silently acting on only the first item", async () => {
+    respondTo([APP], { [APP.bundle_id]: INSPECTED });
+    const handleDrop = await dropAndCapture();
+
+    handleDrop({
+      payload: {
+        type: "drop",
+        paths: [`/Applications/${APP.name}.app`, "/Applications/Other.app"],
+      },
+    });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("one application at a time");
+    expect(screen.queryByRole("button", { name: "Uninstall" })).toBeNull();
+    expect(mockInvoke.mock.calls.some(([command]) => command === "uninstall_inspect")).toBe(false);
+  });
+
+  // The Critical fix from review: two installed applications sharing a
+  // display name at different install locations — exactly the shape M4b
+  // Task 1's widened discovery produces (`/Applications/Vendor App.app` and
+  // `/Applications/Setapp/Vendor App.app`, both reporting the same
+  // `CFBundleName`). The previous implementation matched on name with
+  // `.find`, which resolves to whichever entry happens to come first —
+  // proven, in review, to invoke `uninstall_inspect` for the *other* app's
+  // bundle id than the one actually dropped. `AppSummary` carries no `path`
+  // field to disambiguate by (see `handleDroppedPaths`'s comment on why
+  // that would need a Rust change this task does not make), so the correct,
+  // safe behaviour available today is to refuse rather than guess. This
+  // proves the refusal, not a resolution the frontend cannot yet make
+  // correctly.
+  it("refuses a dropped .app whose display name matches more than one installed application, rather than guessing which one was dropped", async () => {
+    const first: AppSummary = {
+      name: "Vendor App",
+      bundle_id: "com.vendor.app",
+      bytes: 1024,
+      handoff: null,
+      running: false,
+    };
+    const second: AppSummary = {
+      name: "Vendor App",
+      bundle_id: "com.vendor.app.setapp",
+      bytes: 1024,
+      handoff: null,
+      running: false,
+    };
+    respondTo([first, second], {});
+    const handleDrop = await dropAndCapture();
+
+    handleDrop({ payload: { type: "drop", paths: ["/Applications/Setapp/Vendor App.app"] } });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Vendor App");
+    expect(screen.queryByRole("button", { name: "Uninstall" })).toBeNull();
+    // Neither candidate's bundle id may be inspected — an ambiguous match
+    // must never fall back to "just pick one."
     expect(mockInvoke.mock.calls.some(([command]) => command === "uninstall_inspect")).toBe(false);
   });
 });

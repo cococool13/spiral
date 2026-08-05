@@ -169,13 +169,40 @@ export default function Uninstall() {
 
   // Resolves a dropped path to a listed app and opens its review sheet via
   // `inspect`, or refuses with a stated reason and never opens one. Refused,
-  // in order: not a `.app` bundle at all; a `.app` that isn't in the
-  // installed-applications list `uninstall_list` already returned; an Apple
-  // application (`com.apple.*`), which this screen never offers to remove.
+  // in order: more than one item dropped at once (see below); not a `.app`
+  // bundle at all; a `.app` name that matches no installed application, or
+  // matches more than one (see below); an Apple application (`com.apple.*`),
+  // which this screen never offers to remove.
+  //
+  // **Matching is on display name, not on the dropped path itself, and that
+  // is a known, reviewed limitation, not an oversight.** `AppSummary`
+  // (commands.rs) carries `name`, `bundle_id`, `bytes`, `handoff` and
+  // `running` — no `path` — so once two installed apps share a display name
+  // (M4b Task 1 widened discovery into vendor subfolders precisely so a
+  // shape like `/Applications/Vendor App.app` and
+  // `/Applications/Setapp/Vendor App.app` both get discovered, and both can
+  // report the same `CFBundleName`), there is no field this screen already
+  // has that tells the two apart. Matching on the *first* same-named app —
+  // this function's original approach — silently resolved to whichever one
+  // happened to sort first, which review proved could send the wrong app's
+  // files to the Trash. The correct fix is to compare the dropped path
+  // itself against each app's own path, but that needs `AppSummary` to
+  // carry one, which needs a Rust change, which is out of this task's
+  // scope. Refusing on ambiguity is the safe alternative available without
+  // one: never guess between two candidates, only ever act on an
+  // unambiguous name match.
   const handleDroppedPaths = useCallback(
     (paths: string[]) => {
       setDropError(null);
       if (paths.length === 0) return;
+      // A silently-partial batch drop is worse than no batch support at
+      // all: acting on the first item and saying nothing about the rest
+      // reads as "all of them were handled." Refusing states the limit
+      // instead.
+      if (paths.length > 1) {
+        setDropError(`Dropped ${paths.length} items — drop one application at a time.`);
+        return;
+      }
       const path = paths[0];
       const base = path.split("/").pop() ?? path;
       const name = appNameFromDroppedPath(path);
@@ -183,13 +210,21 @@ export default function Uninstall() {
         setDropError(`"${base}" is not an application. Drop a .app bundle to uninstall it.`);
         return;
       }
-      const match = appsRef.current.find((a) => a.name === name);
-      if (!match) {
+      const candidates = appsRef.current.filter((a) => a.name === name);
+      if (candidates.length === 0) {
         setDropError(
           `"${base}" is not in Spiral Clean's list of installed applications. Reopen the list and try again.`,
         );
         return;
       }
+      if (candidates.length > 1) {
+        setDropError(
+          `More than one installed application is named "${name}" — Spiral Clean can't tell which one ` +
+            `was dropped. Use its Review button in the list above instead.`,
+        );
+        return;
+      }
+      const match = candidates[0];
       if (match.bundle_id.toLowerCase().startsWith("com.apple.")) {
         setDropError(`"${match.name}" is an Apple application and cannot be uninstalled here.`);
         return;
