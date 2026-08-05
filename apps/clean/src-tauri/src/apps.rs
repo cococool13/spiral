@@ -272,11 +272,17 @@ fn detect_system_extension(path: &Path) -> bool {
     path.join("Contents/Library/SystemExtensions").exists()
 }
 
+/// Test-only helpers shared with *other* modules' tests — currently
+/// `orphans.rs`, which needs a real app bundle on disk to prove an installed
+/// app's leftovers are not proposed. Kept as its own `pub(crate)` module
+/// rather than duplicating `plant_app` a second time: one fixture, one place
+/// to change, same as the production rule this crate applies to `LOCATIONS`.
+/// Exists only under `#[cfg(test)]`, so it adds nothing to a release build.
 #[cfg(test)]
-mod tests {
-    use super::*;
+pub(crate) mod tests_support {
+    use std::path::PathBuf;
 
-    fn plant_app(dir: &std::path::Path, name: &str, bundle_id: &str) -> PathBuf {
+    pub(crate) fn plant_app(dir: &std::path::Path, name: &str, bundle_id: &str) -> PathBuf {
         let app = dir.join(format!("{name}.app/Contents"));
         std::fs::create_dir_all(&app).unwrap();
         std::fs::write(
@@ -293,6 +299,12 @@ mod tests {
         .unwrap();
         dir.join(format!("{name}.app"))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tests_support::plant_app;
 
     #[test]
     fn reads_the_bundle_id_and_name_from_info_plist() {

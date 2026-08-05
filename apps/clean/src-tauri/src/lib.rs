@@ -15,6 +15,7 @@ mod catalog;
 mod commands;
 mod exclude;
 mod history;
+mod orphans;
 mod paths;
 mod permissions;
 mod remove;
