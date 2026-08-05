@@ -91,9 +91,21 @@ This is now the app's established posture, applied a fourth time: inventory it, 
 - **No test may resolve the real home**, and no test may call a destructive path that reaches real user data. After the seam fix this is enforceable everywhere, not only in `run_clean`.
 - Vitest for the Uninstall screen's states.
 
+## Directory removal, and the application itself
+
+**Amendment, 2026-08-04, during the M4 review.** This section originally stated that directory removal remained unimplemented and that only files were removed. That was wrong about what M4 actually shipped, and it was wrong in the direction that matters: it understated what the app destroys.
+
+**Uninstall removes directories.** `associate` returns `read_dir` entries, so `~/Library/Containers/<id>`, `~/Library/Group Containers/group.<id>` and `<id>.savedState` are directories, and `remove::delete_permanent` removes them recursively. That is what uninstalling an application means, and the guards that bound it — scope, container depth, user content, exclusion, bundle id, the Apple refusal — were already built and mutation-proved. Recorded as a decision in **ADR-0015**, not left as an accident. The Clean screen is unchanged and still removes only files.
+
+**Uninstall also removes the application bundle.** `candidates_for` originally never emitted the `.app`, so a successful uninstall left the app in `/Applications` and still listed on this very screen — contradicting this spec, ADR-0004 and the feature's own name.
+
+The hard part is that a bundle's *name* does not carry its identifier: `Foo.app` contains no `com.example.foo`, so `verified_name_matches` denies it. The answer is **verification, not assertion**: `disposition_for` opens the candidate's own `Contents/Info.plist` — through `apps::read_bundle`, the same reader that identified the app in the first place — and grants `Permanent` only when the identifier declared *there* is the claimed one. Two narrowings keep that honest: the candidate must have a `.app` extension (a plain directory with a planted plist is not an application), and it must be a real directory rather than a symlink (the plist is read after `normalize`, which follows links; refusing symlinks removes the indirection, and incidentally refuses a Homebrew cask's bundle, which is a symlink into the Caskroom).
+
+There is deliberately **no exemption channel**. `commands.rs` cannot mark a path as trusted; the bundle is an ordinary `InspectItem` in the ordinary index space, shown in the review sheet with its own size and checkbox, and it goes through the same `Justification::AppBundle` as everything else. A handoff app contributes no bundle candidate at all, so a cask is refused twice over.
+
 ## Out of scope
 
 - Orphan leftovers, PKG receipts, drag-and-drop — M4b.
 - Optimize and Storage screens stay stubs.
-- Directory removal remains unimplemented; only files are removed, as recorded in M3.
+- Directory pruning on the **Clean** screen — emptied catalog directories — is still unbuilt and still needs its own design, as recorded in M3.
 - Signing, notarization and a `clean-v*` tag remain M7.

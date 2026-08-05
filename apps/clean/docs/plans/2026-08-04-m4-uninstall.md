@@ -703,4 +703,6 @@ git commit -m "feat(clean): build the Uninstall screen"
 
 ## What M4 deliberately leaves out
 
-Orphan leftovers, PKG receipts and drag-and-drop (M4b). Optimize and Storage stay stubs. Directory removal is still unimplemented — only files are removed. Signing, notarization and a `clean-v*` tag remain M7. And nobody has yet seen the Clean screen render, let alone this one.
+Orphan leftovers, PKG receipts and drag-and-drop (M4b). Optimize and Storage stay stubs. Signing, notarization and a `clean-v*` tag remain M7. And nobody has yet seen the Clean screen render, let alone this one.
+
+**Correction, made during the M4 review:** this section previously read "Directory removal is still unimplemented — only files are removed." That was not true of what M4 shipped. `associate` returns `read_dir` entries, so an app's `Containers/<id>`, `Group Containers/group.<id>` and `<id>.savedState` are directories and are removed recursively; the same review added the `.app` bundle itself as a candidate. Removing an app's own containers is what uninstalling means, and the existing guards already bound it — see **ADR-0015**, which records the capability as a decision rather than leaving it as a side effect. Directory pruning on the *Clean* screen (emptied catalog directories) is a different question and is still unbuilt.
