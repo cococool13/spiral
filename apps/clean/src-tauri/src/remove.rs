@@ -2522,6 +2522,34 @@ mod tests {
     // ---- An orphan claim must carry its bundle id ----------------------
 
     #[test]
+    fn an_orphan_claim_does_not_match_a_different_apps_id_by_prefix() {
+        // Same shape as `a_verified_claim_does_not_match_a_different_apps_id_by_prefix`:
+        // `com.example.foo` is a literal prefix of `com.example.foobar` — a
+        // different application's own bundle id. This codebase has shipped
+        // exactly this bug class three separate times
+        // (`starts_with_case_insensitive` in `paths.rs`, the "likely"
+        // association rule, and the `Verified` arm before it was fixed), and
+        // the orphan arm reuses `verified_name_matches` specifically so it
+        // cannot regress to a fourth. A `contains`-style check would let
+        // this test pass while permanently misclassifying another app's
+        // leftover as orphaned.
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.example.foobar");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::Orphan { bundle_id: "com.example.foo".into() },
+            &Roots::rooted_at(home.path()),
+        );
+        assert!(
+            d.is_err(),
+            "com.example.foo was accepted as a match for a different app's com.example.foobar: {d:?}"
+        );
+    }
+
+    #[test]
     fn an_orphan_whose_path_does_not_carry_its_id_is_denied() {
         let home = tempfile::tempdir().unwrap();
         let dir = home.path().join("Library/Application Support");
