@@ -27,6 +27,14 @@
 //! group containers `<TeamID>.<name>` at least as often as `group.<id>`, so
 //! this is not a rare shape: it is a large fraction of one whole location.
 //!
+//! **Apple and macOS own identifiers outside `com.apple.*`, and those are
+//! refused by name.** Shortcuts stores itself as `is.workflow.*` and the
+//! printing system as `org.cups.*` — well-formed reverse-DNS ids that no
+//! application declares, because they do not belong to an application at
+//! all. [`SYSTEM_OWNED_IDS`] is the refusal, and it is a maintenance list
+//! that will go stale; read its own doc comment before assuming it is
+//! complete or before trying to replace it with a wider discovery scan.
+//!
 //! **Discovery finding no installed applications at all makes this report
 //! nothing, not everything.** An empty installed set is far more likely
 //! evidence that `apps::discover_in` could not read `/Applications` than
@@ -49,34 +57,77 @@ pub struct Leftover {
     pub bytes: u64,
 }
 
-/// The two components every identifier Apple's own software is published
-/// under carries, in this order — the same rule `associate.rs` and `remove.rs`
-/// each apply on their own side of the boundary. Duplicated here rather than
-/// exported from either: both are read-only, security-relevant modules this
-/// task is expressly barred from editing beyond what the brief names.
-const APPLE_BUNDLE_SEGMENTS: (&str, &str) = ("com", "apple");
+/// Component sequences that mark an identifier as belonging to Apple or to
+/// macOS itself, lowercased. `com.apple` is the one `associate.rs` and
+/// `remove.rs` each apply on their own side of the boundary; the rest are
+/// system software Apple ships under someone else's reverse-DNS root.
+///
+/// **This list is incomplete by construction and it will go stale.** It is a
+/// maintenance list, not an enumeration of anything knowable: macOS ships an
+/// unbounded number of components under third-party roots, and each release
+/// may add more. Treat a name absent from it as *unclassified*, never as
+/// proven third-party. Adding an entry costs a leftover left behind; missing
+/// one costs live system data proposed for the Trash, which is the failure
+/// this module exists to prevent — so add generously on suspicion rather
+/// than waiting for proof.
+///
+/// **Scanning `/System/Applications` into the installed set would not fix
+/// this, and nobody should spend a day discovering that.** The
+/// declaring-app match asks "does an installed app declare this id", and
+/// these ids are not any application's `CFBundleIdentifier`:
+/// `is.workflow.shortcuts` is Shortcuts' *storage* id, not Shortcuts'
+/// bundle id, so discovering `Shortcuts.app` would not match it however
+/// many roots discovery scanned. A refusal is the only mechanism that
+/// reaches these at all.
+///
+/// Each entry is justified, not guessed:
+///
+/// * `com.apple` — Apple's own, by definition.
+/// * `is.workflow` — Shortcuts and Automator workflow storage
+///   (`group.is.workflow.my.app`, `group.is.workflow.shortcuts`), found live
+///   on a real disk during the M4b branch review.
+/// * `org.cups` — CUPS, the printing system macOS ships
+///   (`org.cups.PrintingPrefs.plist`), found the same way.
+/// * `org.openbsd` — OpenSSH, shipped by macOS (`org.openbsd.ssh-agent`).
+/// * `edu.mit.kerberos` — the Kerberos implementation macOS ships.
+/// * `org.swift` — the Swift toolchain, published by Apple through
+///   swift.org and installed with Xcode's command-line tools.
+///
+/// Note what every non-Apple entry has in common: none of them is an
+/// application, so no `apps::discover_in` scan of any root could declare
+/// them.
+const SYSTEM_OWNED_IDS: &[&[&str]] = &[
+    &["com", "apple"],
+    &["is", "workflow"],
+    &["org", "cups"],
+    &["org", "openbsd"],
+    &["edu", "mit", "kerberos"],
+    &["org", "swift"],
+];
 
-/// True when `bundle_id` is one of Apple's own, case-insensitively.
+/// True when `bundle_id` belongs to Apple or to macOS itself,
+/// case-insensitively — see [`SYSTEM_OWNED_IDS`].
 ///
 /// **Tested at every `.`-separated component boundary, not only at the
 /// start.** A group container is named `<TeamID>.<id>` at least as often as
 /// `group.<id>`, so Apple's own Podcasts state is on disk as
 /// `243LU875E5.groups.com.apple.podcasts` — an identifier that is Apple's
 /// beyond any doubt and that a `starts_with("com.apple.")` test does not
-/// refuse at all. Sliding a two-component window over the id refuses it, and
-/// refuses any other Apple id however it is prefixed.
+/// refuse at all. Sliding each sequence's own window over the id refuses it,
+/// and refuses any other system id however it is prefixed.
 ///
-/// **Components, never substrings.** `com.applesomething.foo` is a
-/// third-party id that merely begins the same way, and it must keep being
-/// proposable: comparing whole components rather than searching for the text
-/// `com.apple` is what separates the two. This codebase has shipped a
-/// substring-where-a-component-was-meant bug four separate times, and every
-/// one of them read as a safe simplification of exactly this shape.
-fn is_apple_bundle_id(bundle_id: &str) -> bool {
+/// **Components, never substrings.** `com.applesomething.foo` and
+/// `is.workflows.example` are third-party ids that merely begin the same
+/// way, and they must keep being proposable: comparing whole components
+/// rather than searching for the text `com.apple` is what separates the two.
+/// This codebase has shipped a substring-where-a-component-was-meant bug
+/// four separate times, and every one of them read as a safe simplification
+/// of exactly this shape.
+fn is_system_bundle_id(bundle_id: &str) -> bool {
     let segments: Vec<String> = bundle_id.split('.').map(str::to_lowercase).collect();
-    segments
-        .windows(2)
-        .any(|pair| pair[0] == APPLE_BUNDLE_SEGMENTS.0 && pair[1] == APPLE_BUNDLE_SEGMENTS.1)
+    SYSTEM_OWNED_IDS
+        .iter()
+        .any(|owned| segments.windows(owned.len()).any(|window| window == *owned))
 }
 
 /// Trailing components macOS appends to a bundle id to name a *file about*
@@ -277,7 +328,7 @@ pub fn find(home: &Path) -> Vec<Leftover> {
 
 /// Find every leftover under `home/Library`: a bundle-id-shaped entry, in one
 /// of [`LOCATIONS`], that resolves to an id no application discovered under
-/// `app_roots` declares and that is not one of Apple's own.
+/// `app_roots` declares and that is not Apple's or macOS's own.
 ///
 /// `app_roots` names every root `apps::discover_in` should scan for
 /// installed applications — [`find`] is the only caller that ever names the
@@ -324,7 +375,7 @@ pub fn find_in(home: &Path, app_roots: &[PathBuf]) -> Vec<Leftover> {
             let Some(id) = resolve_verifiable_id(&name) else {
                 continue;
             };
-            if is_apple_bundle_id(id) {
+            if is_system_bundle_id(id) {
                 continue;
             }
             if belongs_to_installed(id, &installed) {
@@ -538,19 +589,81 @@ mod tests {
     }
 
     #[test]
-    fn an_apple_id_is_refused_at_every_segment_boundary() {
+    fn a_system_owned_id_is_refused_at_every_segment_boundary() {
         // Directly on the guard, so this test fails when the refusal is
         // narrowed back to a leading-prefix test — the shape check in
         // `resolve_verifiable_id` also refuses the team-prefixed name, and
         // an end-to-end test alone could not tell the two guards apart.
-        assert!(is_apple_bundle_id("com.apple.finder"));
-        assert!(is_apple_bundle_id("243LU875E5.groups.com.apple.podcasts"));
-        assert!(is_apple_bundle_id("group.com.apple.notes"));
+        assert!(is_system_bundle_id("com.apple.finder"));
+        assert!(is_system_bundle_id("243LU875E5.groups.com.apple.podcasts"));
+        assert!(is_system_bundle_id("group.com.apple.notes"));
+        // System software Apple ships under someone else's reverse-DNS root.
+        // `is.workflow` clears the ccTLD rule (`is` is Iceland's) and
+        // `Shortcuts.app` lives in `/System/Applications`, which discovery
+        // never scans — so nothing declares these and only a refusal reaches
+        // them.
+        assert!(is_system_bundle_id("is.workflow.my.app"));
+        assert!(is_system_bundle_id("is.workflow.shortcuts"));
+        assert!(is_system_bundle_id("org.cups.PrintingPrefs"));
+        assert!(is_system_bundle_id("org.openbsd.ssh-agent"));
+        assert!(is_system_bundle_id("edu.mit.Kerberos"));
+        assert!(is_system_bundle_id("org.swift.swiftpm"));
         // Component boundary, never a substring: the four substring-vs-
         // component bugs this codebase has shipped all looked like this.
-        assert!(!is_apple_bundle_id("com.applesomething.foo"));
-        assert!(!is_apple_bundle_id("com.example.apple"));
-        assert!(!is_apple_bundle_id("com.notapple.foo"));
+        assert!(!is_system_bundle_id("com.applesomething.foo"));
+        assert!(!is_system_bundle_id("com.example.apple"));
+        assert!(!is_system_bundle_id("com.notapple.foo"));
+        assert!(!is_system_bundle_id("is.workflows.example"));
+        assert!(!is_system_bundle_id("org.cupsomething.foo"));
+        assert!(!is_system_bundle_id("com.example.workflow"));
+        assert!(!is_system_bundle_id("org.swiftly.example"));
+    }
+
+    #[test]
+    fn apple_shortcuts_group_containers_are_never_proposed() {
+        // Live Shortcuts storage, found on a real disk by the M4b branch
+        // review. `is` is Iceland's ccTLD, so `is.workflow.shortcuts` is a
+        // perfectly well-formed reverse-DNS id that no installed
+        // application declares — and moving it to the Trash would take the
+        // user's Shortcuts with it.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
+        plant(home.path(), "Group Containers/group.is.workflow.my.app");
+        plant(home.path(), "Group Containers/group.is.workflow.shortcuts");
+        assert!(
+            find_in(home.path(), &[apps]).is_empty(),
+            "Shortcuts' own storage must never be proposed as dead"
+        );
+    }
+
+    #[test]
+    fn a_system_preference_outside_com_apple_is_never_proposed() {
+        // CUPS is the printing system macOS ships. It is not an
+        // application, so no `apps::discover_in` scan of any root — not even
+        // `/System/Applications` — could ever declare its id.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
+        plant(home.path(), "Preferences/org.cups.PrintingPrefs.plist");
+        assert!(
+            find_in(home.path(), &[apps]).is_empty(),
+            "macOS's own printing preferences must never be proposed as dead"
+        );
+    }
+
+    #[test]
+    fn a_third_party_id_under_a_system_root_is_still_proposed() {
+        // The refusal must not swallow the feature: a vendor id that merely
+        // shares a reverse-DNS root with system software stays proposable.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        decoy_app(&apps);
+        plant(home.path(), "Application Support/is.workflows.example");
+        plant(home.path(), "Application Support/org.cupsomething.foo");
+        let found = find_in(home.path(), &[apps]);
+        assert!(found.iter().any(|l| l.bundle_id == "is.workflows.example"));
+        assert!(found.iter().any(|l| l.bundle_id == "org.cupsomething.foo"));
     }
 
     #[test]
