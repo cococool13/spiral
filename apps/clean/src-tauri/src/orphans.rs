@@ -325,6 +325,27 @@ mod tests {
     }
 
     #[test]
+    fn a_longer_bundle_id_that_merely_shares_a_prefix_with_an_installed_app_is_still_a_leftover() {
+        // The other direction from the test above, and a different claim:
+        // without the literal `.` boundary, `com.example.foobar`.starts_with
+        // `com.example.foo` is true, so a shorter installed app's id would
+        // wrongly be read as "covering" a longer, unrelated app's own
+        // leftover — the exact opposite mistake from the sibling test, and
+        // one it cannot catch, since that test's pairing is false whether or
+        // not the dot is present.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        crate::apps::tests_support::plant_app(&apps, "Foo", "com.example.foo");
+        plant(home.path(), "Application Support/com.example.foobar");
+        let found = find_in(home.path(), &[apps]);
+        assert!(
+            found.iter().any(|l| l.bundle_id == "com.example.foobar"),
+            "a longer id that only shares a prefix with an installed app must still be a leftover"
+        );
+    }
+
+    #[test]
     fn a_plain_name_folder_is_never_proposed() {
         // A name proves far too little to infer that something is dead.
         let home = tempfile::tempdir().unwrap();
