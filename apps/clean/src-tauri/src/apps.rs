@@ -62,38 +62,86 @@ const HOMEBREW_CASKROOM: &str = "/opt/homebrew/Caskroom";
 /// attempt on them always fails; listing them would only pad the inventory
 /// with entries that can never be acted on.
 ///
-/// No caller yet — Task 5 wires this into a Tauri command.
+/// This is the only place the real `/Applications` is ever named — the walk
+/// itself lives in [`discover_in`], which takes its roots as a parameter and
+/// resolves nothing on its own. A test that wants deterministic, hermetic
+/// coverage of the walk calls `discover_in` directly with fake roots; only
+/// this thin wrapper, which no test calls, reaches for the real root.
 pub fn discover(home: &Path) -> Vec<InstalledApp> {
-    let roots = [PathBuf::from("/Applications"), home.join("Applications")];
-    scan_roots(&roots)
+    discover_in(&[PathBuf::from("/Applications"), home.join("Applications")])
 }
 
-/// The walk `discover` performs, taking its roots as a parameter so tests can
-/// exercise it against fake directories without touching the real
-/// `/Applications`. Each root is scanned one level deep only — an app bundle
-/// is a direct child, never nested further, of either root.
-fn scan_roots(roots: &[PathBuf]) -> Vec<InstalledApp> {
+/// The walk `discover` performs, taking its roots as a parameter so a caller
+/// — in practice, a test — can name every root explicitly instead of one
+/// being resolved internally. Each root is scanned one level deep for app
+/// bundles, plus one further level into any subdirectory that is not itself
+/// a bundle — see `scan_dir`.
+///
+/// This function never touches `/Applications`, `~/Applications`, or any
+/// other real path itself; it only walks whatever `roots` names. The real
+/// paths are [`discover`]'s job.
+pub fn discover_in(roots: &[PathBuf]) -> Vec<InstalledApp> {
     let mut found = Vec::new();
     for root in roots {
-        let Ok(entries) = std::fs::read_dir(root) else {
-            // A root that does not exist (most machines have no
-            // `~/Applications`) contributes nothing — that is normal, not an
-            // error worth reporting.
-            continue;
-        };
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-            if path.extension().and_then(|ext| ext.to_str()) != Some("app") {
-                continue;
-            }
+        scan_dir(root, true, &mut found);
+    }
+    found
+}
+
+/// Scan `dir`'s immediate entries for app bundles, collecting matches into
+/// `found`. When `descend` is set, a subdirectory that is not itself a bundle
+/// (its name does not end in `.app`, compared case-insensitively — APFS
+/// treats `Foo.app` and `Foo.APP` as the same directory, and this check is
+/// now the thing standing between the descent and reading a bundle's own
+/// `Contents` as a folder of apps) is scanned the same way, one level
+/// deeper, so vendor subfolders like `/Applications/Setapp/` are found —
+/// Setapp and several other vendors install this way, and every one of those
+/// apps' support files would otherwise look orphaned. `descend` is false on
+/// that recursive call so the walk goes exactly one level past each
+/// Applications root and no further: a `.app` bundle's own `Contents` is
+/// never a folder of apps, and nothing past a vendor subfolder is either.
+///
+/// A subdirectory is only descended into when it is a **real** directory —
+/// see `is_real_dir`. A symlink (e.g. `/Applications/Foo -> /`) is refused
+/// rather than followed, the same posture `remove.rs` takes on a symlinked
+/// bundle: the indirection buys nothing and only hides what is actually
+/// being read.
+fn scan_dir(dir: &Path, descend: bool, found: &mut Vec<InstalledApp>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        // A root that does not exist (most machines have no
+        // `~/Applications`) contributes nothing — that is normal, not an
+        // error worth reporting.
+        return;
+    };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        let is_bundle = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("app"));
+        if is_bundle {
             let Some((bundle_id, name)) = read_bundle(&path) else {
                 continue;
             };
             let handoff = detect_handoff(&path);
             found.push(InstalledApp { name, bundle_id, path, handoff });
+        } else if descend && is_real_dir(&path) {
+            scan_dir(&path, false, found);
         }
     }
-    found
+}
+
+/// True when `path` is itself a directory — never a symlink, even one whose
+/// target is a directory. `Path::is_dir` (and `std::fs::read_dir` on
+/// whatever it names) follows symlinks, so relying on it here would let a
+/// symlinked vendor subfolder — `/Applications/Foo -> /`, say — be silently
+/// descended into and its target's own top level scanned as if it were a
+/// real subfolder. `symlink_metadata` never follows the final component, so
+/// a symlink reports its own type here, never its target's.
+fn is_real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|metadata| metadata.is_dir())
+        .unwrap_or(false)
 }
 
 /// Read `path/Contents/Info.plist` for its bundle id and display name.
@@ -224,11 +272,17 @@ fn detect_system_extension(path: &Path) -> bool {
     path.join("Contents/Library/SystemExtensions").exists()
 }
 
+/// Test-only helpers shared with *other* modules' tests — currently
+/// `orphans.rs`, which needs a real app bundle on disk to prove an installed
+/// app's leftovers are not proposed. Kept as its own `pub(crate)` module
+/// rather than duplicating `plant_app` a second time: one fixture, one place
+/// to change, same as the production rule this crate applies to `LOCATIONS`.
+/// Exists only under `#[cfg(test)]`, so it adds nothing to a release build.
 #[cfg(test)]
-mod tests {
-    use super::*;
+pub(crate) mod tests_support {
+    use std::path::PathBuf;
 
-    fn plant_app(dir: &std::path::Path, name: &str, bundle_id: &str) -> PathBuf {
+    pub(crate) fn plant_app(dir: &std::path::Path, name: &str, bundle_id: &str) -> PathBuf {
         let app = dir.join(format!("{name}.app/Contents"));
         std::fs::create_dir_all(&app).unwrap();
         std::fs::write(
@@ -245,6 +299,12 @@ mod tests {
         .unwrap();
         dir.join(format!("{name}.app"))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tests_support::plant_app;
 
     #[test]
     fn reads_the_bundle_id_and_name_from_info_plist() {
@@ -266,11 +326,16 @@ mod tests {
 
     #[test]
     fn discover_finds_apps_under_the_home_it_is_given() {
+        // Goes through `discover_in` with an explicit, fake root list rather
+        // than `discover` itself: `discover` always includes the real
+        // `/Applications` as one of its two roots, and no test may scan
+        // that real directory (see the task brief) — `discover_in` is the
+        // seam that lets this test name every root itself instead.
         let home = tempfile::tempdir().unwrap();
         let user_apps = home.path().join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
         plant_app(&user_apps, "Foo", "com.example.foo");
-        let found = discover(home.path());
+        let found = discover_in(&[user_apps]);
         assert!(found.iter().any(|a| a.bundle_id == "com.example.foo"));
     }
 
@@ -381,7 +446,7 @@ mod tests {
         let user_apps = home.path().join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
         let app_path = plant_app(&user_apps, "Foo", "com.example.foo");
-        let found = discover(home.path());
+        let found = discover_in(&[user_apps]);
         let foo = found
             .iter()
             .find(|a| a.bundle_id == "com.example.foo")
@@ -398,7 +463,7 @@ mod tests {
         std::fs::create_dir_all(&user_apps).unwrap();
         let app_path = plant_app(&user_apps, "Foo", "com.example.foo");
         std::fs::create_dir_all(app_path.join("Contents/Library/SystemExtensions")).unwrap();
-        let found = discover(home.path());
+        let found = discover_in(&[user_apps]);
         let foo = found
             .iter()
             .find(|a| a.bundle_id == "com.example.foo")
@@ -464,5 +529,67 @@ mod tests {
             "definitely-not-a-real-binary-xyz123",
             "anything"
         ));
+    }
+
+    #[test]
+    fn an_app_in_a_vendor_subfolder_is_discovered() {
+        // Setapp installs into /Applications/Setapp/. Without this, every
+        // Setapp app's support files look orphaned while the app sits there.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        let nested = apps.join("Setapp");
+        std::fs::create_dir_all(&nested).unwrap();
+        plant_app(&nested, "Nested", "com.example.nested");
+        let found = discover_in(&[apps]);
+        assert!(found.iter().any(|a| a.bundle_id == "com.example.nested"));
+    }
+
+    #[test]
+    fn a_bundles_own_contents_is_not_descended_into() {
+        // Foo.app/Contents must never be treated as a folder of apps.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let outer = plant_app(&apps, "Outer", "com.example.outer");
+        plant_app(&outer.join("Contents"), "Inner", "com.example.inner");
+        let found = discover_in(&[apps]);
+        assert!(found.iter().any(|a| a.bundle_id == "com.example.outer"));
+        assert!(
+            !found.iter().any(|a| a.bundle_id == "com.example.inner"),
+            "a bundle's own Contents is not a folder of apps"
+        );
+    }
+
+    #[test]
+    fn a_symlinked_subfolder_is_not_descended_into() {
+        // /Applications/Foo -> / is the shape of the escape: `is_dir` and
+        // `read_dir` both follow symlinks, so without `is_real_dir` this
+        // would silently scan the symlink's *target* as if it were a real
+        // vendor subfolder. `outside` stands in for that target here — an
+        // app that sits entirely outside the `Applications` root and must
+        // never be reached through a link inside it.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        plant_app(outside.path(), "Hidden", "com.example.hidden");
+        std::os::unix::fs::symlink(outside.path(), apps.join("Link")).unwrap();
+        let found = discover_in(&[apps]);
+        assert!(
+            !found.iter().any(|a| a.bundle_id == "com.example.hidden"),
+            "a symlinked subfolder must not be descended into"
+        );
+    }
+
+    #[test]
+    fn a_bundle_extension_is_matched_case_insensitively() {
+        // APFS treats `Foo.app` and `Foo.APP` as the same directory; the
+        // `.app` check must not silently miss the latter.
+        let dir = tempfile::tempdir().unwrap();
+        let app = plant_app(dir.path(), "Foo", "com.example.foo");
+        let upper = dir.path().join("Foo.APP");
+        std::fs::rename(&app, &upper).unwrap();
+        let found = discover_in(&[dir.path().to_path_buf()]);
+        assert!(found.iter().any(|a| a.bundle_id == "com.example.foo"));
     }
 }

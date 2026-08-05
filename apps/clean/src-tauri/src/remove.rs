@@ -642,7 +642,29 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
                 }
             }
         }
-        Justification::Orphan { .. } => Ok(Disposition::Trash),
+        // Unreachable until this milestone's orphan-detection producer
+        // lands (see the module doc), but the check goes in ahead of that
+        // producer rather than after it — an `Orphan` claim is a judgement,
+        // not a proof (ADR-0007), and re-checking it here is the same
+        // discipline `Evidence::Verified` already applies just above: the
+        // path's own name must carry the claimed `bundle_id` at a component
+        // boundary, via the same `verified_name_matches` used there, not a
+        // second spelling of the same rule. Disposition stays `Trash`
+        // either way — this only decides whether the claim is honoured at
+        // all.
+        Justification::Orphan { bundle_id } => {
+            let carries_bundle_id = normalize(path)
+                .and_then(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_owned))
+                .is_some_and(|name| verified_name_matches(&name, bundle_id));
+            if carries_bundle_id {
+                Ok(Disposition::Trash)
+            } else {
+                Err(format!(
+                    "{} does not carry the bundle id \"{bundle_id}\" in its name, so the claim that it belongs to that app cannot be verified. Nothing was removed.",
+                    path.display()
+                ))
+            }
+        }
         Justification::UserChosen => Ok(Disposition::Trash),
     }
 }
@@ -949,7 +971,11 @@ mod tests {
     fn an_orphan_goes_to_the_trash_not_permanent() {
         let home = fake_home();
         let roots = Roots::rooted_at(home.path());
-        let p = file(&caches_dir(home.path()), "leftover.plist");
+        // The name must carry the claimed bundle id (see
+        // `an_orphan_whose_path_carries_its_id_goes_to_the_trash`) — this
+        // test is about the disposition, not the boundary check, so the
+        // fixture satisfies that check rather than exercising it.
+        let p = file(&caches_dir(home.path()), "com.example.gone.plist");
         let reports = run(
             vec![candidate(p, Justification::Orphan { bundle_id: "com.example.gone".into() })],
             &exclude::new(vec![]),
@@ -2491,6 +2517,66 @@ mod tests {
             &roots,
         );
         assert_eq!(d, Ok(Disposition::Permanent));
+    }
+
+    // ---- An orphan claim must carry its bundle id ----------------------
+
+    #[test]
+    fn an_orphan_claim_does_not_match_a_different_apps_id_by_prefix() {
+        // Same shape as `a_verified_claim_does_not_match_a_different_apps_id_by_prefix`:
+        // `com.example.foo` is a literal prefix of `com.example.foobar` — a
+        // different application's own bundle id. This codebase has shipped
+        // exactly this bug class three separate times
+        // (`starts_with_case_insensitive` in `paths.rs`, the "likely"
+        // association rule, and the `Verified` arm before it was fixed), and
+        // the orphan arm reuses `verified_name_matches` specifically so it
+        // cannot regress to a fourth. A `contains`-style check would let
+        // this test pass while permanently misclassifying another app's
+        // leftover as orphaned.
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.example.foobar");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::Orphan { bundle_id: "com.example.foo".into() },
+            &Roots::rooted_at(home.path()),
+        );
+        assert!(
+            d.is_err(),
+            "com.example.foo was accepted as a match for a different app's com.example.foobar: {d:?}"
+        );
+    }
+
+    #[test]
+    fn an_orphan_whose_path_does_not_carry_its_id_is_denied() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("SomethingElse");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::Orphan { bundle_id: "com.example.gone".into() },
+            &Roots::rooted_at(home.path()),
+        );
+        assert!(d.is_err(), "an orphan claim the path does not support must be denied");
+    }
+
+    #[test]
+    fn an_orphan_whose_path_carries_its_id_goes_to_the_trash() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&dir).unwrap();
+        let item = dir.join("com.example.gone");
+        std::fs::write(&item, b"x").unwrap();
+        let d = disposition_for(
+            &item,
+            &Justification::Orphan { bundle_id: "com.example.gone".into() },
+            &Roots::rooted_at(home.path()),
+        );
+        assert_eq!(d, Ok(Disposition::Trash));
     }
 
     // ---- Apple's own software is never an uninstall target -------------

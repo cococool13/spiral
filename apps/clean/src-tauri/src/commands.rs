@@ -4,7 +4,7 @@
 //! which is what lets them be tested without a running app.
 
 use crate::remove::Evidence;
-use crate::{apps, associate, catalog, exclude, history, paths, remove, scan, volume};
+use crate::{apps, associate, catalog, exclude, history, orphans, paths, remove, scan, volume};
 use std::path::{Path, PathBuf};
 
 /// Max paths returned per category across the IPC bridge.
@@ -293,6 +293,16 @@ pub struct AppSummary {
     pub bytes: u64,
     pub handoff: Option<String>,
     pub running: bool,
+    /// Read-only display data, never authority: `uninstall_inspect` and
+    /// `uninstall_execute` still take only a `bundle_id` and re-derive
+    /// everything else themselves via a fresh `apps::discover` call, exactly
+    /// as before this field existed. Added so the Uninstall screen's drop
+    /// handler can resolve a dropped bundle by the path Finder actually
+    /// handed it, rather than by display name — two installed apps can
+    /// share a `CFBundleName` (e.g. a Setapp vendor-subfolder install
+    /// alongside a top-level one, the case M4b Task 1's widened discovery
+    /// exists to support), and a name match alone cannot tell them apart.
+    pub path: String,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -351,6 +361,7 @@ fn app_summary(app: &apps::InstalledApp) -> AppSummary {
         bytes: bundle_bytes(&app.path),
         handoff: app.handoff.as_ref().map(handoff_label),
         running: apps::is_running(&app.bundle_id),
+        path: app.path.display().to_string(),
     }
 }
 
@@ -431,11 +442,37 @@ fn inspect_within(bundle_id: &str, home: &Path) -> Result<InspectResult, String>
     })
 }
 
+/// What `uninstall_inspect` actually runs: canonicalise `home`, then
+/// inspect — the same fix, for the same reason, as `leftovers_for_display`.
+/// `run_uninstall` (behind `uninstall_execute`) already canonicalises its
+/// own `home` internally; this command did not, so on a firmlinked `$HOME`
+/// every path `uninstall_inspect` showed the user failed to match its
+/// re-inspected counterpart and `echo_matches_inspection` denied every
+/// uninstall — the identical failure mode `leftovers_for_display`'s doc
+/// comment describes, found by the same review and fixed the same way while
+/// already in this file for M4b Task 5.
+///
+/// **Falls back to the raw `home` if canonicalisation itself fails**, rather
+/// than surfacing `canonical_home`'s own error text here. Before this task
+/// added canonicalisation, `uninstall_inspect` had no such failure mode at
+/// all — a home that could not be resolved simply fell through to
+/// `inspect_within`'s call to `apps::discover`, which reports the requested
+/// bundle id as not found, the ordinary M4 "is not an installed application"
+/// message. `canonical_home`'s own wording ("nothing was uninstalled") is
+/// written for the removal path and would be both wrong and a change to M4
+/// behaviour on this read-only one — this task's authorisation was to fix
+/// the normalisation mismatch, not to change what the uninstall flow tells
+/// the user on an unrelated failure.
+fn inspect_for_display(bundle_id: &str, home: &Path) -> Result<InspectResult, String> {
+    let display_home = canonical_home(home).unwrap_or_else(|_| home.to_path_buf());
+    inspect_within(bundle_id, &display_home)
+}
+
 #[tauri::command]
 pub fn uninstall_inspect(bundle_id: String) -> Result<InspectResult, String> {
     let home = dirs::home_dir()
         .ok_or("Could not locate your home folder, so nothing was inspected.")?;
-    inspect_within(&bundle_id, &home)
+    inspect_for_display(&bundle_id, &home)
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -673,6 +710,264 @@ pub fn uninstall_execute(
     let home = dirs::home_dir()
         .ok_or("Could not locate your home folder, so nothing was uninstalled.")?;
     run_uninstall(&bundle_id, deselected, displayed, &dir, &home)
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct LeftoverItem {
+    pub bundle_id: String,
+    pub paths: Vec<String>,
+    pub bytes: u64,
+}
+
+/// Deterministic order. Task 5 addresses these by index into this list, and
+/// re-scans before removing — so a shifting order would remove something
+/// other than what the user deselected. Size descending surfaces the
+/// biggest reclaim first; bundle id ascending is the tie-break that makes
+/// the order total rather than left to chance whenever two leftovers happen
+/// to be the same size.
+fn order_leftovers(mut items: Vec<LeftoverItem>) -> Vec<LeftoverItem> {
+    items.sort_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.bundle_id.cmp(&b.bundle_id)));
+    items
+}
+
+/// Converts each `orphans::Leftover`'s `PathBuf`s to `String`s — one
+/// directional, as in M4: the webview only ever displays these, and Task 5's
+/// `leftovers_remove` rebuilds real paths from its own fresh
+/// `orphans::find` call rather than trusting anything handed back across the
+/// IPC boundary. Each leftover's own paths are sorted too, since Task 5's
+/// checksum compares them element-wise and an unordered set could reorder
+/// between calls and deny a legitimate removal.
+///
+/// Factored out from `scan_leftovers_within` so a test can drive this same
+/// mapping-and-ordering logic from `orphans::find_in` with a temp root — the
+/// hermetic seam `orphans.rs` itself provides — without ever going through
+/// `orphans::find` and its real `/Applications` root.
+fn leftover_items_from(leftovers: Vec<orphans::Leftover>) -> Vec<LeftoverItem> {
+    let items = leftovers
+        .into_iter()
+        .map(|leftover| {
+            let mut paths: Vec<String> =
+                leftover.paths.iter().map(|p| p.display().to_string()).collect();
+            paths.sort();
+            LeftoverItem { bundle_id: leftover.bundle_id, paths, bytes: leftover.bytes }
+        })
+        .collect();
+    order_leftovers(items)
+}
+
+/// Testable core of `leftovers_scan`. The only place that calls
+/// `orphans::find` (and, through it, names the real `/Applications`) — see
+/// [`leftover_items_from`] for the hermetically testable half of this.
+fn scan_leftovers_within(home: &Path) -> Vec<LeftoverItem> {
+    leftover_items_from(orphans::find(home))
+}
+
+/// What `leftovers_scan` actually runs: canonicalise `home`, then scan —
+/// exactly the sequence `run_leftovers` runs against its own `home`
+/// parameter (see `canonical_home`'s doc comment).
+///
+/// **This canonicalisation is not optional.** Before it was added here,
+/// `leftovers_scan` scanned against the *raw* home while `run_leftovers`
+/// canonicalised its own copy, so the paths shown to the user and the paths
+/// the re-scan produced were built from two different spellings of the same
+/// directory. On an ordinary dev machine the two spellings happen to agree.
+/// They do not agree when `$HOME` itself sits behind a firmlink — for
+/// example `/System/Volumes/Data/Users/<name>`, which `strip_firmlink`
+/// collapses to `/Users/<name>` — and on that shape of machine every
+/// `displayed` path differs from its re-scanned counterpart, so
+/// `echo_matches_leftovers` denies with "the list changed" on every single
+/// call, whether or not anything actually changed. A safety check that fires
+/// when nothing is wrong is worse than one that is silent: it teaches
+/// whoever next touches this code that the check itself is broken, and the
+/// fix that occurs to them is to weaken it — which removes the protection
+/// for the case where the list really did drift.
+fn leftovers_for_display(home: &Path) -> Result<Vec<LeftoverItem>, String> {
+    let home = canonical_home(home)?;
+    Ok(scan_leftovers_within(&home))
+}
+
+#[tauri::command]
+pub fn leftovers_scan() -> Vec<LeftoverItem> {
+    // No home to resolve, or a home that does not resolve, means nothing
+    // can be reported — an empty list, not a panic or a guess at where to
+    // look instead.
+    dirs::home_dir().and_then(|home| leftovers_for_display(&home).ok()).unwrap_or_default()
+}
+
+/// Every candidate carries the Orphan justification of the leftover it came
+/// from. Nothing the frontend sends supplies one.
+///
+/// `PathBuf::from(p)` reads from the **fresh scan's** items — the ones
+/// `run_leftovers` re-scans on every call — never from the `displayed`
+/// echo, which is only ever compared (`echo_matches_leftovers`), never
+/// converted into a path to delete.
+fn leftover_candidates_for(items: &[LeftoverItem]) -> Vec<remove::Candidate> {
+    items
+        .iter()
+        .flat_map(|item| {
+            item.paths.iter().map(|p| remove::Candidate {
+                path: PathBuf::from(p),
+                justification: remove::Justification::Orphan {
+                    bundle_id: item.bundle_id.clone(),
+                },
+            })
+        })
+        .collect()
+}
+
+/// True when `displayed` names, in order, every path across every item a
+/// fresh scan just found.
+///
+/// **This is a checksum, never authority** — the same discipline
+/// `echo_matches_inspection` holds to for the Uninstall screen. Nothing here
+/// is written into a `Candidate`; every path `remove::execute` ever sees
+/// still comes solely from `items`, the fresh scan `run_leftovers` just
+/// performed. What this answers is a narrower question: is the webview still
+/// looking at the same list `deselected`'s indices were chosen against?
+///
+/// `items` is flattened the same way the review sheet itself renders it —
+/// `order_leftovers`'s item order, each item's own `leftover_items_from`-
+/// sorted paths — so a file written, deleted, or renamed under any leftover
+/// location between `leftovers_scan` and `leftovers_remove` can shift the
+/// flattened list without changing its length, exactly the drift
+/// `echo_matches_inspection`'s doc comment describes for the app-associated-
+/// files case. The comparison is positional and exact for the same reason:
+/// a mere reordering changes which index means what just as surely as an
+/// addition or removal does.
+fn echo_matches_leftovers(displayed: &[String], items: &[LeftoverItem]) -> bool {
+    let fresh: Vec<&str> = items.iter().flat_map(|item| item.paths.iter().map(String::as_str)).collect();
+    displayed.len() == fresh.len() && displayed.iter().zip(fresh.iter()).all(|(shown, path)| shown == *path)
+}
+
+/// Testable core of `leftovers_remove`. **The third destructive command in
+/// the application.** It follows the rule the first two
+/// (`clean_execute`/`remove::execute`, `uninstall_execute`) established: the
+/// webview cannot name a path, only a position (`deselected`, indices into
+/// a fresh scan) and an echo of what it was shown (`displayed`) — see
+/// `echo_matches_leftovers`. This function re-scans from scratch on every
+/// call via `scan_leftovers_within` rather than trusting anything else the
+/// webview might send.
+///
+/// `home` is canonicalised once, here, before it reaches either
+/// `scan_leftovers_within` (and, through it, `orphans::find`) or
+/// `remove::execute` below — see `canonical_home`'s doc comment for why a
+/// mismatch between the two would silently deny every candidate.
+///
+/// **`deselected` and `displayed` index two different lists — this is
+/// deliberate, but it does not match `run_uninstall`, so state it plainly.**
+/// `deselected` holds indices into `items`, the *item* list
+/// `scan_leftovers_within` returns (one entry per bundle id, however many
+/// paths it owns) — `total` below is `items.len()`, not a path count.
+/// `displayed`, by contrast, is the *flattened path* list
+/// `echo_matches_leftovers` compares against: every path of every item, in
+/// item order. The two coincide, and are easy to mistake for the same
+/// space, exactly when every item has one path — the shape every test in
+/// this module used until the multi-path tests below were added. A leftover
+/// with two or more paths (the ordinary case: a bundle id can show up under
+/// several `LOCATIONS` entries at once) makes the two spaces diverge, and an
+/// index meant for one list silently means something else read against the
+/// other — a flattened path-list index that happens to land in range would
+/// select the wrong *item* and delete something the user chose to keep.
+fn run_leftovers(
+    deselected: Vec<usize>,
+    displayed: Vec<String>,
+    config_dir: &Path,
+    home: &Path,
+) -> Result<UninstallReport, String> {
+    let home = canonical_home(home)?;
+
+    let items = scan_leftovers_within(&home);
+
+    // The echo check runs before anything about `deselected` is trusted —
+    // the same ordering `run_uninstall` holds to, and for the same reason:
+    // an index is only meaningful relative to the exact list it was chosen
+    // against.
+    if !echo_matches_leftovers(&displayed, &items) {
+        let fresh_count: usize = items.iter().map(|item| item.paths.len()).sum();
+        return Err(format!(
+            "The list changed while you were reviewing it ({} path{} shown, {} found just now). \
+             Scan again and try again.",
+            displayed.len(),
+            if displayed.len() == 1 { "" } else { "s" },
+            fresh_count
+        ));
+    }
+
+    let total = items.len();
+
+    // A frontend and backend disagreeing about the list must not resolve
+    // into removing the wrong item: every index is validated before any
+    // item is dropped, and a single bad index denies the whole call rather
+    // than silently honouring the rest.
+    let mut skip = std::collections::HashSet::new();
+    for &index in &deselected {
+        if index >= total {
+            return Err(format!(
+                "Deselected item {index} does not exist — this scan found {total} leftover \
+                 item{}. The list may be out of date; scan again and try again.",
+                if total == 1 { "" } else { "s" }
+            ));
+        }
+        skip.insert(index);
+    }
+
+    let kept: Vec<LeftoverItem> = items
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, item)| (!skip.contains(&i)).then_some(item))
+        .collect();
+
+    let estimated_bytes: u64 = kept.iter().map(|item| item.bytes).sum();
+    let candidates = leftover_candidates_for(&kept);
+
+    let before = volume::available_bytes(&home);
+
+    // Loaded here, immediately before the removal, and never held across
+    // calls — an exclusion added mid-session must bind on the very next run.
+    let exclusions = exclude::load(config_dir);
+    let reports = remove::execute(candidates, &exclusions, &home);
+
+    let after = volume::available_bytes(&home);
+    let measured_bytes = match (before, after) {
+        (Some(b), Some(a)) => a.saturating_sub(b),
+        _ => 0,
+    };
+
+    let Tally { removed, partially_removed, excluded, failed } = tally(reports);
+
+    // A failed history write must not fail the run — the removal already
+    // happened, and reporting failure here would be false. The result is
+    // discarded deliberately.
+    let _ = history::append(
+        config_dir,
+        history::RunRecord {
+            started_at: now_iso8601(),
+            screen: "leftovers".into(),
+            removed,
+            partially_removed: partially_removed.len(),
+            estimated_bytes,
+            measured_bytes,
+            interrupted: false,
+        },
+    );
+
+    Ok(UninstallReport { removed, partially_removed, excluded, failed })
+}
+
+#[tauri::command]
+pub fn leftovers_remove(
+    app: tauri::AppHandle,
+    deselected: Vec<usize>,
+    displayed: Vec<String>,
+) -> Result<UninstallReport, String> {
+    use tauri::Manager;
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app."))?;
+    let home = dirs::home_dir()
+        .ok_or("Could not locate your home folder, so nothing was removed.")?;
+    run_leftovers(deselected, displayed, &dir, &home)
 }
 
 #[cfg(test)]
@@ -944,7 +1239,7 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         let user_apps = home.path().join("Applications");
         std::fs::create_dir_all(&user_apps).unwrap();
-        plant_app(&user_apps, "Foo", "com.example.foo");
+        let app_path = plant_app(&user_apps, "Foo", "com.example.foo");
 
         let summaries = list_apps_within(home.path());
         let foo = summaries.iter().find(|s| s.bundle_id == "com.example.foo").unwrap();
@@ -952,6 +1247,33 @@ mod tests {
         assert!(foo.bytes > 0, "the plist itself should be counted");
         assert!(!foo.running);
         assert_eq!(foo.handoff, None);
+        // `path` (added for the Uninstall screen's drop handler to resolve a
+        // dropped bundle unambiguously — two apps can share a display name,
+        // never a path) must be the app's own real bundle path, not
+        // anything else derived from it.
+        assert_eq!(foo.path, app_path.display().to_string());
+    }
+
+    #[test]
+    fn two_apps_sharing_a_display_name_get_distinct_paths() {
+        // The exact shape review found the Uninstall screen's drop handler
+        // resolving wrong before `path` existed: a vendor-subfolder install
+        // (Setapp) and a top-level install can share a `CFBundleName`. Name
+        // alone cannot tell them apart; `path` must.
+        let home = tempfile::tempdir().unwrap();
+        let top_level = home.path().join("Applications");
+        let nested = top_level.join("Setapp");
+        std::fs::create_dir_all(&nested).unwrap();
+        let top_path = plant_app(&top_level, "Vendor App", "com.vendor.top");
+        let nested_path = plant_app(&nested, "Vendor App", "com.vendor.nested");
+
+        let summaries = list_apps_within(home.path());
+        let top = summaries.iter().find(|s| s.bundle_id == "com.vendor.top").unwrap();
+        let nested = summaries.iter().find(|s| s.bundle_id == "com.vendor.nested").unwrap();
+        assert_eq!(top.name, nested.name, "both share a display name by construction");
+        assert_eq!(top.path, top_path.display().to_string());
+        assert_eq!(nested.path, nested_path.display().to_string());
+        assert_ne!(top.path, nested.path, "distinct install locations must resolve to distinct paths");
     }
 
     #[test]
@@ -1516,5 +1838,404 @@ mod tests {
         std::fs::create_dir_all(&support).unwrap();
         std::fs::write(support.join(bundle_id), b"x").unwrap();
         std::fs::write(support.join("Foo"), b"x").unwrap();
+    }
+
+    #[test]
+    fn inspect_for_display_canonicalises_before_inspecting() {
+        // Regression for the same drift bug `leftovers_for_display` fixes
+        // (see its doc comment): `uninstall_inspect` used to inspect against
+        // the raw home while `run_uninstall` canonicalises its own copy
+        // internally, so on a firmlinked `$HOME` every path shown to the
+        // user failed to match its re-inspected counterpart and
+        // `echo_matches_inspection` denied every uninstall. `home.path()`
+        // here is a `tempfile::tempdir()`, which sits under macOS's own
+        // `/var` -> `/private/var` firmlink — the same shape of mismatch a
+        // firmlinked real `$HOME` produces — so this reproduces the failure
+        // without needing one.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        plant_app_with_one_item(home.path(), "com.example.inspect-drift-fix");
+
+        let displayed: Vec<String> = inspect_for_display("com.example.inspect-drift-fix", home.path())
+            .unwrap()
+            .items
+            .into_iter()
+            .map(|i| i.path)
+            .collect();
+
+        let report = run_uninstall(
+            "com.example.inspect-drift-fix",
+            vec![],
+            displayed,
+            cfg.path(),
+            home.path(),
+        )
+        .unwrap();
+        assert_eq!(report.removed, 2, "the associated item and the bundle: {report:?}");
+    }
+
+    #[test]
+    fn leftover_items_are_ordered_deterministically() {
+        // Task 5 addresses these by index, so a shifting order would remove
+        // something other than what the user deselected.
+        let items = vec![
+            LeftoverItem { bundle_id: "com.b".into(), paths: vec![], bytes: 1 },
+            LeftoverItem { bundle_id: "com.a".into(), paths: vec![], bytes: 1 },
+        ];
+        let sorted = order_leftovers(items);
+        assert_eq!(sorted[0].bundle_id, "com.a");
+        assert_eq!(sorted[1].bundle_id, "com.b");
+    }
+
+    #[test]
+    fn leftover_items_sort_by_size_descending_first() {
+        // Distinct sizes, deliberately paired against the bundle-id
+        // alphabetical order so the two keys disagree: if `order_leftovers`
+        // sorted by size ascending (the opposite of what the user needs —
+        // biggest reclaim first), "com.a" (the smaller item) would still
+        // come first, same as it does alphabetically, and this test would
+        // not notice. Mutation-proven: reversing the comparator to
+        // `a.bytes.cmp(&b.bytes)` makes this fail (see task-4-report.md).
+        let items = vec![
+            LeftoverItem { bundle_id: "com.a".into(), paths: vec![], bytes: 10 },
+            LeftoverItem { bundle_id: "com.b".into(), paths: vec![], bytes: 100 },
+        ];
+        let sorted = order_leftovers(items);
+        assert_eq!(sorted[0].bundle_id, "com.b", "the bigger item must sort first");
+        assert_eq!(sorted[1].bundle_id, "com.a");
+    }
+
+    #[test]
+    fn scan_leftovers_within_sorts_each_items_own_paths() {
+        // `leftover_items_from` is the mapping-and-ordering half of
+        // `scan_leftovers_within`, factored out precisely so this can run
+        // through `orphans::find_in` with a temp root — never
+        // `orphans::find`, which is the only place the real `/Applications`
+        // is named.
+        //
+        // `LOCATIONS` iterates "Logs" before "HTTPStorages", but
+        // "HTTPStorages" sorts before "Logs" lexically — planting the same
+        // id under both, in that iteration order, comes back sorted only if
+        // `paths.sort()` inside `leftover_items_from` actually ran. Task 5's
+        // checksum compares displayed paths element-wise, so an unsorted
+        // (or accidentally-already-sorted) set here would deny a legitimate
+        // removal without this test catching it.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        crate::apps::tests_support::plant_app(&apps, "Decoy", "com.example.decoy");
+
+        let logs = home.path().join("Library/Logs");
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::write(logs.join("com.example.multi"), b"x").unwrap();
+
+        let http_storages = home.path().join("Library/HTTPStorages");
+        std::fs::create_dir_all(&http_storages).unwrap();
+        std::fs::write(http_storages.join("com.example.multi"), b"x").unwrap();
+
+        let items = leftover_items_from(orphans::find_in(home.path(), &[apps]));
+        let item = items
+            .iter()
+            .find(|i| i.bundle_id == "com.example.multi")
+            .expect("the planted leftover must be reported");
+
+        assert_eq!(item.paths.len(), 2, "both locations must be attributed to the one id");
+        assert!(
+            item.paths[0].contains("HTTPStorages") && item.paths[1].contains("Logs"),
+            "paths must come back sorted, not in LOCATIONS iteration order: {:?}",
+            item.paths
+        );
+    }
+
+    #[test]
+    fn an_empty_scan_reports_an_empty_list_not_an_error() {
+        // Nothing to clean is a normal, good outcome — the state most users
+        // will be in on a second run, not a failure to surface as one.
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        crate::apps::tests_support::plant_app(&apps, "Decoy", "com.example.decoy");
+        assert!(leftover_items_from(orphans::find_in(home.path(), &[apps])).is_empty());
+    }
+
+    // ---- leftovers_remove (Task 5) ---------------------------------------
+    //
+    // `run_leftovers` re-scans via `scan_leftovers_within`, which reaches
+    // `orphans::find` — the one place that always names the real
+    // `/Applications` (see that function's own doc comment). That is
+    // read-only: the real `/Applications` is consulted only to build the
+    // "installed" comparison set inside `orphans::find_in`, and a real
+    // installed app's own bundle id can never be the thing these tests plant
+    // as a leftover under `com.example.*`. **Every path any of these tests
+    // could ever remove still lives under `home.path()`, a
+    // `tempfile::tempdir()`** — `remove::execute` never receives anything
+    // under the real `/Applications` as a candidate, so no guard in this
+    // file, mutated or not, stands between a real disk and any test here.
+
+    /// **This is not an out-of-range-index test, despite its shape.**
+    /// `displayed` here is built from the *raw* tempdir path, but
+    /// `run_leftovers` scans against the *canonical* one — on macOS,
+    /// `tempfile::tempdir()` sits under `/var/...`, which `strip_firmlink`
+    /// resolves to `/private/var/...` (see `canonical_home`'s doc comment).
+    /// That mismatch alone denies the call via `echo_matches_leftovers`.
+    /// `deselected` is deliberately empty: the brief's original version of
+    /// this test passed `vec![99]`, an out-of-range index, which meant that
+    /// stubbing `echo_matches_leftovers` to always match still left the
+    /// range check standing — the test kept passing under a mutation of the
+    /// wrong guard, satisfying its old name for the wrong reason (the exact
+    /// defect this file's other renamed test, one review round earlier, was
+    /// about). With no indices to range-check, the echo is the only guard
+    /// that can deny this call. Verified directly: stubbing
+    /// `echo_matches_leftovers` to `return true` makes this test fail (the
+    /// file is actually removed); see
+    /// `an_out_of_range_index_against_a_real_leftover_is_caught_and_named`
+    /// below for the test that isolates the range check instead.
+    #[test]
+    fn a_raw_vs_canonical_home_mismatch_in_the_echo_denies_the_call() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        std::fs::write(apps.join("com.example.gone"), b"x").unwrap();
+        let displayed = vec![apps.join("com.example.gone").display().to_string()];
+        let err = run_leftovers(vec![], displayed, cfg.path(), home.path()).unwrap_err();
+        assert!(!err.is_empty());
+        assert!(apps.join("com.example.gone").exists(), "nothing may be removed when denied");
+    }
+
+    #[test]
+    fn an_out_of_range_index_against_a_real_leftover_is_caught_and_named() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        std::fs::write(apps.join("com.example.leftovers-range"), b"x").unwrap();
+        let displayed = fresh_leftover_paths(home.path());
+        assert_eq!(displayed.len(), 1, "sanity: exactly the one planted leftover");
+
+        let err = run_leftovers(vec![1], displayed, cfg.path(), home.path()).unwrap_err();
+        assert!(err.contains('1'), "must name the out-of-range index: {err}");
+        assert!(err.contains("1 leftover item"), "must name the true list length: {err}");
+        let canonical = canonical_home(home.path()).unwrap();
+        assert!(
+            canonical.join("Library/Application Support/com.example.leftovers-range").exists(),
+            "nothing may be removed when the call is denied"
+        );
+    }
+
+    #[test]
+    fn a_drifted_leftovers_echo_denies_the_whole_call() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        std::fs::write(apps.join("com.example.gone"), b"x").unwrap();
+        let err = run_leftovers(vec![], vec!["/not/what/was/shown".into()], cfg.path(), home.path())
+            .unwrap_err();
+        assert!(!err.is_empty());
+        assert!(apps.join("com.example.gone").exists(), "nothing may be removed on a mismatch");
+    }
+
+    #[test]
+    fn every_leftover_candidate_carries_the_orphan_justification() {
+        let items = vec![LeftoverItem {
+            bundle_id: "com.example.gone".into(),
+            paths: vec!["/x/com.example.gone".into()],
+            bytes: 1,
+        }];
+        let candidates = leftover_candidates_for(&items);
+        assert_eq!(candidates.len(), 1);
+        match &candidates[0].justification {
+            crate::remove::Justification::Orphan { bundle_id } => {
+                assert_eq!(bundle_id, "com.example.gone")
+            }
+            other => panic!("unexpected justification: {other:?}"),
+        }
+    }
+
+    /// The `displayed` echo a well-behaved caller would send: every path
+    /// across every item `scan_leftovers_within` finds right now, flattened
+    /// in the same order the review sheet itself would render them —
+    /// `order_leftovers`'s item order, each item's own `leftover_items_from`-
+    /// sorted paths. Built through `canonical_home` first, matching
+    /// `run_leftovers`'s own sequencing, so a positive test's echo matches
+    /// what the function under test actually computes.
+    fn fresh_leftover_paths(home: &std::path::Path) -> Vec<String> {
+        let canonical = canonical_home(home).unwrap();
+        scan_leftovers_within(&canonical).into_iter().flat_map(|item| item.paths).collect()
+    }
+
+    #[test]
+    fn a_matching_leftovers_echo_removes_the_orphan() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        std::fs::write(apps.join("com.example.leftovers-happy"), b"x").unwrap();
+        let displayed = fresh_leftover_paths(home.path());
+        assert_eq!(displayed.len(), 1, "sanity: exactly the one planted leftover");
+
+        let report = run_leftovers(vec![], displayed, cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 1, "{report:?}");
+        assert!(report.failed.is_empty());
+        assert!(report.partially_removed.is_empty());
+        let canonical = canonical_home(home.path()).unwrap();
+        assert!(
+            !canonical.join("Library/Application Support/com.example.leftovers-happy").exists()
+        );
+    }
+
+    #[test]
+    fn deselecting_a_leftover_item_keeps_it() {
+        // `deselected` indexes into the item list `scan_leftovers_within`
+        // returns, not into the flattened `displayed` path list — a single
+        // item with one path here, so index 0 names that one item.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        let path = apps.join("com.example.leftovers-deselect");
+        std::fs::write(&path, b"x").unwrap();
+        let displayed = fresh_leftover_paths(home.path());
+
+        let report = run_leftovers(vec![0], displayed, cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 0, "{report:?}");
+        assert!(path.exists(), "a deselected leftover must survive");
+    }
+
+    #[test]
+    fn a_history_record_is_appended_with_the_leftovers_screen() {
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        std::fs::write(apps.join("com.example.leftovers-history"), b"x").unwrap();
+        let displayed = fresh_leftover_paths(home.path());
+
+        run_leftovers(vec![], displayed, cfg.path(), home.path()).unwrap();
+
+        let runs = history::read(cfg.path()).unwrap();
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].screen, "leftovers");
+        assert_eq!(runs[0].removed, 1);
+    }
+
+    #[test]
+    fn an_exclusion_protects_a_leftover() {
+        // The frontend cannot bypass the exclusion list by routing a removal
+        // through `leftovers_remove` instead of `clean_execute` or
+        // `uninstall_execute` — all three load the same list from
+        // `config_dir` and hand it to the same `remove::execute`.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        let path = apps.join("com.example.leftovers-exclusion");
+        std::fs::write(&path, b"x").unwrap();
+        let displayed = fresh_leftover_paths(home.path());
+
+        std::fs::write(
+            cfg.path().join("exclusions.json"),
+            serde_json::to_vec(&serde_json::json!({ "paths": [path.to_string_lossy()] })).unwrap(),
+        )
+        .unwrap();
+
+        let report = run_leftovers(vec![], displayed, cfg.path(), home.path()).unwrap();
+        assert_eq!(report.excluded, 1, "{report:?}");
+        assert!(path.exists(), "an excluded leftover was removed");
+    }
+
+    #[test]
+    fn a_reordered_leftovers_echo_is_denied() {
+        // Same paths, same length, reversed order. A pure length or
+        // set-membership check would let this through; `echo_matches_leftovers`
+        // must be positional, because a reordering changes which index means
+        // what just as surely as an addition or removal does — the same
+        // property `run_uninstall`'s `an_echo_in_a_different_order_is_denied`
+        // proves for the Uninstall screen.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        let a = apps.join("com.example.leftovers-order-a");
+        let b = apps.join("com.example.leftovers-order-b");
+        std::fs::write(&a, b"x").unwrap();
+        std::fs::write(&b, b"x").unwrap();
+        let mut displayed = fresh_leftover_paths(home.path());
+        assert_eq!(displayed.len(), 2, "sanity: two distinct leftovers");
+        displayed.reverse();
+
+        let err = run_leftovers(vec![], displayed, cfg.path(), home.path()).unwrap_err();
+        assert!(!err.is_empty());
+        assert!(a.exists(), "nothing should be removed when denied");
+        assert!(b.exists(), "nothing should be removed when denied");
+    }
+
+    #[test]
+    fn leftovers_for_display_canonicalises_before_scanning() {
+        // Regression for the drift bug described on `leftovers_for_display`'s
+        // own doc comment: `leftovers_scan` used to scan against the raw
+        // home while `run_leftovers` canonicalises its own copy, so on a
+        // machine where the two differ every displayed path failed to match
+        // its re-scanned counterpart and the echo denied every legitimate
+        // call. `home.path()` here is a `tempfile::tempdir()`, which sits
+        // under macOS's own `/var` -> `/private/var` firmlink — the same
+        // shape of mismatch a firmlinked real `$HOME` produces — so this
+        // reproduces the failure without needing one.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Library/Application Support");
+        std::fs::create_dir_all(&apps).unwrap();
+        std::fs::write(apps.join("com.example.leftovers-drift-fix"), b"x").unwrap();
+
+        let displayed: Vec<String> = leftovers_for_display(home.path())
+            .unwrap()
+            .into_iter()
+            .flat_map(|item| item.paths)
+            .collect();
+
+        let report = run_leftovers(vec![], displayed, cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 1, "{report:?}");
+    }
+
+    #[test]
+    fn deselecting_a_multi_path_item_keeps_every_one_of_its_paths() {
+        // `deselected` indexes the *item* list, not the flattened *path*
+        // list `displayed` is built from — see `run_leftovers`'s own doc
+        // comment. Every other test in this module plants a single-path
+        // leftover, where the two index spaces happen to coincide; this test
+        // plants one leftover with two paths (the ordinary case — a bundle
+        // id can appear under several `LOCATIONS` entries at once) so the
+        // two spaces genuinely diverge, and proves `deselected` is read
+        // against items, not against the flattened path list.
+        let home = tempfile::tempdir().unwrap();
+        let cfg = tempfile::tempdir().unwrap();
+        let support = home.path().join("Library/Application Support");
+        let logs = home.path().join("Library/Logs");
+        let caches = home.path().join("Library/Caches");
+        std::fs::create_dir_all(&support).unwrap();
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::create_dir_all(&caches).unwrap();
+
+        // Item A: two paths, sized so it sorts before B (size descending —
+        // see `order_leftovers`).
+        let a_support = support.join("com.example.leftovers-multi-a");
+        let a_logs = logs.join("com.example.leftovers-multi-a");
+        std::fs::write(&a_support, vec![b'x'; 100]).unwrap();
+        std::fs::write(&a_logs, vec![b'x'; 100]).unwrap();
+
+        // Item B: one path, smaller — sorts second.
+        let b_path = caches.join("com.example.leftovers-multi-b");
+        std::fs::write(&b_path, b"x").unwrap();
+
+        let displayed = fresh_leftover_paths(home.path());
+        assert_eq!(displayed.len(), 3, "sanity: two paths for A, one for B");
+
+        // Deselect item index 1 — item B, the single-path item — to protect
+        // it. If `deselected` were (mis)read against the flattened path
+        // list instead, index 1 would name A's second path, not B at all.
+        let report = run_leftovers(vec![1], displayed, cfg.path(), home.path()).unwrap();
+        assert_eq!(report.removed, 2, "only A's two paths: {report:?}");
+        assert!(!a_support.exists(), "A must be removed");
+        assert!(!a_logs.exists(), "A must be removed");
+        assert!(b_path.exists(), "B (deselected) must survive");
     }
 }
