@@ -22,9 +22,16 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const APPS = {
-  wallpaper: { tag: (v) => `v${v}`, name: "Spiral Wallpaper", builds: "macOS + Windows" },
-  slim: { tag: (v) => `slim-v${v}`, name: "Spiral Slim", builds: "macOS" },
-  clean: { tag: (v) => `clean-v${v}`, name: "Spiral Clean", builds: "macOS" },
+  wallpaper: {
+    tag: (v) => `v${v}`,
+    name: "Spiral Wallpaper",
+    builds: "macOS + Windows",
+    // Wallpaper has no release-*.yml of its own: `build.yml` carries the
+    // `v*` trigger and calls the reusable workflow.
+    workflow: "build.yml",
+  },
+  slim: { tag: (v) => `slim-v${v}`, name: "Spiral Slim", builds: "macOS", workflow: "release-slim.yml" },
+  clean: { tag: (v) => `clean-v${v}`, name: "Spiral Clean", builds: "macOS", workflow: "release-clean.yml" },
 };
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
@@ -46,6 +53,98 @@ function run(command, args, { allowFailure = false } = {}) {
   return { ok: result.status === 0, out: (result.stdout || "").trim(), err: (result.stderr || "").trim() };
 }
 
+/** Block for `ms`. The script is synchronous throughout; this keeps it so. */
+const sleep = (ms) => {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+};
+
+/**
+ * A pushed tag is not a started release.
+ *
+ * On 2026-08-06 a `v1.0.3` tag landed on origin with the right trigger in the
+ * workflow at that ref, and GitHub fired **nothing** — the tag had been
+ * deleted and recreated a minute earlier. Nothing reported that. A release
+ * that silently never starts looks exactly like one that succeeded quietly,
+ * which is the worst shape a failure can take.
+ *
+ * So the push is not the last step. This waits for a run to appear on the
+ * tag and, if none does, says so and gives the one command that fixes it.
+ * It never fails the script: the tag is already pushed by this point, and
+ * exiting non-zero would imply that needs undoing.
+ */
+function confirmCiStarted(tag, workflow) {
+  const gh = run("gh", ["--version"], { allowFailure: true });
+  if (!gh.ok) {
+    say(`
+Could not check whether CI started — the gh CLI is not available.
+Confirm a run exists for ${tag}, and if none does:
+
+  gh workflow run ${workflow} --ref ${tag}
+`);
+    return;
+  }
+
+  const DEADLINE_MS = 90_000;
+  const EVERY_MS = 5_000;
+  process.stdout.write("Waiting for CI to pick up the tag");
+
+  for (let waited = 0; waited < DEADLINE_MS; waited += EVERY_MS) {
+    const listed = run(
+      "gh",
+      ["run", "list", "--limit", "20", "--json", "headBranch,databaseId,name,status"],
+      { allowFailure: true },
+    );
+
+    if (listed.ok) {
+      let runs = [];
+      try {
+        runs = JSON.parse(listed.out || "[]");
+      } catch {
+        // A gh that answered with something unparseable is not a reason to
+        // claim the release failed. Fall through and retry.
+      }
+      const onTag = runs.filter((r) => r.headBranch === tag);
+      if (onTag.length) {
+        const [found] = onTag;
+        say(`
+
+CI picked it up: ${found.name} (${found.status})
+
+  gh run watch ${found.databaseId}`);
+
+        // Two runs on one tag means two `publish` jobs racing to create the
+        // same release. `build.yml` has no concurrency group, so nothing
+        // stops them. This happened on the very first use of this check: a
+        // dispatched run and a late-firing push run, 21 seconds apart.
+        if (onTag.length > 1) {
+          say(`
+WARNING: ${onTag.length} runs exist for ${tag}:
+
+${onTag.map((r) => `  ${r.databaseId}  ${r.name}  (${r.status})`).join("\n")}
+
+Each will try to publish the same release. Cancel all but one:
+
+${onTag.slice(1).map((r) => `  gh run cancel ${r.databaseId}`).join("\n")}`);
+        }
+        return;
+      }
+    }
+
+    process.stdout.write(".");
+    sleep(EVERY_MS);
+  }
+
+  say(`
+
+No workflow run appeared for ${tag} after 90 seconds.
+
+The tag IS pushed — this is not a failed release, it is a release that has
+not started. GitHub sometimes fires nothing for a tag that was deleted and
+recreated shortly before. Start it explicitly:
+
+  gh workflow run ${workflow} --ref ${tag}`);
+}
+
 const [app, version, ...flags] = process.argv.slice(2);
 const push = flags.includes("--push");
 
@@ -55,7 +154,7 @@ apps: ${Object.keys(APPS).join(", ")}`);
 }
 if (!SEMVER.test(version)) die(`"${version}" is not a three-part version like 1.0.3.`);
 
-const { tag: tagFor, name, builds } = APPS[app];
+const { tag: tagFor, name, builds, workflow } = APPS[app];
 const tag = tagFor(version);
 
 // ---------------------------------------------------------------------------
@@ -145,9 +244,10 @@ notarizes and publishes a public release — there is no undo for that.
 
 say("\nPushing main and the tag…");
 run("git", ["push", "origin", "main", tag]);
-say(`
-Pushed. CI is building ${name} ${version}.
+say("Pushed.");
 
-  gh run watch
+confirmCiStarted(tag, workflow);
+
+say(`
   gh release view ${tag}
 `);
