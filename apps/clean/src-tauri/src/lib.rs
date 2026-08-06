@@ -46,6 +46,7 @@ pub fn run() {
             optimize::optimize_execute,
             startup::startup_list,
             startup::startup_set_enabled,
+            startup::startup_remove,
             startup::open_login_items_settings,
             permissions::fda_status,
             permissions::open_privacy_settings

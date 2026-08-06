@@ -32,6 +32,21 @@ pub enum Justification {
     /// producer lands in M4, together with `associate.rs`.
     #[allow(dead_code)]
     AppBundle { bundle_id: String, evidence: Evidence },
+    /// A launchd job definition the user chose to remove (ADR-0008, where
+    /// removal is the deliberate second step after a reversible disable).
+    ///
+    /// **It carries no label, and that is the point.** The label was read
+    /// *out of the very plist being removed*, so "does this file declare that
+    /// label" would reduce to `x == x` — structurally incapable of failing.
+    /// That is precisely the self-derived-identifier trap ADR-0016 records,
+    /// where `verified_name_matches` was defeated the same way and 43 live
+    /// Group Containers reached `Ok(Trash)`.
+    ///
+    /// What authorises this removal is **location**. A `.plist` sitting
+    /// directly in `~/Library/LaunchAgents` is a user launch agent by virtue
+    /// of where it is, and that is a fact about the path which no content of
+    /// the file can forge.
+    StartupItem,
     /// The user selected this specific item, e.g. an iOS device backup —
     /// constructed by the Storage screen in M6.
     #[allow(dead_code)]
@@ -225,6 +240,10 @@ struct Roots {
     /// `Evidence::Verified` happens in `disposition_for` itself, not here
     /// (see ADR-0011). Every entry has passed `authorizing_root`.
     app_bundle_scope: Vec<PathBuf>,
+    /// `~/Library/LaunchAgents`, resolved — the only location a
+    /// `Justification::StartupItem` may point into. `None` when it does not
+    /// resolve where it is declared, in which case nothing is authorised.
+    startup_agents: Option<PathBuf>,
     /// `~/Library`, resolved — what the container-depth rule counts from.
     /// Deliberately *not* `authorizing_root`-checked: it is used to deny, and
     /// a `~/Library` pointed elsewhere should have its target's containers
@@ -282,6 +301,10 @@ impl Roots {
             protected: protected.into_iter().filter_map(|r| normalize(&r)).collect(),
             user_content,
             app_bundle_scope,
+            // `authorizing_root`, not `normalize`: this grants permission, so
+            // a `LaunchAgents` that has been pointed somewhere else must
+            // authorise nothing rather than authorise its new target.
+            startup_agents: authorizing_root("~/Library/LaunchAgents", &home),
             library: normalize(&home.join("Library")),
             home,
         })
@@ -559,6 +582,25 @@ fn bundle_declares_id(path: &Path, bundle_id: &str) -> bool {
 /// denied here, not merely flagged in a review sheet.
 /// `Evidence::Likely` clears only the location bar; a name match cannot be
 /// validated against anything stronger, so it is routed to `Trash` instead.
+/// Whether `normalized` is a `.plist` sitting **directly** inside `agents`.
+///
+/// Direct child, not descendant. `launchd` reads only the top level of
+/// `LaunchAgents`, so a nested path is not a launch agent at all — and
+/// admitting descendants would let one wrongly-built candidate reach an
+/// arbitrary depth of whatever a user had filed under there.
+///
+/// Mutual prefix is equality, using the one case-insensitive comparison this
+/// module owns rather than adding another.
+fn is_user_launch_agent(normalized: &Path, agents: &Path) -> bool {
+    normalized
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("plist"))
+        && normalized.parent().is_some_and(|parent| {
+            starts_with_case_insensitive(parent, agents)
+                && starts_with_case_insensitive(agents, parent)
+        })
+}
+
 fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disposition, String> {
     match j {
         Justification::Catalog(id) => match catalog::find(id) {
@@ -588,6 +630,22 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
             },
             None => Err(format!(
                 "\"{id}\" is not a category in this release. Nothing was removed."
+            )),
+        },
+        // ADR-0008's deliberate second step. Trash, never permanent: a plist
+        // is the only copy of a job definition, nothing regenerates it, and
+        // ADR-0001 reserves permanent deletion for a catalog match.
+        Justification::StartupItem => match (normalize(path), roots.startup_agents.as_deref()) {
+            (Some(normalized), Some(agents)) if is_user_launch_agent(&normalized, agents) => {
+                Ok(Disposition::Trash)
+            }
+            (_, None) => Err(
+                "Your LaunchAgents folder does not resolve where macOS keeps it, so Spiral Clean will not remove anything from it. Nothing was removed."
+                    .to_string(),
+            ),
+            (_, Some(_)) => Err(format!(
+                "{} is not a login item file in your LaunchAgents folder, so Spiral Clean will not remove it. Nothing was removed.",
+                path.display()
             )),
         },
         // ADR-0011, satisfied — see
@@ -982,6 +1040,143 @@ mod tests {
             &roots,
         );
         assert!(matches!(reports[0].outcome, Outcome::Removed(Disposition::Trash)));
+    }
+
+    // -- Justification::StartupItem (ADR-0008, M5c) -------------------------
+
+    fn agents_dir(home: &Path) -> PathBuf {
+        let dir = home.join("Library/LaunchAgents");
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_user_launch_agent_goes_to_the_trash_not_permanent() {
+        // A plist is the only copy of a job definition and nothing
+        // regenerates it, so ADR-0001 keeps permanent deletion for the
+        // catalog and this goes to the Trash.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let p = file(&agents_dir(home.path()), "com.example.agent.plist");
+        let reports = run(vec![candidate(p, Justification::StartupItem)], &exclude::new(vec![]), &roots);
+        assert!(matches!(reports[0].outcome, Outcome::Removed(Disposition::Trash)));
+    }
+
+    #[test]
+    fn a_plist_outside_launchagents_is_denied() {
+        // Stub `is_user_launch_agent` to `true` and this test fails. That is
+        // the ADR-0012 proof: location is the *only* thing authorising this
+        // justification, because the label was read out of the file itself
+        // and so can prove nothing about it.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let prefs = home.path().join("Library/Preferences");
+        std::fs::create_dir_all(&prefs).unwrap();
+        let p = file(&prefs, "com.example.agent.plist");
+        let reports = run(
+            vec![candidate(p.clone(), Justification::StartupItem)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)), "{:?}", reports[0].outcome);
+        assert!(p.exists(), "a denied candidate is still on disk");
+    }
+
+    #[test]
+    fn a_nested_plist_under_launchagents_is_denied() {
+        // `launchd` reads only the top level, so a nested file is not a
+        // launch agent — and admitting descendants would let one candidate
+        // reach an arbitrary depth of whatever a user filed under there.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let nested = agents_dir(home.path()).join("disabled");
+        std::fs::create_dir_all(&nested).unwrap();
+        let p = file(&nested, "com.example.agent.plist");
+        let reports = run(
+            vec![candidate(p.clone(), Justification::StartupItem)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+        assert!(p.exists());
+    }
+
+    #[test]
+    fn a_non_plist_in_launchagents_is_denied() {
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let p = file(&agents_dir(home.path()), "notes.txt");
+        let reports = run(
+            vec![candidate(p.clone(), Justification::StartupItem)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+        assert!(p.exists());
+    }
+
+    #[test]
+    fn a_system_launch_daemon_is_denied() {
+        // System daemons are root-owned and out of this justification's
+        // reach. M5c disables them through escalation; it never removes them.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let reports = run(
+            vec![candidate(
+                PathBuf::from("/Library/LaunchDaemons/com.example.daemon.plist"),
+                Justification::StartupItem,
+            )],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+    }
+
+    #[test]
+    fn a_traversal_out_of_launchagents_is_denied() {
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let prefs = home.path().join("Library/Preferences");
+        std::fs::create_dir_all(&prefs).unwrap();
+        let real = file(&prefs, "com.example.agent.plist");
+        let traversal = agents_dir(home.path()).join("../Preferences/com.example.agent.plist");
+        let reports = run(
+            vec![candidate(traversal, Justification::StartupItem)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+        assert!(real.exists());
+    }
+
+    #[test]
+    fn launchagents_itself_is_never_removable() {
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let dir = agents_dir(home.path());
+        let reports = run(
+            vec![candidate(dir.clone(), Justification::StartupItem)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+        assert!(dir.exists());
+    }
+
+    #[test]
+    fn an_excluded_launch_agent_is_skipped_like_anything_else() {
+        // Hard rule 2: the exclusion list binds at the removal boundary, so
+        // a new justification is covered the moment it exists.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let p = file(&agents_dir(home.path()), "com.example.agent.plist");
+        let reports = run(
+            vec![candidate(p.clone(), Justification::StartupItem)],
+            &exclude::new(vec![p.clone()]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Excluded(_)));
+        assert!(p.exists());
     }
 
     #[test]

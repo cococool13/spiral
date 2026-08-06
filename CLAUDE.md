@@ -87,6 +87,11 @@ cargo test           # the safety-core suite; the gate for every removal change
 cargo clippy --all-targets   # must stay warning-free; there is no crate-wide allow
 ```
 
+**Never run `cargo fmt` in `apps/clean`.** The crate is not rustfmt-formatted and
+running it rewrites about 1170 lines across files you did not touch — noise that
+buries the real change and is painful to unpick. There is no `rustfmt.toml` and no
+CI format check, so nothing stops you; match the surrounding style by hand instead.
+
 Spiral Clean releases on a `clean-v*` tag (`git tag clean-v0.1.0`), independent of
 Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
 `.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,

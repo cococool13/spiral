@@ -6,19 +6,24 @@
 //! - **User launch agents** (`~/Library/LaunchAgents`) get a reversible
 //!   enable/disable, because `launchctl … gui/<uid>/<label>` needs no
 //!   privileges.
-//! - **System agents and daemons** are listed without a control.
-//!   `launchctl … system/<label>` needs root, and a toggle that silently does
-//!   nothing is worse than no toggle. It arrives in M5b with escalation.
+//! - **System agents and daemons** get the same toggle through `escalate`,
+//!   because `launchctl … system/<label>` needs root. The password prompt is
+//!   raised only for this tier. They are never *removed*: a system plist is
+//!   root-owned and out of `Justification::StartupItem`'s reach.
 //! - **Login items** are listed read-only with a System Settings deep link.
 //!   Since macOS 13 the Background Task Management database is protected and
 //!   third-party applications cannot toggle its entries at all.
 //!
-//! This module has no delete path. Removing a plist is a separate deliberate
-//! action per ADR-0008, needs a new `Justification` in `remove.rs`, and is
-//! M5b work.
+//! Removing a user agent's plist is ADR-0008's deliberate second step, and it
+//! goes through `remove::execute` carrying `Justification::StartupItem` —
+//! hard rule 1 has no exemption for this screen. That justification is
+//! authorised by the file's *location*, never by the label, because the label
+//! was read out of the very file being removed.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+
+use crate::{escalate, remove};
 
 use serde::Serialize;
 
@@ -59,6 +64,13 @@ pub struct StartupItem {
     /// Whether the UI should render a toggle. False means no control exists
     /// that can work — never a control rendered disabled.
     pub controllable: bool,
+    /// Whether turning this item off needs administrator access. True only
+    /// for the system tier, where `launchctl … system/<label>` needs root.
+    pub requires_admin: bool,
+    /// Whether the plist itself may be moved to the Trash. User tier only:
+    /// a system plist is root-owned, and ADR-0008's deliberate second step
+    /// is not worth escalating for when disabling already achieves the aim.
+    pub removable: bool,
     /// One line saying why there is no control, when there is none.
     pub handoff: Option<String>,
 }
@@ -70,9 +82,10 @@ pub struct StartupInventory {
     pub login_items: Vec<StartupItem>,
 }
 
-const SYSTEM_HANDOFF: &str = "Managed by the system. Turning this off needs administrator access, which Spiral Clean does not yet ask for.";
+const SYSTEM_HANDOFF: &str = "Managed by the system. Spiral Clean can turn this off, but macOS will ask for your password.";
 const LOGIN_ITEM_HANDOFF: &str = "macOS owns this list. Open Login Items in System Settings to change it.";
 const APPLE_HANDOFF: &str = "Part of macOS. Spiral Clean does not turn Apple's own agents off.";
+const UNADDRESSABLE_HANDOFF: &str = "This item's name is not one Spiral Clean can address safely. Change it in System Settings instead.";
 
 // ---------------------------------------------------------------------------
 // Label validation — the one new guard in this milestone
@@ -124,6 +137,8 @@ pub fn inventory(home: &Path) -> StartupInventory {
                 // can break the system with no in-app recovery — the same
                 // refusal `associate` and `orphans` already make.
                 controllable: !apple && label_is_addressable(&label),
+                requires_admin: false,
+                removable: !apple && label_is_addressable(&label),
                 handoff: apple.then(|| APPLE_HANDOFF.to_string()),
                 label,
             }
@@ -138,8 +153,20 @@ pub fn inventory(home: &Path) -> StartupInventory {
             name: display_name(&label),
             path: Some(path.to_string_lossy().into_owned()),
             tier: Tier::System,
-            controllable: false,
-            handoff: Some(SYSTEM_HANDOFF.to_string()),
+            // M5c: escalation exists, so this is a control that can work.
+            // Apple's own daemons stay refused for the same reason as ever.
+            controllable: !crate::associate::is_apple_bundle_id(&label)
+                && label_is_addressable(&label),
+            requires_admin: true,
+            // Root-owned, and out of `Justification::StartupItem`'s reach.
+            removable: false,
+            handoff: if crate::associate::is_apple_bundle_id(&label) {
+                Some(APPLE_HANDOFF.to_string())
+            } else if label_is_addressable(&label) {
+                Some(SYSTEM_HANDOFF.to_string())
+            } else {
+                Some(UNADDRESSABLE_HANDOFF.to_string())
+            },
             label,
         })
         .collect();
@@ -265,6 +292,8 @@ fn login_items_from(dump: &str, uid: u32) -> Vec<StartupItem> {
                 tier: Tier::LoginItem,
                 state: State::Unknown,
                 controllable: false,
+                requires_admin: false,
+                removable: false,
                 handoff: Some(LOGIN_ITEM_HANDOFF.to_string()),
             });
         }
@@ -312,42 +341,71 @@ pub fn startup_list() -> StartupInventory {
     }
 }
 
-/// Enable or disable a user launch agent.
+/// Find `label` in a fresh inventory and confirm it still offers a control.
 ///
-/// The label is **re-derived from a fresh inventory** rather than trusted, for
-/// the same reason `uninstall_execute` re-scans: a label is a reference to a
-/// list, and the list can change between the call that displayed it and the
-/// call that acts on it. A label that no longer names a controllable user
-/// agent is refused, not acted on.
+/// The item is **re-derived rather than trusted**, for the same reason
+/// `uninstall_execute` re-scans: a label is a reference to a list, and the
+/// list can change between the call that displayed it and the call that acts
+/// on it. Returns the item cloned, so the borrow of the inventory ends here.
+fn controllable_item(home: &Path, label: &str) -> Result<StartupItem, String> {
+    let found = inventory(home);
+    let item = found
+        .user_agents
+        .iter()
+        .chain(&found.system)
+        .find(|item| item.label == label)
+        .ok_or_else(|| {
+            format!("{label} is no longer in your login items. Reopen Optimize to see the current list.")
+        })?;
+
+    if !item.controllable {
+        return Err(item
+            .handoff
+            .clone()
+            .unwrap_or_else(|| format!("{label} cannot be turned off from here.")));
+    }
+
+    // Belt and braces: `controllable` already implies this, and it is checked
+    // again immediately before the interpolation it protects.
+    if !label_is_addressable(label) {
+        return Err(format!(
+            "{label} is not a name Spiral Clean can address safely. A login item name should contain only letters, numbers, dots, hyphens and underscores."
+        ));
+    }
+    Ok(item.clone())
+}
+
+/// The launchd service target for an item, by tier.
+///
+/// Split out so a test can prove a system item addresses `system/<label>` and
+/// a user item addresses `gui/<uid>/<label>` without spawning `launchctl`.
+fn service_target(tier: Tier, uid: u32, label: &str) -> String {
+    match tier {
+        Tier::System => format!("system/{label}"),
+        _ => format!("gui/{uid}/{label}"),
+    }
+}
+
+/// Enable or disable a launch agent or system daemon.
+///
+/// A user agent is toggled directly — `launchctl … gui/<uid>/<label>` needs no
+/// privileges. A system daemon goes through `escalate` as a one-step batch,
+/// because `launchctl … system/<label>` needs root. The password prompt is
+/// therefore raised only for the tier that genuinely requires it.
 #[tauri::command]
 pub fn startup_set_enabled(label: String, enabled: bool) -> Result<(), String> {
     let home = dirs::home_dir().ok_or(
         "Could not find your home folder, so Spiral Clean cannot tell which login items are yours.",
     )?;
-    let inventory = inventory(&home);
+    let item = controllable_item(&home, &label)?;
 
-    let item = inventory
-        .user_agents
-        .iter()
-        .find(|item| item.label == label)
-        .ok_or_else(|| format!("{label} is no longer in your login items. Reopen Optimize to see the current list."))?;
-
-    if !item.controllable {
-        return Err(item.handoff.clone().unwrap_or_else(|| {
-            format!("{label} cannot be turned off from here.")
-        }));
-    }
-
-    // Belt and braces: `controllable` already implies this, and it is checked
-    // again immediately before the interpolation it protects.
-    if !label_is_addressable(&label) {
-        return Err(format!(
-            "{label} is not a name Spiral Clean can address safely. A login item name should contain only letters, numbers, dots, hyphens and underscores."
-        ));
-    }
-
-    let target = format!("gui/{}/{}", current_uid(), label);
     let verb = if enabled { "enable" } else { "disable" };
+    let target = service_target(item.tier, current_uid(), &label);
+
+    if item.requires_admin {
+        return escalated_toggle(&label, verb, &target);
+    }
+
     let output = std::process::Command::new("launchctl")
         .args([verb, &target])
         .output()
@@ -362,6 +420,93 @@ pub fn startup_set_enabled(label: String, enabled: bool) -> Result<(), String> {
         "macOS refused to {verb} {label}{}. Try again, or change this item in System Settings.",
         if detail.is_empty() { String::new() } else { format!(" ({detail})") }
     ))
+}
+
+/// A system-daemon toggle, as a one-step privileged batch.
+///
+/// It reuses `escalate` rather than shelling out to `sudo` or building its own
+/// prompt, so the token allowlist, the quoting and the result attribution are
+/// the same ones every Optimize action goes through. One trust boundary, one
+/// implementation.
+fn escalated_toggle(label: &str, verb: &str, target: &str) -> Result<(), String> {
+    let step = escalate::PrivilegedStep {
+        id: label.to_string(),
+        commands: vec![vec!["launchctl".to_string(), verb.to_string(), target.to_string()]],
+    };
+
+    match escalate::run(std::slice::from_ref(&step)) {
+        escalate::BatchResult::Ran(results) => match results.first().map(|r| &r.outcome) {
+            Some(escalate::Outcome::Succeeded) => Ok(()),
+            Some(escalate::Outcome::Failed(detail)) => Err(format!(
+                "macOS refused to {verb} {label}. {detail} Try again, or change this item in System Settings."
+            )),
+            // No result is never success, per ADR-0018.
+            _ => Err(format!(
+                "Spiral Clean did not get a result for {label}, so it may not have changed. Reopen Optimize to see its current state."
+            )),
+        },
+        escalate::BatchResult::Cancelled => Err(format!(
+            "You did not give administrator access, so {label} was left alone."
+        )),
+        escalate::BatchResult::Failed(reason) => Err(reason),
+    }
+}
+
+/// Move a user launch agent's plist to the Trash.
+///
+/// ADR-0008's deliberate second step. It goes through `remove::execute` like
+/// every other deletion in the application — hard rule 1 has no exemption for
+/// this screen either — carrying `Justification::StartupItem`, whose authority
+/// is the file's *location* and not the label this command was handed.
+#[tauri::command]
+pub fn startup_remove(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    use tauri::Manager;
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app."))?;
+    let home = dirs::home_dir().ok_or(
+        "Could not find your home folder, so Spiral Clean cannot tell which login items are yours.",
+    )?;
+
+    let found = inventory(&home);
+    let item = found
+        .user_agents
+        .iter()
+        .find(|item| item.label == label)
+        .ok_or_else(|| {
+            format!("{label} is no longer in your login items. Reopen Optimize to see the current list.")
+        })?;
+
+    if !item.removable {
+        return Err(item
+            .handoff
+            .clone()
+            .unwrap_or_else(|| format!("{label} is not something Spiral Clean can remove.")));
+    }
+    let path = item
+        .path
+        .as_ref()
+        .ok_or_else(|| format!("Spiral Clean does not know where {label} is stored, so nothing was removed."))?;
+
+    let reports = remove::execute(
+        vec![remove::Candidate {
+            path: PathBuf::from(path),
+            justification: remove::Justification::StartupItem,
+        }],
+        &crate::exclude::load(&config_dir),
+        &home,
+    );
+
+    match reports.first().map(|r| &r.outcome) {
+        Some(remove::Outcome::Removed(_)) => Ok(()),
+        Some(remove::Outcome::Excluded(entry)) => Err(format!(
+            "{label} is on your exclusion list ({entry}), so it was left alone."
+        )),
+        Some(remove::Outcome::Denied(why)) | Some(remove::Outcome::Failed(why)) => Err(why.clone()),
+        Some(remove::Outcome::PartiallyRemoved(why)) => Err(why.clone()),
+        None => Err(format!("Nothing happened to {label}. Try again.")),
+    }
 }
 
 #[tauri::command]
@@ -388,6 +533,30 @@ mod tests {
             ),
         )
         .unwrap();
+    }
+
+
+    /// A system-tier item built the way `inventory` builds one, without
+    /// depending on whatever this machine happens to have in /Library.
+    fn system_item(label: &str) -> StartupItem {
+        let apple = crate::associate::is_apple_bundle_id(label);
+        StartupItem {
+            label: label.to_string(),
+            name: display_name(label),
+            path: Some(format!("/Library/LaunchDaemons/{label}.plist")),
+            tier: Tier::System,
+            state: State::Unknown,
+            controllable: !apple && label_is_addressable(label),
+            requires_admin: true,
+            removable: false,
+            handoff: if apple {
+                Some(APPLE_HANDOFF.to_string())
+            } else if label_is_addressable(label) {
+                Some(SYSTEM_HANDOFF.to_string())
+            } else {
+                Some(UNADDRESSABLE_HANDOFF.to_string())
+            },
+        }
     }
 
     // -- the guard, and its mutation proof ---------------------------------
@@ -592,12 +761,40 @@ mod tests {
     // -- tier posture -------------------------------------------------------
 
     #[test]
-    fn no_system_item_is_ever_controllable() {
+    fn no_system_item_is_ever_removable() {
+        // Disabling a daemon is reversible and escalated; deleting a
+        // root-owned plist is neither, and `Justification::StartupItem`
+        // cannot reach outside `~/Library/LaunchAgents` anyway.
         let home = tempfile::tempdir().unwrap();
         for item in inventory(home.path()).system {
-            assert!(!item.controllable, "{} needs root, so no toggle is shown", item.label);
-            assert_eq!(item.handoff.as_deref(), Some(SYSTEM_HANDOFF));
+            assert!(!item.removable, "{} is root-owned", item.label);
+            assert!(item.requires_admin, "{} needs root to toggle", item.label);
         }
+    }
+
+    #[test]
+    fn a_system_daemon_is_controllable_but_needs_a_password() {
+        // M5c: escalation exists, so the toggle is now a control that works.
+        let item = system_item("com.vendor.daemon");
+        assert!(item.controllable);
+        assert!(item.requires_admin);
+        assert_eq!(item.handoff.as_deref(), Some(SYSTEM_HANDOFF));
+    }
+
+    #[test]
+    fn an_apple_system_daemon_stays_refused_even_with_escalation() {
+        // Having the ability to do it is not a reason to offer it.
+        let item = system_item("com.apple.somethingd");
+        assert!(!item.controllable);
+        assert_eq!(item.handoff.as_deref(), Some(APPLE_HANDOFF));
+    }
+
+    #[test]
+    fn a_system_item_addresses_the_system_domain_and_a_user_item_the_gui_domain() {
+        // The one thing that differs between the tiers at the launchctl
+        // boundary, proven without spawning launchctl.
+        assert_eq!(service_target(Tier::System, 501, "com.vendor.daemon"), "system/com.vendor.daemon");
+        assert_eq!(service_target(Tier::UserAgent, 501, "com.vendor.agent"), "gui/501/com.vendor.agent");
     }
 
     #[test]
@@ -617,16 +814,34 @@ mod tests {
 
     #[test]
     fn an_item_with_no_control_always_says_why() {
+        // Weakened from M5a's biconditional on purpose: a system item now has
+        // both a control *and* a handoff, because the handoff says the
+        // password will be asked for. What must still hold is the direction
+        // that matters — a missing control is never unexplained.
         let home = tempfile::tempdir().unwrap();
         agent(&home.path().join(USER_AGENTS), "apple.plist", "com.apple.thing");
         let found = inventory(home.path());
         for item in found.user_agents.iter().chain(&found.system).chain(&found.login_items) {
-            assert_eq!(
-                item.controllable,
-                item.handoff.is_none(),
-                "{} must either offer a control or explain its absence",
-                item.label
-            );
+            if !item.controllable {
+                assert!(
+                    item.handoff.is_some(),
+                    "{} offers no control and must explain why",
+                    item.label
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_user_agent_that_is_controllable_is_also_removable() {
+        // The two travel together in this tier: both rest on the same
+        // "not Apple's, and addressable" test.
+        let home = tempfile::tempdir().unwrap();
+        agent(&home.path().join(USER_AGENTS), "a.plist", "com.example.agent");
+        agent(&home.path().join(USER_AGENTS), "apple.plist", "com.apple.thing");
+        for item in inventory(home.path()).user_agents {
+            assert_eq!(item.controllable, item.removable, "{}", item.label);
+            assert!(!item.requires_admin, "a user agent never needs a password");
         }
     }
 

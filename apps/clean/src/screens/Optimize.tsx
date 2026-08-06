@@ -33,6 +33,8 @@ export interface StartupItem {
   tier: Tier;
   state: ItemState;
   controllable: boolean;
+  requires_admin: boolean;
+  removable: boolean;
   handoff: string | null;
 }
 
@@ -153,14 +155,15 @@ function Health({ report }: HealthProps) {
 interface StartupRowProps {
   item: StartupItem;
   onToggle: (item: StartupItem, enabled: boolean) => void;
+  onRemove: (item: StartupItem) => void;
 }
 
-function StartupRow({ item, onToggle }: StartupRowProps) {
+function StartupRow({ item, onToggle, onRemove }: StartupRowProps) {
   return (
     <li>
       <span>{item.name}</span>
       {item.path && <code>{item.path}</code>}
-      {item.controllable ? (
+      {item.controllable && (
         <label>
           <input
             type="checkbox"
@@ -173,8 +176,14 @@ function StartupRow({ item, onToggle }: StartupRowProps) {
           />
           {item.state === "unknown" ? "State unknown" : "Open at login"}
         </label>
-      ) : (
-        <p>{item.handoff}</p>
+      )}
+      {/* Shown alongside a working control when it explains the password
+          prompt, and alone when there is no control at all. */}
+      {item.handoff && <p>{item.handoff}</p>}
+      {item.removable && (
+        <button type="button" onClick={() => onRemove(item)}>
+          Remove {item.name}
+        </button>
       )}
     </li>
   );
@@ -186,9 +195,10 @@ interface GroupProps {
   empty: string;
   note?: React.ReactNode;
   onToggle: (item: StartupItem, enabled: boolean) => void;
+  onRemove: (item: StartupItem) => void;
 }
 
-function Group({ heading, items, empty, note, onToggle }: GroupProps) {
+function Group({ heading, items, empty, note, onToggle, onRemove }: GroupProps) {
   return (
     <section>
       <h3>{heading}</h3>
@@ -198,7 +208,12 @@ function Group({ heading, items, empty, note, onToggle }: GroupProps) {
       ) : (
         <ul>
           {items.map((item) => (
-            <StartupRow key={`${item.tier}:${item.label}`} item={item} onToggle={onToggle} />
+            <StartupRow
+              key={`${item.tier}:${item.label}`}
+              item={item}
+              onToggle={onToggle}
+              onRemove={onRemove}
+            />
           ))}
         </ul>
       )}
@@ -374,6 +389,18 @@ export default function Optimize() {
       });
   };
 
+  const removeItem = (item: StartupItem) => {
+    // A plist goes to the Trash rather than being destroyed, so this needs
+    // no confirmation sheet — it is recoverable in Finder, and saying so is
+    // more useful than a dialog.
+    invoke("startup_remove", { label: item.label })
+      .then(load)
+      .catch((e) => {
+        load();
+        setError(`${e}`);
+      });
+  };
+
   const toggleAction = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -430,12 +457,14 @@ export default function Optimize() {
             items={startup.user_agents}
             empty="Nothing of your own opens at login."
             onToggle={toggle}
+            onRemove={removeItem}
           />
           <Group
             heading="System"
             items={startup.system}
             empty="No system items were found."
             onToggle={toggle}
+            onRemove={removeItem}
           />
           <Group
             heading="Managed by macOS"
@@ -449,6 +478,7 @@ export default function Optimize() {
               </p>
             }
             onToggle={toggle}
+            onRemove={removeItem}
           />
         </>
       )}

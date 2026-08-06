@@ -59,6 +59,8 @@ function item(over: Partial<StartupItem> = {}): StartupItem {
     tier: "user-agent",
     state: "enabled",
     controllable: true,
+    requires_admin: false,
+    removable: true,
     handoff: null,
     ...over,
   };
@@ -170,17 +172,89 @@ describe("Startup Items", () => {
       ...EMPTY_STARTUP,
       system: [
         item({
-          label: "com.vendor.daemon",
+          label: "com.apple.somethingd",
           tier: "system",
           controllable: false,
-          handoff: "Managed by the system.",
+          removable: false,
+          handoff: "Part of macOS.",
         }),
       ],
     });
     render(<Optimize />);
 
-    expect(await screen.findByText("Managed by the system.")).toBeTruthy();
+    expect(await screen.findByText("Part of macOS.")).toBeTruthy();
     expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("gives a system daemon a working toggle and says the password will be asked for", async () => {
+    // M5c: escalation exists, so the control is real. The handoff stays,
+    // because it now explains the prompt rather than the absence.
+    wire(EMPTY_HEALTH, {
+      ...EMPTY_STARTUP,
+      system: [
+        item({
+          label: "com.vendor.daemon",
+          name: "daemon",
+          tier: "system",
+          controllable: true,
+          requires_admin: true,
+          removable: false,
+          handoff: "Spiral Clean can turn this off, but macOS will ask for your password.",
+        }),
+      ],
+    });
+    render(<Optimize />);
+
+    expect(await screen.findByLabelText("Open at login")).toBeTruthy();
+    expect(
+      screen.getByText("Spiral Clean can turn this off, but macOS will ask for your password."),
+    ).toBeTruthy();
+    // Root-owned: disabling is offered, deleting never is.
+    expect(screen.queryByRole("button", { name: /^Remove/ })).toBeNull();
+  });
+
+  it("removes a user agent by label and re-reads the list", async () => {
+    wire(EMPTY_HEALTH, {
+      ...EMPTY_STARTUP,
+      user_agents: [item({ label: "com.example.agent", name: "agent" })],
+    });
+    render(<Optimize />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remove agent" }));
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith("startup_remove", { label: "com.example.agent" }),
+    );
+  });
+
+  it("offers no remove control for an item that is not removable", async () => {
+    wire(EMPTY_HEALTH, {
+      ...EMPTY_STARTUP,
+      user_agents: [item({ label: "com.apple.thing", controllable: false, removable: false })],
+    });
+    render(<Optimize />);
+
+    await screen.findByText("Your login items");
+    expect(screen.queryByRole("button", { name: /^Remove/ })).toBeNull();
+  });
+
+  it("surfaces a refused removal and keeps the reason visible", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "health_report") return Promise.resolve(EMPTY_HEALTH);
+      if (cmd === "optimize_plan") return Promise.resolve([]);
+      if (cmd === "startup_remove")
+        return Promise.reject("com.example.agent is on your exclusion list, so it was left alone.");
+      return Promise.resolve({
+        ...EMPTY_STARTUP,
+        user_agents: [item({ label: "com.example.agent", name: "agent" })],
+      });
+    });
+    render(<Optimize />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remove agent" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("exclusion list");
   });
 
   it("renders a login item read-only with its handoff", async () => {
@@ -194,6 +268,7 @@ describe("Startup Items", () => {
           tier: "login-item",
           state: "unknown",
           controllable: false,
+          removable: false,
           handoff: "macOS owns this list.",
         }),
       ],
