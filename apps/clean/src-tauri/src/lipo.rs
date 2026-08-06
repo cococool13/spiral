@@ -134,7 +134,7 @@ pub fn savings_from(detailed: &str, keep: &str) -> u64 {
 /// that guessing would silently skip real candidates, and — worse — could
 /// name a file that is not the executable at all.
 fn executable_of(app: &Path) -> Option<PathBuf> {
-    let plist = std::fs::read_to_string(app.join("Contents/Info.plist")).ok()?;
+    let plist = crate::apps::plist_text(&app.join("Contents/Info.plist"))?;
     let name = crate::apps::extract_plist_string(&plist, "CFBundleExecutable")?;
     if name.contains('/') || name.contains("..") {
         return None;

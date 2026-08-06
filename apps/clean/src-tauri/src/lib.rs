@@ -27,6 +27,7 @@ mod permissions;
 mod proc;
 mod remove;
 mod scan;
+mod smoke;
 mod startup;
 mod volume;
 
@@ -34,6 +35,14 @@ mod volume;
 // plugins.updater.pubkey at init and panics without it, so it cannot be
 // added before the signing key exists.
 pub fn run() {
+    // The smoke gate runs before any window exists and then exits. It is a
+    // read-only pass over everything a release depends on being true of a
+    // real Mac — see `smoke.rs`.
+    if smoke::requested() {
+        smoke::run();
+        return;
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
@@ -52,6 +61,11 @@ pub fn run() {
             backups::backups_remove,
             lipo::lipo_candidates,
             lipo::lipo_strip,
+            exclude::exclusions_list,
+            exclude::exclusions_add,
+            exclude::exclusions_remove,
+            history::history_read,
+            history::history_clear,
             health::health_report,
             optimize::optimize_plan,
             optimize::optimize_execute,

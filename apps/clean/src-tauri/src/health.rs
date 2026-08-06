@@ -82,7 +82,9 @@ pub fn report() -> HealthReport {
         storage: storage(Path::new("/")),
         uptime_seconds: None,
         model: None,
-        macos_version: macos_version_from(&std::fs::read_to_string(SYSTEM_VERSION_PLIST).unwrap_or_default()),
+        macos_version: macos_version_from(
+            &crate::apps::plist_text(Path::new(SYSTEM_VERSION_PLIST)).unwrap_or_default(),
+        ),
         ..Default::default()
     };
 

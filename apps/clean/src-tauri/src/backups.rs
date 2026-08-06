@@ -52,7 +52,8 @@ pub fn list(home: &Path) -> Vec<DeviceBackup> {
         .filter(|path| path.is_dir())
         .filter_map(|path| {
             let id = path.file_name()?.to_string_lossy().into_owned();
-            let info = std::fs::read_to_string(path.join("Info.plist")).unwrap_or_default();
+            // An iOS backup's Info.plist is routinely binary.
+            let info = crate::apps::plist_text(&path.join("Info.plist")).unwrap_or_default();
             Some(DeviceBackup {
                 device_name: crate::apps::extract_plist_string(&info, "Device Name")
                     .unwrap_or_else(|| id.clone()),

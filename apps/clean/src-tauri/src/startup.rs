@@ -197,7 +197,10 @@ fn agents_in(dir: &Path) -> Vec<(String, PathBuf)> {
         .map(|entry| entry.path())
         .filter(|path| path.extension().is_some_and(|e| e == "plist"))
         .filter_map(|path| {
-            let xml = std::fs::read_to_string(&path).ok()?;
+            // `plist_text`, not `read_to_string`: a binary launchd plist is
+            // ordinary — a quarter of Apple's own are — and reading one as
+            // nothing would drop the item from Startup Items entirely.
+            let xml = crate::apps::plist_text(&path)?;
             let label = crate::apps::extract_plist_string(&xml, "Label")?;
             Some((label, path))
         })
