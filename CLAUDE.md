@@ -95,7 +95,14 @@ running it rewrites about 1170 lines across files you did not touch — noise th
 buries the real change and is painful to unpick. There is no `rustfmt.toml` and no
 CI format check, so nothing stops you; match the surrounding style by hand instead.
 
-Spiral Clean releases on a `clean-v*` tag (`git tag clean-v0.1.0`), independent of
+**Cut every release with `node scripts/release.mjs <app> <x.y.z>`**, never a bare
+`git tag`. It bumps the four version files, commits them, and tags *that* commit,
+so a tag can never point at a tree whose versions disagree with it — the failure
+that discarded two fully signed builds on 2026-08-02. It pushes nothing without
+`--push`. `node scripts/version.mjs tag <tag>` answers the same question about a
+tag that already exists.
+
+Spiral Clean releases on a `clean-v*` tag, independent of
 Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
 `.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,
 updater: false` — and the updater still cannot be written: the Tauri plugin reads

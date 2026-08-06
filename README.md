@@ -163,11 +163,41 @@ Each app owns a tag namespace, so one release never drags the others along:
 
 All three call the same reusable `.github/workflows/release-app.yml`.
 
+### Cut one with the script, not by hand
+
 ```bash
-# the tag must match the app's package.json and src-tauri/tauri.conf.json —
-# `node scripts/version.mjs check` proves all four version files agree first
-git tag v1.0.2 && git push origin v1.0.2
+node scripts/release.mjs clean 0.1.0           # bump, commit, tag — nothing pushed
+node scripts/release.mjs clean 0.1.0 --push    # ...and push it
 ```
+
+It bumps the four version files, commits them, and tags **that** commit — so
+the tag can never point at a tree whose versions disagree with it. Before it
+writes anything it refuses a dirty tree, a branch that is not `main`, a `main`
+behind origin, a tag that already exists, and a version that is not newer than
+the current one.
+
+Without `--push` nothing leaves your machine. Pushing the tag is what publishes,
+and there is no undo for a public release.
+
+**Tagging by hand still works and is still guarded**, at three points now: the
+`versions` workflow re-checks the tag against the files within seconds of the
+push, the publish job checks again before creating the release, and
+`node scripts/version.mjs tag <tag>` gives you the same answer locally.
+
+<details>
+<summary>Why the script exists</summary>
+
+On 2026-08-02, `v1.0.3` and `slim-v1.0.1` were both tagged on commits that
+predated their version bumps. macOS and Windows built, signed and notarized
+successfully — and the publish step correctly refused both, because the files
+still said `1.0.2` and `1.0.0`. Roughly an hour of runner time, twice, for a
+mistake that is now unreachable: the script writes the bump and tags the commit
+carrying it, in that order.
+
+`node scripts/version.mjs check` cannot catch this on its own. It proves the
+four files agree **with each other**, never that they agree with the tag.
+
+</details>
 
 The workflow refuses to publish a partial release. It stops before building if
 a signing or notarization secret is missing, and the manifest step throws
