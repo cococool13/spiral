@@ -80,8 +80,8 @@ Ambition is the point; these exist so it stays fast, not to shrink it.
 - **Nothing animates the LCP element on arrival.** The headline may enter, but
   it must not be what the browser is waiting on.
 - **Video is muted, `playsinline`, `preload="none"`, behind a poster, and pauses
-  off-screen.** See `components/DemoVideo.tsx` — it already does this. Video
-  files live in `/brand/media` and are served from `/brand/media/…`.
+  off-screen.** No component uses video today — the app-card demo player was
+  removed. Video files live in `/brand/media` and are served from `/brand/media/…`.
 - **Watch the first-load number.** Current baseline: **~138 kB** first load, ~102
   kB shared. If a change pushes that meaningfully, it should be buying something
   a visitor can see.

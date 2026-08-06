@@ -1,6 +1,4 @@
 import type { SpiralApp } from "@/lib/apps";
-import DemoVideo from "./DemoVideo";
-import DownloadConfidence from "./DownloadConfidence";
 import GlassPillCTA, { DisabledPill } from "./GlassPillCTA";
 
 export default function AppCard({ app }: { app: SpiralApp }) {
@@ -33,36 +31,13 @@ export default function AppCard({ app }: { app: SpiralApp }) {
             <p className="mt-1 text-sm text-gray">{app.tagline}</p>
           </div>
         </div>
-        <span className="font-mono text-[11px] uppercase tracking-widest text-gray whitespace-nowrap">
-          {shipped ? (
-            <>
-              <span className="text-red">{live ? "Live" : "Source"}</span>
-              {app.version && <span className="ml-2">v{app.version}</span>}
-            </>
-          ) : (
-            "Coming soon"
-          )}
-        </span>
+        {shipped && (
+          <span className="font-mono text-[11px] uppercase tracking-widest text-gray whitespace-nowrap">
+            <span className="text-red">{live ? "Live" : "Source"}</span>
+            {app.version && <span className="ml-2">v{app.version}</span>}
+          </span>
+        )}
       </div>
-
-      {live && app.video && <DemoVideo video={app.video} name={app.name} />}
-      {live && app.downloads && (
-        <DownloadConfidence
-          downloads={app.downloads}
-          noWindowsBinary={app.noWindowsBinary}
-        />
-      )}
-
-      {source && app.source && (
-        <aside className="border-y border-white/10 py-5" aria-label="How to get it">
-          <p className="type-eyebrow text-paper">How to get it</p>
-          <p className="mt-3 text-sm leading-relaxed text-concrete">{app.source.note}</p>
-          <p className="mt-3 text-sm leading-relaxed text-gray">
-            Clone the repository and build it yourself. No account, no telemetry, no
-            network calls at all.
-          </p>
-        </aside>
-      )}
 
       {/* flex-wrap + min-w-0: at 380px the pill, the downloads link and the
           price label together had a min-content width of ~302px inside a

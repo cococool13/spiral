@@ -17,11 +17,7 @@ export default function AppGrid() {
       </Reveal>
       <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {apps.map((app, i) => (
-          <Reveal
-            key={app.slug}
-            delay={i * 0.05}
-            className={app.status === "live" ? "sm:col-span-2 flex" : "flex"}
-          >
+          <Reveal key={app.slug} delay={i * 0.05} className="flex">
             <AppCard app={app} />
           </Reveal>
         ))}
