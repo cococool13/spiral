@@ -393,7 +393,7 @@ export default function Optimize() {
     // A plist goes to the Trash rather than being destroyed, so this needs
     // no confirmation sheet — it is recoverable in Finder, and saying so is
     // more useful than a dialog.
-    invoke("startup_remove", { label: item.label })
+    invoke("startup_remove", { label: item.label, startedAt: new Date().toISOString() })
       .then(load)
       .catch((e) => {
         load();

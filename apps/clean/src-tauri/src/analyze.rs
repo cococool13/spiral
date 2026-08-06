@@ -35,25 +35,62 @@ pub fn children_of(dir: &Path) -> Result<Vec<Entry>, String> {
         format!("Could not read {}: {e}. Check Full Disk Access in System Settings.", dir.display())
     })?;
 
-    let mut entries: Vec<Entry> = read
+    // Names and kinds first, cheaply. `symlink_metadata`, never `metadata`:
+    // a symlink is reported as the link it is, at its own tiny size.
+    // Following one would count a target that lives elsewhere — and could
+    // loop forever.
+    let listed: Vec<(PathBuf, String, bool, u64)> = read
         .flatten()
         .filter_map(|item| {
             let path = item.path();
-            // `symlink_metadata`, never `metadata`: a symlink is reported as
-            // the link it is, at its own tiny size. Following one would count
-            // a target that lives elsewhere — and could loop forever.
             let meta = std::fs::symlink_metadata(&path).ok()?;
-            let is_dir = meta.is_dir();
-            let (bytes, partial) = if is_dir { size_of_tree(&path) } else { (meta.len(), false) };
-            Some(Entry {
-                name: path.file_name()?.to_string_lossy().into_owned(),
-                path: path.to_string_lossy().into_owned(),
-                bytes,
-                is_dir,
-                partial,
-            })
+            let name = path.file_name()?.to_string_lossy().into_owned();
+            Some((path, name, meta.is_dir(), meta.len()))
         })
         .collect();
+
+    // Sizing is the expensive part and the children are independent, so it
+    // runs in parallel. Measured on the development machine's home
+    // directory — 468,000 files — a serial walk took long enough that the
+    // Storage screen looked hung on open, which is the same failure the
+    // subprocess deadlines exist to prevent, arriving by a slower road.
+    //
+    // Bounded rather than one thread per child: a directory with a thousand
+    // entries would otherwise spawn a thousand threads to contend for one
+    // disk.
+    let lanes = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).min(8);
+    let mut entries: Vec<Entry> = Vec::with_capacity(listed.len());
+
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = listed
+            .chunks(listed.len().div_ceil(lanes).max(1))
+            .map(|chunk| {
+                scope.spawn(move || {
+                    chunk
+                        .iter()
+                        .map(|(path, name, is_dir, len)| {
+                            let (bytes, partial) =
+                                if *is_dir { size_of_tree(path) } else { (*len, false) };
+                            Entry {
+                                name: name.clone(),
+                                path: path.to_string_lossy().into_owned(),
+                                bytes,
+                                is_dir: *is_dir,
+                                partial,
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        for handle in handles {
+            // A panicking lane must not poison the whole listing; its chunk
+            // is simply absent, which the sort below handles.
+            if let Ok(chunk) = handle.join() {
+                entries.extend(chunk);
+            }
+        }
+    });
 
     // Largest first, then by name so equal sizes do not shuffle between
     // calls. A space map whose rows move is unusable.

@@ -120,8 +120,13 @@ fn label_is_addressable(label: &str) -> bool {
 // ---------------------------------------------------------------------------
 
 pub fn inventory(home: &Path) -> StartupInventory {
-    let user_disabled = disabled_set(&format!("gui/{}", current_uid()));
-    let system_disabled = disabled_set("system");
+    inventory_from(home, &real_sources())
+}
+
+pub fn inventory_from(home: &Path, sources: &Sources) -> StartupInventory {
+    let user_disabled =
+        (sources.disabled)(&format!("gui/{}", current_uid())).and_then(|o| disabled_set_from(&o));
+    let system_disabled = (sources.disabled)("system").and_then(|o| disabled_set_from(&o));
 
     let user_agents = agents_in(&home.join(USER_AGENTS))
         .into_iter()
@@ -145,7 +150,8 @@ pub fn inventory(home: &Path) -> StartupInventory {
         })
         .collect();
 
-    let system = SYSTEM_LOCATIONS
+    let system = sources
+        .system_locations
         .iter()
         .flat_map(|dir| agents_in(Path::new(dir)))
         .map(|(label, path)| StartupItem {
@@ -171,7 +177,8 @@ pub fn inventory(home: &Path) -> StartupInventory {
         })
         .collect();
 
-    let login_items = login_items_from(&run("sfltool", &["dumpbtm"]).unwrap_or_default(), current_uid());
+    let login_items =
+        login_items_from(&(sources.login_items)().unwrap_or_default(), current_uid());
 
     StartupInventory { user_agents, system, login_items }
 }
@@ -223,10 +230,6 @@ fn current_uid() -> u32 {
 // ---------------------------------------------------------------------------
 // Parsing
 // ---------------------------------------------------------------------------
-
-fn disabled_set(domain: &str) -> Option<HashSet<String>> {
-    disabled_set_from(&run("launchctl", &["print-disabled", domain])?)
-}
 
 /// The labels `launchctl print-disabled` reports as disabled.
 ///
@@ -321,12 +324,26 @@ fn login_items_from(dump: &str, uid: u32) -> Vec<StartupItem> {
     items
 }
 
-fn run(binary: &str, args: &[&str]) -> Option<String> {
-    let out = std::process::Command::new(binary).args(args).output().ok()?;
-    if !out.status.success() {
-        return None;
+/// What `inventory` reads from the machine, behind one seam.
+///
+/// Not indirection for its own sake. Before this existed the tests called
+/// `inventory` directly, which ran `launchctl print-disabled system` and
+/// `sfltool dumpbtm` against the real Mac — so they were slow, gave
+/// different answers on different machines, and hung outright the day
+/// `sfltool` stopped returning. The M5a spec already promised no test would
+/// spawn `launchctl`; this is what makes that true.
+pub struct Sources<'a> {
+    pub disabled: &'a dyn Fn(&str) -> Option<String>,
+    pub login_items: &'a dyn Fn() -> Option<String>,
+    pub system_locations: &'a [&'a str],
+}
+
+pub fn real_sources<'a>() -> Sources<'a> {
+    Sources {
+        disabled: &|domain| crate::proc::output("launchctl", &["print-disabled", domain], crate::proc::DEFAULT),
+        login_items: &|| crate::proc::output("sfltool", &["dumpbtm"], crate::proc::DEFAULT),
+        system_locations: &SYSTEM_LOCATIONS,
     }
-    String::from_utf8(out.stdout).ok()
 }
 
 // ---------------------------------------------------------------------------
@@ -406,20 +423,16 @@ pub fn startup_set_enabled(label: String, enabled: bool) -> Result<(), String> {
         return escalated_toggle(&label, verb, &target);
     }
 
-    let output = std::process::Command::new("launchctl")
-        .args([verb, &target])
-        .output()
-        .map_err(|e| format!("Could not run launchctl: {e}. Try again, or change this item in System Settings."))?;
-
-    if output.status.success() {
-        return Ok(());
+    match crate::proc::combined("launchctl", &[verb, &target], crate::proc::DEFAULT) {
+        Some(detail) if detail.trim().is_empty() => Ok(()),
+        Some(detail) => Err(format!(
+            "macOS refused to {verb} {label} ({}). Try again, or change this item in System Settings.",
+            detail.trim()
+        )),
+        None => Err(format!(
+            "launchctl did not answer, so {label} may not have changed. Reopen Optimize to see its current state."
+        )),
     }
-    let detail = String::from_utf8_lossy(&output.stderr);
-    let detail = detail.trim();
-    Err(format!(
-        "macOS refused to {verb} {label}{}. Try again, or change this item in System Settings.",
-        if detail.is_empty() { String::new() } else { format!(" ({detail})") }
-    ))
 }
 
 /// A system-daemon toggle, as a one-step privileged batch.
@@ -459,7 +472,11 @@ fn escalated_toggle(label: &str, verb: &str, target: &str) -> Result<(), String>
 /// this screen either — carrying `Justification::StartupItem`, whose authority
 /// is the file's *location* and not the label this command was handed.
 #[tauri::command]
-pub fn startup_remove(app: tauri::AppHandle, label: String) -> Result<(), String> {
+pub fn startup_remove(
+    app: tauri::AppHandle,
+    label: String,
+    started_at: String,
+) -> Result<(), String> {
     use tauri::Manager;
     let config_dir = app
         .path()
@@ -489,6 +506,7 @@ pub fn startup_remove(app: tauri::AppHandle, label: String) -> Result<(), String
         .as_ref()
         .ok_or_else(|| format!("Spiral Clean does not know where {label} is stored, so nothing was removed."))?;
 
+    let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
     let reports = remove::execute(
         vec![remove::Candidate {
             path: PathBuf::from(path),
@@ -497,6 +515,25 @@ pub fn startup_remove(app: tauri::AppHandle, label: String) -> Result<(), String
         &crate::exclude::load(&config_dir),
         &home,
     );
+
+    // Decision 12 promises a log of *every* removal. This path and the two
+    // in `backups`/`lipo` were added after `commands.rs` grew its three call
+    // sites, and each quietly bypassed the log — the join between milestones,
+    // not any one of them, was where the promise broke.
+    if let Some(remove::Outcome::Removed(_)) = reports.first().map(|r| &r.outcome) {
+        let _ = crate::history::append(
+            &config_dir,
+            crate::history::RunRecord {
+                started_at: started_at.clone(),
+                screen: "startup".into(),
+                removed: 1,
+                partially_removed: 0,
+                estimated_bytes: size,
+                measured_bytes: size,
+                interrupted: false,
+            },
+        );
+    }
 
     match reports.first().map(|r| &r.outcome) {
         Some(remove::Outcome::Removed(_)) => Ok(()),
@@ -559,6 +596,31 @@ mod tests {
         }
     }
 
+
+    /// Sources that touch nothing. Before this existed these tests ran
+    /// `launchctl print-disabled system` and `sfltool dumpbtm` against the
+    /// real Mac on every call — which made them machine-dependent, slow,
+    /// and eventually hanging when `sfltool` stopped returning.
+    macro_rules! fixture {
+        ($disabled:expr, $dump:expr) => {
+            Sources {
+                disabled: &|_| Some($disabled.to_string()),
+                login_items: &|| Some($dump.to_string()),
+                system_locations: &[],
+            }
+        };
+    }
+
+    macro_rules! quiet {
+        () => {
+            Sources {
+                disabled: &|_| None,
+                login_items: &|| None,
+                system_locations: &[],
+            }
+        };
+    }
+
     // -- the guard, and its mutation proof ---------------------------------
 
     #[test]
@@ -608,7 +670,7 @@ mod tests {
     fn an_apple_agent_is_listed_and_never_controllable() {
         let home = tempfile::tempdir().unwrap();
         agent(&home.path().join(USER_AGENTS), "apple.plist", "com.apple.something");
-        let found = inventory(home.path());
+        let found = inventory_from(home.path(), &quiet!());
         let item = found
             .user_agents
             .iter()
@@ -622,7 +684,7 @@ mod tests {
     fn a_third_party_agent_is_controllable() {
         let home = tempfile::tempdir().unwrap();
         agent(&home.path().join(USER_AGENTS), "third.plist", "com.example.agent");
-        let found = inventory(home.path());
+        let found = inventory_from(home.path(), &quiet!());
         let item = found.user_agents.iter().find(|i| i.label == "com.example.agent").unwrap();
         assert!(item.controllable);
         assert_eq!(item.handoff, None);
@@ -655,6 +717,22 @@ mod tests {
         agent(dir.path(), "c.plist", "com.example.c");
         let labels: Vec<String> = agents_in(dir.path()).into_iter().map(|(l, _)| l).collect();
         assert_eq!(labels, ["com.example.a", "com.example.b", "com.example.c"]);
+    }
+
+    #[test]
+    fn a_disabled_agent_reads_as_disabled_through_the_seam() {
+        let home = tempfile::tempdir().unwrap();
+        agent(&home.path().join(USER_AGENTS), "a.plist", "com.example.agent");
+        let disabled = "\tdisabled services = {\n\t\t\"com.example.agent\" => disabled\n\t}\n";
+        let found = inventory_from(home.path(), &fixture!(disabled, ""));
+        assert_eq!(found.user_agents[0].state, State::Disabled);
+    }
+
+    #[test]
+    fn login_items_reach_the_inventory_through_the_seam() {
+        let home = tempfile::tempdir().unwrap();
+        let found = inventory_from(home.path(), &fixture!("", DUMP));
+        assert_eq!(found.login_items.len(), 2, "the current user's records only");
     }
 
     // -- print-disabled parsing --------------------------------------------
@@ -766,7 +844,7 @@ mod tests {
         // root-owned plist is neither, and `Justification::StartupItem`
         // cannot reach outside `~/Library/LaunchAgents` anyway.
         let home = tempfile::tempdir().unwrap();
-        for item in inventory(home.path()).system {
+        for item in inventory_from(home.path(), &quiet!()).system {
             assert!(!item.removable, "{} is root-owned", item.label);
             assert!(item.requires_admin, "{} needs root to toggle", item.label);
         }
@@ -802,7 +880,7 @@ mod tests {
         // The invariant `startup_set_enabled` relies on, asserted directly.
         let home = tempfile::tempdir().unwrap();
         agent(&home.path().join(USER_AGENTS), "a.plist", "com.example.agent");
-        let found = inventory(home.path());
+        let found = inventory_from(home.path(), &quiet!());
         for item in found.user_agents.iter().chain(&found.system).chain(&found.login_items) {
             if item.controllable {
                 assert_eq!(item.tier, Tier::UserAgent);
@@ -820,7 +898,7 @@ mod tests {
         // that matters — a missing control is never unexplained.
         let home = tempfile::tempdir().unwrap();
         agent(&home.path().join(USER_AGENTS), "apple.plist", "com.apple.thing");
-        let found = inventory(home.path());
+        let found = inventory_from(home.path(), &quiet!());
         for item in found.user_agents.iter().chain(&found.system).chain(&found.login_items) {
             if !item.controllable {
                 assert!(
@@ -839,7 +917,7 @@ mod tests {
         let home = tempfile::tempdir().unwrap();
         agent(&home.path().join(USER_AGENTS), "a.plist", "com.example.agent");
         agent(&home.path().join(USER_AGENTS), "apple.plist", "com.apple.thing");
-        for item in inventory(home.path()).user_agents {
+        for item in inventory_from(home.path(), &quiet!()).user_agents {
             assert_eq!(item.controllable, item.removable, "{}", item.label);
             assert!(!item.requires_admin, "a user agent never needs a password");
         }

@@ -168,19 +168,13 @@ pub fn real_effects<'a>() -> Effects<'a> {
 }
 
 fn run(binary: &str, args: &[&std::ffi::OsStr]) -> Option<String> {
-    let out = std::process::Command::new(binary).args(args).output().ok()?;
-    out.status.success().then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    crate::proc::output(binary, args, crate::proc::DEFAULT)
 }
 
 /// `codesign -dv` writes to stderr, and a failed call still says useful
 /// things, so both streams are kept and the exit status is not a gate.
 fn run_combined(binary: &str, args: &[&std::ffi::OsStr]) -> Option<String> {
-    let out = std::process::Command::new(binary).args(args).output().ok()?;
-    Some(format!(
-        "{}{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    ))
+    crate::proc::combined(binary, args, crate::proc::DEFAULT)
 }
 
 /// Strip `binary` to `keep`, via a temporary file beside it.
@@ -332,9 +326,36 @@ pub fn lipo_candidates() -> Vec<Candidate> {
 }
 
 #[tauri::command]
-pub fn lipo_strip(bundle_id: String) -> Result<StripReport, String> {
+pub fn lipo_strip(
+    app: tauri::AppHandle,
+    bundle_id: String,
+    started_at: String,
+) -> Result<StripReport, String> {
+    use tauri::Manager;
     let home = dirs::home_dir().ok_or("Could not find your home folder, so nothing was changed.")?;
-    strip(&home, &bundle_id, &real_effects())
+    let report = strip(&home, &bundle_id, &real_effects())?;
+
+    // Not a removal, and logged anyway. Decision 12's log is what a user
+    // consults to answer "what did this app do to my Mac", and the one
+    // irreversible thing it can do to an application belongs in that answer
+    // more than any Trash move does.
+    if report.failed.is_none() {
+        if let Ok(dir) = app.path().app_config_dir() {
+            let _ = crate::history::append(
+                &dir,
+                crate::history::RunRecord {
+                    started_at,
+                    screen: "lipo".into(),
+                    removed: 1,
+                    partially_removed: 0,
+                    estimated_bytes: report.freed,
+                    measured_bytes: report.freed,
+                    interrupted: false,
+                },
+            );
+        }
+    }
+    Ok(report)
 }
 
 #[cfg(test)]

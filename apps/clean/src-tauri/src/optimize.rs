@@ -58,6 +58,16 @@ struct Spec {
     /// Stated on the row. Every opt-in action has one — decision 11 requires
     /// costly actions to carry their cost in the label, not in a tooltip.
     note: Option<&'static str>,
+    /// A check that must pass before this action may run, returning the
+    /// reason it may not.
+    ///
+    /// **On the action, not matched by id at the call site.** It was
+    /// previously `if spec.id == "bluetooth-reset"` in two separate places,
+    /// which meant renaming the id would silently detach the guard and let
+    /// `pkill bluetoothd` run with no check at all — the gap-between-two-
+    /// correct-looking-places failure ADR-0016 records. Carrying the guard
+    /// here makes that impossible: the action and its guard are one value.
+    guard: Option<fn() -> Option<String>>,
     plan: Plan,
 }
 
@@ -69,6 +79,7 @@ static ACTIONS: &[Spec] = &[
         group: Group::CachesAndIndexes,
         default_selected: true,
         note: None,
+        guard: None,
         plan: Plan::Plain(&[&["atsutil", "databases", "-remove"]]),
     },
     Spec {
@@ -77,6 +88,7 @@ static ACTIONS: &[Spec] = &[
         group: Group::CachesAndIndexes,
         default_selected: true,
         note: None,
+        guard: None,
         plan: Plan::Plain(&[&["qlmanage", "-r", "cache"]]),
     },
     Spec {
@@ -85,6 +97,7 @@ static ACTIONS: &[Spec] = &[
         group: Group::CachesAndIndexes,
         default_selected: true,
         note: None,
+        guard: None,
         // Not a command. Clearing this cache means deleting files, and files
         // are removed by `remove.rs` or not at all.
         plan: Plan::Removal("icon-services-cache"),
@@ -95,6 +108,7 @@ static ACTIONS: &[Spec] = &[
         group: Group::CachesAndIndexes,
         default_selected: true,
         note: None,
+        guard: None,
         plan: Plan::Privileged(&[&[
             LSREGISTER, "-kill", "-r", "-domain", "local", "-domain", "system", "-domain", "user",
         ]]),
@@ -104,6 +118,7 @@ static ACTIONS: &[Spec] = &[
         label: "Rebuild the Spotlight index",
         group: Group::CachesAndIndexes,
         default_selected: false,
+        guard: None,
         note: Some("Search will be incomplete and your Mac will run warm until this finishes — often an hour or more."),
         plan: Plan::Privileged(&[&["mdutil", "-E", "/"]]),
     },
@@ -114,6 +129,7 @@ static ACTIONS: &[Spec] = &[
         group: Group::SystemAndStorage,
         default_selected: true,
         note: None,
+        guard: None,
         plan: Plan::Plain(&[&["killall", "Finder", "Dock"]]),
     },
     Spec {
@@ -121,6 +137,7 @@ static ACTIONS: &[Spec] = &[
         label: "Thin local Time Machine snapshots",
         group: Group::SystemAndStorage,
         default_selected: false,
+        guard: None,
         note: Some("Removes the oldest local snapshots until 20 GB is free. Those restore points are gone for good."),
         plan: Plan::PrivilegedDynamic(thin_snapshots_command),
     },
@@ -129,6 +146,7 @@ static ACTIONS: &[Spec] = &[
         label: "Verify the startup disk",
         group: Group::SystemAndStorage,
         default_selected: false,
+        guard: None,
         note: Some("Reads the whole disk. Takes a few minutes and changes nothing."),
         plan: Plan::Plain(&[&["diskutil", "verifyVolume", "/"]]),
     },
@@ -139,6 +157,7 @@ static ACTIONS: &[Spec] = &[
         group: Group::NetworkAndDevices,
         default_selected: true,
         note: None,
+        guard: None,
         plan: Plan::Privileged(&[&["dscacheutil", "-flushcache"], &["killall", "-HUP", "mDNSResponder"]]),
     },
     Spec {
@@ -146,6 +165,7 @@ static ACTIONS: &[Spec] = &[
         label: "Renew the DHCP lease",
         group: Group::NetworkAndDevices,
         default_selected: false,
+        guard: None,
         note: Some("Drops the network for a moment."),
         plan: Plan::PrivilegedDynamic(dhcp_renew_command),
     },
@@ -154,6 +174,7 @@ static ACTIONS: &[Spec] = &[
         label: "Restart Bluetooth",
         group: Group::NetworkAndDevices,
         default_selected: false,
+        guard: Some(bluetooth_reset_refusal),
         note: Some("Disconnects every Bluetooth device until they reconnect."),
         plan: Plan::Privileged(&[&["pkill", "bluetoothd"]]),
     },
@@ -435,7 +456,9 @@ pub struct Effects<'a> {
     /// the single source of truth for what gets removed.
     pub remove_catalog: &'a dyn Fn(&str) -> Result<(), String>,
     pub run_batch: &'a dyn Fn(&[PrivilegedStep]) -> BatchResult,
-    pub bluetooth_refusal: &'a dyn Fn() -> Option<String>,
+    /// Stands in for whichever `Spec::guard` applies. Only actions that
+    /// declare a guard consult it.
+    pub guard_override: &'a dyn Fn() -> Option<String>,
 }
 
 /// Run the selected actions.
@@ -449,8 +472,12 @@ pub fn execute(ids: Vec<String>, effects: &Effects) -> Result<OptimizeReport, St
     let mut steps: Vec<PrivilegedStep> = Vec::new();
 
     for spec in &specs {
-        if spec.id == "bluetooth-reset" {
-            if let Some(reason) = (effects.bluetooth_refusal)() {
+        // The guard runs before the step is built, never after: running it
+        // later would mean the command was already inside the batch the user
+        // authorised. `effects.guard_override` lets a test answer for a
+        // guard without the real one touching the machine.
+        if spec.guard.is_some() {
+            if let Some(reason) = (effects.guard_override)() {
                 results.push(result(spec, ActionOutcome::Skipped { reason }));
                 continue;
             }
@@ -633,7 +660,7 @@ pub fn optimize_execute(
                 .map(|_| ())
             },
             run_batch: &escalate::run,
-            bluetooth_refusal: &bluetooth_reset_refusal,
+            guard_override: &bluetooth_reset_refusal,
         },
     )
 }
@@ -787,6 +814,26 @@ mod tests {
     }
 
     // -- selection ----------------------------------------------------------
+
+    #[test]
+    fn restarting_bluetooth_is_the_action_that_carries_a_guard() {
+        // The guard lives on the action, so this cannot drift the way an
+        // `if spec.id == "…"` at the call site could. If a future action
+        // needs one, this test is where its absence shows up.
+        let guarded: Vec<&str> =
+            ACTIONS.iter().filter(|s| s.guard.is_some()).map(|s| s.id).collect();
+        assert_eq!(guarded, ["bluetooth-reset"]);
+    }
+
+    #[test]
+    fn renaming_an_action_cannot_detach_its_guard() {
+        // The property the previous shape lacked, asserted directly: what
+        // `plan()` reports as blocked is derived from the action's own guard
+        // and never from its id.
+        let bluetooth = ACTIONS.iter().find(|s| s.guard.is_some()).unwrap();
+        let summary = plan().into_iter().find(|a| a.id == bluetooth.id).unwrap();
+        assert_eq!(summary.blocked, (bluetooth.guard.unwrap())());
+    }
 
     #[test]
     fn an_unknown_id_refuses_the_whole_call() {
@@ -950,7 +997,7 @@ mod tests {
             run_command: &|_| ActionOutcome::Succeeded,
             remove_catalog: &|_| Ok(()),
             run_batch: batch,
-            bluetooth_refusal: bluetooth,
+            guard_override: bluetooth,
         }
     }
 
@@ -1181,7 +1228,7 @@ mod tests {
                     Ok(())
                 },
                 run_batch: &never_called,
-                bluetooth_refusal: &|| None,
+                guard_override: &|| None,
             },
         )
         .unwrap();
@@ -1197,7 +1244,7 @@ mod tests {
                 run_command: &|_| ActionOutcome::Succeeded,
                 remove_catalog: &|_| Err("the exclusion list is unreadable".into()),
                 run_batch: &never_called,
-                bluetooth_refusal: &|| None,
+                guard_override: &|| None,
             },
         )
         .unwrap();
@@ -1225,7 +1272,7 @@ mod tests {
                 },
                 remove_catalog: &|_| Ok(()),
                 run_batch: &never_called,
-                bluetooth_refusal: &|| None,
+                guard_override: &|| None,
             },
         )
         .unwrap();

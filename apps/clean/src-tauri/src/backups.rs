@@ -107,7 +107,11 @@ pub fn backups_list() -> Vec<DeviceBackup> {
 /// name somewhere else entirely — `remove.rs` would still refuse it, but the
 /// refusal belongs here too, where the mistake would be made.
 #[tauri::command]
-pub fn backups_remove(app: tauri::AppHandle, id: String) -> Result<(), String> {
+pub fn backups_remove(
+    app: tauri::AppHandle,
+    id: String,
+    started_at: String,
+) -> Result<(), String> {
     use tauri::Manager;
     let config_dir = app
         .path()
@@ -129,6 +133,23 @@ pub fn backups_remove(app: tauri::AppHandle, id: String) -> Result<(), String> {
         &crate::exclude::load(&config_dir),
         &home,
     );
+
+    // Decision 12: every removal is logged, and a backup is the largest
+    // single thing this application ever moves to the Trash.
+    if let Some(remove::Outcome::Removed(_)) = reports.first().map(|r| &r.outcome) {
+        let _ = crate::history::append(
+            &config_dir,
+            crate::history::RunRecord {
+                started_at,
+                screen: "backups".into(),
+                removed: 1,
+                partially_removed: 0,
+                estimated_bytes: backup.bytes,
+                measured_bytes: backup.bytes,
+                interrupted: false,
+            },
+        );
+    }
 
     match reports.first().map(|r| &r.outcome) {
         Some(remove::Outcome::Removed(_)) => Ok(()),

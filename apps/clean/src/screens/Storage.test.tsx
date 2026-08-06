@@ -145,7 +145,10 @@ describe("Device backups", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Move Cohen's iPhone to Trash" }));
     await waitFor(() =>
-      expect(mockInvoke).toHaveBeenCalledWith("backups_remove", { id: "00008120-001A" }),
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "backups_remove",
+        expect.objectContaining({ id: "00008120-001A" }),
+      ),
     );
   });
 
@@ -191,7 +194,10 @@ describe("App Lipo", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Strip Fat anyway" }));
     await waitFor(() =>
-      expect(mockInvoke).toHaveBeenCalledWith("lipo_strip", { bundleId: "com.example.fat" }),
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "lipo_strip",
+        expect.objectContaining({ bundleId: "com.example.fat" }),
+      ),
     );
   });
 

@@ -223,7 +223,10 @@ describe("Startup Items", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Remove agent" }));
 
     await waitFor(() =>
-      expect(mockInvoke).toHaveBeenCalledWith("startup_remove", { label: "com.example.agent" }),
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "startup_remove",
+        expect.objectContaining({ label: "com.example.agent" }),
+      ),
     );
   });
 

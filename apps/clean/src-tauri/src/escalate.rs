@@ -173,6 +173,9 @@ pub fn run(steps: &[PrivilegedStep]) -> BatchResult {
         Err(message) => return BatchResult::Failed(message),
     };
 
+    // Deliberately *not* `proc::output`. Every other tool this app runs
+    // answers on its own; this one waits for a human to type a password, and
+    // a deadline here would cancel the prompt out from under them.
     let output = match std::process::Command::new("osascript")
         .arg("-e")
         .arg(&script)

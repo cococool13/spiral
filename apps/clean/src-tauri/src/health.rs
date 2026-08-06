@@ -133,12 +133,10 @@ impl Field {
 /// wrong — the binary missing, a non-zero exit, output that is not UTF-8.
 /// Every caller treats `None` as *Unavailable*, so no failure mode needs to
 /// be distinguished from another here.
+/// Each source gets most of the whole-report budget, so one slow tool is
+/// bounded twice: here, and by `BUDGET` in `report`.
 fn run(binary: &str, args: &[&str]) -> Option<String> {
-    let out = std::process::Command::new(binary).args(args).output().ok()?;
-    if !out.status.success() {
-        return None;
-    }
-    String::from_utf8(out.stdout).ok()
+    crate::proc::output(binary, args, BUDGET)
 }
 
 fn storage(path: &Path) -> Option<Storage> {

@@ -206,7 +206,7 @@ export default function Storage() {
 
   const removeBackup = (backup: DeviceBackup) => {
     setError(null);
-    invoke("backups_remove", { id: backup.id })
+    invoke("backups_remove", { id: backup.id, startedAt: new Date().toISOString() })
       .then(() => invoke<DeviceBackup[]>("backups_list").then(setBackups))
       .catch((e) => {
         setError(`${e}`);
@@ -217,7 +217,10 @@ export default function Storage() {
   const strip = (candidate: LipoCandidate) => {
     setConfirming(null);
     setError(null);
-    invoke<StripReport>("lipo_strip", { bundleId: candidate.bundle_id })
+    invoke<StripReport>("lipo_strip", {
+      bundleId: candidate.bundle_id,
+      startedAt: new Date().toISOString(),
+    })
       .then((report) => setReports((prev) => [...prev, report]))
       .catch((e) => setError(`${e}`));
   };

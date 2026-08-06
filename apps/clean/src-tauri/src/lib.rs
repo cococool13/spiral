@@ -24,6 +24,7 @@ mod optimize;
 mod orphans;
 mod paths;
 mod permissions;
+mod proc;
 mod remove;
 mod scan;
 mod startup;
