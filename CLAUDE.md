@@ -17,9 +17,10 @@ Current app release **v1.0.2** (Spiral Wallpaper).
 brand/         the design system. Every colour, font, and mark. Single source of truth.
 apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri, shipped)
                apps/slim = Spiral Slim (Python + Tauri wizard, shipped on macOS)
-               apps/clean = Spiral Clean (Tauri, macOS only, unreleased — M1-M4 shipped:
-                            shell, FDA gate, the tested safety core, the Clean screen,
-                            and Uninstall. Optimize/Storage are still stubs)
+               apps/clean = Spiral Clean (Tauri, macOS only, unreleased —
+                            feature-complete, every screen built. Blocked on signing,
+                            notarization, the updater key, and nobody having yet
+                            opened it. See apps/clean/README.md)
 collection/    the spiral-collection.netlify.app website (Next.js, static export)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```
@@ -57,6 +58,7 @@ the website, or website ambition into an app.
 - `README.md` — repo map, current release, downloads, build instructions, roadmap.
 - `brand/README.md` — what is canonical and how each surface consumes it.
 - `collection/README.md` — the website's charter, budgets, and stack.
+- `apps/clean/README.md` — Spiral Clean's safety model, layout, and what blocks its release.
 - `docs/PRODUCT.md` — product promise, audience, scope, and privacy position.
 - `docs/DESIGN.md` — shipped visual system and interaction rules.
 - `brand/guide.html` — full brand reference.
@@ -80,6 +82,7 @@ pnpm install
 pnpm check:hex       # reject colors outside the approved token set
 pnpm build           # token check + TypeScript + Vite production build
 pnpm test            # the frontend suite (Vitest); `pnpm build` does not run it
+pnpm smoke           # native gate: runs the app against this Mac, non-zero on failure
 pnpm tauri dev       # native development app
 
 cd apps/clean/src-tauri
@@ -95,7 +98,9 @@ CI format check, so nothing stops you; match the surrounding style by hand inste
 Spiral Clean releases on a `clean-v*` tag (`git tag clean-v0.1.0`), independent of
 Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
 `.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,
-updater: false` — there is no updater until M7.
+updater: false` — and the updater still cannot be written: the Tauri plugin reads
+`plugins.updater.pubkey` at init and panics without it, so the signing key has to
+exist first.
 
 ```bash
 cd collection

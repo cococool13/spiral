@@ -90,7 +90,7 @@ started that way, and its ADRs still sit beside the code they became.
 | [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
 | [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
-| [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall. macOS only, unreleased. M1–M4 shipped: the Tauri shell, the Full Disk Access gate, the safety core (`catalog`, `scan`, `remove`, `exclude`, `history`) under a 183-test Rust suite plus 10 Vitest tests, the Clean screen, and Uninstall — which removes an app, its containers and its bundle. Optimize and Storage are still stubs. See the [design spec](apps/clean/docs/design-spec.md) and fifteen ADRs | working on the maintenance app |
+| [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall, plus History and Settings. macOS only, unreleased. **Feature-complete: every screen is built.** 428 Rust tests, 97 Vitest, a native smoke gate, and nineteen ADRs. See its own [README](apps/clean/README.md) | working on the maintenance app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
@@ -119,6 +119,7 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | `pnpm build` | `apps/clean` | hex-token guard → typecheck → Vite build |
 | `pnpm test` | `apps/clean` | the frontend suite (Vitest). `pnpm build` does not run it |
 | `cargo test` | `apps/clean/src-tauri` | the safety-core suite — run it before any change to `remove`, `exclude`, or `paths` |
+| `pnpm smoke` | `apps/clean` | the native gate: runs the app against this Mac and exits non-zero if any data source fails |
 | `pnpm build` | `collection` | static export into `out/` |
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |
 | `pnpm sync-brand` | any app or `collection` | re-copy brand assets from `brand/` |
@@ -139,7 +140,7 @@ Each app owns a tag namespace, so one release never drags the others along:
 | --- | --- | --- |
 | Spiral Wallpaper | `v*` | macOS + Windows, updater manifest |
 | Spiral Slim | `slim-v*` | macOS |
-| Spiral Clean | `clean-v*` | macOS only, no updater until M7 |
+| Spiral Clean | `clean-v*` | macOS only. No updater yet — the Tauri plugin panics without a signing key, so the key has to exist first |
 
 All three call the same reusable `.github/workflows/release-app.yml`.
 
@@ -180,11 +181,32 @@ things it cannot derive, checks the certificate password actually opens the
 
 ## Roadmap, stated plainly
 
-Current: v1.0.2, with a signed and notarized universal macOS build. Next:
-Windows signing and the remaining runtime pass on real Windows hardware.
-On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
-and were removed; the `WallpaperSource` interface is waiting for them). Out
-of scope for v1: animated wallpapers, auto-update, anything that phones home.
+**Spiral Wallpaper** — current: v1.0.2, signed and notarized universal macOS
+build. Next: Windows signing and the remaining runtime pass on real Windows
+hardware. On hold: additional wallpaper sources (Unsplash and Pexels shipped
+briefly and were removed; the `WallpaperSource` interface is waiting for
+them). Out of scope for v1: animated wallpapers, auto-update, anything that
+phones home.
+
+**Spiral Clean** — every screen is built and every gate is green. Four things
+stand between it and a `clean-v0.1.0` tag, and none of them is code anyone can
+write today:
+
+1. **Nobody has seen it rendered.** Ten milestones, and the app has never been
+   opened. The smoke gate proves every data source answers on a real Mac; it
+   draws nothing. This is the gate.
+2. **Signing** needs the Developer ID in the build environment.
+3. **Notarization** needs the Apple ID and an app-specific password.
+4. **The updater cannot be written yet.** The Tauri plugin reads
+   `plugins.updater.pubkey` at init and panics without it, so the key has to be
+   generated before the first line of updater code exists. `release-clean.yml`
+   passes `updater: false` until then.
+
+Out of scope for Clean v1, deliberately: a menu bar HUD or anything resident,
+scheduled cleaning, duplicate and large-file finders, `node_modules`, and any
+network call whatsoever.
+
+**Spiral Slim** — v1.0.0, shipped on macOS. No further work planned.
 
 ---
 
