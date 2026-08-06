@@ -159,7 +159,10 @@ fn is_apple_owned(name: &str) -> bool {
 /// even listed: without this, its items pass discovery and are only denied
 /// later at `remove::execute`, showing the user a list nothing on it can
 /// actually remove.
-fn is_apple_bundle_id(bundle_id: &str) -> bool {
+/// `startup` reuses this rather than adding a third copy. The duplicate that
+/// already exists in `remove.rs` is recorded as a deferred minor; this is the
+/// one place a new caller should reach for.
+pub(crate) fn is_apple_bundle_id(bundle_id: &str) -> bool {
     bundle_id.to_lowercase().starts_with("com.apple.")
 }
 

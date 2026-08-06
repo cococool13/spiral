@@ -14,12 +14,14 @@ mod associate;
 mod catalog;
 mod commands;
 mod exclude;
+mod health;
 mod history;
 mod orphans;
 mod paths;
 mod permissions;
 mod remove;
 mod scan;
+mod startup;
 mod volume;
 
 // The updater plugin is registered at M7, not here. It reads
@@ -37,6 +39,10 @@ pub fn run() {
             commands::uninstall_execute,
             commands::leftovers_scan,
             commands::leftovers_remove,
+            health::health_report,
+            startup::startup_list,
+            startup::startup_set_enabled,
+            startup::open_login_items_settings,
             permissions::fda_status,
             permissions::open_privacy_settings
         ])

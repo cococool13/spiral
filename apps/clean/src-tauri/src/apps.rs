@@ -195,7 +195,12 @@ pub fn read_bundle(path: &Path) -> Option<(String, String)> {
 /// its own string value" — sufficient for `CFBundleIdentifier` and
 /// `CFBundleName`, which are always flat string values in a real
 /// `Info.plist`, and nothing else this module reads.
-fn extract_plist_string(xml: &str, key: &str) -> Option<String> {
+/// `health` and `startup` reuse this rather than restating it. They read
+/// `Label` out of a launchd plist and `ProductVersion` and `SMARTStatus` out
+/// of Apple's own — all the same flat `<key>…</key><string>…</string>` shape,
+/// all from plists this application did not write. One parser, one place to
+/// fix, for the same reason `orphans` reuses `associate::LOCATIONS`.
+pub(crate) fn extract_plist_string(xml: &str, key: &str) -> Option<String> {
     let key_tag = format!("<key>{key}</key>");
     let after_key = &xml[xml.find(&key_tag)? + key_tag.len()..];
     let region_end = after_key.find("<key>").unwrap_or(after_key.len());
