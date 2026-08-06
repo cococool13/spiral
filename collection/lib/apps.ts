@@ -37,7 +37,7 @@ export interface SpiralApp {
   };
 }
 
-const RELEASE = "https://github.com/cococool13/spiral-wallpaper/releases/download/v1.0.2";
+const RELEASE = "https://github.com/cococool13/spiral-wallpaper/releases/download/v1.0.3";
 const SLIM_RELEASE = "https://github.com/cococool13/Spiral-Slim/releases/download/v1.0.0";
 
 export const apps: SpiralApp[] = [
@@ -46,7 +46,7 @@ export const apps: SpiralApp[] = [
     name: "Spiral Wallpaper",
     tagline: "Click a wallpaper. It downloads and applies. That's it.",
     status: "live",
-    version: "1.0.2",
+    version: "1.0.3",
     iconPath: "M3 5h18v13H3zM3 18h18M9 21h6M6 8l4 4M14 8l4 4M10 12l-2 3M16 12l-1.5 3",
     video: {
       mp4: "/brand/media/wallpaper-demo.mp4",
@@ -55,11 +55,11 @@ export const apps: SpiralApp[] = [
     },
     downloads: {
       mac: {
-        url: `${RELEASE}/Spiral.Wallpaper_1.0.2_universal.dmg`,
+        url: `${RELEASE}/Spiral.Wallpaper_1.0.3_universal.dmg`,
         label: "Download for Mac",
       },
       windows: {
-        url: `${RELEASE}/Spiral.Wallpaper_1.0.2_x64-setup.exe`,
+        url: `${RELEASE}/Spiral.Wallpaper_1.0.3_x64-setup.exe`,
         label: "Download for Windows",
       },
       all: "https://github.com/cococool13/spiral-wallpaper/releases/latest",

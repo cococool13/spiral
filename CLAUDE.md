@@ -1,7 +1,7 @@
 # Spiral (Claude build) — Project Context
 
 The Spiral monorepo: the brand system, the apps, and the site that houses them.
-Current app release **v1.0.2** (Spiral Wallpaper).
+Current app release **v1.0.3** (Spiral Wallpaper).
 
 > **There are two separate Spiral Wallpaper codebases.** This one (`Spiral Claude`) is the
 > shipped repo — `github.com/cococool13/spiral-wallpaper`, pnpm **11.9**, **no tray, closing the
@@ -164,8 +164,8 @@ deployed to Netlify from CI on every push to `main`.
 
 ## Release Notes
 
-- macOS v1.0.2 is universal, Developer ID signed, and notarized.
-- Windows v1.0.2 is built but not code-signed; README documents the SmartScreen flow.
+- macOS v1.0.3 is universal, Developer ID signed, and notarized.
+- Windows v1.0.3 is built but not code-signed; README documents the SmartScreen flow.
 - Checksums ship as `SHA256SUMS.txt` with releases.
 
 ## Definition of Done
