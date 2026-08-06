@@ -9,14 +9,17 @@
 // one.** The few items that genuinely have no caller yet carry their own
 // narrowly scoped `#[allow(dead_code)]` naming the milestone that consumes
 // them, so a warning here now means what it says.
+mod analyze;
 mod apps;
 mod associate;
+mod backups;
 mod catalog;
 mod commands;
 mod escalate;
 mod exclude;
 mod health;
 mod history;
+mod lipo;
 mod optimize;
 mod orphans;
 mod paths;
@@ -41,6 +44,13 @@ pub fn run() {
             commands::uninstall_execute,
             commands::leftovers_scan,
             commands::leftovers_remove,
+            analyze::analyze_children,
+            analyze::analyze_root,
+            analyze::reveal_in_finder,
+            backups::backups_list,
+            backups::backups_remove,
+            lipo::lipo_candidates,
+            lipo::lipo_strip,
             health::health_report,
             optimize::optimize_plan,
             optimize::optimize_execute,

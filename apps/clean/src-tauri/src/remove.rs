@@ -4,12 +4,18 @@ use crate::paths::{normalize, resolve, starts_with_case_insensitive, strip_firml
 use std::path::{Path, PathBuf};
 
 /// Why an item is eligible for removal. This is the caller's claim, not a
-/// guarantee: `UserChosen` is a unit variant with no path constraint, so any
-/// caller can justify Trashing any path that clears the user-content and
-/// exclusion bars this way. What `execute` actually guarantees is narrower —
-/// user content (and anything above it) is denied no matter which variant
-/// is used, and `Catalog` can only reach `Permanent` through a real catalog
-/// entry whose own roots actually cover the path (see `disposition_for`).
+/// guarantee: what `execute` guarantees is narrower — user content (and
+/// anything above it) is denied no matter which variant is used, and
+/// `Catalog` can only reach `Permanent` through a real catalog entry whose
+/// own roots actually cover the path (see `disposition_for`).
+///
+/// **Every variant's authority rests on something the path cannot assert
+/// about itself** — a catalog root, a bundle id present in the name, a
+/// location. There was once a `UserChosen` unit variant with no path
+/// constraint at all, which meant any caller could Trash any path merely by
+/// saying so. It was replaced by `DeviceBackup` at M6 rather than given a
+/// producer: "the user picked it" is precisely the caller assertion this
+/// enum exists to refuse.
 #[derive(Debug, Clone)]
 pub enum Justification {
     /// Matched a safe-category catalog entry, by id. The only variant M3
@@ -47,10 +53,15 @@ pub enum Justification {
     /// of where it is, and that is a fact about the path which no content of
     /// the file can forge.
     StartupItem,
-    /// The user selected this specific item, e.g. an iOS device backup —
-    /// constructed by the Storage screen in M6.
-    #[allow(dead_code)]
-    UserChosen,
+    /// An iOS device backup, from the Storage screen (M6).
+    ///
+    /// Like `StartupItem`, it carries no payload and is authorised by
+    /// **location**: a direct child of `~/Library/Application
+    /// Support/MobileSync/Backup`. The device name and date shown in the UI
+    /// are read out of the backup's own `Info.plist`, so they could not
+    /// possibly authorise removing it — see ADR-0008's amendment for the
+    /// general rule and ADR-0016 for what it cost to learn.
+    DeviceBackup,
 }
 
 /// How strongly a path is tied to the application being removed.
@@ -244,6 +255,9 @@ struct Roots {
     /// `Justification::StartupItem` may point into. `None` when it does not
     /// resolve where it is declared, in which case nothing is authorised.
     startup_agents: Option<PathBuf>,
+    /// `~/Library/Application Support/MobileSync/Backup`, resolved — the only
+    /// location a `Justification::DeviceBackup` may point into.
+    device_backups: Option<PathBuf>,
     /// `~/Library`, resolved — what the container-depth rule counts from.
     /// Deliberately *not* `authorizing_root`-checked: it is used to deny, and
     /// a `~/Library` pointed elsewhere should have its target's containers
@@ -305,6 +319,10 @@ impl Roots {
             // a `LaunchAgents` that has been pointed somewhere else must
             // authorise nothing rather than authorise its new target.
             startup_agents: authorizing_root("~/Library/LaunchAgents", &home),
+            device_backups: authorizing_root(
+                "~/Library/Application Support/MobileSync/Backup",
+                &home,
+            ),
             library: normalize(&home.join("Library")),
             home,
         })
@@ -362,7 +380,7 @@ fn is_user_content(path: &Path, roots: &Roots) -> bool {
     // `APP_STATE_CONTAINERS` sat in `protected` and therefore denied a
     // container under *every* justification, not just `AppBundle`. Applying
     // the rule only at the `AppBundle` site would have removed the list and
-    // quietly weakened `Orphan` and `UserChosen`, which can still Trash.
+    // quietly weakened `Orphan` and `DeviceBackup`, which can still Trash.
     if roots.is_library_container(&normalized) {
         return true;
     }
@@ -601,6 +619,19 @@ fn is_user_launch_agent(normalized: &Path, agents: &Path) -> bool {
         })
 }
 
+/// Whether `normalized` is a **direct child** of the MobileSync backup folder.
+///
+/// One backup is one directory named for the device's UDID. Direct child, not
+/// descendant: a path deeper in belongs to the backup's contents, and Trashing
+/// a fragment of a backup would leave a broken one behind rather than free the
+/// space the user asked for.
+fn is_device_backup(normalized: &Path, backups: &Path) -> bool {
+    normalized.parent().is_some_and(|parent| {
+        starts_with_case_insensitive(parent, backups)
+            && starts_with_case_insensitive(backups, parent)
+    })
+}
+
 fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disposition, String> {
     match j {
         Justification::Catalog(id) => match catalog::find(id) {
@@ -723,7 +754,20 @@ fn disposition_for(path: &Path, j: &Justification, roots: &Roots) -> Result<Disp
                 ))
             }
         }
-        Justification::UserChosen => Ok(Disposition::Trash),
+        // Authorised by location, never by the caller's say-so.
+        Justification::DeviceBackup => match (normalize(path), roots.device_backups.as_deref()) {
+            (Some(normalized), Some(backups)) if is_device_backup(&normalized, backups) => {
+                Ok(Disposition::Trash)
+            }
+            (_, None) => Err(
+                "Your iOS backup folder does not resolve where macOS keeps it, so Spiral Clean will not remove anything from it. Nothing was removed."
+                    .to_string(),
+            ),
+            (_, Some(_)) => Err(format!(
+                "{} is not a device backup in your MobileSync folder, so Spiral Clean will not remove it. Nothing was removed.",
+                path.display()
+            )),
+        },
     }
 }
 
@@ -1179,6 +1223,93 @@ mod tests {
         assert!(p.exists());
     }
 
+    // -- Justification::DeviceBackup (M6) -----------------------------------
+
+    fn backups_dir(home: &Path) -> PathBuf {
+        let dir = home.join("Library/Application Support/MobileSync/Backup");
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_device_backup_goes_to_the_trash() {
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let backup = backups_dir(home.path()).join("00008120-001A2B3C4D5E6F70");
+        std::fs::create_dir_all(&backup).unwrap();
+        let reports = run(
+            vec![candidate(backup, Justification::DeviceBackup)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Removed(Disposition::Trash)));
+    }
+
+    #[test]
+    fn a_path_outside_the_backup_folder_is_denied() {
+        // Stub `is_device_backup` to `true` and this fails. That is the
+        // ADR-0012 proof — and the reason `UserChosen` had to go: it granted
+        // Trash to any path at all, on nothing but the caller's word.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let elsewhere = home.path().join("Library/Application Support/SomeApp");
+        std::fs::create_dir_all(&elsewhere).unwrap();
+        let reports = run(
+            vec![candidate(elsewhere.clone(), Justification::DeviceBackup)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)), "{:?}", reports[0].outcome);
+        assert!(elsewhere.exists());
+    }
+
+    #[test]
+    fn something_inside_a_backup_is_denied_only_the_backup_itself_goes() {
+        // Trashing a fragment would leave a broken backup behind rather than
+        // free the space the user asked for.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let backup = backups_dir(home.path()).join("00008120-001A2B3C4D5E6F70");
+        std::fs::create_dir_all(&backup).unwrap();
+        let inner = file(&backup, "Manifest.db");
+        let reports = run(
+            vec![candidate(inner.clone(), Justification::DeviceBackup)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+        assert!(inner.exists());
+    }
+
+    #[test]
+    fn the_backup_folder_itself_is_never_removable() {
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let dir = backups_dir(home.path());
+        let reports = run(
+            vec![candidate(dir.clone(), Justification::DeviceBackup)],
+            &exclude::new(vec![]),
+            &roots,
+        );
+        assert!(matches!(reports[0].outcome, Outcome::Denied(_)));
+        assert!(dir.exists());
+    }
+
+    #[test]
+    fn a_device_backup_can_never_reach_permanent() {
+        // ADR-0001: permanent deletion requires a catalog match, and there is
+        // no catalog entry for MobileSync. A backup is irreplaceable if the
+        // device is gone.
+        let home = fake_home();
+        let roots = Roots::rooted_at(home.path());
+        let backup = backups_dir(home.path()).join("00008120-001A2B3C4D5E6F70");
+        std::fs::create_dir_all(&backup).unwrap();
+        assert_eq!(
+            disposition_for(&backup, &Justification::DeviceBackup, &roots),
+            Ok(Disposition::Trash)
+        );
+    }
+
     #[test]
     fn an_excluded_path_is_skipped() {
         let home = fake_home();
@@ -1336,7 +1467,7 @@ mod tests {
         let reports = execute_within(
             vec![
                 candidate(a.clone(), Justification::Catalog("user-caches".into())),
-                candidate(b.clone(), Justification::UserChosen),
+                candidate(b.clone(), Justification::DeviceBackup),
             ],
             excl.as_ref().map_err(String::as_str),
             Some(&roots),
@@ -1425,7 +1556,7 @@ mod tests {
         let reports = execute(
             vec![candidate(
                 PathBuf::from("/Volumes/spiral-clean-no-such-volume/thing"),
-                Justification::UserChosen,
+                Justification::DeviceBackup,
             )],
             &Ok(exclude::new(vec![])),
             home.path(),
@@ -1487,7 +1618,7 @@ mod tests {
         let reports = execute(
             vec![candidate(
                 PathBuf::from("/tmp/spiral-clean-unresolvable-home-probe"),
-                Justification::UserChosen,
+                Justification::DeviceBackup,
             )],
             &Ok(exclude::new(vec![])),
             &home_a,
@@ -1556,7 +1687,7 @@ mod tests {
                 Justification::Catalog("user-caches".into()),
                 Justification::Orphan { bundle_id: "x".into() },
                 Justification::AppBundle { bundle_id: "x".into(), evidence: Evidence::Likely },
-                Justification::UserChosen,
+                Justification::DeviceBackup,
             ] {
                 assert!(
                     is_user_content(&path, &roots),
