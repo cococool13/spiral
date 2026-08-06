@@ -13,9 +13,11 @@ mod apps;
 mod associate;
 mod catalog;
 mod commands;
+mod escalate;
 mod exclude;
 mod health;
 mod history;
+mod optimize;
 mod orphans;
 mod paths;
 mod permissions;
@@ -40,6 +42,8 @@ pub fn run() {
             commands::leftovers_scan,
             commands::leftovers_remove,
             health::health_report,
+            optimize::optimize_plan,
+            optimize::optimize_execute,
             startup::startup_list,
             startup::startup_set_enabled,
             startup::open_login_items_settings,

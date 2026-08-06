@@ -42,6 +42,42 @@ export interface StartupInventory {
   login_items: StartupItem[];
 }
 
+export type ActionGroup = "caches-and-indexes" | "system-and-storage" | "network-and-devices";
+
+export interface ActionSummary {
+  id: string;
+  label: string;
+  group: ActionGroup;
+  default_selected: boolean;
+  requires_admin: boolean;
+  note: string | null;
+  /** Present when the action cannot run right now, with the reason. */
+  blocked: string | null;
+}
+
+export type ActionOutcome =
+  | { kind: "succeeded" }
+  | { kind: "failed"; reason: string }
+  | { kind: "skipped"; reason: string }
+  | { kind: "not-run" };
+
+export interface ActionResult {
+  id: string;
+  label: string;
+  outcome: ActionOutcome;
+}
+
+export interface OptimizeReport {
+  results: ActionResult[];
+  cancelled: boolean;
+}
+
+const GROUP_HEADINGS: [ActionGroup, string][] = [
+  ["caches-and-indexes", "Caches and indexes"],
+  ["system-and-storage", "System and storage"],
+  ["network-and-devices", "Network and devices"],
+];
+
 const UNAVAILABLE = "Unavailable";
 
 /** Whole days and hours. Anything finer is noise for a figure like this. */
@@ -170,9 +206,128 @@ function Group({ heading, items, empty, note, onToggle }: GroupProps) {
   );
 }
 
+interface ActionRowProps {
+  action: ActionSummary;
+  checked: boolean;
+  onToggle: (id: string) => void;
+}
+
+function ActionRow({ action, checked, onToggle }: ActionRowProps) {
+  // A blocked action shows why and offers no control — the same posture the
+  // Startup groups take, and the one ADR-0008 states.
+  if (action.blocked) {
+    return (
+      <li>
+        <span>{action.label}</span>
+        <p>{action.blocked}</p>
+      </li>
+    );
+  }
+  return (
+    <li>
+      <label>
+        <input type="checkbox" checked={checked} onChange={() => onToggle(action.id)} />
+        {action.label}
+      </label>
+      {action.requires_admin && <span>Needs your password</span>}
+      {action.note && <p>{action.note}</p>}
+    </li>
+  );
+}
+
+function outcomeText(outcome: ActionOutcome): string {
+  switch (outcome.kind) {
+    case "succeeded":
+      return "Done";
+    case "failed":
+      return outcome.reason;
+    case "skipped":
+      return outcome.reason;
+    case "not-run":
+      return "Spiral Clean did not get a result for this, so it may not have run.";
+  }
+}
+
+interface ActionsProps {
+  actions: ActionSummary[] | null;
+  selected: Set<string>;
+  report: OptimizeReport | null;
+  running: boolean;
+  onToggle: (id: string) => void;
+  onRun: () => void;
+  onReset: () => void;
+}
+
+function Actions({ actions, selected, report, running, onToggle, onRun, onReset }: ActionsProps) {
+  if (actions === null) return <p>Working out what can be done…</p>;
+  if (running) return <p>Running…</p>;
+
+  if (report) {
+    return (
+      <>
+        {report.cancelled && (
+          <p>
+            You did not give administrator access, so the actions that needed it were left alone.
+          </p>
+        )}
+        <dl>
+          {report.results.map((r) => (
+            <div key={r.id}>
+              <dt>{r.label}</dt>
+              <dd>{outcomeText(r.outcome)}</dd>
+            </div>
+          ))}
+        </dl>
+        <button type="button" onClick={onReset}>
+          Back
+        </button>
+      </>
+    );
+  }
+
+  const runnable = actions.filter((a) => !a.blocked && selected.has(a.id));
+  const needsPassword = runnable.some((a) => a.requires_admin);
+
+  return (
+    <>
+      {GROUP_HEADINGS.map(([group, heading]) => {
+        const inGroup = actions.filter((a) => a.group === group);
+        if (inGroup.length === 0) return null;
+        return (
+          <section key={group}>
+            <h3>{heading}</h3>
+            <ul>
+              {inGroup.map((action) => (
+                <ActionRow
+                  key={action.id}
+                  action={action}
+                  checked={selected.has(action.id)}
+                  onToggle={onToggle}
+                />
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+      <p>
+        {needsPassword
+          ? "macOS will ask for your password once, for the whole run."
+          : "Nothing selected needs your password."}
+      </p>
+      <button type="button" disabled={runnable.length === 0} onClick={onRun}>
+        Run {runnable.length} {runnable.length === 1 ? "action" : "actions"}
+      </button>
+    </>
+  );
+}
+
 export default function Optimize() {
   const [health, setHealth] = useState<HealthReport | null>(null);
   const [startup, setStartup] = useState<StartupInventory | null>(null);
+  const [actions, setActions] = useState<ActionSummary[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [report, setReport] = useState<OptimizeReport | null>(null);
+  const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Deliberately does not clear `error`. A refusal is followed by a re-read,
@@ -193,6 +348,16 @@ export default function Optimize() {
           `Could not read your login items: ${e}. Try again, or open Login Items in System Settings.`,
         ),
       );
+    invoke<ActionSummary[]>("optimize_plan")
+      .then((plan) => {
+        setActions(plan);
+        // Re-derive the selection from the plan every time, so an action
+        // that has become blocked since the last read cannot stay ticked.
+        setSelected(
+          new Set(plan.filter((a) => a.default_selected && !a.blocked).map((a) => a.id)),
+        );
+      })
+      .catch((e) => setError(`Could not work out what can be done: ${e}. Try again.`));
   }, []);
 
   useEffect(load, [load]);
@@ -209,6 +374,30 @@ export default function Optimize() {
       });
   };
 
+  const toggleAction = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const run = () => {
+    setError(null);
+    setRunning(true);
+    invoke<OptimizeReport>("optimize_execute", {
+      ids: [...selected],
+      startedAt: new Date().toISOString(),
+    })
+      .then((r) => {
+        setReport(r);
+        // The run may have changed free space or the snapshot count.
+        load();
+      })
+      .catch((e) => setError(`${e}`))
+      .finally(() => setRunning(false));
+  };
+
   return (
     <section>
       <h1>Optimize</h1>
@@ -216,6 +405,20 @@ export default function Optimize() {
 
       <h2>Health</h2>
       <Health report={health} />
+
+      <h2>Actions</h2>
+      <Actions
+        actions={actions}
+        selected={selected}
+        report={report}
+        running={running}
+        onToggle={toggleAction}
+        onRun={run}
+        onReset={() => {
+          setReport(null);
+          load();
+        }}
+      />
 
       <h2>Startup Items</h2>
       {startup === null ? (

@@ -172,7 +172,12 @@ fn snapshot_note(estimated: u64, measured: u64, snapshots: bool) -> Option<Strin
 /// than resolved in here — a test points both at a temp directory, so no
 /// guard in this function is the only thing standing between a broken test
 /// and the real filesystem.
-fn run_clean(
+/// `pub(crate)` for Optimize's "Clear the icon cache", which is a *deletion*
+/// and so must go through this flow rather than shell out. Reusing it gives
+/// that action exclusion enforcement, history recording and measured sizing
+/// on the same terms as Clean, instead of a second removal path with its own
+/// bugs.
+pub(crate) fn run_clean(
     ids: Vec<String>,
     config_dir: &Path,
     home: &Path,

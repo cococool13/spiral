@@ -17,7 +17,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import Optimize, { formatUptime } from "./Optimize";
-import type { HealthReport, StartupInventory, StartupItem } from "./Optimize";
+import type {
+  ActionSummary,
+  HealthReport,
+  OptimizeReport,
+  StartupInventory,
+  StartupItem,
+} from "./Optimize";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
@@ -58,10 +64,24 @@ function item(over: Partial<StartupItem> = {}): StartupItem {
   };
 }
 
-function wire(health: HealthReport, startup: StartupInventory) {
+function action(over: Partial<ActionSummary> = {}): ActionSummary {
+  return {
+    id: "font-caches",
+    label: "Clear font caches",
+    group: "caches-and-indexes",
+    default_selected: true,
+    requires_admin: false,
+    note: null,
+    blocked: null,
+    ...over,
+  };
+}
+
+function wire(health: HealthReport, startup: StartupInventory, plan: ActionSummary[] = []) {
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === "health_report") return Promise.resolve(health);
     if (cmd === "startup_list") return Promise.resolve(startup);
+    if (cmd === "optimize_plan") return Promise.resolve(plan);
     return Promise.resolve(undefined);
   });
 }
@@ -221,6 +241,7 @@ describe("Startup Items", () => {
       if (cmd === "startup_set_enabled")
         return Promise.reject("com.example.agent is no longer in your login items.");
       if (cmd === "health_report") return Promise.resolve(EMPTY_HEALTH);
+      if (cmd === "optimize_plan") return Promise.resolve([]);
       return Promise.resolve({ ...EMPTY_STARTUP, user_agents: [] });
     });
 
@@ -235,6 +256,7 @@ describe("Startup Items", () => {
     // Two independent commands. One failing must not blank the other.
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "health_report") return Promise.resolve(FULL_HEALTH);
+      if (cmd === "optimize_plan") return Promise.resolve([]);
       return Promise.reject("no access");
     });
     render(<Optimize />);
@@ -246,10 +268,184 @@ describe("Startup Items", () => {
   it("keeps the startup list when Health fails", async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "health_report") return Promise.reject("bridge error");
+      if (cmd === "optimize_plan") return Promise.resolve([]);
       return Promise.resolve({ ...EMPTY_STARTUP, user_agents: [item()] });
     });
     render(<Optimize />);
 
     expect(await screen.findByLabelText("Open at login")).toBeTruthy();
+  });
+});
+
+describe("Actions", () => {
+  it("preselects the default actions and no others", async () => {
+    wire(EMPTY_HEALTH, EMPTY_STARTUP, [
+      action({ id: "font-caches", label: "Clear font caches", default_selected: true }),
+      action({
+        id: "spotlight-reindex",
+        label: "Rebuild the Spotlight index",
+        default_selected: false,
+        note: "Your Mac will run warm for an hour.",
+      }),
+    ]);
+    render(<Optimize />);
+
+    expect(((await screen.findByLabelText("Clear font caches")) as HTMLInputElement).checked).toBe(
+      true,
+    );
+    expect(
+      (screen.getByLabelText("Rebuild the Spotlight index") as HTMLInputElement).checked,
+    ).toBe(false);
+  });
+
+  it("states the cost of an opt-in action on the row", async () => {
+    wire(EMPTY_HEALTH, EMPTY_STARTUP, [
+      action({
+        id: "thin-snapshots",
+        label: "Thin local Time Machine snapshots",
+        default_selected: false,
+        note: "Those restore points are gone for good.",
+      }),
+    ]);
+    render(<Optimize />);
+    expect(await screen.findByText("Those restore points are gone for good.")).toBeTruthy();
+  });
+
+  it("says the password will be asked for once, and only when it will be", async () => {
+    wire(EMPTY_HEALTH, EMPTY_STARTUP, [
+      action({ id: "font-caches", requires_admin: false }),
+      action({
+        id: "dns-flush",
+        label: "Flush the DNS cache",
+        requires_admin: true,
+        default_selected: false,
+      }),
+    ]);
+    render(<Optimize />);
+
+    // Only the unprivileged action is selected to begin with.
+    expect(await screen.findByText("Nothing selected needs your password.")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Flush the DNS cache"));
+    expect(
+      screen.getByText("macOS will ask for your password once, for the whole run."),
+    ).toBeTruthy();
+  });
+
+  it("shows a blocked action's reason and gives it no control", async () => {
+    // The Bluetooth guard, as the user meets it.
+    wire(EMPTY_HEALTH, EMPTY_STARTUP, [
+      action({
+        id: "bluetooth-reset",
+        label: "Restart Bluetooth",
+        group: "network-and-devices",
+        requires_admin: true,
+        default_selected: false,
+        blocked: "Your keyboard connects over Bluetooth.",
+      }),
+    ]);
+    render(<Optimize />);
+
+    expect(await screen.findByText("Your keyboard connects over Bluetooth.")).toBeTruthy();
+    expect(screen.queryByLabelText("Restart Bluetooth")).toBeNull();
+  });
+
+  it("never sends a blocked action, even if it was a default", async () => {
+    // A default that has since become blocked must not stay ticked.
+    wire(EMPTY_HEALTH, EMPTY_STARTUP, [
+      action({ id: "font-caches" }),
+      action({ id: "bluetooth-reset", default_selected: true, blocked: "No built-in keyboard." }),
+    ]);
+    render(<Optimize />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Run 1 action/ }));
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "optimize_execute",
+        expect.objectContaining({ ids: ["font-caches"] }),
+      ),
+    );
+  });
+
+  it("counts only what will actually run", async () => {
+    wire(EMPTY_HEALTH, EMPTY_STARTUP, [
+      action({ id: "a", label: "A" }),
+      action({ id: "b", label: "B" }),
+      action({ id: "c", label: "C", blocked: "Not right now." }),
+    ]);
+    render(<Optimize />);
+    expect(await screen.findByRole("button", { name: "Run 2 actions" })).toBeTruthy();
+  });
+
+  it("disables the run button when nothing is selected", async () => {
+    wire(EMPTY_HEALTH, EMPTY_STARTUP, [action({ id: "font-caches" })]);
+    render(<Optimize />);
+
+    fireEvent.click(await screen.findByLabelText("Clear font caches"));
+    expect((screen.getByRole("button", { name: /Run 0 actions/ }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+  });
+
+  it("reports every outcome, including the ones that are not failures", async () => {
+    const report: OptimizeReport = {
+      cancelled: true,
+      results: [
+        { id: "font-caches", label: "Clear font caches", outcome: { kind: "succeeded" } },
+        {
+          id: "dns-flush",
+          label: "Flush the DNS cache",
+          outcome: { kind: "skipped", reason: "You did not give administrator access." },
+        },
+        {
+          id: "verify-volume",
+          label: "Verify the startup disk",
+          outcome: { kind: "failed", reason: "diskutil reported a problem." },
+        },
+        { id: "thin-snapshots", label: "Thin snapshots", outcome: { kind: "not-run" } },
+      ],
+    };
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "health_report") return Promise.resolve(EMPTY_HEALTH);
+      if (cmd === "startup_list") return Promise.resolve(EMPTY_STARTUP);
+      if (cmd === "optimize_plan") return Promise.resolve([action({ id: "font-caches" })]);
+      if (cmd === "optimize_execute") return Promise.resolve(report);
+      return Promise.resolve(undefined);
+    });
+    render(<Optimize />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Run 1 action/ }));
+
+    expect(await screen.findByText("Done")).toBeTruthy();
+    expect(screen.getByText("You did not give administrator access.")).toBeTruthy();
+    expect(screen.getByText("diskutil reported a problem.")).toBeTruthy();
+    // A step with no result must never read as success.
+    expect(
+      screen.getByText("Spiral Clean did not get a result for this, so it may not have run."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "You did not give administrator access, so the actions that needed it were left alone.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("surfaces a refused run without losing the action list", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "health_report") return Promise.resolve(EMPTY_HEALTH);
+      if (cmd === "startup_list") return Promise.resolve(EMPTY_STARTUP);
+      if (cmd === "optimize_plan") return Promise.resolve([action({ id: "font-caches" })]);
+      if (cmd === "optimize_execute")
+        return Promise.reject("nonsense is not something Spiral Clean can do.");
+      return Promise.resolve(undefined);
+    });
+    render(<Optimize />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Run 1 action/ }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("not something Spiral Clean can do");
+    expect(screen.getByLabelText("Clear font caches")).toBeTruthy();
   });
 });
