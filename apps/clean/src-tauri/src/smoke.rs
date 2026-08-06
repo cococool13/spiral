@@ -165,6 +165,25 @@ pub fn run() {
         v.check("device backups", Ok(format!("{} backups", backups.len())));
     }
 
+    let receipts = crate::receipts::list();
+    if receipts.is_empty() {
+        v.note("installer receipts", "none from third parties — the listing path was not exercised");
+    } else {
+        v.check("installer receipts", {
+            // Every row must carry its handoff command, or the module's whole
+            // posture — inventory and hand off, never act — is not true of
+            // this build.
+            match receipts.iter().find(|r| r.handoff.is_empty()) {
+                Some(r) => Err(format!("{} has no handoff command", r.package_id)),
+                None => Ok(format!(
+                    "{} receipts, {} stale",
+                    receipts.len(),
+                    receipts.iter().filter(|r| r.stale).count()
+                )),
+            }
+        });
+    }
+
     let universal = crate::lipo::candidates(&home, &crate::lipo::real_effects());
     if universal.is_empty() {
         v.note("universal apps", "none on this Mac — the listing path was not exercised");
@@ -185,7 +204,7 @@ pub fn run() {
         println!("{WARN} {warning}");
     }
     if v.failures.is_empty() {
-        println!("{OK} {} checks passed", 9 + usize::from(!v.warnings.is_empty()));
+        println!("{OK} {} checks passed", 10 + usize::from(!v.warnings.is_empty()));
     } else {
         println!("{FAIL} {}", v.failures.join(", "));
     }

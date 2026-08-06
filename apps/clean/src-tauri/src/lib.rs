@@ -25,6 +25,7 @@ mod orphans;
 mod paths;
 mod permissions;
 mod proc;
+mod receipts;
 mod remove;
 mod scan;
 mod smoke;
@@ -66,6 +67,7 @@ pub fn run() {
             exclude::exclusions_remove,
             history::history_read,
             history::history_clear,
+            receipts::receipts_list,
             health::health_report,
             optimize::optimize_plan,
             optimize::optimize_execute,

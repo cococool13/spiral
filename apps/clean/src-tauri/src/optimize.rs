@@ -466,10 +466,37 @@ pub struct Effects<'a> {
 /// Order is fixed: unprivileged work first, then one privileged batch. The
 /// user is asked for a password once, and only if the selection contains a
 /// privileged action — a run of plain actions never prompts.
+/// The batch form, for callers with nothing to report progress to.
+#[cfg(test)]
 pub fn execute(ids: Vec<String>, effects: &Effects) -> Result<OptimizeReport, String> {
+    execute_reporting(ids, effects, &|_| {})
+}
+
+/// As `execute`, calling `on_result` as each action finishes.
+///
+/// `verify-volume` alone reads the whole disk and takes minutes. Without this
+/// the Optimize screen shows an unchanging "Running…" for that entire time,
+/// which is indistinguishable from the app having hung — the failure the
+/// subprocess deadlines exist to prevent, arriving as a UI problem instead.
+pub fn execute_reporting(
+    ids: Vec<String>,
+    effects: &Effects,
+    on_result: &dyn Fn(&ActionResult),
+) -> Result<OptimizeReport, String> {
     let specs = resolve(&ids)?;
     let mut results: Vec<ActionResult> = Vec::new();
     let mut steps: Vec<PrivilegedStep> = Vec::new();
+
+    // Every result goes through here, so an action can never finish without
+    // the caller hearing about it. Emitting at the end instead would make the
+    // whole run one silent block, which is the problem this exists to fix.
+    macro_rules! record {
+        ($spec:expr, $outcome:expr) => {{
+            let r = result($spec, $outcome);
+            on_result(&r);
+            results.push(r);
+        }};
+    }
 
     for spec in &specs {
         // The guard runs before the step is built, never after: running it
@@ -478,7 +505,7 @@ pub fn execute(ids: Vec<String>, effects: &Effects) -> Result<OptimizeReport, St
         // guard without the real one touching the machine.
         if spec.guard.is_some() {
             if let Some(reason) = (effects.guard_override)() {
-                results.push(result(spec, ActionOutcome::Skipped { reason }));
+                record!(spec, ActionOutcome::Skipped { reason });
                 continue;
             }
         }
@@ -492,16 +519,16 @@ pub fn execute(ids: Vec<String>, effects: &Effects) -> Result<OptimizeReport, St
                         break;
                     }
                 }
-                results.push(result(spec, outcome));
+                record!(spec, outcome);
             }
             Plan::Removal(catalog_id) => {
-                results.push(result(
+                record!(
                     spec,
                     match (effects.remove_catalog)(catalog_id) {
                         Ok(()) => ActionOutcome::Succeeded,
                         Err(reason) => ActionOutcome::Failed { reason },
-                    },
-                ));
+                    }
+                );
             }
             Plan::Privileged(commands) => {
                 steps.push(PrivilegedStep {
@@ -517,7 +544,7 @@ pub fn execute(ids: Vec<String>, effects: &Effects) -> Result<OptimizeReport, St
                     id: spec.id.to_string(),
                     commands,
                 }),
-                Err(reason) => results.push(result(spec, ActionOutcome::Failed { reason })),
+                Err(reason) => record!(spec, ActionOutcome::Failed { reason }),
             },
         }
     }
@@ -534,14 +561,14 @@ pub fn execute(ids: Vec<String>, effects: &Effects) -> Result<OptimizeReport, St
                     let Some(spec) = specs.iter().find(|s| s.id == step.id) else {
                         continue;
                     };
-                    results.push(result(
+                    record!(
                         spec,
                         match step.outcome {
                             StepOutcome::Succeeded => ActionOutcome::Succeeded,
                             StepOutcome::Failed(reason) => ActionOutcome::Failed { reason },
                             StepOutcome::NotRun => ActionOutcome::NotRun,
-                        },
-                    ));
+                        }
+                    );
                 }
             }
             BatchResult::Cancelled => {
@@ -646,7 +673,9 @@ pub fn optimize_execute(
     })?;
     let home = dirs::home_dir().ok_or("Could not locate your home folder, so nothing was run.")?;
 
-    execute(
+    use tauri::Emitter;
+    let progress = app.clone();
+    execute_reporting(
         ids,
         &Effects {
             run_command: &|command| run_plain(&[command]),
@@ -661,6 +690,11 @@ pub fn optimize_execute(
             },
             run_batch: &escalate::run,
             guard_override: &bluetooth_reset_refusal,
+        },
+        // A dropped event costs promptness, never correctness: the report
+        // returned at the end still carries every result.
+        &|result| {
+            let _ = progress.emit("optimize:result", result.clone());
         },
     )
 }
@@ -1015,6 +1049,46 @@ mod tests {
 
     fn never_called(_: &[PrivilegedStep]) -> BatchResult {
         panic!("the batch must not run when no privileged action was selected");
+    }
+
+    #[test]
+    fn every_action_reports_progress_exactly_once_as_it_finishes() {
+        // The property that makes the Optimize screen honest during a run:
+        // an action cannot finish silently. `verify-volume` alone takes
+        // minutes, and a run that reported nothing until the end was
+        // indistinguishable from one that had hung.
+        use std::cell::RefCell;
+        let seen: RefCell<Vec<&'static str>> = RefCell::new(Vec::new());
+        let ids: Vec<String> = ACTIONS.iter().map(|s| s.id.to_string()).collect();
+
+        let report = execute_reporting(
+            ids,
+            &stub(&all_succeed, &|| None),
+            &|r| seen.borrow_mut().push(r.id),
+        )
+        .unwrap();
+
+        let mut progressed = seen.into_inner();
+        let count = progressed.len();
+        progressed.sort_unstable();
+        progressed.dedup();
+        assert_eq!(progressed.len(), count, "an action reported twice");
+        assert_eq!(count, report.results.len(), "every result was also reported live");
+    }
+
+    #[test]
+    fn a_skipped_action_reports_progress_too() {
+        // Not just the ones that ran: a blocked Bluetooth reset is a result
+        // the user is waiting to see.
+        use std::cell::RefCell;
+        let seen: RefCell<Vec<&'static str>> = RefCell::new(Vec::new());
+        execute_reporting(
+            vec!["bluetooth-reset".into()],
+            &stub(&never_called, &|| Some("blocked".into())),
+            &|r| seen.borrow_mut().push(r.id),
+        )
+        .unwrap();
+        assert_eq!(seen.into_inner(), ["bluetooth-reset"]);
     }
 
     #[test]

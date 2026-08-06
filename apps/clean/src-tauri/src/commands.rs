@@ -32,23 +32,42 @@ pub fn clean_categories() -> Vec<CategorySummary> {
     category_summaries()
 }
 
-#[tauri::command]
-pub fn clean_scan() -> Vec<scan::CategoryResult> {
-    // `scan_attributed`, not `scan_all`: catalog categories nest (a Chrome
-    // cache file sits under both "Chrome cache" and "Application caches"),
-    // and attributing each file to its single most specific category is what
-    // keeps the totals shown here honest — see scan.rs.
-    scan::scan_attributed()
-        .into_iter()
-        .map(|mut result| {
-            // Cap paths at preview limit; keep true count (items) and total size (bytes).
-            if result.paths.len() > PATHS_PREVIEW_LIMIT {
-                result.paths.truncate(PATHS_PREVIEW_LIMIT);
-            }
-            result
-        })
-        .collect()
+/// Cap the path preview; the true count (`items`) and total (`bytes`) stay.
+fn capped(mut result: scan::CategoryResult) -> scan::CategoryResult {
+    if result.paths.len() > PATHS_PREVIEW_LIMIT {
+        result.paths.truncate(PATHS_PREVIEW_LIMIT);
+    }
+    result
 }
+
+/// Scan every catalog category, **emitting each one the moment it is final**.
+///
+/// `scan_attributed_streaming`, not `scan_attributed`: a cold scan of a large
+/// home directory takes long enough that a single return value leaves the
+/// Clean screen saying "Looking for reclaimable files…" with nothing to show
+/// for it. The design spec's data flow has always described this as
+/// progressive; until now it was not.
+///
+/// The whole set is still returned, so a frontend that missed an event — or
+/// never subscribed — is never left with a partial list. The events are an
+/// improvement to *when* the user learns something, never the only copy of it.
+#[tauri::command]
+pub fn clean_scan(app: tauri::AppHandle) -> Vec<scan::CategoryResult> {
+    use tauri::Emitter;
+    let home = dirs::home_dir();
+    let emit = |result: &scan::CategoryResult| {
+        // A failed emit is not a failed scan. The batch return still carries
+        // everything, so a dropped event costs promptness, never correctness.
+        let _ = app.emit("clean:category", capped(result.clone()));
+    };
+
+    let all = match &home {
+        Some(home) => scan::scan_attributed_streaming(home, &emit),
+        None => scan::scan_attributed(),
+    };
+    all.into_iter().map(capped).collect()
+}
+
 
 #[derive(Debug, serde::Serialize)]
 pub struct FailedItem {

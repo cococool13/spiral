@@ -13,11 +13,13 @@
 //    that rule is visible.
 //  - A toggle sends the item's own `label`, never its display name. Two
 //    items can share a display name; only the label addresses a service.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import Optimize, { formatUptime } from "./Optimize";
 import type {
+  ActionResult,
   ActionSummary,
   HealthReport,
   OptimizeReport,
@@ -26,8 +28,21 @@ import type {
 } from "./Optimize";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn() }));
 
 const mockInvoke = vi.mocked(invoke);
+const mockListen = vi.mocked(listen);
+
+/** Handlers the screen registered, so a test can emit action progress. */
+let handlers: ((event: { payload: ActionResult }) => void)[] = [];
+
+beforeEach(() => {
+  handlers = [];
+  mockListen.mockImplementation((_name, handler) => {
+    handlers.push(handler as (event: { payload: ActionResult }) => void);
+    return Promise.resolve(() => {});
+  });
+});
 
 const FULL_HEALTH: HealthReport = {
   storage: { total_bytes: 500_000_000_000, available_bytes: 120_000_000_000 },
@@ -507,6 +522,37 @@ describe("Actions", () => {
         "You did not give administrator access, so the actions that needed it were left alone.",
       ),
     ).toBeTruthy();
+  });
+
+  it("shows each action's result while the run is still going", async () => {
+    // `verify-volume` alone takes minutes. Before this, the screen showed an
+    // unchanging "Running…" for the whole run, which reads as a hang.
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "health_report") return Promise.resolve(EMPTY_HEALTH);
+      if (cmd === "startup_list") return Promise.resolve(EMPTY_STARTUP);
+      if (cmd === "optimize_plan") return Promise.resolve([action({ id: "font-caches" })]);
+      // Never resolves: the run is still in flight while progress arrives.
+      if (cmd === "optimize_execute") return new Promise(() => {});
+      return Promise.resolve(undefined);
+    });
+    render(<Optimize />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Run 1 action/ }));
+    await waitFor(() => expect(handlers.length).toBeGreaterThan(0));
+
+    for (const handler of handlers) {
+      handler({
+        payload: {
+          id: "font-caches",
+          label: "Clear font caches",
+          outcome: { kind: "succeeded" },
+        },
+      });
+    }
+
+    expect(await screen.findByText("Running…")).toBeTruthy();
+    expect(screen.getByText("Clear font caches")).toBeTruthy();
+    expect(screen.getByText("Done")).toBeTruthy();
   });
 
   it("surfaces a refused run without losing the action list", async () => {

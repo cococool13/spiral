@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { formatBytes } from "../lib/format";
 
 export interface Storage {
@@ -268,14 +269,37 @@ interface ActionsProps {
   selected: Set<string>;
   report: OptimizeReport | null;
   running: boolean;
+  progress: ActionResult[];
   onToggle: (id: string) => void;
   onRun: () => void;
   onReset: () => void;
 }
 
-function Actions({ actions, selected, report, running, onToggle, onRun, onReset }: ActionsProps) {
+function Actions({
+  actions,
+  selected,
+  report,
+  running,
+  progress,
+  onToggle,
+  onRun,
+  onReset,
+}: ActionsProps) {
   if (actions === null) return <p>Working out what can be done…</p>;
-  if (running) return <p>Running…</p>;
+  if (running)
+    return (
+      <>
+        <p>Running…</p>
+        <dl>
+          {progress.map((r) => (
+            <div key={r.id}>
+              <dt>{r.label}</dt>
+              <dd>{outcomeText(r.outcome)}</dd>
+            </div>
+          ))}
+        </dl>
+      </>
+    );
 
   if (report) {
     return (
@@ -343,6 +367,7 @@ export default function Optimize() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [report, setReport] = useState<OptimizeReport | null>(null);
   const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<ActionResult[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Deliberately does not clear `error`. A refusal is followed by a re-read,
@@ -376,6 +401,18 @@ export default function Optimize() {
   }, []);
 
   useEffect(load, [load]);
+
+  // Actions report as they finish. `verify-volume` alone reads the whole
+  // disk and takes minutes; without this the screen showed an unchanging
+  // "Running…" for that entire time, which reads as a hang.
+  useEffect(() => {
+    const subscription = listen<ActionResult>("optimize:result", (event) => {
+      setProgress((prev) => [...prev, event.payload]);
+    });
+    return () => {
+      subscription.then((unlisten) => unlisten()).catch(() => {});
+    };
+  }, []);
 
   const toggle = (item: StartupItem, enabled: boolean) => {
     setError(null);
@@ -411,6 +448,7 @@ export default function Optimize() {
 
   const run = () => {
     setError(null);
+    setProgress([]);
     setRunning(true);
     invoke<OptimizeReport>("optimize_execute", {
       ids: [...selected],
@@ -439,6 +477,7 @@ export default function Optimize() {
         selected={selected}
         report={report}
         running={running}
+        progress={progress}
         onToggle={toggleAction}
         onRun={run}
         onReset={() => {

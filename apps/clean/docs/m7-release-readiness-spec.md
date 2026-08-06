@@ -65,9 +65,30 @@ That is not a cosmetic gap. `orphans.rs` proposes any reverse-DNS entry **no dis
 
 That remains the one outstanding item that blocks a release tag and cannot be done by an agent.
 
+## Added after the first M7 commit
+
+### Progressive streaming
+
+The design spec's data flow has always described Clean streaming category results and Optimize streaming per-action results. Neither existed — there was not one `emit` in the codebase.
+
+**Clean** now emits `clean:category` as each category becomes **final**. "Final" is the load-bearing word: a category is not done when its first file lands, but when every outermost root that could still contribute has been walked. `package-manager-caches` draws from three unrelated roots, so emitting after the first would show a number that then grew — and hard rule 6 does not allow a size that is neither a labelled estimate nor a measurement. Each category is emitted once, with its true total, as early as that total can be known.
+
+**Optimize** emits `optimize:result` as each action finishes. `verify-volume` alone reads the whole disk and takes minutes; before this the screen showed an unchanging "Running…" for the entire run, which is indistinguishable from a hang.
+
+Both keep the batch return as the source of truth. **A dropped event costs promptness, never correctness** — a frontend that missed every event still ends up with the full list, and a test asserts exactly that.
+
+### PKG receipts — decision 21 closed
+
+`receipts.rs` inventories installer receipts read-only, marks the ones whose files are gone, and shows `sudo pkgutil --forget <id>` for the user to run.
+
+**M4b decision 2 is not reversed.** Spiral Clean still never forgets a receipt: doing so reclaims no space, and a stale receipt is safer than a missing one when an installer next runs. What was wrong was *removing* receipts, not *seeing* them — and seeing them is the parity decision 21 asked for. This is the posture already taken for Homebrew casks, system extensions and BTM login items: inventory it, show the evidence, hand off to the real owner.
+
+Apple's own receipts are excluded. They describe macOS itself, they are most of the list on any Mac, and including them would bury the few that are informative. A receipt listing no files is **not** called stale — unread is not the same as removed.
+
+### `startup_remove` now unloads first
+
+Removing a plist alone left the job loaded and running until the next logout, so a user watched a login item they had just deleted keep working. It now disables the service before the file is removed, and a refusal there is not fatal — the removal is still what was asked for.
+
 ## Out of scope
 
-- **Progressive streaming.** The design spec's data flow describes Clean streaming category results over Tauri events and Optimize streaming per-action results. Neither was ever built — there is not one `emit` in the codebase — and `verify-volume` sits behind an unchanging "Running…" for minutes as a result. Real work across three screens; recorded rather than smuggled into a release milestone.
-- **PKG receipts.** Cut at M4b for a reason that has not changed, still open against decision 21.
-- **`remove.rs` at 3,148 lines and `commands.rs` at 2,246**, against the 200–400 target.
-- **`startup_remove` does not unload the agent first.** The plist goes to the Trash; the job keeps running until logout.
+- **`remove.rs` at 3,148 lines and `commands.rs` at 2,246**, against the 200–400 target. Splitting them is a refactor with no behavioural change and real regression risk; it does not belong in the same commit as a release gate.

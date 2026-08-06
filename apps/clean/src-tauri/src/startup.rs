@@ -509,6 +509,16 @@ pub fn startup_remove(
         .as_ref()
         .ok_or_else(|| format!("Spiral Clean does not know where {label} is stored, so nothing was removed."))?;
 
+    // Disable it first. Removing the plist alone leaves the job loaded and
+    // running until the next logout, so the user watches a login item they
+    // just deleted keep working — which reads as the removal having failed.
+    // A refusal here is not fatal: the file removal below is still the thing
+    // that was asked for, and `launchctl` declining to disable an already
+    // disabled job is ordinary.
+    let _ = std::process::Command::new("launchctl")
+        .args(["disable", &service_target(item.tier, current_uid(), &label)])
+        .output();
+
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
     let reports = remove::execute(
         vec![remove::Candidate {
