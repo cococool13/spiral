@@ -38,17 +38,36 @@ thumbnail cache is capped at 200 MB and says so in Settings.
 
 ## Download
 
-Get the current version from the
-[latest release](https://github.com/cococool13/spiral-wallpaper/releases/latest):
+Three apps have been started. Two of them you can download today.
 
-- **macOS 13+** - `Spiral.Wallpaper_1.0.2_universal.dmg`. Signed with a Developer ID
+### Spiral Wallpaper — v1.0.2
+
+From the [latest release](https://github.com/cococool13/spiral-wallpaper/releases/latest):
+
+- **macOS 13+** — `Spiral.Wallpaper_1.0.2_universal.dmg`. Signed with a Developer ID
   and notarized by Apple; universal binary, runs native on Apple Silicon and
   Intel. Open the DMG, drag Spiral into Applications. That's the whole
   install.
-- **Windows 10+** - `Spiral.Wallpaper_1.0.2_x64-setup.exe` (or the `.msi`). Not yet
+- **Windows 10+** — `Spiral.Wallpaper_1.0.2_x64-setup.exe` (or the `.msi`). Not yet
   code-signed, so SmartScreen warns on first run: More info, then Run anyway.
 
-SHA-256 checksums for every file are attached to the release as
+### Spiral Slim — v1.0.0
+
+Lives in its own repository: [cococool13/Spiral-Slim](https://github.com/cococool13/Spiral-Slim/releases/latest).
+
+- **macOS 13+** — `Spiral.Slim_1.0.0_universal.dmg`, signed and notarized.
+- **Windows and Linux** — the Python script, run from source. **There is no
+  Windows binary and there never will be**: Slim's own `SECURITY.md` tells
+  users that any "Spiral Slim" installer or signed binary is a malware
+  indicator, so publishing one would contradict the advice the project gives
+  its own users.
+
+### Spiral Clean — not yet
+
+Feature-complete and unreleased. See [`apps/clean/README.md`](apps/clean/README.md)
+for what it does and the four things standing between it and a first tag.
+
+SHA-256 checksums for every file are attached to each release as
 `SHA256SUMS.txt`.
 
 ## Build from source
