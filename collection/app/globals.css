@@ -212,10 +212,36 @@ p {
   box-shadow: rgba(0, 0, 0, 0.04) 0 4px 24px;
 }
 
+/* Other Work rail — a scroll container, so it keeps a visible track. Hiding
+   the scrollbar would remove the only affordance a mouse user has before the
+   arrows are noticed. */
+.work-rail {
+  /* Full-bleed row, first card aligned to the page gutter (max-w-6xl = 72rem).
+     Written here, not as a Tailwind arbitrary value — calc() inside one loses
+     the spaces around its operators and the whole declaration is dropped. */
+  padding-inline: max(1.5rem, calc((100vw - 72rem) / 2));
+  scroll-padding-inline-start: max(1.5rem, calc((100vw - 72rem) / 2));
+  scrollbar-width: thin;
+  scrollbar-color: var(--spiral-conc-03) transparent;
+}
+.work-rail::-webkit-scrollbar {
+  height: 6px;
+}
+.work-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+.work-rail::-webkit-scrollbar-thumb {
+  background: var(--spiral-conc-03);
+  border-radius: 999px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glass-pill,
   .glass-pill:hover {
     transition: none;
     transform: none;
+  }
+  .work-rail :is(img) {
+    transition: none;
   }
 }
