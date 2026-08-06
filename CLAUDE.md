@@ -102,6 +102,11 @@ that discarded two fully signed builds on 2026-08-02. It pushes nothing without
 `--push`. `node scripts/version.mjs tag <tag>` answers the same question about a
 tag that already exists.
 
+**After any release, `collection/lib/apps.ts` goes stale** — it is the only page
+that hands out a binary, and its versions are copies of a git tag.
+`node scripts/downloads.mjs latest` checks it against what is actually
+published; CI runs it on `release: published` and weekly.
+
 Spiral Clean releases on a `clean-v*` tag, independent of
 Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
 `.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,

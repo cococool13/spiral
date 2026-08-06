@@ -142,6 +142,8 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | `pnpm build` | `collection` | static export into `out/` |
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |
 | `pnpm sync-brand` | any app or `collection` | re-copy brand assets from `brand/` |
+| `node scripts/downloads.mjs check` | repo root | the download page agrees with itself (no network) |
+| `node scripts/downloads.mjs latest` | repo root | the download page matches what is actually published |
 
 The design system is eight colors, two fonts, two radii, and one easing
 curve, enforced by the build. When in doubt, open the brand guide at
@@ -178,6 +180,12 @@ the current one.
 
 Without `--push` nothing leaves your machine. Pushing the tag is what publishes,
 and there is no undo for a public release.
+
+After a release publishes, `collection/lib/apps.ts` is the one file that goes
+stale — it hands visitors a binary, and its version is a copy of a fact that
+lives in a git tag. `node scripts/downloads.mjs latest` catches that, and CI
+runs it on every `release: published` (plus weekly, as the backstop for Slim,
+which publishes from its own repository and fires no event here).
 
 **Tagging by hand still works and is still guarded**, at three points now: the
 `versions` workflow re-checks the tag against the files within seconds of the

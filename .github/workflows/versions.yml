@@ -22,6 +22,11 @@ name: versions
 # this would double the run on exactly the branches that are being reviewed
 # and add nothing for the ones that are not.
 on:
+  release:
+    types: [published]
+  schedule:
+    # Weekly, as the backstop for releases published from another repository.
+    - cron: "0 9 * * 1"
   push:
     branches: [main]
     # Every release namespace. A tag that does not match its version files
@@ -45,6 +50,13 @@ jobs:
       - name: Every app's four version files agree
         run: node scripts/version.mjs check
 
+      # No network: this only asks whether the download page agrees with
+      # itself. The half-done bump — constant updated, filename not — is a
+      # real shape, and it is invisible in review because both lines look
+      # right on their own.
+      - name: The download page agrees with itself
+        run: node scripts/downloads.mjs check
+
   # Only on a tag. Deliberately a separate job so its failure names the real
   # problem — "this tag does not match" — rather than being one red step inside
   # a job called "check".
@@ -60,3 +72,29 @@ jobs:
 
       - name: This tag matches the version files it points at
         run: node scripts/version.mjs tag "${GITHUB_REF_NAME}"
+
+  # Whether the download page still matches what is actually published.
+  #
+  # Deliberately not on pull requests. It calls the GitHub API, and a rate
+  # limit failing someone's review for a reason they cannot fix would teach
+  # people to ignore a red check — which costs more than the drift it catches.
+  #
+  # `release: published` is the trigger that matters: publishing a release is
+  # the exact moment the site goes stale, and this says so within a minute
+  # instead of whenever somebody next looks. The schedule is the backstop for
+  # Spiral Slim, which publishes from its own repository and so fires no
+  # release event here.
+  downloads:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: The download page matches the latest published releases
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/downloads.mjs latest
