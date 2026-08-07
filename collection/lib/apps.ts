@@ -1,10 +1,12 @@
 /**
  * `source` is shipped and usable, but distributed as source rather than as a
- * download. Spiral Slim is the case that needed it: its own SECURITY.md tells
- * users that any "Spiral Slim" installer or signed binary is a malware
- * indicator, so offering a DMG here would contradict the project's own advice
- * to its users. Shipped is shipped, so it does not belong under "coming soon"
- * either.
+ * download — no status here may offer a binary that does not exist.
+ *
+ * Spiral Slim is the case that shaped it. Its SECURITY.md draws the line by
+ * platform, not by product: the policy scripts are source-only everywhere, and
+ * the only official binary is the signed, notarized macOS DMG of the wizard in
+ * `apps/slim/desktop`. So the Slim card offers that DMG on macOS and sends
+ * Windows visitors to the source, which is what `noWindowsBinary` is for.
  */
 export type AppStatus = "live" | "source" | "coming-soon";
 

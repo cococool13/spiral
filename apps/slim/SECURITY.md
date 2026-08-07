@@ -12,9 +12,9 @@ elsewhere, do not trust it.
 
 ### What "official" looks like
 
-The real project ships **source code only** — no compiled binaries, no
-installers, no executables. Every entry point is a human-readable script you
-can read before running:
+The policy tool is **source code only** — no compiled binaries, no installers,
+no executables. Every entry point is a human-readable script you can read
+before running:
 
 | Platform | File | Type | Browsers |
 |----------|------|------|----------|
@@ -23,23 +23,40 @@ can read before running:
 | Windows  | `SpiralSlim.ps1`      | PowerShell | Brave, Chrome, Edge, Firefox |
 
 The `Presets/` directory (flat, and per-browser under `Presets/<Browser>/`)
-contains JSON configuration files. That is the entire surface area of the
-project.
+contains JSON configuration files.
+
+**There is exactly one official binary, and it is not one of those scripts.**
+`desktop/` is a macOS wizard that drives the macOS script — it holds no policy
+logic of its own. It is distributed as a single file:
+
+| File | Platform | Signing |
+|------|----------|---------|
+| `Spiral.Slim_<version>_universal.dmg` | macOS 13+, universal | Developer ID signed and notarized by Apple |
+
+It is published on this project's GitHub Releases page and nowhere else.
+v1.0.0 is on the archived [`cococool13/Spiral-Slim`](https://github.com/cococool13/Spiral-Slim/releases/latest)
+release; every version after it ships from
+[`cococool13/spiral`](https://github.com/cococool13/spiral/releases) under a
+`slim-v*` tag. Every release carries `SHA256SUMS.txt`.
 
 ### What official does *not* include
 
-- **No `.exe`, `.msi`, `.pkg`, `.deb`, `.rpm`, `.AppImage`, or `.dmg` installer.**
-- **No precompiled binary of any kind.** The project has zero dependencies and
-  does not need to be compiled.
+- **No Windows or Linux binary, ever** — no `.exe`, `.msi`, `.deb`, `.rpm`, or
+  `.AppImage`. Windows and Linux users run the scripts. This is a deliberate
+  decision, not a gap waiting to be filled.
+- **No `.pkg`, and no macOS installer other than the signed DMG above.**
 - **No browser extension.**
-- **No standalone website** outside this GitHub repo.
+- **No standalone website** outside this GitHub repo and
+  [spiral-collection.netlify.app](https://spiral-collection.netlify.app), which
+  links here rather than hosting anything.
 
-If someone offers you a "Spiral Slim" (or "SlimBrave") installer, executable, or signed binary,
+If someone offers you a "Spiral Slim" (or "SlimBrave") executable for Windows
+or Linux, or a macOS download from anywhere but the Releases pages named above,
 **it is not from this project**. Report it and do not run it.
 
 ### How to verify you're running an authentic copy
 
-Use one of these two methods:
+**The scripts** — use one of these two methods:
 
 1. **Clone the repo directly:**
 
@@ -58,6 +75,17 @@ Use one of these two methods:
 The URL bar must show `github.com/cococool13/spiral` or
 `raw.githubusercontent.com/cococool13/spiral`. Anything else is not
 from this project.
+
+**The macOS app** — check the signature and the checksum before you open it:
+
+```bash
+shasum -a 256 "Spiral.Slim_<version>_universal.dmg"   # match SHA256SUMS.txt
+spctl -a -vvv -t install "/Applications/Spiral Slim.app"
+```
+
+`spctl` must say `accepted` and `source=Notarized Developer ID`. Anything else
+— unsigned, ad-hoc signed, or signed by a different identity — is not the
+build published here.
 
 ---
 

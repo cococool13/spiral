@@ -23,9 +23,11 @@ Spiral Slim uses enterprise managed policies to disable telemetry, bloat, and un
 > **The only official source of Spiral Slim is this repository:**
 > [`github.com/cococool13/spiral`](https://github.com/cococool13/spiral) (`apps/slim`)
 >
-> This project ships **source code only**. Python and PowerShell scripts you can read before running.
-> **There are no official `.exe`, `.msi`, `.dmg`, `.pkg`, installers, or compiled binaries.**
-> If you find a download claiming to be Spiral Slim elsewhere, it is not from this project. See [`SECURITY.md`](SECURITY.md).
+> The policy tool ships **source code only**. Python and PowerShell scripts you can read before running.
+> The one exception is [`desktop/`](desktop/README.md), the macOS wizard: a single signed, notarized
+> `Spiral.Slim_<version>_universal.dmg`, published on this project's Releases page and nowhere else.
+> **There is no Windows or Linux binary, and there never will be** — no `.exe`, `.msi`, `.deb`, `.rpm`, `.AppImage`.
+> If you find any other download claiming to be Spiral Slim, it is not from this project. See [`SECURITY.md`](SECURITY.md).
 
 > [!NOTE]
 > **Lineage & credit.** Spiral Slim began as a fork of [SlimBrave Neo](https://github.com/ChaoticSi1ence/SlimBrave-Neo) by ChaoticSi1ence and remains GPL-3.0. The multi-browser engine, per-browser catalogs, and preset system were developed upstream and merged in here; the macOS script also carries a `--detect`/`--preview-plan`/`--apply-plan` interface specific to this repo's native GUI wizard (see [`desktop/`](desktop/README.md)). For migration compatibility with SlimBrave installs, some on-disk identifiers deliberately keep their original names (the `slimbrave.json` policy filename and the macOS profile identifiers) — renaming them would leave migrating users with duplicate policy files that Chromium merges, and orphaned Configuration Profiles this tool could no longer remove.

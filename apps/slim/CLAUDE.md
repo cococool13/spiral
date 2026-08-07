@@ -1,6 +1,6 @@
 # Spiral Slim
 
-Cross-platform browser debloat/hardening tool using Chromium and Mozilla enterprise managed policies. Source-only project: Python for Linux/macOS, PowerShell for Windows, no packaged binaries.
+Cross-platform browser debloat/hardening tool using Chromium and Mozilla enterprise managed policies. The policy tool is source-only: Python for Linux/macOS, PowerShell for Windows, no packaged binaries. `desktop/` is the one exception — a macOS wizard shipped as a signed, notarized universal DMG. There is no Windows or Linux binary and there never will be.
 
 All three platforms share one multi-browser engine: `--browser brave|chrome|edge|firefox`
 (Edge is Windows/macOS only — no auditable Linux policy source) and one per-browser
@@ -69,7 +69,8 @@ Presets/<Browser>/   # per-browser preset JSON (Brave/Chrome/Edge/Firefox),
                      # below for how this relates to profiles/+modules/.
 assets/              # README screenshots/assets
 docs/                # collection integration contract
-SECURITY.md          # source-only distribution warning
+SECURITY.md          # distribution warning: scripts everywhere, one
+                     # signed macOS DMG, nothing else
 ```
 
 ## Two policy sources, deliberately not merged
@@ -104,7 +105,7 @@ plan the entrypoint accepts unchanged.
 ## Rules
 
 - The scripts require root/Administrator by design (they write browser/system policy locations). Run with `sudo`/Administrator only when the user has asked to apply or reset policy — never speculatively.
-- Keep the project source-only. Do not add `.exe`, `.msi`, `.dmg`, `.pkg`, or compiled binary guidance.
+- Keep the scripts source-only. Do not add `.exe`, `.msi`, `.deb`, `.rpm`, `.AppImage`, or `.pkg` guidance, and do not add a Windows or Linux binary — `SECURITY.md` promises users there is none. `desktop/`'s signed macOS DMG is the single documented exception; changing its terms means changing `SECURITY.md` first.
 - Verify macOS persistence behavior in `README.md` before changing `--persist` logic; profile installation requires GUI completion on modern macOS.
 - Preserve stdlib-only Python unless a dependency is deliberately introduced and documented.
 - Treat policy changes as security-sensitive: prefer explicit, readable mappings over clever abstractions.
