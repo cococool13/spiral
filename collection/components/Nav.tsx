@@ -20,9 +20,12 @@ export default function Nav() {
   return (
     <header className="fixed inset-x-0 top-6 z-50 flex justify-center px-4">
       <nav className="nav-pill flex w-full max-w-3xl items-center justify-between gap-4 py-2 pl-5 pr-2">
+        {/* min-h-11 = 44px: the mark and wordmark are only 20px tall, so the
+            link needs its own hit area. It fits inside the pill's existing
+            height, which the 44px download CTA already sets. */}
         <a
           href="/"
-          className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-red"
+          className="flex min-h-11 items-center gap-3 focus-visible:outline-2 focus-visible:outline-red"
         >
           {/* Small filled mark from /brand, recolored paper via CSS mask */}
           <span

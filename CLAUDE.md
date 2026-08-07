@@ -4,7 +4,7 @@ The Spiral monorepo: the brand system, the apps, and the site that houses them.
 Current app release **v1.0.3** (Spiral Wallpaper).
 
 > **There are two separate Spiral Wallpaper codebases.** This one (`Spiral Claude`) is the
-> shipped repo — `github.com/cococool13/spiral-wallpaper`, pnpm **11.9**, **no tray, closing the
+> shipped repo — `github.com/cococool13/spiral`, pnpm **11.9**, **no tray, closing the
 > window quits**. The Codex-built variant has a different structure and a `keepRunning` tray
 > mode; **facts do not transfer between them** — don't apply its tray/settings behavior here.
 > It is **no longer a sibling directory**, and as of 2026-08-02 its docs/assets no longer exist

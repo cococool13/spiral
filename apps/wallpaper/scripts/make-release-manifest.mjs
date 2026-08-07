@@ -9,7 +9,7 @@
 // emit a partial manifest — it throws instead, and the release never happens.
 //
 //   node scripts/make-release-manifest.mjs \
-//     --dir ./artifacts --version 1.0.2 --repo cococool13/spiral-wallpaper \
+//     --dir ./artifacts --version 1.0.2 --repo cococool13/spiral \
 //     --notes "What changed" --date 2026-07-29T12:00:00Z
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";

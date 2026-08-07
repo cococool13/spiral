@@ -6,40 +6,45 @@
 
 **Small tools. No bloat. Your data stays yours.**
 
-The Spiral monorepo: the brand system, every app, and the site that houses
-them. The first app is **Spiral Wallpaper** — click a wallpaper, it downloads
-and applies, that's it.
+Every Spiral app, the brand system they share, and the site that houses them.
+One repository — each app is a folder, not a separate project.
 
-[![build](https://github.com/cococool13/spiral-wallpaper/actions/workflows/build.yml/badge.svg)](https://github.com/cococool13/spiral-wallpaper/actions/workflows/build.yml)
+[**spiral-collection.netlify.app**](https://spiral-collection.netlify.app)
+
+[![build](https://github.com/cococool13/spiral/actions/workflows/build.yml/badge.svg)](https://github.com/cococool13/spiral/actions/workflows/build.yml)
 ![platforms](https://img.shields.io/badge/macOS%2013%2B%20·%20Windows%2010%2B-10181B?label=runs%20on)
-![size](https://img.shields.io/badge/binary-4.6%20MB-D52E2B)
 [![license](https://img.shields.io/badge/license-MIT-666863)](LICENSE)
 
-<img src="docs/screenshot-browse.png" alt="Spiral Wallpaper browse screen: a thumbnail grid with a glass Apply wallpaper button on the hovered tile" width="820" />
-
-<sub>The Browse screen. Thumbnails above are dev-preview placeholders; the app browses Wallhaven.</sub>
+<img src="docs/screenshot-site.png" alt="The Spiral website: the Spiral wordmark over the line Small tools. No bloat. Your data stays yours." width="820" />
 
 </div>
 
-A free desktop wallpaper app for macOS and Windows, built on three things it
-actually does rather than promises:
+Three promises, kept the same way in every app:
 
-- **Privacy.** No account. No telemetry. Zero network requests until you
-  search or apply; every request goes to Wallhaven and nowhere else. All
-  networking runs in the Rust core, never the webview.
-- **Ease.** One Browse screen, one Settings page, one first-run sentence.
-  The app quits when you close the window. Nothing runs in the background.
-- **Super lightweight.** 4.6 MB binary, ~95 MB idle RAM, window on screen in
-  0.23 s (measured on Apple Silicon). Tauri 2, not Electron.
+- **Privacy.** No account. No telemetry. No network request you did not ask
+  for. Where an app talks to the internet at all, it names the host it talks
+  to and talks to nothing else.
+- **Ease.** One window, one job. Everything the app is about to do is on
+  screen before it does it. Close the window and the app is gone — nothing
+  keeps running.
+- **Lightweight.** Native binaries measured in megabytes. Tauri and Rust, not
+  Electron.
 
-Everything the app does is stated on-screen before it happens. Downloaded
-files are verified to actually be images before they touch disk. The
-thumbnail cache is capped at 200 MB and says so in Settings.
+## The apps
 
-## Download
+| App | What it does | Status | Get it |
+| --- | --- | --- | --- |
+| [**Spiral Wallpaper**](apps/wallpaper/) | Click a wallpaper, it downloads and applies. Browses [Wallhaven](https://wallhaven.cc). 4.6 MB binary, ~95 MB idle RAM, window on screen in 0.23 s. | **v1.0.3** — macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/latest) |
+| [**Spiral Slim**](apps/slim/) | Debloats and hardens Brave, Chrome, Edge, and Firefox with enterprise policies the browsers respect natively. Shows every change before it makes it. | **v1.0.0** — macOS app, scripts everywhere | [Download](https://github.com/cococool13/Spiral-Slim/releases/latest) · [Read the scripts](apps/slim/) |
+| [**Spiral Clean**](apps/clean/) | Reclaims disk space and uninstalls apps, macOS only. Every removal is proven safe by a Rust test suite before it ships. | Unreleased — Clean and Uninstall built | [Design spec](apps/clean/docs/design-spec.md) |
+
+Spiral Dashboard, Resume, Weather, Transcribe, and Chat are named on the site
+and not yet started. They are ideas, not promises.
+
+## Download Spiral Wallpaper
 
 Get the current version from the
-[latest release](https://github.com/cococool13/spiral-wallpaper/releases/latest):
+[latest release](https://github.com/cococool13/spiral/releases/latest):
 
 - **macOS 13+** - `Spiral.Wallpaper_1.0.3_universal.dmg`. Signed with a Developer ID
   and notarized by Apple; universal binary, runs native on Apple Silicon and
@@ -50,6 +55,18 @@ Get the current version from the
 
 SHA-256 checksums for every file are attached to the release as
 `SHA256SUMS.txt`.
+
+<div align="center">
+
+<img src="docs/screenshot-browse.png" alt="Spiral Wallpaper browse screen: a thumbnail grid with a glass Apply wallpaper button on the hovered tile" width="820" />
+
+<sub>The Browse screen. Thumbnails above are dev-preview placeholders; the app browses Wallhaven.</sub>
+
+</div>
+
+Everything the app does is stated on-screen before it happens. Downloaded
+files are verified to actually be images before they touch disk. The
+thumbnail cache is capped at 200 MB and says so in Settings.
 
 ## Build from source
 
@@ -180,13 +197,22 @@ things it cannot derive, checks the certificate password actually opens the
 
 ## Roadmap, stated plainly
 
-Current: v1.0.3, with a signed and notarized universal macOS build. Next:
-Windows signing and the remaining runtime pass on real Windows hardware.
+**Wallpaper** is at v1.0.3 with a signed and notarized universal macOS build.
+Next: Windows signing and the remaining runtime pass on real Windows hardware.
 On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
 and were removed; the `WallpaperSource` interface is waiting for them). Out
 of scope for v1: animated wallpapers, auto-update, anything that phones home.
 
+**Clean** has its Clean and Uninstall screens working behind a tested safety
+core. Storage and Optimize are stubs, and there is no release until they land.
+
+**Slim** is done for what it set out to do. It stays script-first on every
+platform by design — see [`apps/slim/SECURITY.md`](apps/slim/SECURITY.md).
+
 ---
 
-[MIT licensed](LICENSE). Wallpapers from [Wallhaven](https://wallhaven.cc).
-Spiral is not affiliated.
+[MIT licensed](LICENSE), except [`apps/slim/`](apps/slim/), which is
+[GPL-3.0](apps/slim/LICENSE) — it began as a fork of
+[SlimBrave Neo](https://github.com/ChaoticSi1ence/SlimBrave-Neo).
+Wallpapers from [Wallhaven](https://wallhaven.cc). Spiral is not affiliated
+with either.

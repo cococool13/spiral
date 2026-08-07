@@ -11,7 +11,7 @@
 # Two of the six are read from your keychain, so there are four things to type.
 set -euo pipefail
 
-REPO="cococool13/spiral-wallpaper"
+REPO="cococool13/spiral"
 
 bold() { printf '\033[1m%s\033[0m\n' "$1"; }
 dim() { printf '\033[2m%s\033[0m\n' "$1"; }

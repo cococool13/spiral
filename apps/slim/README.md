@@ -21,7 +21,7 @@ Spiral Slim uses enterprise managed policies to disable telemetry, bloat, and un
 
 > [!IMPORTANT]
 > **The only official source of Spiral Slim is this repository:**
-> [`github.com/cococool13/spiral-wallpaper`](https://github.com/cococool13/spiral-wallpaper) (`apps/slim`)
+> [`github.com/cococool13/spiral`](https://github.com/cococool13/spiral) (`apps/slim`)
 >
 > This project ships **source code only**. Python and PowerShell scripts you can read before running.
 > **There are no official `.exe`, `.msi`, `.dmg`, `.pkg`, installers, or compiled binaries.**
@@ -127,7 +127,7 @@ After applying, restart the browser and verify at `brave://policy`.
 ### Windows
 
 ```powershell
-iwr "https://raw.githubusercontent.com/cococool13/Spiral-Slim/main/SpiralSlim.ps1" -OutFile "SpiralSlim.ps1"; .\SpiralSlim.ps1
+iwr "https://raw.githubusercontent.com/cococool13/spiral/main/apps/slim/SpiralSlim.ps1" -OutFile "SpiralSlim.ps1"; .\SpiralSlim.ps1
 ```
 
 To manage Google Chrome or Microsoft Edge instead of Brave:

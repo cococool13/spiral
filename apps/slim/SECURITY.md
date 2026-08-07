@@ -4,7 +4,7 @@
 
 **The only official source of Spiral Slim is this GitHub repository:**
 
-> https://github.com/cococool13/spiral-wallpaper (`apps/slim`)
+> https://github.com/cococool13/spiral (`apps/slim`)
 
 Any other website, repository, installer, executable, or download link claiming
 to be Spiral Slim is **not affiliated with this project**. If you found a copy
@@ -44,19 +44,19 @@ Use one of these two methods:
 1. **Clone the repo directly:**
 
    ```
-   git clone https://github.com/cococool13/spiral-wallpaper.git
+   git clone https://github.com/cococool13/spiral.git
    ```
 
 2. **Or download a script directly from the raw URL on `github.com`:**
 
    ```
-   https://raw.githubusercontent.com/cococool13/spiral-wallpaper/main/apps/slim/spiral-slim-linux.py
-   https://raw.githubusercontent.com/cococool13/spiral-wallpaper/main/apps/slim/spiral-slim-mac.py
-   https://raw.githubusercontent.com/cococool13/spiral-wallpaper/main/apps/slim/SpiralSlim.ps1
+   https://raw.githubusercontent.com/cococool13/spiral/main/apps/slim/spiral-slim-linux.py
+   https://raw.githubusercontent.com/cococool13/spiral/main/apps/slim/spiral-slim-mac.py
+   https://raw.githubusercontent.com/cococool13/spiral/main/apps/slim/SpiralSlim.ps1
    ```
 
-The URL bar must show `github.com/cococool13/spiral-wallpaper` or
-`raw.githubusercontent.com/cococool13/spiral-wallpaper`. Anything else is not
+The URL bar must show `github.com/cococool13/spiral` or
+`raw.githubusercontent.com/cococool13/spiral`. Anything else is not
 from this project.
 
 ---
@@ -67,7 +67,7 @@ If you believe you have found a security issue in Spiral Slim, please report
 it privately rather than opening a public issue.
 
 Use GitHub's **Private Vulnerability Reporting**:
-https://github.com/cococool13/spiral-wallpaper/security/advisories/new
+https://github.com/cococool13/spiral/security/advisories/new
 
 Please include:
 

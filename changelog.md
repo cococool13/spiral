@@ -18,7 +18,7 @@ Original archived to `_archive/2026-07-24/CLAUDE.md`. Nothing deleted.
 ### Fixed (conflict)
 This file and `../Spiral Codex/CLAUDE.md` are **two different codebases** of the same
 product, and each described the other's behavior as its own. Added a disambiguation banner:
-this is the shipped repo (`github.com/cococool13/spiral-wallpaper`), pnpm 11.9, **no tray**.
+this is the shipped repo (`github.com/cococool13/spiral`), pnpm 11.9, **no tray**.
 The Codex build has a `keepRunning` tray mode and pnpm 10.17.1. Facts do not transfer.
 
 ### Cut
