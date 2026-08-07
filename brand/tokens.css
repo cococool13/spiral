@@ -20,6 +20,26 @@
   --spiral-red: #d52e2b;
   --spiral-oxblood: #6f1011;
 
+  /* light temperatures — the /cool page ONLY.
+     Scoped exception to the palette rule, and the only one. These are not
+     Spiral brand colours and must never appear on a product surface, in an
+     app, or on any other page of the site. Anything outside
+     collection/app/cool/ using a --cool-* value is a bug.
+
+     They are named for real light sources rather than hues on purpose. The
+     page is a night-into-morning ride through real places, and lighting it
+     from a spectrum instead of from actual lamps and sky is what made an
+     earlier version read as science fiction. */
+  --cool-void: #06070a; /* unlit night */
+  --cool-asphalt: #16181c; /* wet road surface */
+  --cool-sodium: #ff9d4a; /* high-pressure sodium street lamp */
+  --cool-tungsten: #ffc98a; /* warm interior lamp */
+  --cool-mercury: #cfe0f5; /* cold fluorescent and LED */
+  --cool-dusk: #26406e; /* sky before sunrise */
+  --cool-horizon: #ff7b52; /* the sunrise band itself */
+  --cool-daylight: #e8eff7; /* open sky, full morning */
+  --cool-moss: #46523c; /* roadside ground */
+
   /* type */
   --spiral-font-display: "Archivo", sans-serif; /* variable: wdth + wght */
   --spiral-font-mono: "IBM Plex Mono", monospace;
