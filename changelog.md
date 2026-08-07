@@ -1,5 +1,13 @@
 # changelog
 
+## 2026-08-07 — Documentation audit
+
+Verified the published, signed `v1.0.3` release and updated the root `README.md`
+and `CLAUDE.md` from v1.0.2. The release-tag command now uses `vX.Y.Z` so it
+does not become stale. Audited 139 active Markdown files and 239 local links;
+all links resolve and all code fences are balanced. Historical, generated, and
+user-modified documents were preserved.
+
 ## 2026-07-24 — CLAUDE.md context audit
 
 Audited against [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).
