@@ -27,6 +27,12 @@ export interface SpiralApp {
   noWindowsBinary?: true;
   /** Inline SVG path data drawn in a 24x24 viewBox, stroke-based. */
   iconPath: string;
+  /**
+   * Homebrew cask token, for the apps in the cococool13/spiral tap. Present
+   * only where a signed macOS build exists — a brew command for an app with no
+   * cask would fail in the terminal after the person had already copied it.
+   */
+  brewCask?: string;
   downloads?: {
     mac: { url: string; label: string };
     windows: { url: string; label: string };
@@ -44,6 +50,7 @@ export const apps: SpiralApp[] = [
     tagline: "Click a wallpaper. It downloads and applies. That's it.",
     status: "live",
     version: "1.0.3",
+    brewCask: "spiral-wallpaper",
     iconPath: "M3 5h18v13H3zM3 18h18M9 21h6M6 8l4 4M14 8l4 4M10 12l-2 3M16 12l-1.5 3",
     downloads: {
       mac: {
@@ -63,6 +70,7 @@ export const apps: SpiralApp[] = [
     tagline: "Sets Brave's privacy policies. Shows every change first.",
     status: "live",
     version: "1.0.0",
+    brewCask: "spiral-slim",
     noWindowsBinary: true,
     downloads: {
       mac: {

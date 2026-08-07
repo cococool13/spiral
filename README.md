@@ -11,6 +11,12 @@ One repository — each app is a folder, not a separate project.
 
 [**spiral-collection.netlify.app**](https://spiral-collection.netlify.app)
 
+On a Mac, one line gets you the app:
+
+```
+brew install --cask cococool13/spiral/spiral-wallpaper
+```
+
 [![build](https://github.com/cococool13/spiral/actions/workflows/build.yml/badge.svg)](https://github.com/cococool13/spiral/actions/workflows/build.yml)
 ![platforms](https://img.shields.io/badge/macOS%2013%2B%20·%20Windows%2010%2B-10181B?label=runs%20on)
 [![license](https://img.shields.io/badge/license-MIT-666863)](LICENSE)
@@ -41,20 +47,54 @@ Three promises, kept the same way in every app:
 Spiral Dashboard, Resume, Weather, Transcribe, and Chat are named on the site
 and not yet started. They are ideas, not promises.
 
-## Download Spiral Wallpaper
+## Install
 
-Get the current version from the
-[latest release](https://github.com/cococool13/spiral/releases/latest):
+### On a Mac, in one line
 
-- **macOS 13+** - `Spiral.Wallpaper_1.0.3_universal.dmg`. Signed with a Developer ID
-  and notarized by Apple; universal binary, runs native on Apple Silicon and
-  Intel. Open the DMG, drag Spiral into Applications. That's the whole
-  install.
-- **Windows 10+** - `Spiral.Wallpaper_1.0.3_x64-setup.exe` (or the `.msi`). Not yet
-  code-signed, so SmartScreen warns on first run: More info, then Run anyway.
+If you have [Homebrew](https://brew.sh), paste one of these into Terminal:
 
-SHA-256 checksums for every file are attached to the release as
-`SHA256SUMS.txt`.
+```bash
+brew install --cask cococool13/spiral/spiral-wallpaper
+```
+
+```bash
+brew install --cask cococool13/spiral/spiral-slim
+```
+
+That's the whole install. To update later, `brew upgrade --cask spiral-wallpaper`.
+To remove an app and everything it saved, `brew uninstall --zap --cask spiral-wallpaper`.
+
+### On a Mac, without Homebrew
+
+1. Download the `.dmg` from the [latest release](https://github.com/cococool13/spiral/releases/latest).
+2. Open it.
+3. Drag the app into Applications.
+
+Done. Apple has checked these apps (they are signed and notarized), so they
+open normally — no right-click, no security warning to click past.
+
+### On Windows
+
+1. Download the `.exe` from the [latest release](https://github.com/cococool13/spiral/releases/latest).
+2. Run it.
+3. Windows shows a blue **"Windows protected your PC"** box. Click **More
+   info**, then **Run anyway**.
+
+That box appears because the file is not code-signed yet, not because anything
+is wrong with it. Signing costs money and is on the list.
+
+Spiral Slim has no Windows download on purpose — on Windows you run its script
+instead. [Here's how](apps/slim/).
+
+### Want to check the file is the real one?
+
+Every release includes `SHA256SUMS.txt`. Compare it to the file you downloaded:
+
+```bash
+shasum -a 256 ~/Downloads/Spiral.Wallpaper_1.0.3_universal.dmg
+```
+
+If the line matches, the file is byte-for-byte what was published here.
 
 <div align="center">
 
@@ -68,24 +108,32 @@ Everything the app does is stated on-screen before it happens. Downloaded
 files are verified to actually be images before they touch disk. The
 thumbnail cache is capped at 200 MB and says so in Settings.
 
-## Build from source
+## Build it yourself
 
-Needs Node 22+, pnpm, and Rust (rustup). On macOS: `xcode-select --install`.
-On Windows: Microsoft C++ Build Tools.
+You need [Node 22+](https://nodejs.org), [pnpm](https://pnpm.io), and
+[Rust](https://rustup.rs). On a Mac, also run `xcode-select --install`. On
+Windows, install Microsoft C++ Build Tools.
+
+Then:
 
 ```bash
-cd apps/wallpaper
+git clone https://github.com/cococool13/spiral.git
+cd spiral/apps/wallpaper
 pnpm install
-pnpm tauri dev      # run the app
-pnpm tauri build    # release bundles (.app/.dmg or .exe/.msi)
+pnpm tauri dev
 ```
 
-`pnpm build` runs the quality gates: a guard that fails the build on any hex
-color outside the design tokens, then typecheck, then Vite.
-`pnpm smoke` runs a full end-to-end smoke test (search, cache, download, set
-wallpaper, verify) and restores your wallpaper after. It exits non-zero when
-the smoke fails, so it can gate a release — `tauri dev` does not forward the
-app's exit code on its own.
+The app opens. `pnpm tauri build` instead of `pnpm tauri dev` makes an
+installer you can keep.
+
+Swap `apps/wallpaper` for `apps/clean` or `apps/slim/desktop` to run one of
+the others the same way.
+
+Two extra commands, if you're changing the code: `pnpm build` refuses to
+finish if any colour is outside the design tokens or TypeScript complains, and
+`pnpm smoke` runs the app end to end — search, download, set the wallpaper —
+then puts your old wallpaper back. It exits non-zero when it fails, so it can
+gate a release.
 
 ## What's in this repo
 
@@ -171,6 +219,25 @@ a signing or notarization secret is missing, and the manifest step throws
 rather than emitting a `latest.json` without signatures — an unsigned macOS
 build is blocked by Gatekeeper, and a bundle with no `.sig` breaks the updater
 for everyone already running the previous version.
+
+### After a macOS release: bump the Homebrew cask
+
+`brew install --cask cococool13/spiral/<app>` is served by
+[`cococool13/homebrew-spiral`](https://github.com/cococool13/homebrew-spiral),
+a separate repo only because Homebrew requires taps to be named `homebrew-*`.
+A release is not finished until its cask points at it — until then `brew`
+installs the previous version.
+
+Edit `Casks/<app>.rb` in that repo: set `version`, and set `sha256` to the
+line for the `.dmg` in the new release's `SHA256SUMS.txt`. Then:
+
+```bash
+brew audit --cask --online cococool13/spiral/<app>
+```
+
+Homebrew verifies the checksum on every install, so a stale `sha256` does not
+install the wrong file — it fails loudly, which is the right failure but still
+a broken install command.
 
 ### One-time setup
 

@@ -52,6 +52,17 @@ Spiral Slim uses enterprise managed policies to disable telemetry, bloat, and un
 
 ## Quick Start
 
+**On a Mac, the easiest way is the app.** One line in Terminal, then open it
+like any other app — it walks you through the whole thing and shows every
+change before making it:
+
+```bash
+brew install --cask cococool13/spiral/spiral-slim
+```
+
+Everything below is the script version: same policies, run from a terminal, on
+any of the three platforms. Pick whichever you prefer — you only need one.
+
 ### Linux
 
 ```bash
@@ -85,7 +96,7 @@ sudo python3 spiral-slim-mac.py
 
 Requires root. Policies are written to `/Library/Managed Preferences/com.brave.Browser.plist` by default; with `--persist on` an Apple Configuration Profile is installed instead.
 
-A native macOS GUI wizard is in progress under [`desktop/`](desktop/README.md); it isn't published yet. It drives this same script through a read-only `--detect`/`--preview-plan`/`--apply-plan` interface (Brave only — see [CLI Reference](#cli-reference)).
+The native macOS wizard under [`desktop/`](desktop/README.md) is v1.0.0 and shipped — install it with `brew install --cask cococool13/spiral/spiral-slim`, or [download the DMG](https://github.com/cococool13/Spiral-Slim/releases/latest). It drives this same script through a read-only `--detect`/`--preview-plan`/`--apply-plan` interface (Brave only — see [CLI Reference](#cli-reference)).
 
 **Persistence on macOS (Apple Silicon / macOS 13+).** On modern macOS, `cfprefsd` and `mdmclient` may clear directly-written `/Library/Managed Preferences/*.plist` files at reboot when no Configuration Profile backs them, so policies don't always survive a restart. Spiral Slim offers two modes:
 

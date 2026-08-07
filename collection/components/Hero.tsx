@@ -1,6 +1,7 @@
 "use client";
 
 import { m, useReducedMotion } from "framer-motion";
+import DownloadMenu from "./DownloadMenu";
 import HeroLogo from "./HeroLogo";
 import InteractiveGrid from "./InteractiveGrid";
 
@@ -51,6 +52,15 @@ export default function Hero() {
         >
           Small tools. No bloat. Your data stays yours.
         </m.p>
+
+        <m.div
+          className="mt-8"
+          initial={reduced ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 80, damping: 16, delay: 1.15 }}
+        >
+          <DownloadMenu />
+        </m.div>
 
         <m.div
           className="mt-16 grid w-full grid-cols-1 gap-8 text-left sm:grid-cols-3"

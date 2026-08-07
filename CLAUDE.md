@@ -92,6 +92,12 @@ Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
 `.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,
 updater: false` — there is no updater until M7.
 
+**Every macOS release has a second step CI does not do:** bump the matching cask in
+[`cococool13/homebrew-spiral`](https://github.com/cococool13/homebrew-spiral)
+(`version` + the `.dmg` line from `SHA256SUMS.txt`), or `brew install --cask
+cococool13/spiral/<app>` keeps installing the previous version. The tap is a separate
+repo only because Homebrew requires taps to be named `homebrew-*`; it is not an app repo.
+
 ```bash
 cd collection
 pnpm install

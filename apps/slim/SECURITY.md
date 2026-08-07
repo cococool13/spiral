@@ -33,7 +33,17 @@ logic of its own. It is distributed as a single file:
 |------|----------|---------|
 | `Spiral.Slim_<version>_universal.dmg` | macOS 13+, universal | Developer ID signed and notarized by Apple |
 
-It is published on this project's GitHub Releases page and nowhere else.
+It is published on this project's GitHub Releases page and nowhere else, and
+served by one official Homebrew tap that installs that exact file:
+
+```bash
+brew install --cask cococool13/spiral/spiral-slim
+```
+
+The tap is [`github.com/cococool13/homebrew-spiral`](https://github.com/cococool13/homebrew-spiral).
+It pins the release's SHA-256, so Homebrew refuses to install anything else. A
+`brew install` for Spiral Slim from any other tap is not from this project.
+
 v1.0.0 is on the archived [`cococool13/Spiral-Slim`](https://github.com/cococool13/Spiral-Slim/releases/latest)
 release; every version after it ships from
 [`cococool13/spiral`](https://github.com/cococool13/spiral/releases) under a
