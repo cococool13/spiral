@@ -1,6 +1,8 @@
 @import "tailwindcss";
-/* Brand tokens — synced from /brand (single source of truth). */
-@import "../../brand/tokens.css";
+/* Brand tokens — the gitignored copy `sync-brand` writes before dev and build.
+   /brand stays the single source of truth; reaching outside the project root
+   here is what Turbopack refuses to resolve in `next dev`. */
+@import "../public/brand/tokens.css";
 
 @font-face {
   font-family: "Archivo";
