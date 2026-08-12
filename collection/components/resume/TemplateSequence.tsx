@@ -138,18 +138,21 @@ export default function TemplateSequence() {
       style={{ height: `${SHEETS.length * PER_SHEET * 100}vh` }}
       className="relative"
     >
-      <div className="sticky top-0 flex h-screen items-center overflow-hidden">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-12 px-6">
+      {/* The stage is the viewport minus the floating nav pill at the top and a
+          little air at the bottom. The sheet then fills what is left, rather
+          than sitting at a fixed fraction of it and leaving the column empty. */}
+      <div className="sticky top-0 flex h-screen items-center overflow-hidden pt-24 pb-10">
+        <div className="mx-auto flex h-full w-full max-w-6xl items-stretch gap-12 px-6">
           {/* The rail names what is on screen. Without it the sequence is
               pretty and mute — the reader cannot tell one layout from another
               by looking at a page of their own words. */}
-          <ol className="hidden w-56 shrink-0 lg:block">
+          <ol className="hidden w-56 shrink-0 self-center lg:block">
             {SHEETS.map((sheet, i) => (
               <RailItem key={sheet.id} sheet={sheet} index={i} active={index} />
             ))}
           </ol>
 
-          <div className="relative h-[68vh] flex-1">
+          <div className="relative h-full flex-1">
             {SHEETS.map((sheet, i) => (
               <Sheet key={sheet.id} sheet={sheet} index={i} progress={scrollYProgress} />
             ))}
