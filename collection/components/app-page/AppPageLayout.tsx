@@ -98,7 +98,7 @@ export default function AppPageLayout({
           </ol>
         </section>
 
-        {page.facts ? (
+        {page.facts && page.factsHeading ? (
           <section className="mx-auto max-w-6xl px-6 py-32 sm:py-40">
             <Reveal>
               <p className="type-eyebrow text-paper">The numbers</p>
