@@ -5,6 +5,7 @@
 //! `sys.inputs.resume`, and `prelude.typ` decodes it. That is why this file
 //! contains no escaping: there is no string to escape into.
 
+use crate::docx::DocxStyle;
 use crate::model::ResumeDoc;
 use typst::foundations::{Dict, IntoValue, Str};
 
@@ -12,7 +13,13 @@ pub struct Template {
     pub id: &'static str,
     pub name: &'static str,
     pub source: &'static str,
+    /// The same design expressed in Word's terms. Declared here, beside the
+    /// Typst source, so the two halves of a template cannot drift apart.
+    pub docx: DocxStyle,
 }
+
+const SERIF: &str = "Times New Roman";
+const SANS: &str = "Arial";
 
 const PRELUDE: &str = include_str!("prelude.typ");
 
@@ -21,26 +28,71 @@ const TEMPLATES: &[Template] = &[
         id: "column",
         name: "Column",
         source: include_str!("column.typ"),
+        docx: DocxStyle {
+            font: SERIF,
+            name_size: 38,
+            body_size: 21,
+            name_centered: true,
+            section_rule: false,
+            header_shading: None,
+            date_rail: false,
+        },
     },
     Template {
         id: "ledger",
         name: "Ledger",
         source: include_str!("ledger.typ"),
+        docx: DocxStyle {
+            font: SERIF,
+            name_size: 36,
+            body_size: 21,
+            name_centered: false,
+            section_rule: false,
+            header_shading: None,
+            date_rail: true,
+        },
     },
     Template {
         id: "sheet",
         name: "Sheet",
         source: include_str!("sheet.typ"),
+        docx: DocxStyle {
+            font: SANS,
+            name_size: 32,
+            body_size: 20,
+            name_centered: false,
+            section_rule: false,
+            header_shading: None,
+            date_rail: false,
+        },
     },
     Template {
         id: "rule",
         name: "Rule",
         source: include_str!("rule.typ"),
+        docx: DocxStyle {
+            font: SERIF,
+            name_size: 40,
+            body_size: 21,
+            name_centered: false,
+            section_rule: true,
+            header_shading: None,
+            date_rail: false,
+        },
     },
     Template {
         id: "card",
         name: "Card",
         source: include_str!("card.typ"),
+        docx: DocxStyle {
+            font: SANS,
+            name_size: 40,
+            body_size: 20,
+            name_centered: false,
+            section_rule: false,
+            header_shading: Some("f0efec"),
+            date_rail: false,
+        },
     },
 ];
 
@@ -186,7 +238,10 @@ mod dump {
             let svg = super::to_svg_pages(template, &doc).unwrap().remove(0);
             let path = out.join(format!("{}.svg", template.id));
             std::fs::write(&path, svg).unwrap();
-            println!("wrote {}", path.display());
+            let docx = crate::docx::to_docx(&doc, &template.docx).unwrap();
+            let docx_path = out.join(format!("{}.docx", template.id));
+            std::fs::write(&docx_path, docx).unwrap();
+            println!("wrote {} and {}", path.display(), docx_path.display());
         }
     }
 }

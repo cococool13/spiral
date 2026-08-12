@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod docx;
 pub mod model;
 pub mod parse_text;
 pub mod render;
