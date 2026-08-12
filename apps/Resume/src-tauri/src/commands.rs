@@ -206,8 +206,15 @@ pub struct EngineInfo {
     pub model: String,
     pub base_url: String,
     pub has_key: bool,
+    /// Whether a model tier would actually run. Not the same question as
+    /// `has_key`: the offline tier needs no key and would report `false`,
+    /// which is what used to hide "another version" from it entirely.
+    pub uses_model: bool,
     /// The exact hostname the key would be sent to, shown before anything is.
     pub host: String,
+    /// Where this provider issues keys, or empty when there is nowhere to send
+    /// someone. The frontend opens it; it never guesses it.
+    pub key_url: String,
 }
 
 fn engine_of(app: &tauri::AppHandle) -> Result<(EngineSettings, Provider), String> {
@@ -217,13 +224,27 @@ fn engine_of(app: &tauri::AppHandle) -> Result<(EngineSettings, Provider), Strin
     Ok((stored, provider))
 }
 
+/// Is there a model behind the button? A saved key for a hosted provider, or
+/// the downloaded model for the offline one. Everything that offers a rewrite
+/// asks this, so the two tiers cannot drift apart.
+fn model_ready(root: &std::path::Path, provider: &Provider) -> bool {
+    if provider.needs_key() {
+        keys::has(provider.id())
+    } else {
+        crate::local::status(root).installed
+    }
+}
+
 #[tauri::command]
 pub fn engine_info(app: tauri::AppHandle) -> Result<EngineInfo, String> {
+    let root = store_for(&app)?.path().to_path_buf();
     let (stored, provider) = engine_of(&app)?;
     Ok(EngineInfo {
         // An engine that needs no credential never reports one.
         has_key: provider.needs_key() && keys::has(provider.id()),
+        uses_model: model_ready(&root, &provider),
         host: provider.host(),
+        key_url: provider.key_url().to_string(),
         provider: stored.provider,
         model: stored.model,
         base_url: stored.base_url,
@@ -312,7 +333,8 @@ pub fn parse_pasted_text(text: String) -> ResumeDoc {
     parse_text::parse_text(&text)
 }
 
-/// Five compiles, roughly 200 ms in total. Deliberately synchronous: the Style
+/// Twelve compiles, roughly half a second in total. Deliberately synchronous:
+/// the Style
 /// screen has nothing to show until they are all done, and a progress bar for
 /// a fifth of a second would be theatre.
 #[tauri::command]
@@ -332,6 +354,19 @@ pub struct BuildResult {
     pub engine: String,
     /// One line per rewrite the fact gate refused. Never an error.
     pub notes: Vec<String>,
+}
+
+/// The two engine names that are not built from a hostname. Stated once, so
+/// the build screen and the result screen cannot say different things.
+const OFFLINE_ENGINE: &str = "Built offline, no network used";
+const LOCAL_ENGINE: &str = "Rewritten on this computer — nothing left it";
+
+fn stage(name: &str, percent: u8, engine: &str) -> Progress {
+    Progress {
+        stage: name.to_string(),
+        percent,
+        engine: engine.to_string(),
+    }
 }
 
 /// Holds the one built file between the Build screen and the Save button.
@@ -369,79 +404,72 @@ pub async fn build_document(
     })?;
     let format = Format::parse(&format)?;
 
-    // The model pass, when the user has configured a key. It replaces the
-    // deterministic tightening rather than stacking on top of it — two passes
-    // over the same sentence is how wording gets mangled.
-    let (doc, engine, notes) = if tighten {
-        let (stored, provider) = engine_of(&app)?;
-        let local = stored.provider == "local";
-        if local {
-            // The offline engine: a process on this machine, reachable only on
-            // loopback, speaking the same shape as any other endpoint.
-            let root = store_for(&app)?.path().to_path_buf();
-            let entry = crate::local::catalogue().ok_or_else(|| {
-                "This build has no offline model. Use your own API key, or the free rule-based pass."
-                    .to_string()
-            })?;
-            let binary = app
-                .path()
-                .resolve("binaries/llama-server", tauri::path::BaseDirectory::Resource)
-                .map_err(|_| "This build has no offline engine bundled.".to_string())?;
-            let port = crate::sidecar::free_port()?;
-            let engine_process =
-                crate::sidecar::Sidecar::start(&binary, &crate::local::model_path(&root, &entry), port)?;
-            let _ = on_progress.send(Progress {
-                stage: "Starting the offline engine".to_string(),
-                percent: 5,
-            });
-            crate::sidecar::wait_until_ready(port, crate::sidecar::READY_ATTEMPTS).await?;
-            let _ = on_progress.send(Progress {
-                stage: "Rewriting wording".to_string(),
-                percent: 10,
-            });
-            let provider = Provider::Local {
-                base_url: engine_process.url(),
-            };
-            let (rewritten, outcome) =
-                crate::rewrite::rewrite_doc(&doc, &provider, "", &stored.model).await?;
-            // The sidecar is dropped here, which kills it. Nothing keeps
-            // running after a build.
-            drop(engine_process);
-            (
-                rewritten,
-                "Rewritten on this computer — nothing left it".to_string(),
-                outcome.notes,
-            )
-        } else {
+    // The model pass runs whenever a model tier is ready — a saved key, or the
+    // offline model installed. It is deliberately *not* gated on `tighten`:
+    // that toggle is the free rule-based pass, and letting it switch off a
+    // configured engine meant a user with a key silently got no rewrite at all.
+    // It replaces the deterministic tightening rather than stacking on top of
+    // it — two passes over the same sentence is how wording gets mangled.
+    let root = store_for(&app)?.path().to_path_buf();
+    let (stored, provider) = engine_of(&app)?;
+    let (doc, engine, notes, used_model) = if !model_ready(&root, &provider) {
+        (doc, OFFLINE_ENGINE.to_string(), Vec::new(), false)
+    } else if stored.provider == "local" {
+        // The offline engine: a process on this machine, reachable only on
+        // loopback, speaking the same shape as any other endpoint.
+        let entry = crate::local::catalogue().ok_or_else(|| {
+            "This build has no offline model. Use your own API key, or the free rule-based pass."
+                .to_string()
+        })?;
+        let binary = app
+            .path()
+            .resolve("binaries/llama-server", tauri::path::BaseDirectory::Resource)
+            .map_err(|_| "This build has no offline engine bundled.".to_string())?;
+        let port = crate::sidecar::free_port()?;
+        let engine_process =
+            crate::sidecar::Sidecar::start(&binary, &crate::local::model_path(&root, &entry), port)?;
+        let _ = on_progress.send(stage("Starting the offline engine", 5, LOCAL_ENGINE));
+        crate::sidecar::wait_until_ready(port, crate::sidecar::READY_ATTEMPTS).await?;
+        let _ = on_progress.send(stage("Rewriting wording", 10, LOCAL_ENGINE));
+        let provider = Provider::Local {
+            base_url: engine_process.url(),
+        };
+        let (rewritten, outcome) =
+            crate::rewrite::rewrite_doc(&doc, &provider, "", &stored.model).await?;
+        // The fact gate has just run inside `rewrite_doc`. Naming it is the one
+        // stage that shows the promise doing work.
+        let _ = on_progress.send(stage("Checking facts", 12, LOCAL_ENGINE));
+        // The sidecar is dropped here, which kills it. Nothing keeps
+        // running after a build.
+        drop(engine_process);
+        (rewritten, LOCAL_ENGINE.to_string(), outcome.notes, true)
+    } else {
+        // `model_ready` said a key is there; if it vanished between the two
+        // calls, the free pass is a working answer, not an error.
         match keys::read(provider.id()) {
             Some(key) => {
-                let _ = on_progress.send(Progress {
-                    stage: "Rewriting wording".to_string(),
-                    percent: 10,
-                });
+                let named = format!("Rewritten with your key at {}", provider.host());
+                let _ = on_progress.send(stage("Rewriting wording", 10, &named));
                 let (rewritten, outcome) =
                     crate::rewrite::rewrite_doc(&doc, &provider, &key, &stored.model).await?;
-                let engine = format!("Rewritten with your key at {}", provider.host());
-                (rewritten, engine, outcome.notes)
+                let _ = on_progress.send(stage("Checking facts", 12, &named));
+                (rewritten, named, outcome.notes, true)
             }
-            None => (doc, "Built offline, no network used".to_string(), Vec::new()),
+            None => (doc, OFFLINE_ENGINE.to_string(), Vec::new(), false),
         }
-        }
-    } else {
-        (doc, "Built offline, no network used".to_string(), Vec::new())
     };
 
-    // When the model already rewrote the wording, the deterministic pass is
-    // skipped — but its stage name still appears, so the build screen's
-    // vocabulary does not change under the user.
-    let used_model = engine.starts_with("Rewritten");
+    // Every stage from here on carries the engine name, so the build screen
+    // says what is doing the work while it is being done.
+    let named = engine.clone();
     let result = build::build(
         &doc,
         template,
         format,
         &accent,
         tighten && !used_model,
-        |progress| {
+        |mut progress| {
+            progress.engine = named.clone();
             let _ = on_progress.send(progress);
         },
     )?;

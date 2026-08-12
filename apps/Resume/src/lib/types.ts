@@ -138,6 +138,8 @@ export interface BulletReview {
 export interface Progress {
   stage: string;
   percent: number;
+  /** What is doing the work, named while it works. Empty until it is known. */
+  engine: string;
 }
 
 export interface BuildResult {
@@ -173,6 +175,11 @@ export interface EngineInfo {
   model: string;
   baseUrl: string;
   hasKey: boolean;
+  /** Whether a rewrite would actually run. Not the same as `hasKey`: the
+   *  offline tier needs no key and would report false. */
+  usesModel: boolean;
   /** The exact host a key would be sent to, shown before anything is sent. */
   host: string;
+  /** Where this provider issues keys, or empty when there is nowhere to go. */
+  keyUrl: string;
 }

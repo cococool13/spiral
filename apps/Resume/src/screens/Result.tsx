@@ -16,8 +16,9 @@ export function Result({
   versions: BuildResult[];
   showing: number;
   format: ExportFormat;
-  /** Only true when a key is configured — otherwise there is nothing behind
-   *  the button, so it is not shown at all. */
+  /** Only true when a model tier would actually run — a saved key, or the
+   *  offline model installed. Otherwise there is nothing behind the button,
+   *  so it is not shown at all. */
   canRewrite: boolean;
   onShow: (index: number) => void;
   onRewrite: () => void;

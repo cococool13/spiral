@@ -53,11 +53,9 @@ export function Style({
   return (
     <section className="panel panel--wide">
       <h2 className="panel__title">Pick a style</h2>
-      <p className="panel__lede">Every one of these is your resume, not a sample.</p>
-
       <div className="styles" role="radiogroup" aria-label="Resume style">
         {thumbnails === null
-          ? <p className="notice">Setting your resume in five styles…</p>
+          ? <p className="notice">Setting your resume in twelve styles…</p>
           : thumbnails.map((thumbnail) => (
               <button
                 key={thumbnail.id}

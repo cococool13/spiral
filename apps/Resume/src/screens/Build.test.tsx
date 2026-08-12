@@ -4,6 +4,8 @@ import { emptyDoc } from "../lib/types";
 import type { BuildResult, Progress } from "../lib/types";
 import { Build } from "./Build";
 
+const ENGINE = "Built offline, no network used";
+
 const buildDocument = vi.fn(
   async (
     _doc: unknown,
@@ -13,12 +15,12 @@ const buildDocument = vi.fn(
     _tighten: boolean,
     onProgress: (p: Progress) => void,
   ): Promise<BuildResult> => {
-    onProgress({ stage: "Reading structure", percent: 15 });
-    onProgress({ stage: "Preparing the file", percent: 100 });
+    onProgress({ stage: "Reading structure", percent: 15, engine: ENGINE });
+    onProgress({ stage: "Preparing the file", percent: 100, engine: ENGINE });
     return {
       pages: ["<svg id='p1'></svg>"],
       suggestedName: "Ada-Lovelace-resume.pdf",
-      engine: "Built offline, no network used",
+      engine: ENGINE,
       notes: [],
     };
   },
@@ -52,6 +54,23 @@ describe("Build", () => {
     );
     await waitFor(() => expect(screen.getByText("Preparing the file…")).toBeTruthy());
     expect(screen.getByText("100%")).toBeTruthy();
+  });
+
+  /** Decision 10: "It names what it used, plainly, on the build screen and
+   *  under the result." Only the result said it until this test existed. */
+  it("names the engine while it is still building", async () => {
+    render(
+      <Build
+        doc={emptyDoc()}
+        template="column"
+        format="pdf"
+        accent="ink"
+        tighten={true}
+        onDone={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(ENGINE)).toBeTruthy());
   });
 
   it("hands the finished build up", async () => {

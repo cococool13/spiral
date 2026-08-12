@@ -45,12 +45,17 @@ impl Format {
 pub struct Progress {
     pub stage: String,
     pub percent: u8,
+    /// What is doing the work, named on the build screen as soon as it is
+    /// known — not only afterwards on the result. Empty until it is decided.
+    pub engine: String,
 }
 
 fn progress(stage: &str, percent: u8) -> Progress {
     Progress {
         stage: stage.to_string(),
         percent,
+        // Filled in by the caller, which is the only place that knows.
+        engine: String::new(),
     }
 }
 

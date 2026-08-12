@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Stepper, type Step } from "./components/Stepper";
-import { loadDocument, saveDocument } from "./lib/ipc";
+import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
 import {
   emptyDoc,
   type BuildResult,
@@ -25,7 +25,7 @@ export default function App() {
   const [format, setFormat] = useState<ExportFormat | "">("");
   const [versions, setVersions] = useState<BuildResult[]>([]);
   const [showing, setShowing] = useState(0);
-  const [hasKey, setHasKey] = useState(false);
+  const [usesModel, setUsesModel] = useState(false);
   const [rebuilding, setRebuilding] = useState(0);
   const [saveError, setSaveError] = useState("");
   const [accent, setAccent] = useState("ink");
@@ -44,6 +44,15 @@ export default function App() {
         }
       })
       .catch(() => setSavedAt(null));
+  }, []);
+
+  // Asked on launch, not only when Settings is opened. Without this, someone
+  // who saved a key last week reopened the app and found "another version"
+  // missing until they wandered back into Settings.
+  useEffect(() => {
+    engineInfo()
+      .then((info) => setUsesModel(info.usesModel))
+      .catch(() => setUsesModel(false));
   }, []);
 
   // Stable identity: an inline arrow here re-ran Input's drag-drop effect on
@@ -121,7 +130,7 @@ export default function App() {
         <main className="app__main">
           <Settings
             onClose={() => setSettingsOpen(false)}
-            onEngineChanged={(info) => setHasKey(info.hasKey)}
+            onEngineChanged={(info) => setUsesModel(info.usesModel)}
             onCleared={() => {
               setDoc(emptyDoc());
               setSavedAt(null);
@@ -177,7 +186,7 @@ export default function App() {
                   versions={versions}
                   showing={showing}
                   format={format}
-                  canRewrite={hasKey && tighten}
+                  canRewrite={usesModel}
                   onShow={setShowing}
                   onRewrite={() => setRebuilding((n) => n + 1)}
                   onAnotherStyle={() => {

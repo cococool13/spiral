@@ -40,8 +40,9 @@ export function Build({
       current = false;
     };
     // Building is a one-shot action for this screen; re-running it because a
-    // callback identity changed would build the same file twice.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // callback identity changed would build the same file twice. A fresh `key`
+    // from App is what starts a second build.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: one-shot by design
   }, []);
 
   if (error) {
@@ -64,6 +65,8 @@ export function Build({
       <p className="build__stage" aria-live="polite">
         {progress ? `${progress.stage}…` : "Starting…"}
       </p>
+      {/* Named while it works, not only afterwards on the result. */}
+      {progress?.engine ? <p className="panel__lede">{progress.engine}</p> : null}
       <progress
         className="build__bar"
         max={100}

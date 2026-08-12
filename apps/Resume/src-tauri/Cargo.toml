@@ -35,6 +35,7 @@ typst-assets = { version = "0.15", features = ["fonts"] }
 typst-layout = "0.15"
 docx-rs = { version = "0.4", default-features = false }
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 zip = "8"
 pdf-extract = "0.12"
 keyring = "4"

@@ -21,7 +21,11 @@ pub struct StoredDoc {
     pub doc: ResumeDoc,
     pub saved_at: String,
     /// The template id chosen on the Style screen, or empty before one is.
-    /// `default` so a file written before styles existed still loads.
+    /// `default` here and below is not a compatibility layer for a shipped
+    /// format — nothing has shipped. It is for the files this branch's own
+    /// earlier commits already wrote into the app data folder: losing a real
+    /// draft to a field that did not exist last week is not a trade worth
+    /// making for four attributes.
     #[serde(default)]
     pub template: String,
     /// "pdf" or "docx", or empty before the Format step is reached.
@@ -30,8 +34,8 @@ pub struct StoredDoc {
     /// The accent name, resolved through a closed set before it is ever used.
     #[serde(default)]
     pub accent: String,
-    /// Whether the free wording pass runs at build time. On unless turned off,
-    /// including for a file written before the setting existed.
+    /// Whether the free rule-based wording pass runs at build time. On unless
+    /// turned off. It does not gate the model tier — that lives in Settings.
     #[serde(default = "yes")]
     pub tighten: bool,
 }

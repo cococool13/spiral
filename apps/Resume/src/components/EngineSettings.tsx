@@ -1,3 +1,4 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { clearApiKey, engineInfo, saveApiKey, saveEngine } from "../lib/ipc";
 import type { EngineInfo } from "../lib/types";
@@ -153,6 +154,20 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
             onClick={() => run(clearApiKey, "Key removed from your keychain.")}
           >
             Remove the key
+          </button>
+        ) : null}
+        {/* The URL comes from Rust with the rest of the provider's identity —
+            the frontend opens it, it never guesses it. Empty for a custom
+            endpoint, which is the user's own service. */}
+        {info.keyUrl ? (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              void openUrl(info.keyUrl).catch((e) => setError(`${e}`));
+            }}
+          >
+            Get your key
           </button>
         ) : null}
       </div>

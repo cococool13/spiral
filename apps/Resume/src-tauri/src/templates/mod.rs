@@ -280,7 +280,7 @@ Weaving, Music
 ";
 
     #[test]
-    fn there_are_five_templates_and_their_ids_are_unique() {
+    fn there_are_twelve_templates_and_their_ids_are_unique() {
         let ids: Vec<&str> = all().iter().map(|t| t.id).collect();
         assert_eq!(ids.len(), 12);
         let mut sorted = ids.clone();

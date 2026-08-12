@@ -109,6 +109,17 @@ impl Provider {
         !matches!(self, Provider::Local { .. })
     }
 
+    /// Where this provider issues keys. Empty when there is nowhere to send
+    /// someone: a custom endpoint is the user's own service, and the offline
+    /// engine has no console at all.
+    pub fn key_url(&self) -> &'static str {
+        match self {
+            Provider::Anthropic => "https://console.anthropic.com/settings/keys",
+            Provider::OpenAi => "https://platform.openai.com/api-keys",
+            Provider::Compatible { .. } | Provider::Local { .. } => "",
+        }
+    }
+
     fn endpoint(&self) -> String {
         match self {
             Provider::Anthropic => "https://api.anthropic.com/v1/messages".to_string(),
@@ -260,6 +271,29 @@ pub async fn send(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Decision 11's helper only works if every provider that issues keys says
+    /// where — and only if the two that do not stay silent rather than sending
+    /// someone to a console that has nothing for them.
+    #[test]
+    fn every_provider_that_issues_keys_says_where_and_the_others_stay_silent() {
+        assert!(Provider::Anthropic.key_url().starts_with("https://"));
+        assert!(Provider::OpenAi.key_url().starts_with("https://"));
+        assert_eq!(
+            Provider::Compatible {
+                base_url: "https://example.test/v1".to_string()
+            }
+            .key_url(),
+            ""
+        );
+        assert_eq!(
+            Provider::Local {
+                base_url: String::new()
+            }
+            .key_url(),
+            ""
+        );
+    }
 
     #[test]
     fn each_provider_names_the_exact_host_it_will_contact() {

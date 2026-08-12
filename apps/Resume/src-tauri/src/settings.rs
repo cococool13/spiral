@@ -16,7 +16,7 @@ const FILE: &str = "engine.json";
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineSettings {
-    /// "anthropic", "openai", or "compatible".
+    /// "anthropic", "openai", "compatible", or "local".
     pub provider: String,
     pub model: String,
     /// Only meaningful for "compatible".

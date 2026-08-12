@@ -14,7 +14,7 @@ use crate::model::{ResumeDoc, Role, School};
 use docx_rs::*;
 use std::io::Cursor;
 
-/// Everything that differs between the five templates, in Word's terms.
+/// Everything that differs between the twelve templates, in Word's terms.
 #[derive(Debug, Clone, Copy)]
 pub struct DocxStyle {
     /// Metric twin of the Liberation face the PDF uses.
@@ -320,26 +320,82 @@ mod tests {
         assert_eq!(&bytes[..2], b"PK");
     }
 
+    /// Every fact in `sample()`. One list, so the Word check and the PDF/Word
+    /// twin check below cannot test different things.
+    const FACTS: [&str; 11] = [
+        "Ada Lovelace",
+        "ada@example.com",
+        "London",
+        "Analyst",
+        "Admiralty",
+        "Jan 2021",
+        "Present",
+        "Wrote the first algorithm",
+        "University of London",
+        "BSc Mathematics",
+        "Rust",
+    ];
+
+    /// Line breaks and capitals are layout decisions, not content ones — a
+    /// narrow template may split "Wrote the first algorithm" across two lines,
+    /// and several set headings and names in `upper()`. Folding both away asks
+    /// the question that matters: is the fact there at all?
+    fn squashed(text: &str) -> String {
+        text.chars()
+            .filter(|c| !c.is_whitespace())
+            .flat_map(char::to_lowercase)
+            .collect()
+    }
+
     /// The point of the whole exporter: nothing the user typed may be lost on
     /// the way to Word. The document XML is inside the zip, so read it back.
     #[test]
     fn every_fact_reaches_the_word_file() {
         let bytes = to_docx(&sample(), &SERIF, "ink").unwrap();
-        let text = document_xml(&bytes);
-        for expected in [
-            "Ada Lovelace",
-            "ada@example.com",
-            "London",
-            "Analyst",
-            "Admiralty",
-            "Jan 2021",
-            "Present",
-            "Wrote the first algorithm",
-            "University of London",
-            "BSc Mathematics",
-            "Rust",
-        ] {
-            assert!(text.contains(expected), "Word file is missing {expected:?}");
+        let text = squashed(&document_xml(&bytes));
+        for expected in FACTS {
+            assert!(
+                text.contains(&squashed(expected)),
+                "Word file is missing {expected:?}"
+            );
+        }
+    }
+
+    /// Risk 1 in the spec: every template is built twice, by two engines, and
+    /// "a test asserting the two carry the same content" is the only thing
+    /// stopping them drifting. Until this existed each half was only ever
+    /// checked against itself, so a template could drop a whole section from
+    /// one of them and stay green.
+    ///
+    /// Mutation proof: delete the education block from any `.typ` template and
+    /// only this test fails.
+    #[test]
+    fn every_template_carries_the_same_facts_in_both_halves() {
+        let doc = sample();
+        for template in templates::all() {
+            let pdf = crate::templates::to_pdf(template, &doc, "ink")
+                .unwrap_or_else(|e| panic!("{} produced no PDF: {e}", template.id));
+            let from_pdf = squashed(
+                &crate::import::pdf::text_from_pdf(&pdf)
+                    .unwrap_or_else(|e| panic!("{} produced an unreadable PDF: {e}", template.id)),
+            );
+            let from_word = squashed(&document_xml(
+                &to_docx(&doc, &template.docx, "ink").unwrap(),
+            ));
+
+            for fact in FACTS {
+                let fact = squashed(fact);
+                assert!(
+                    from_pdf.contains(&fact),
+                    "{} PDF is missing {fact:?}",
+                    template.id
+                );
+                assert!(
+                    from_word.contains(&fact),
+                    "{} Word file is missing {fact:?}",
+                    template.id
+                );
+            }
         }
     }
 

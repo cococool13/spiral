@@ -8,7 +8,9 @@ const base: EngineInfo = {
   model: "claude-opus-5",
   baseUrl: "",
   hasKey: false,
+  usesModel: false,
   host: "api.anthropic.com",
+  keyUrl: "https://console.anthropic.com/settings/keys",
 };
 
 const engineInfo = vi.fn(async (): Promise<EngineInfo> => base);
@@ -97,7 +99,12 @@ describe("EngineSettings", () => {
   /** The offline engine needs no credential, so the key section is not shown
    *  at all — an empty key field there would be a question with no answer. */
   it("hides the key section entirely for the offline engine", async () => {
-    engineInfo.mockResolvedValueOnce({ ...base, provider: "local", host: "127.0.0.1" });
+    engineInfo.mockResolvedValueOnce({
+      ...base,
+      provider: "local",
+      host: "127.0.0.1",
+      keyUrl: "",
+    });
     render(<EngineSettings onChanged={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/Wording engine/)).toBeTruthy());
     expect(screen.queryByLabelText(/Paste your key/)).toBeNull();
@@ -123,6 +130,26 @@ describe("EngineSettings", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save these settings" }));
     await waitFor(() => expect(saveEngine).toHaveBeenCalled());
+  });
+
+  /** Decision 11: "A 'get your key' helper deep-links to each provider's
+   *  console." Nothing linked out at all until this test existed. */
+  it("offers a way to get a key, and hides it where there is nowhere to go", async () => {
+    render(<EngineSettings onChanged={vi.fn()} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Get your key" })).toBeTruthy());
+  });
+
+  it("hides the key helper for a custom endpoint, which is the user's own service", async () => {
+    engineInfo.mockResolvedValueOnce({
+      ...base,
+      provider: "compatible",
+      baseUrl: "http://localhost:11434/v1",
+      host: "localhost:11434",
+      keyUrl: "",
+    });
+    render(<EngineSettings onChanged={vi.fn()} />);
+    await screen.findByLabelText(/Paste your key/);
+    expect(screen.queryByRole("button", { name: "Get your key" })).toBeNull();
   });
 
   it("asks for a base URL only for a custom service", async () => {
