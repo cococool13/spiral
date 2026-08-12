@@ -32,7 +32,26 @@ M1–M6 hold. Added, and non-negotiable:
 | Sizing / removal | `sizes_read_the_way_a_person_would_say_them`, `removing_a_model_that_is_not_there_is_not_an_error` |
 | Sidecar | `the_sidecar_is_only_ever_reachable_on_loopback`, `the_model_path_and_port_are_passed_through`, `a_free_port_is_asked_for_rather_than_assumed`, `a_missing_binary_or_model_explains_itself` |
 
-**The milestone gate is not met.** No binary and no model has ever been run: the app has never generated a token locally. Every code path *around* that is tested; the generation itself is not, and cannot be until Tasks 6 and 7 below are done.
+**Tasks 6 and 7 are done (2026-08-12).** The model is pinned, a self-contained
+`llama-server` is built and bundled, and the engine has generated locally: the
+bundled sidecar, started with this app's own arguments, answered the app's own
+prompt with valid JSON in 1.7 s, tightening three bullets and preserving every
+number and proper noun.
+
+Three things only running it revealed:
+
+1. **llama.cpp's release binaries cannot be bundled.** They link ten `@rpath`
+   dylibs; `externalBin` copies one file. `scripts/build-sidecar.mjs` builds a
+   static one instead.
+2. **`externalBin` lands in `Contents/MacOS/`, not `Resources/`.** The code
+   resolved it as a resource, so a build that shipped the engine reported it
+   missing. Fixed by `sidecar::beside_this_binary`.
+3. **Qwen3.5 thinks by default.** It spent 3,832 tokens — the whole context —
+   deliberating and returned empty content, so every rewrite was discarded.
+   `--reasoning off` answers the same request in 69 tokens.
+
+**What remains is the by-hand walkthrough in Task 7 Step 5**, and notarisation,
+which CI does.
 
 ---
 

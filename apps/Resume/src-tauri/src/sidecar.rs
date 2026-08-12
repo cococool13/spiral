@@ -50,6 +50,14 @@ pub fn arguments(model: &Path, port: u16) -> Vec<String> {
         // The whole document's bullets in one request, with room for the reply.
         "--n-predict".into(),
         "2048".into(),
+        // Thinking off. Qwen3.5 reasons by default, and on this task it spent
+        // 3,832 tokens — the entire context — deliberating before it had
+        // written a single bullet, so the reply came back empty and every
+        // rewrite was discarded. Off, the same request answers in 69 tokens and
+        // under two seconds. Nothing is lost: quality here is enforced by the
+        // fact gate, not by the model's deliberation.
+        "--reasoning".into(),
+        "off".into(),
     ]
 }
 
@@ -177,6 +185,16 @@ mod tests {
     /// Tauri puts an `externalBin` beside the app executable. Resolving it as a
     /// resource pointed at `Contents/Resources/binaries/`, which the bundler
     /// never writes — so a build that shipped the engine reported it missing.
+    /// Left on, the model thinks until the context is gone and returns nothing.
+    /// This flag is the difference between the offline tier working and the
+    /// offline tier silently falling back to the free pass on every build.
+    #[test]
+    fn thinking_is_turned_off() {
+        let args = arguments(Path::new("/models/x.gguf"), 8080);
+        let at = args.iter().position(|a| a == "--reasoning").expect("no --reasoning flag");
+        assert_eq!(args[at + 1], "off");
+    }
+
     #[test]
     fn the_sidecar_is_looked_for_beside_this_binary() {
         let found = beside_this_binary("llama-server").unwrap();

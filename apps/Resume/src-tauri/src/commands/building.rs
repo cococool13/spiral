@@ -9,7 +9,7 @@ use crate::templates;
 use serde::Serialize;
 use std::sync::Mutex;
 use tauri::ipc::Channel;
-use tauri::{Manager, State};
+use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
 /// One card in the style picker: the first page of the user's own resume, set
