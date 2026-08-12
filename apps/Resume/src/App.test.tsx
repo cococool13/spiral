@@ -50,8 +50,8 @@ vi.mock("./lib/ipc", () => ({
 describe("App", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  /** Opening the app and touching nothing used to rewrite the file, which moved
-   *  "saved from…" to today on every launch. */
+  /** A launch that rewrites the file moves "saved from…" to today, which tells
+   *  the user they edited something they did not. */
   it("does not write anything back when the user has changed nothing", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText(/You have a resume saved/)).toBeTruthy());
@@ -59,7 +59,7 @@ describe("App", () => {
     expect(saveDocument).not.toHaveBeenCalled();
   });
 
-  /** Every keystroke used to be one synchronous disk write. */
+  /** `save_document` is synchronous and writes the whole document. */
   it("writes once after typing stops, not once per keystroke", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText(/You have a resume saved/)).toBeTruthy());

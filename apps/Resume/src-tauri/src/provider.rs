@@ -375,10 +375,10 @@ mod tests {
         assert!(!message.contains("sk-"));
     }
 
-    /// Found in review: `local` resolved to a `Compatible`, whose id is
-    /// "compatible" — so a key saved for a custom endpoint was reported as
-    /// belonging to the offline engine, and saving one while offline was
-    /// selected overwrote the other provider's credential.
+    /// The offline engine needs its own id. Sharing `Compatible`'s would mean
+    /// sharing its keychain account: a key saved for a custom endpoint would be
+    /// reported as the offline engine's, and saving one while offline was
+    /// selected would overwrite the other provider's credential.
     #[test]
     fn the_offline_engine_has_its_own_identity_and_needs_no_key() {
         let local = Provider::parse("local", "").unwrap();

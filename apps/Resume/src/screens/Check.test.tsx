@@ -90,9 +90,8 @@ describe("Check", () => {
     expect(onTighten).toHaveBeenCalledWith(false);
   });
 
-  /** Found in review: ids came from `roles.length`, so removing an earlier role
-   *  and adding one produced a duplicate id — and duplicate bullet ids let a
-   *  model rewrite land on the wrong role's bullet. */
+  /** An id derived from the list length repeats after a removal, and duplicate
+   *  bullet ids let a model rewrite land on the wrong role's bullet. */
   it("never reuses a role id after an earlier role is removed", () => {
     const first = emptyRole("exp-0");
     const second = emptyRole("exp-1");

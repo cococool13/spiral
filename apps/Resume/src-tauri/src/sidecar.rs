@@ -105,10 +105,9 @@ impl Drop for Sidecar {
 /// disk and is still finite.
 pub const READY_ATTEMPTS: u32 = 360;
 
-/// Found in review: the original one-minute budget failed cold starts. A
-/// runtime test of a constant asserts nothing, so this is checked where it
-/// belongs — at compile time. Lowering the budget below three minutes stops
-/// the build rather than silently reintroducing the bug.
+/// Checked at compile time, because a runtime test of a constant asserts
+/// nothing. Lowering the budget below three minutes stops the build rather than
+/// silently reintroducing a timeout that a cold start cannot meet.
 const _: () = assert!(READY_ATTEMPTS / 2 >= 180);
 
 /// Wait until the server answers, or give up with a sentence.

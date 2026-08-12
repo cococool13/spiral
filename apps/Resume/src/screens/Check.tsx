@@ -16,8 +16,8 @@ import {
 } from "../lib/types";
 
 /** One editable section of roles. Every label is stated by the caller: the
- *  add-button label used to be derived from the heading text, so renaming
- *  "Experience" silently turned "Add a role" into "Add an activity".
+ *  labels are not derived from the heading text, so renaming a section cannot
+ *  silently change what its add button offers to add.
  *
  *  `idPrefix` must match what Rust mints (`model.rs::entry_id`), or an entry
  *  added here would not be the same kind of thing as one that was parsed. */
@@ -190,8 +190,7 @@ export function Check({
         Tighten my wording when building
       </label>
       <p className="panel__lede">
-        Removes filler like "responsible for" and flags bullets with no numbers. It never changes
-        a name, a date or a number.
+        Removes filler like "responsible for" and flags bullets with no numbers.
       </p>
 
       {roleSection(EXPERIENCE, doc.experience, shown, (experience) =>

@@ -84,10 +84,9 @@ fn failed_card(template: &templates::Template, message: impl Into<String>) -> Th
     }
 }
 
-/// `async` so Tauri runs this off the main thread: the twelve compiles used to
-/// block the webview, which is why "Setting your resume in twelve styles…" was
-/// liable never to paint. Still one shot with no progress bar — a fraction of a
-/// second of progress would be theatre.
+/// `async` so Tauri runs this off the main thread, leaving the webview free to
+/// paint while the twelve compiles run. One shot, no progress bar — a couple of
+/// milliseconds of progress would be theatre.
 #[tauri::command]
 pub async fn render_thumbnails(doc: ResumeDoc, accent: String) -> Vec<Thumbnail> {
     render_all_thumbnails(&doc, &accent)

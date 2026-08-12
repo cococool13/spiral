@@ -7,12 +7,9 @@
 //!
 //! **Both halves read from here.** Typst receives these on `sys.inputs` and
 //! Word takes them as strings, so a template cannot set its body in one ink and
-//! its Word twin in another. They used to be written out twice — `555555` in
-//! `prelude.typ` and again in `docx.rs`, `f0efec` in `card.typ` and again in
-//! `templates/mod.rs`, `111111` in all twelve `.typ` files and nowhere at all
-//! on the Word side, which is why Word was quietly setting body text in its own
-//! automatic black. Nothing failed when they disagreed; that is the problem a
-//! single source solves.
+//! its Word twin in another. Nothing fails when the two disagree — the files
+//! simply stop matching — which is why they are declared once rather than
+//! guarded.
 
 /// Hex values without the leading `#`, so both Typst and Word can take them
 /// directly. Ink is first and is the default.

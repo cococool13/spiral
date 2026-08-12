@@ -61,9 +61,8 @@ impl Store {
         self.root.join(FILE)
     }
 
-    /// Takes the record itself. It used to take the same six fields
-    /// positionally through three layers, which meant a seventh field was
-    /// three signatures to change — and a `doc.clone()` on every save.
+    /// Takes the record itself, so a new field is one type to change rather
+    /// than three signatures, and nothing is copied to assemble it.
     pub fn save(&self, stored: &StoredDoc) -> io::Result<()> {
         fs::create_dir_all(&self.root)?;
         let json = serde_json::to_vec_pretty(stored)

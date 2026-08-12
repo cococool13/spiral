@@ -39,9 +39,7 @@ export function Settings({
       <EngineSettings onChanged={onEngineChanged} />
 
       <h3 className="panel__heading">Stored on this machine</h3>
-      <p className="panel__lede">
-        Your resume is saved here and nowhere else. It is never uploaded and never synced.
-      </p>
+      <p className="panel__lede">Never uploaded, never synced.</p>
       <p className="path">{path}</p>
 
       {error ? <p className="notice notice--warn">{error}</p> : null}

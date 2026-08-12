@@ -29,8 +29,8 @@ export default function App() {
   const [rebuilding, setRebuilding] = useState(0);
   const [saveError, setSaveError] = useState("");
 
-  // The saved copy waits for typing to stop. Every keystroke used to write the
-  // whole document to disk through a synchronous command.
+  // The saved copy waits for typing to stop; `save_document` is synchronous
+  // and writes the whole document.
   const settled = useDebounced(draft);
 
   useEffect(() => {
@@ -58,9 +58,8 @@ export default function App() {
       .catch(() => setUsesModel(false));
   }, []);
 
-  // Only what the user changed is written back. Saving unconditionally meant
-  // opening the app and touching nothing still rewrote the file, which moved
-  // "saved from…" to today every launch.
+  // Only a document the user has actually touched is written back, so opening
+  // the app and changing nothing leaves "saved from…" where it was.
   const edited = useRef(false);
 
   function edit(changed: Partial<Draft>) {
@@ -68,8 +67,8 @@ export default function App() {
     setDraft((current) => ({ ...current, ...changed }));
   }
 
-  // Persistence failures used to be swallowed, so an unwritable folder meant
-  // the user kept working on a document that was never being saved.
+  // A failure here is surfaced, not swallowed: an unwritable folder must not
+  // let someone keep working on a document that is not being saved.
   useEffect(() => {
     if (!edited.current) return;
     void saveDocument(settled)

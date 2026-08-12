@@ -153,9 +153,9 @@ mod tests {
         );
     }
 
-    /// Found in review. Both sides contain a 6 and an 18, so a sorted-multiset
-    /// comparison called this rewrite faithful — while it claims the person
-    /// managed three times the people for a third of the time.
+    /// Both sides contain a 6 and an 18, so a sorted-multiset comparison calls
+    /// this rewrite faithful — while it claims the person managed three times
+    /// the people for a third of the time.
     ///
     /// **Mutation proof:** re-add `runs.sort_unstable()` to `digit_runs` and
     /// this test fails; every other test in this module still passes, which is

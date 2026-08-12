@@ -317,11 +317,9 @@ mod tests {
         assert_eq!(&bytes[..2], b"PK");
     }
 
-    /// Every fact in `sample()`. One list, so the Word check and the PDF/Word
-    /// twin check below cannot test different things.
-    /// One fact from every section. It used to name only contact, experience,
-    /// education and skills — so a template could drop projects, leadership,
-    /// awards or interests entirely and the twin test stayed green.
+    /// One fact from every section, in one list, so the Word check and the
+    /// PDF/Word twin check below cannot test different things. A section
+    /// missing from here is a section a template may silently stop rendering.
     const FACTS: [&str; 18] = [
         "Ada Lovelace",
         "ada@example.com",

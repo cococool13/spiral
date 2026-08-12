@@ -103,7 +103,7 @@ Each produces working, testable software on its own.
 | # | Milestone | Ends with |
 | --- | --- | --- |
 | **M1** | Shell, document model, paste + guided form input, Check screen, local persistence | An app you can open, type a resume into, correct the parse, and reopen tomorrow |
-| **M2** | Embedded Typst renderer, ~5 template sources, SVG live thumbnails, style picker | You can see your resume in five styles |
+| **M2** | Embedded Typst renderer, template sources, SVG live thumbnails, style picker | You can see your resume in every style |
 | **M3** | Format step, PDF + DOCX export, build screen with real stages | End-to-end: text in, styled file on disk |
 | **M4** | File import — DOCX, then PDF | Drop your existing resume in |
 | **M5** | Deterministic tightening engine | The free tier's wording pass |

@@ -111,9 +111,10 @@ describe("EngineSettings", () => {
     expect(screen.queryByText(/billed separately/)).toBeNull();
   });
 
-  /** Found in review: saving on change rejected "compatible" for having no base
-   *  URL, and the base URL field only rendered once the provider was already
-   *  saved — so every OpenAI-compatible endpoint was unreachable. */
+  /** The base URL field only renders once "compatible" is the chosen provider,
+   *  so choosing must not save — a save would be rejected for the very field
+   *  the user has not been shown yet, and no custom endpoint would be
+   *  reachable. */
   it("lets a custom service be chosen and its base URL entered before saving", async () => {
     render(<EngineSettings onChanged={vi.fn()} />);
     await screen.findByLabelText("Service");
@@ -133,7 +134,7 @@ describe("EngineSettings", () => {
   });
 
   /** Decision 11: "A 'get your key' helper deep-links to each provider's
-   *  console." Nothing linked out at all until this test existed. */
+   *  console." */
   it("offers a way to get a key, and hides it where there is nowhere to go", async () => {
     render(<EngineSettings onChanged={vi.fn()} />);
     await waitFor(() => expect(screen.getByRole("button", { name: "Get your key" })).toBeTruthy());

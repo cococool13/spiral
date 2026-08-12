@@ -524,8 +524,8 @@ mod tests {
         assert_eq!(doc.contact.location, "London");
     }
 
-    /// Templates that put the whole contact block on line one used to make the
-    /// entire line the person's name.
+    /// Many templates put the whole contact block on line one. Taking that
+    /// line whole would make all of it the person's name.
     #[test]
     fn a_name_sharing_its_line_with_contact_details_is_read_alone() {
         let doc = parse_text("Ada Lovelace | 12 Acacia Ave | (555) 123-4567 | ada@example.com\n");
@@ -533,8 +533,8 @@ mod tests {
         assert_eq!(doc.contact.email, "ada@example.com");
     }
 
-    /// Found in review: the name split kept the head and discarded the tail, so
-    /// a title or city sharing line one vanished from the document entirely.
+    /// Splitting the name off line one must not discard the rest of it: a
+    /// title or a city sharing that line has nowhere else to go.
     #[test]
     fn text_after_the_name_on_line_one_is_kept_rather_than_dropped() {
         let doc = parse_text("Ada Lovelace | Senior Engineer | ada@example.com\n");

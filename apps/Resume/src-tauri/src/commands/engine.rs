@@ -22,8 +22,8 @@ pub struct EngineInfo {
     pub base_url: String,
     pub has_key: bool,
     /// Whether a model tier would actually run. Not the same question as
-    /// `has_key`: the offline tier needs no key and would report `false`,
-    /// which is what used to hide "another version" from it entirely.
+    /// `has_key` — the offline tier needs no key and reports `false` for one —
+    /// and this is what "another version" hangs on.
     pub uses_model: bool,
     /// The exact hostname the key would be sent to, shown before anything is.
     pub host: String,

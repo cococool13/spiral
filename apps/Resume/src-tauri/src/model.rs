@@ -130,10 +130,9 @@ impl ResumeDoc {
     }
 
     /// Every section that holds bullets, in the order a reader meets them.
-    /// Three callers used to spell this chain out themselves, and a fourth
-    /// section would have had to be remembered in all three — including the
-    /// one that writes rewrites back, where forgetting it means a bullet the
-    /// model improved is silently dropped.
+    /// A new bullet-bearing section is added here and nowhere else. The caller
+    /// that matters most is the one writing rewrites back: a section missing
+    /// from this walk drops the model's improvements silently.
     pub fn roles(&self) -> impl Iterator<Item = &Role> {
         self.experience
             .iter()
@@ -171,9 +170,9 @@ mod tests {
         assert_eq!(doc, back);
     }
 
-    /// Found in review: a resume saved before skills gained labels was silently
-    /// discarded on upgrade, because the type change made the whole file fail
-    /// to parse and `Store::load` treats that as "no document".
+    /// `Store::load` treats an unparseable file as "no document", so a shape
+    /// this deserializer rejects is not an error the user sees — it is their
+    /// resume disappearing. Both skill shapes must keep loading.
     #[test]
     fn a_document_saved_with_flat_skills_still_loads() {
         let legacy = r#"{"contact":{"name":"Ada","email":"","phone":"","location":"","links":[]},"summary":"","experience":[],"education":[],"projects":[],"skills":["Rust","Analysis"]}"#;
