@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { downloadOfflineModel, offlineModelStatus, removeOfflineModel } from "../lib/ipc";
 import type { DownloadProgress, ModelStatus } from "../lib/types";
+import { Notice } from "./Notice";
 
 /** The offline tier. The size is stated before anything is fetched, the bar
  *  measures real bytes, and nothing downloads unless the user asks. */
@@ -73,7 +74,7 @@ export function OfflineModel() {
         </>
       )}
 
-      {error ? <p className="notice notice--warn">{error}</p> : null}
+      {error ? <Notice tone="warn">{error}</Notice> : null}
 
       {status.available ? (
         <div className="panel__actions">

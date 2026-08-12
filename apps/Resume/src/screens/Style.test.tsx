@@ -68,18 +68,22 @@ describe("Style", () => {
     expect(screen.getByRole("radio", { name: /Column/ }).getAttribute("aria-checked")).toBe("false");
   });
 
-  it("cannot continue before a style is chosen", async () => {
+  it("does not continue before a style is chosen, and says what is missing", async () => {
+    const onContinue = vi.fn();
     render(<Style
         doc={emptyDoc()}
         chosen=""
         accent="ink"
         onChoose={vi.fn()}
         onChooseAccent={vi.fn()}
-        onContinue={vi.fn()}
+        onContinue={onContinue}
       />);
     await waitFor(() => screen.getByRole("radio", { name: /Column/ }));
-    const use = screen.getByRole("button", { name: "Use this style" }) as HTMLButtonElement;
-    expect(use.disabled).toBe(true);
+    const use = screen.getByRole("button", { name: "Use this style" });
+    expect(use.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(use);
+    expect(onContinue).not.toHaveBeenCalled();
+    expect(screen.getByText("Pick a style to carry on.")).toBeTruthy();
   });
 
   it("shows a failed template's reason on its own card instead of blanking the screen", async () => {

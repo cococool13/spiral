@@ -1,3 +1,5 @@
+import { Notice } from "../components/Notice";
+import { useRadioGroup } from "../lib/useRadioGroup";
 import type { ExportFormat } from "../lib/types";
 
 /** The one place in this app where a line under a label earns its keep: a
@@ -25,6 +27,12 @@ export function Format({
   onChoose: (format: ExportFormat) => void;
   onContinue: () => void;
 }) {
+  const formatProps = useRadioGroup(
+    FORMATS.map((f) => f.id),
+    chosen,
+    onChoose,
+  );
+
   return (
     <section className="panel">
       <h2 className="panel__title">Choose a format</h2>
@@ -34,10 +42,8 @@ export function Format({
           <button
             key={format.id}
             type="button"
-            role="radio"
-            aria-checked={chosen === format.id}
             className="format-card"
-            onClick={() => onChoose(format.id)}
+            {...formatProps(format.id)}
           >
             <span className="format-card__name">{format.name}</span>
             <span className="format-card__note">{format.note}</span>
@@ -45,12 +51,14 @@ export function Format({
         ))}
       </div>
 
+      {chosen === "" ? <Notice>Choose a format to carry on.</Notice> : null}
+
       <div className="panel__actions">
         <button
           type="button"
           className="btn btn--primary"
-          disabled={chosen === ""}
-          onClick={onContinue}
+          onClick={() => chosen !== "" && onContinue()}
+          aria-disabled={chosen === ""}
         >
           Build my resume
         </button>

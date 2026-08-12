@@ -22,9 +22,15 @@ describe("Format", () => {
     expect(screen.getByRole("radio", { name: /PDF/ }).getAttribute("aria-checked")).toBe("true");
   });
 
-  it("cannot build before a format is chosen", () => {
-    render(<Format chosen="" onChoose={vi.fn()} onContinue={vi.fn()} />);
-    const build = screen.getByRole("button", { name: "Build my resume" }) as HTMLButtonElement;
-    expect(build.disabled).toBe(true);
+  /** The button stays focusable and named so a keyboard user can find it and
+   *  read why it will not act yet — it simply does not advance. */
+  it("does not build before a format is chosen, and says what is missing", () => {
+    const onContinue = vi.fn();
+    render(<Format chosen="" onChoose={vi.fn()} onContinue={onContinue} />);
+    const build = screen.getByRole("button", { name: "Build my resume" });
+    expect(build.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(build);
+    expect(onContinue).not.toHaveBeenCalled();
+    expect(screen.getByText("Choose a format to carry on.")).toBeTruthy();
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { importDroppedFile, importResumeFile, parsePastedText } from "../lib/ipc";
 import { emptyDoc, type ResumeDoc } from "../lib/types";
+import { Notice } from "../components/Notice";
 
 export function Input({ onReady }: { onReady: (doc: ResumeDoc) => void }) {
   const [text, setText] = useState("");
@@ -102,7 +103,7 @@ export function Input({ onReady }: { onReady: (doc: ResumeDoc) => void }) {
         />
       </label>
 
-      {error ? <p className="notice notice--warn">{error}</p> : null}
+      {error ? <Notice tone="warn">{error}</Notice> : null}
 
       <div className="panel__actions">
         <button

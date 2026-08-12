@@ -4,6 +4,7 @@ import { clearApiKey, engineInfo, saveApiKey, saveEngine } from "../lib/ipc";
 import type { EngineInfo } from "../lib/types";
 import { Field } from "./Field";
 import { OfflineModel } from "./OfflineModel";
+import { Notice } from "./Notice";
 
 const PROVIDERS = [
   { id: "anthropic", name: "Anthropic" },
@@ -43,7 +44,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
   }
 
   if (!info) {
-    return <p className="notice">Reading your engine settings…</p>;
+    return <Notice>Reading your engine settings…</Notice>;
   }
 
   return (
@@ -114,7 +115,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
       </p>
 
       {info.hasKey ? (
-        <p className="notice">A key is saved for {PROVIDERS.find((p) => p.id === info.provider)?.name}.</p>
+        <Notice>A key is saved for {PROVIDERS.find((p) => p.id === info.provider)?.name}.</Notice>
       ) : null}
 
       <label className="field">
@@ -129,8 +130,8 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
         />
       </label>
 
-      {saved ? <p className="notice">{saved}</p> : null}
-      {error ? <p className="notice notice--warn">{error}</p> : null}
+      {saved ? <Notice>{saved}</Notice> : null}
+      {error ? <Notice tone="warn">{error}</Notice> : null}
 
       <div className="panel__actions">
         <button

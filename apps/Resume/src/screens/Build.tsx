@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { buildDocument } from "../lib/ipc";
 import type { BuildResult, Draft, Progress } from "../lib/types";
+import { Notice } from "../components/Notice";
 
 /** Every percent shown here was reported by Rust after the work that earned it.
  *  On the deterministic path the whole thing crosses in well under a second —
@@ -41,7 +42,7 @@ export function Build({
     return (
       <section className="panel">
         <h2 className="panel__title">That did not build</h2>
-        <p className="notice notice--warn">{error}</p>
+        <Notice tone="warn">{error}</Notice>
         <div className="panel__actions">
           <button type="button" className="btn" onClick={onBack}>
             Back to Style

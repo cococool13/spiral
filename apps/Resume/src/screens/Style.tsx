@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { listAccents, renderThumbnails } from "../lib/ipc";
 import type { Accent, ResumeDoc, Thumbnail } from "../lib/types";
+import { Notice } from "../components/Notice";
+import { useRadioGroup } from "../lib/useRadioGroup";
+
+/** The swatches are colours with no visible label, so the accessible name is
+ *  the only name they have. "oxblood" is an id; "Oxblood" is a name. */
+const named = (id: string) => id.charAt(0).toUpperCase() + id.slice(1);
 
 export function Style({
   doc,
@@ -20,6 +26,17 @@ export function Style({
   const [thumbnails, setThumbnails] = useState<Thumbnail[] | null>(null);
   const [accents, setAccents] = useState<Accent[]>([]);
   const [error, setError] = useState("");
+
+  const styleProps = useRadioGroup(
+    (thumbnails ?? []).map((t) => t.id),
+    chosen,
+    onChoose,
+  );
+  const accentProps = useRadioGroup(
+    accents.map((a) => a.id),
+    accent,
+    onChooseAccent,
+  );
 
   useEffect(() => {
     listAccents()
@@ -45,7 +62,7 @@ export function Style({
     return (
       <section className="panel">
         <h2 className="panel__title">Pick a style</h2>
-        <p className="notice notice--warn">{error}</p>
+        <Notice tone="warn">{error}</Notice>
       </section>
     );
   }
@@ -53,17 +70,16 @@ export function Style({
   return (
     <section className="panel panel--wide">
       <h2 className="panel__title">Pick a style</h2>
-      <div className="styles" role="radiogroup" aria-label="Resume style">
-        {thumbnails === null
-          ? <p className="notice">Setting your resume in twelve styles…</p>
-          : thumbnails.map((thumbnail) => (
+      {thumbnails === null ? (
+        <Notice>Setting your resume in twelve styles…</Notice>
+      ) : (
+        <div className="styles" role="radiogroup" aria-label="Resume style">
+          {thumbnails.map((thumbnail) => (
               <button
                 key={thumbnail.id}
                 type="button"
-                role="radio"
-                aria-checked={chosen === thumbnail.id}
                 className="style-card"
-                onClick={() => onChoose(thumbnail.id)}
+                {...styleProps(thumbnail.id)}
               >
                 {thumbnail.error ? (
                   // Not aria-hidden: a card that failed has to say so out loud.
@@ -81,7 +97,8 @@ export function Style({
                 <span className="style-card__name">{thumbnail.name}</span>
               </button>
             ))}
-      </div>
+        </div>
+      )}
 
       <h3 className="panel__heading">Accent</h3>
       <div className="accents" role="radiogroup" aria-label="Accent colour">
@@ -89,22 +106,22 @@ export function Style({
           <button
             key={swatch.id}
             type="button"
-            role="radio"
-            aria-checked={accent === swatch.id}
-            aria-label={swatch.id}
+            aria-label={named(swatch.id)}
             className="accent"
             style={{ background: swatch.hex }}
-            onClick={() => onChooseAccent(swatch.id)}
+            {...accentProps(swatch.id)}
           />
         ))}
       </div>
+
+      {chosen === "" ? <Notice>Pick a style to carry on.</Notice> : null}
 
       <div className="panel__actions">
         <button
           type="button"
           className="btn btn--primary"
-          disabled={chosen === ""}
-          onClick={onContinue}
+          onClick={() => chosen !== "" && onContinue()}
+          aria-disabled={chosen === ""}
         >
           Use this style
         </button>

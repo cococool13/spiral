@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { saveBuiltDocument } from "../lib/ipc";
 import type { BuildResult, ExportFormat } from "../lib/types";
+import { Notice } from "../components/Notice";
+import { useRadioGroup } from "../lib/useRadioGroup";
 
 const FORMAT_NAME: Record<ExportFormat, string> = { pdf: "PDF", docx: "Word file" };
 
@@ -28,6 +30,10 @@ export function Result({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const result = versions[showing];
+  const labels = versions.map((_, index) => (index === 0 ? "First" : `Version ${index + 1}`));
+  const versionProps = useRadioGroup(labels, labels[showing] ?? "", (label) =>
+    onShow(labels.indexOf(label)),
+  );
 
   async function save() {
     setBusy(true);
@@ -51,24 +57,21 @@ export function Result({
 
       {versions.length > 1 ? (
         <div className="versions" role="radiogroup" aria-label="Versions">
-          {versions.map((_, index) => (
-            <button
-              // Versions are ordinal and the list only ever grows.
-              // biome-ignore lint/suspicious/noArrayIndexKey: versions are ordinal
-              key={index}
-              type="button"
-              role="radio"
-              aria-checked={index === showing}
-              className="btn"
-              onClick={() => onShow(index)}
-            >
-              {index === 0 ? "First" : `Version ${index + 1}`}
+          {labels.map((label) => (
+            <button key={label} type="button" className="btn" {...versionProps(label)}>
+              {label}
             </button>
           ))}
         </div>
       ) : null}
 
-      <div className="result__pages">
+      {/* Drawn as glyph outlines, so there is no text in it to read. Naming the
+          region and saying where the words are beats a silent unlabelled blob. */}
+      <div
+        className="result__pages"
+        role="img"
+        aria-label={`Your resume, ${result.pages.length === 1 ? "one page" : `${result.pages.length} pages`}. The wording is on the Check step.`}
+      >
         {result.pages.map((page, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: pages are ordinal
           <div
@@ -83,13 +86,11 @@ export function Result({
       </div>
 
       {result.notes.map((note) => (
-        <p className="notice" key={note}>
-          {note}
-        </p>
+        <Notice key={note}>{note}</Notice>
       ))}
 
-      {savedTo ? <p className="notice">Saved to {savedTo}</p> : null}
-      {error ? <p className="notice notice--warn">{error}</p> : null}
+      {savedTo ? <Notice>Saved to {savedTo}</Notice> : null}
+      {error ? <Notice tone="warn">{error}</Notice> : null}
 
       <div className="panel__actions">
         <button type="button" className="btn btn--primary" disabled={busy} onClick={save}>

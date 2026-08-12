@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { EngineSettings } from "../components/EngineSettings";
 import { deleteStoredData, storageInfo } from "../lib/ipc";
 import type { EngineInfo } from "../lib/types";
+import { Notice } from "../components/Notice";
 
 export function Settings({
   onClose,
@@ -34,7 +35,11 @@ export function Settings({
 
   return (
     <section className="panel">
-      <h2 className="panel__title">Settings</h2>
+      {/* Opening Settings swaps the whole main region, so focus has to follow
+          it — otherwise a keyboard user is still standing in the flow behind. */}
+      <h2 className="panel__title" tabIndex={-1} ref={(node) => node?.focus()}>
+        Settings
+      </h2>
 
       <EngineSettings onChanged={onEngineChanged} />
 
@@ -42,7 +47,7 @@ export function Settings({
       <p className="panel__lede">Never uploaded, never synced.</p>
       <p className="path">{path}</p>
 
-      {error ? <p className="notice notice--warn">{error}</p> : null}
+      {error ? <Notice tone="warn">{error}</Notice> : null}
 
       <div className="panel__actions">
         {confirming ? (

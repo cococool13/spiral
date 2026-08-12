@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Notice } from "./components/Notice";
 import { Stepper, type Step } from "./components/Stepper";
 import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
 import { emptyDoc, type BuildResult, type Draft, type ResumeDoc } from "./lib/types";
@@ -28,6 +29,14 @@ export default function App() {
   const [usesModel, setUsesModel] = useState(false);
   const [rebuilding, setRebuilding] = useState(0);
   const [saveError, setSaveError] = useState("");
+  // Closing Settings returns focus to the control that opened it, rather than
+  // dropping it on the document.
+  const settingsButton = useRef<HTMLButtonElement>(null);
+
+  function closeSettings() {
+    setSettingsOpen(false);
+    settingsButton.current?.focus();
+  }
 
   // The saved copy waits for typing to stop; `save_document` is synchronous
   // and writes the whole document.
@@ -107,7 +116,13 @@ export default function App() {
         <span className="app__mark" aria-hidden="true" />
         <h1 className="app__title">Spiral Resume</h1>
         <span className="app__spacer" />
-        <button type="button" className="btn" onClick={() => setSettingsOpen((open) => !open)}>
+        <button
+          type="button"
+          className="btn"
+          ref={settingsButton}
+          aria-expanded={settingsOpen}
+          onClick={() => setSettingsOpen((open) => !open)}
+        >
           Settings
         </button>
       </header>
@@ -115,14 +130,14 @@ export default function App() {
       {settingsOpen ? (
         <main className="app__main">
           <Settings
-            onClose={() => setSettingsOpen(false)}
+            onClose={closeSettings}
             onEngineChanged={(info) => setUsesModel(info.usesModel)}
             onCleared={() => {
               edit({ doc: emptyDoc() });
               setSavedAt(null);
               setStep("input");
               setReached(["input"]);
-              setSettingsOpen(false);
+              closeSettings();
             }}
           />
         </main>
@@ -130,16 +145,16 @@ export default function App() {
         <>
           <Stepper current={step} reached={reached} onJump={goTo} />
           <main className="app__main">
-            {saveError ? <p className="notice notice--warn">{saveError}</p> : null}
+            {saveError ? <Notice tone="warn">{saveError}</Notice> : null}
             {step === "input" ? (
               <>
                 {savedAt ? (
-                  <p className="notice">
+                  <Notice>
                     You have a resume saved from {new Date(savedAt).toLocaleString()}.{" "}
                     <button type="button" className="btn" onClick={() => goTo("check")}>
                       Continue where you left off
                     </button>
-                  </p>
+                  </Notice>
                 ) : null}
                 <Input onReady={onInputReady} />
               </>

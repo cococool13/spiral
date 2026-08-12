@@ -68,7 +68,8 @@ body {
 .app__title {
   margin: 0;
   font-size: 15px;
-  font-variation-settings: "wdth" var(--spiral-wdth-heading), "wght" var(--spiral-wght-heading);
+  font-weight: var(--spiral-wght-heading);
+  font-variation-settings: "wdth" var(--spiral-wdth-heading);
 }
 
 .app__spacer {
@@ -143,7 +144,8 @@ body {
 .panel__title {
   margin: 0 0 calc(var(--spiral-unit) * 2);
   font-size: 22px;
-  font-variation-settings: "wdth" var(--spiral-wdth-heading), "wght" var(--spiral-wght-heading);
+  font-weight: var(--spiral-wght-heading);
+  font-variation-settings: "wdth" var(--spiral-wdth-heading);
 }
 
 .panel__lede {
@@ -213,6 +215,13 @@ body {
 
 .btn:hover:not(:disabled) {
   border-color: var(--spiral-steel);
+}
+
+/* aria-disabled, not disabled: the button keeps its place in the tab order and
+   its name, so a keyboard user can find it and read why it will not act yet. */
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn:disabled {
@@ -314,7 +323,8 @@ body {
 }
 
 .style-card__name {
-  font-variation-settings: "wdth" var(--spiral-wdth-heading), "wght" var(--spiral-wght-heading);
+  font-weight: var(--spiral-wght-heading);
+  font-variation-settings: "wdth" var(--spiral-wdth-heading);
 }
 
 .formats {
@@ -350,7 +360,8 @@ body {
 
 .format-card__name {
   font-size: 17px;
-  font-variation-settings: "wdth" var(--spiral-wdth-heading), "wght" var(--spiral-wght-heading);
+  font-weight: var(--spiral-wght-heading);
+  font-variation-settings: "wdth" var(--spiral-wdth-heading);
 }
 
 .format-card__note {

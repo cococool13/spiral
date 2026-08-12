@@ -259,7 +259,7 @@ export function Check({
 
       <div className="panel__actions">
         <button type="button" className="btn btn--primary" onClick={onContinue}>
-          This is right
+          Continue
         </button>
       </div>
     </section>
