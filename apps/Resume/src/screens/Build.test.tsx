@@ -1,20 +1,20 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyDoc } from "../lib/types";
-import type { BuildResult, Progress } from "../lib/types";
+import type { BuildResult, Draft, Progress } from "../lib/types";
 import { Build } from "./Build";
 
 const ENGINE = "Built offline, no network used";
+const DRAFT: Draft = {
+  doc: emptyDoc(),
+  template: "column",
+  format: "pdf",
+  accent: "ink",
+  tighten: true,
+};
 
 const buildDocument = vi.fn(
-  async (
-    _doc: unknown,
-    _template: string,
-    _format: string,
-    _accent: string,
-    _tighten: boolean,
-    onProgress: (p: Progress) => void,
-  ): Promise<BuildResult> => {
+  async (_draft: Draft, onProgress: (p: Progress) => void): Promise<BuildResult> => {
     onProgress({ stage: "Reading structure", percent: 15, engine: ENGINE });
     onProgress({ stage: "Preparing the file", percent: 100, engine: ENGINE });
     return {
@@ -27,14 +27,7 @@ const buildDocument = vi.fn(
 );
 
 vi.mock("../lib/ipc", () => ({
-  buildDocument: (
-    d: unknown,
-    t: string,
-    f: string,
-    a: string,
-    g: boolean,
-    p: (x: Progress) => void,
-  ) => buildDocument(d, t, f, a, g, p),
+  buildDocument: (draft: Draft, p: (x: Progress) => void) => buildDocument(draft, p),
 }));
 
 describe("Build", () => {
@@ -43,11 +36,7 @@ describe("Build", () => {
   it("shows the last stage reported and its percent", async () => {
     render(
       <Build
-        doc={emptyDoc()}
-        template="column"
-        format="pdf"
-        accent="ink"
-        tighten={true}
+        draft={DRAFT}
         onDone={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -61,11 +50,7 @@ describe("Build", () => {
   it("names the engine while it is still building", async () => {
     render(
       <Build
-        doc={emptyDoc()}
-        template="column"
-        format="pdf"
-        accent="ink"
-        tighten={true}
+        draft={DRAFT}
         onDone={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -76,7 +61,7 @@ describe("Build", () => {
   it("hands the finished build up", async () => {
     const onDone = vi.fn();
     render(
-      <Build doc={emptyDoc()} template="column" format="pdf" accent="ink" tighten={true} onDone={onDone} onBack={vi.fn()} />,
+      <Build draft={DRAFT} onDone={onDone} onBack={vi.fn()} />,
     );
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(onDone.mock.calls[0][0].suggestedName).toBe("Ada-Lovelace-resume.pdf");
@@ -85,7 +70,7 @@ describe("Build", () => {
   it("builds exactly once", async () => {
     const onDone = vi.fn();
     render(
-      <Build doc={emptyDoc()} template="column" format="pdf" accent="ink" tighten={true} onDone={onDone} onBack={vi.fn()} />,
+      <Build draft={DRAFT} onDone={onDone} onBack={vi.fn()} />,
     );
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(buildDocument).toHaveBeenCalledTimes(1);
@@ -95,7 +80,7 @@ describe("Build", () => {
     buildDocument.mockRejectedValueOnce("The template failed to typeset: nope.");
     const onBack = vi.fn();
     render(
-      <Build doc={emptyDoc()} template="column" format="pdf" accent="ink" tighten={true} onDone={vi.fn()} onBack={onBack} />,
+      <Build draft={DRAFT} onDone={vi.fn()} onBack={onBack} />,
     );
     await waitFor(() => expect(screen.getByText(/failed to typeset/)).toBeTruthy());
     expect(screen.getByRole("button", { name: "Back to Style" })).toBeTruthy();

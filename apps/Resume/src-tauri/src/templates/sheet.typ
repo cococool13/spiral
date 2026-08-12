@@ -2,7 +2,7 @@
 // Liberation Sans, tight leading, no rules, no columns, nothing to misparse.
 
 #set page(paper: "us-letter", margin: (x: 50pt, y: 50pt))
-#set text(font: "Liberation Sans", size: 10pt, fill: rgb("#111111"))
+#set text(font: "Liberation Sans", size: 10pt, fill: ink)
 #set par(justify: false, leading: 0.58em, spacing: 0.72em)
 
 #let section(title) = {

@@ -62,6 +62,18 @@ export interface ResumeDoc {
   skills: SkillGroup[];
 }
 
+/** The five choices that make a build. They travel together everywhere — the
+ *  same five are saved, built, and re-built — so they are one value rather
+ *  than five parameters repeated at every call site. Mirrors `BuildRequest`
+ *  in Rust. */
+export interface Draft {
+  doc: ResumeDoc;
+  template: string;
+  format: string;
+  accent: string;
+  tighten: boolean;
+}
+
 /** PDF or Word. Chosen on the Format step, before anything is built. */
 export type ExportFormat = "pdf" | "docx";
 

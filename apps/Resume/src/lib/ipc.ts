@@ -5,6 +5,7 @@ import type {
   Accent,
   BuildResult,
   BulletReview,
+  Draft,
   DownloadProgress,
   EngineInfo,
   ModelStatus,
@@ -42,19 +43,9 @@ export function listAccents(): Promise<Accent[]> {
   return invoke<Accent[]>("list_accents");
 }
 
-export function saveDocument(
-  doc: ResumeDoc,
-  template: string,
-  format: string,
-  accent: string,
-  tighten: boolean,
-): Promise<void> {
+export function saveDocument(draft: Draft): Promise<void> {
   return invoke<void>("save_document", {
-    doc,
-    template,
-    format,
-    accent,
-    tighten,
+    ...draft,
     savedAt: new Date().toISOString(),
   });
 }
@@ -74,17 +65,13 @@ export function deleteStoredData(): Promise<void> {
 /** Builds the file and reports each real stage through a channel. The bytes
  *  stay in Rust; only the preview pages and a suggested filename come back. */
 export function buildDocument(
-  doc: ResumeDoc,
-  template: string,
-  format: string,
-  accent: string,
-  tighten: boolean,
+  draft: Draft,
   onProgress: (progress: Progress) => void,
 ): Promise<BuildResult> {
   const channel = new Channel<Progress>();
   channel.onmessage = onProgress;
   return invoke<BuildResult>("build_document", {
-    request: { doc, template, format, accent, tighten },
+    request: draft,
     onProgress: channel,
   });
 }

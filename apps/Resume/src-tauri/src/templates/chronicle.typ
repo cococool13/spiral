@@ -3,13 +3,13 @@
 // Spiral's own wording and typography; see docs/template-lineage.md.
 
 #set page(paper: "us-letter", margin: (x: 58pt, y: 56pt))
-#set text(font: "Liberation Serif", size: 10.5pt, fill: rgb("#111111"))
+#set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.6em, spacing: 0.8em)
 
 #let section(title) = block(above: 13pt, below: 4pt)[
   #text(size: 13pt, weight: "bold", fill: accent)[#title]
   #v(1pt, weak: true)
-  #line(length: 100%, stroke: 0.5pt + rgb("#111111"))
+  #line(length: 100%, stroke: 0.5pt + ink)
 ]
 
 #let role-entry(role) = {

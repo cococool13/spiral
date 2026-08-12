@@ -4,16 +4,16 @@
 // typography; see docs/template-lineage.md.
 
 #set page(paper: "us-letter", margin: (x: 58pt, y: 52pt))
-#set text(font: "Liberation Serif", size: 10pt, fill: rgb("#111111"))
+#set text(font: "Liberation Serif", size: 10pt, fill: ink)
 #set par(justify: false, leading: 0.65em, spacing: 0.85em)
 
 #let section(title) = {
   v(12pt)
-  line(length: 100%, stroke: 0.7pt + rgb("#111111"))
+  line(length: 100%, stroke: 0.7pt + ink)
   v(3pt)
   align(center)[#text(size: 10.5pt, weight: "bold", tracking: 0.06em, fill: accent)[#upper(title)]]
   v(2pt)
-  line(length: 100%, stroke: 0.7pt + rgb("#111111"))
+  line(length: 100%, stroke: 0.7pt + ink)
   v(6pt)
 }
 
@@ -39,11 +39,11 @@
   #align(center)[#text(weight: "bold")[#doc.headline]]
 ]
 #v(5pt)
-#line(length: 100%, stroke: 0.7pt + rgb("#111111"))
+#line(length: 100%, stroke: 0.7pt + ink)
 #v(3pt)
 #align(center)[#text(size: 9.5pt)[#contact-line(sep: " • ")]]
 #v(3pt)
-#line(length: 100%, stroke: 0.7pt + rgb("#111111"))
+#line(length: 100%, stroke: 0.7pt + ink)
 
 #if doc.summary != "" [ #v(8pt) #doc.summary ]
 

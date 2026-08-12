@@ -1,7 +1,7 @@
 //! The Word half of every template.
 //!
 //! One writer, parameterised by a small `DocxStyle` that each template declares
-//! beside its Typst source. Five hand-written builders would have drifted from
+//! beside its Typst source. Twelve hand-written builders would have drifted from
 //! their PDF twins the first time a template changed; this way a template and
 //! its Word version are one decision in one place.
 //!
@@ -10,6 +10,7 @@
 //! matches. What it cannot promise is pixel identity. Word's spacing model is
 //! its own, and the UI must not claim otherwise.
 
+use crate::accent::{INK, QUIET};
 use crate::model::{ResumeDoc, Role, School};
 use docx_rs::*;
 use std::io::Cursor;
@@ -31,8 +32,6 @@ pub struct DocxStyle {
     pub date_rail: bool,
 }
 
-const QUIET: &str = "555555";
-
 /// Word measures paragraph spacing in twentieths of a point. It defaults to
 /// none, which is why an unstyled .docx reads as a text dump rather than a
 /// document — every gap below is one we chose.
@@ -48,6 +47,9 @@ fn run(text: &str, style: &DocxStyle) -> Run {
         .add_text(text)
         .fonts(RunFonts::new().ascii(style.font).hi_ansi(style.font))
         .size(style.body_size)
+        // Stated, not left to Word. Its automatic black is not the PDF's ink,
+        // and the difference only shows once the two files sit side by side.
+        .color(INK)
 }
 
 fn body(text: &str, style: &DocxStyle) -> Paragraph {
@@ -175,6 +177,7 @@ pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle, accent: &str) -> Result<Vec<u
             .add_text(&doc.contact.name)
             .fonts(RunFonts::new().ascii(style.font).hi_ansi(style.font))
             .size(style.name_size)
+            .color(INK)
             .bold(),
     );
     let mut contact = spaced(quiet(&contact_line(doc), style), 0, 60);
@@ -406,6 +409,47 @@ mod tests {
                 .unwrap_or_else(|e| panic!("{} has no working Word twin: {e}", template.id));
             assert_eq!(&bytes[..2], b"PK", "{} produced no zip", template.id);
         }
+    }
+
+    /// Word's automatic black is not the PDF's ink. Nothing failed while the
+    /// two halves disagreed — the difference only appears with both files open
+    /// side by side, which is exactly when a user notices it.
+    ///
+    /// The invariant is "no run is left to Word", not "the ink appears
+    /// somewhere" — the name and the section headings carry colours of their
+    /// own, so merely finding `111111` in the file proves nothing about body
+    /// text. Every run's properties must name a colour.
+    ///
+    /// Mutation proof: drop `.color(INK)` from `run` and only this test fails.
+    #[test]
+    fn no_run_leaves_its_colour_to_word() {
+        let xml = document_xml(&to_docx(&sample(), &SERIF, "navy").unwrap());
+        for (index, block) in xml.split("<w:rPr>").skip(1).enumerate() {
+            let properties = block.split("</w:rPr>").next().unwrap_or("");
+            assert!(
+                properties.contains("<w:color"),
+                "run {index} sets no colour, so Word picks its own:\n  {properties}"
+            );
+        }
+    }
+
+    /// And the colour it names for body text is the PDF's ink, not something
+    /// close to it.
+    #[test]
+    fn body_text_is_set_in_the_same_ink_as_the_pdf() {
+        let xml = document_xml(&to_docx(&sample(), &SERIF, "navy").unwrap());
+        assert!(
+            xml.contains(&format!(r#"<w:color w:val="{INK}""#)),
+            "body text is not set in the PDF's ink"
+        );
+    }
+
+    /// The shaded name block in `card` is declared in Rust and drawn in Typst.
+    /// One constant reaches both, or the two halves shade differently.
+    #[test]
+    fn the_shaded_header_uses_the_shared_value() {
+        let card = templates::find("card").unwrap();
+        assert_eq!(card.docx.header_shading, Some(crate::accent::SHADING));
     }
 
     #[test]

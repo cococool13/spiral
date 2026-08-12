@@ -1,24 +1,16 @@
 import { useEffect, useState } from "react";
 import { buildDocument } from "../lib/ipc";
-import type { BuildResult, ExportFormat, Progress, ResumeDoc } from "../lib/types";
+import type { BuildResult, Draft, Progress } from "../lib/types";
 
 /** Every percent shown here was reported by Rust after the work that earned it.
  *  On the deterministic path the whole thing crosses in well under a second —
  *  that is the honest result, not something to pad out. */
 export function Build({
-  doc,
-  template,
-  format,
-  accent,
-  tighten,
+  draft,
   onDone,
   onBack,
 }: {
-  doc: ResumeDoc;
-  template: string;
-  format: ExportFormat;
-  accent: string;
-  tighten: boolean;
+  draft: Draft;
   onDone: (result: BuildResult) => void;
   onBack: () => void;
 }) {
@@ -27,7 +19,7 @@ export function Build({
 
   useEffect(() => {
     let current = true;
-    buildDocument(doc, template, format, accent, tighten, (next) => {
+    buildDocument(draft, (next) => {
       if (current) setProgress(next);
     })
       .then((result) => {

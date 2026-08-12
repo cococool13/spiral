@@ -4,6 +4,7 @@ import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
 import {
   emptyDoc,
   type BuildResult,
+  type Draft,
   type ExportFormat,
   type ResumeDoc,
 } from "./lib/types";
@@ -55,16 +56,19 @@ export default function App() {
       .catch(() => setUsesModel(false));
   }, []);
 
+  const draft: Draft = { doc, template, format, accent, tighten };
+
   // Stable identity: an inline arrow here re-ran Input's drag-drop effect on
   // every render of this component, stacking listeners.
   const onInputReady = useCallback(
     (next: ResumeDoc) => {
       setDoc(next);
-      persist(next, template, format, accent, tighten);
+      persist({ doc: next });
       setStep("check");
       setReached((seen) => (seen.includes("check") ? seen : [...seen, "check"]));
     },
-    [template, format, accent, tighten],
+    // `persist` closes over the current draft, so the whole draft is the dep.
+    [doc, template, format, accent, tighten],
   );
 
   function goTo(next: Step) {
@@ -74,45 +78,45 @@ export default function App() {
 
   // Persistence failures used to be swallowed, so an unwritable folder meant
   // the user kept working on a document that was never being saved.
-  function persist(
-    next: ResumeDoc,
-    nextTemplate: string,
-    nextFormat: string,
-    nextAccent: string,
-    nextTighten: boolean,
-  ) {
-    void saveDocument(next, nextTemplate, nextFormat, nextAccent, nextTighten)
+  //
+  // Takes the one field that changed: React state has not caught up when this
+  // runs, so passing the whole draft from a setter would save the old value.
+  function persist(changed: Partial<Draft>) {
+    void saveDocument({ ...draft, ...changed })
       .then(() => setSaveError(""))
       .catch((e) => setSaveError(`${e}`));
   }
 
   function update(next: ResumeDoc) {
     setDoc(next);
-    persist(next, template, format, accent, tighten);
+    persist({ doc: next });
+  }
+
+  /** Every style choice invalidates the built versions: they were set in the
+   *  previous one. */
+  function choose(changed: Partial<Draft>) {
+    setVersions([]);
+    persist(changed);
   }
 
   function chooseTemplate(id: string) {
     setTemplate(id);
-    setVersions([]);
-    persist(doc, id, format, accent, tighten);
+    choose({ template: id });
   }
 
   function chooseTighten(next: boolean) {
     setTighten(next);
-    setVersions([]);
-    persist(doc, template, format, accent, next);
+    choose({ tighten: next });
   }
 
   function chooseAccent(next: string) {
     setAccent(next);
-    setVersions([]);
-    persist(doc, template, format, next, tighten);
+    choose({ accent: next });
   }
 
   function chooseFormat(next: ExportFormat) {
     setFormat(next);
-    setVersions([]);
-    persist(doc, template, next, accent, tighten);
+    choose({ format: next });
   }
 
   return (
@@ -200,11 +204,7 @@ export default function App() {
                   // A fresh key remounts the screen, which is what makes
                   // "rewrite the wording again" actually run a second build.
                   key={`${versions.length}-${rebuilding}`}
-                  doc={doc}
-                  template={template}
-                  format={format}
-                  accent={accent}
-                  tighten={tighten}
+                  draft={{ ...draft, format }}
                   onDone={(result) => {
                     setVersions((all) => [...all, result]);
                     setShowing(versions.length);

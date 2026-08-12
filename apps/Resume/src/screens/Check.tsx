@@ -17,15 +17,32 @@ function nextRoleId(prefix: string, roles: Role[]): string {
   return `${prefix}-${next}`;
 }
 
+/** One editable section of roles. Both fields are stated by the caller: the
+ *  add-button label used to be derived from the heading text, so renaming
+ *  "Experience" silently turned "Add a role" into "Add an activity". */
+interface RoleSection {
+  heading: string;
+  /** What one entry is called, for the add button. */
+  entry: string;
+  idPrefix: string;
+}
+
+const EXPERIENCE: RoleSection = { heading: "Experience", entry: "a role", idPrefix: "exp" };
+const LEADERSHIP: RoleSection = {
+  heading: "Leadership & activities",
+  entry: "an activity",
+  idPrefix: "lead",
+};
+
 /** Experience and Leadership are the same shape, edited the same way. Writing
  *  the list twice would guarantee they drift. */
 function roleSection(
-  heading: string,
-  idPrefix: string,
+  section: RoleSection,
   roles: Role[],
   reviews: BulletReview[],
   onChange: (roles: Role[]) => void,
 ) {
+  const { heading, entry, idPrefix } = section;
   return (
     <>
       <h3 className="panel__heading">{heading}</h3>
@@ -43,7 +60,7 @@ function roleSection(
         className="btn"
         onClick={() => onChange([...roles, emptyRole(nextRoleId(idPrefix, roles))])}
       >
-        Add {heading === "Experience" ? "a role" : "an activity"}
+        Add {entry}
       </button>
     </>
   );
@@ -130,11 +147,11 @@ export function Check({
         a name, a date or a number.
       </p>
 
-      {roleSection("Experience", "exp", doc.experience, shown, (experience) =>
+      {roleSection(EXPERIENCE, doc.experience, shown, (experience) =>
         onChange({ ...doc, experience }),
       )}
 
-      {roleSection("Leadership & activities", "lead", doc.leadership, shown, (leadership) =>
+      {roleSection(LEADERSHIP, doc.leadership, shown, (leadership) =>
         onChange({ ...doc, leadership }),
       )}
 

@@ -2,7 +2,7 @@
 // Liberation Serif throughout. Nothing decorative; the hierarchy does the work.
 
 #set page(paper: "us-letter", margin: (x: 54pt, y: 54pt))
-#set text(font: "Liberation Serif", size: 10.5pt, fill: rgb("#111111"))
+#set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.62em, spacing: 0.9em)
 
 #let section(title) = {

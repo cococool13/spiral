@@ -8,10 +8,15 @@
 
 #let doc = json(bytes(sys.inputs.resume))
 
-// The one colour the user chose, validated against a closed set in Rust before
-// it ever reaches this file. A template must not invent its own colour.
+// The palette, all of it from `accent.rs` — the accent the user chose,
+// validated against a closed set in Rust before it ever reaches this file, and
+// the three fixed colours the Word half also reads. A template must not write
+// a colour of its own: a raw hex here silently disagrees with the .docx, and
+// `no_template_writes_its_own_colour` fails the build if one appears.
 #let accent = rgb("#" + sys.inputs.accent)
-#let quiet = rgb("#555555")
+#let ink = rgb("#" + sys.inputs.ink)
+#let quiet = rgb("#" + sys.inputs.quiet)
+#let shading = rgb("#" + sys.inputs.shading)
 
 // "Jan 2021 — Present", or whichever half exists. Dates are shown exactly as
 // the user wrote them: `raw` is the field the Check screen edits, and no

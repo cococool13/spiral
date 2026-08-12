@@ -4,7 +4,7 @@
 // and typography; see docs/template-lineage.md.
 
 #set page(paper: "us-letter", margin: (x: 60pt, y: 54pt))
-#set text(font: "Liberation Serif", size: 10.5pt, fill: rgb("#111111"))
+#set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.6em, spacing: 0.8em)
 
 #let section(title) = {
@@ -41,7 +41,7 @@
 
 #align(center)[#text(size: 12pt, weight: "bold")[#doc.contact.name]]
 #v(2pt)
-#line(length: 100%, stroke: 0.6pt + rgb("#111111"))
+#line(length: 100%, stroke: 0.6pt + ink)
 #v(2pt)
 #align(center)[#text(size: 10pt)[#contact-line(sep: " • ")]]
 

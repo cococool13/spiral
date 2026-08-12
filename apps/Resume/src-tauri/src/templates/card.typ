@@ -3,7 +3,7 @@
 // shaded paragraph, which is what keeps this inside the template envelope.
 
 #set page(paper: "us-letter", margin: (x: 0pt, y: 0pt))
-#set text(font: "Liberation Sans", size: 10pt, fill: rgb("#111111"))
+#set text(font: "Liberation Sans", size: 10pt, fill: ink)
 #set par(justify: false, leading: 0.6em, spacing: 0.8em)
 
 #let body-margin = 52pt
@@ -29,7 +29,7 @@
 
 #block(
   width: 100%,
-  fill: rgb("#f0efec"),
+  fill: shading,
   inset: (x: body-margin, y: 26pt),
 )[
   #text(size: 20pt, weight: "bold")[#doc.contact.name]

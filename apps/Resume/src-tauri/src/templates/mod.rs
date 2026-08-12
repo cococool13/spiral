@@ -90,7 +90,7 @@ const TEMPLATES: &[Template] = &[
             body_size: 20,
             name_centered: false,
             section_rule: false,
-            header_shading: Some("f0efec"),
+            header_shading: Some(crate::accent::SHADING),
             date_rail: false,
         },
     },
@@ -216,6 +216,11 @@ pub fn inputs_for(doc: &ResumeDoc, accent: &str) -> Result<Dict, String> {
     let mut inputs = Dict::new();
     inputs.insert(Str::from("resume"), json.into_value());
     inputs.insert(Str::from("accent"), crate::accent::resolve(accent).into_value());
+    // The rest of the palette, so no template writes a colour of its own and
+    // the Word twin cannot drift from the PDF.
+    inputs.insert(Str::from("ink"), crate::accent::INK.into_value());
+    inputs.insert(Str::from("quiet"), crate::accent::QUIET.into_value());
+    inputs.insert(Str::from("shading"), crate::accent::SHADING.into_value());
     Ok(inputs)
 }
 
@@ -228,7 +233,10 @@ pub fn to_svg_pages(
     crate::render::svg_pages_with_inputs(source_for(template), inputs_for(doc, accent)?)
 }
 
-/// The finished PDF for a given template.
+/// The finished PDF for a given template. The build path goes through
+/// `render::compile` directly, because it needs the compiled document for the
+/// preview pages too — so this is the tests' way in, and nothing else's.
+#[cfg(test)]
 pub fn to_pdf(template: &Template, doc: &ResumeDoc, accent: &str) -> Result<Vec<u8>, String> {
     crate::render::pdf_with_inputs(source_for(template), inputs_for(doc, accent)?)
 }
@@ -332,6 +340,44 @@ Weaving, Music
                     number + 1
                 );
             }
+        }
+    }
+
+    /// The drift guard. A raw hex in a `.typ` file is a colour the Word half
+    /// knows nothing about, and nothing else fails when the two disagree — the
+    /// PDF and the .docx just quietly stop matching. Every colour must come
+    /// from `accent.rs` through the prelude's `accent`, `ink`, `quiet` and
+    /// `shading`.
+    ///
+    /// Mutation proof: put `rgb("#111111")` back into any template and only
+    /// this test fails.
+    #[test]
+    fn no_template_writes_its_own_colour() {
+        for template in all() {
+            for (number, line) in template.source.lines().enumerate() {
+                assert!(
+                    !line.contains("rgb("),
+                    "{}:{} writes its own colour; use the prelude's palette:\n  {line}",
+                    template.id,
+                    number + 1
+                );
+            }
+        }
+    }
+
+    /// The prelude is the one file allowed to build a colour, and only from
+    /// what Rust sent it — never from a literal of its own.
+    #[test]
+    fn the_prelude_takes_every_colour_from_rust() {
+        for (number, line) in PRELUDE.lines().enumerate() {
+            if !line.contains("rgb(") {
+                continue;
+            }
+            assert!(
+                line.contains("sys.inputs."),
+                "prelude.typ:{} builds a colour from a literal:\n  {line}",
+                number + 1
+            );
         }
     }
 

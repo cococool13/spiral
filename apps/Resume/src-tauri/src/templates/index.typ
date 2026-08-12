@@ -3,13 +3,13 @@
 // wording and typography; see docs/template-lineage.md.
 
 #set page(paper: "us-letter", margin: (x: 58pt, y: 56pt))
-#set text(font: "Liberation Serif", size: 10.5pt, fill: rgb("#111111"))
+#set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.6em, spacing: 0.78em)
 
 #let section(title) = block(above: 12pt, below: 4pt)[
   #align(center)[#text(size: 11pt, weight: "bold", tracking: 0.04em, fill: accent)[#upper(title)]]
   #v(1pt, weak: true)
-  #line(length: 100%, stroke: 0.7pt + rgb("#111111"))
+  #line(length: 100%, stroke: 0.7pt + ink)
 ]
 
 #let role-entry(role) = {

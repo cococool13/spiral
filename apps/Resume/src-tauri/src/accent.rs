@@ -1,9 +1,18 @@
-//! The one colour the user chooses for their own document.
+//! Every colour in a built resume, and the one the user chooses.
 //!
 //! A fixed set, not a colour picker. Two reasons: a resume with a badly chosen
 //! accent is worse than one without, and — more importantly — this value is read
 //! from a file on disk and handed to a typesetting engine. A closed set means a
 //! tampered or corrupted stored file cannot inject anything into a template.
+//!
+//! **Both halves read from here.** Typst receives these on `sys.inputs` and
+//! Word takes them as strings, so a template cannot set its body in one ink and
+//! its Word twin in another. They used to be written out twice — `555555` in
+//! `prelude.typ` and again in `docx.rs`, `f0efec` in `card.typ` and again in
+//! `templates/mod.rs`, `111111` in all twelve `.typ` files and nowhere at all
+//! on the Word side, which is why Word was quietly setting body text in its own
+//! automatic black. Nothing failed when they disagreed; that is the problem a
+//! single source solves.
 
 /// Hex values without the leading `#`, so both Typst and Word can take them
 /// directly. Ink is first and is the default.
@@ -16,7 +25,14 @@ pub const ACCENTS: &[(&str, &str)] = &[
     ("plum", "4a2545"),
 ];
 
+/// Body text, in both halves. Also the default accent.
 pub const INK: &str = "111111";
+
+/// Dates, locations, and hairlines — everything a reader scans past.
+pub const QUIET: &str = "555555";
+
+/// The block behind the name in `card`, the one template that shades anything.
+pub const SHADING: &str = "f0efec";
 
 /// Resolve a stored accent name to its hex value. Anything unrecognised — an
 /// empty string, an old name, or a hex value someone typed into the file by

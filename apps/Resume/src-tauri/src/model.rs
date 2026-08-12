@@ -128,6 +128,25 @@ impl ResumeDoc {
     pub fn empty() -> Self {
         Self::default()
     }
+
+    /// Every section that holds bullets, in the order a reader meets them.
+    /// Three callers used to spell this chain out themselves, and a fourth
+    /// section would have had to be remembered in all three — including the
+    /// one that writes rewrites back, where forgetting it means a bullet the
+    /// model improved is silently dropped.
+    pub fn roles(&self) -> impl Iterator<Item = &Role> {
+        self.experience
+            .iter()
+            .chain(self.projects.iter())
+            .chain(self.leadership.iter())
+    }
+
+    pub fn roles_mut(&mut self) -> impl Iterator<Item = &mut Role> {
+        self.experience
+            .iter_mut()
+            .chain(self.projects.iter_mut())
+            .chain(self.leadership.iter_mut())
+    }
 }
 
 /// The one place bullet ids are minted. `section` is `exp`, `proj` or `edu`.

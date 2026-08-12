@@ -114,12 +114,17 @@ impl World for ResumeWorld {
 }
 
 /// Compile a template to PDF bytes, or to the first Typst error as a sentence.
+/// Production always has inputs to pass, so this convenience exists only for
+/// tests that compile a bare snippet.
+#[cfg(test)]
 pub fn to_pdf(source: String) -> Result<Vec<u8>, String> {
     pdf_with_inputs(source, Dict::new())
 }
 
 /// Compile a template to one SVG string per page. Same source, same engine, so
-/// a thumbnail cannot show something the PDF will not.
+/// a thumbnail cannot show something the PDF will not. Test-only, for the same
+/// reason as `to_pdf`.
+#[cfg(test)]
 pub fn to_svg_pages(source: String) -> Result<Vec<String>, String> {
     svg_pages_with_inputs(source, Dict::new())
 }

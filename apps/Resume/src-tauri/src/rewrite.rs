@@ -55,10 +55,7 @@ struct Reply {
 
 /// Every bullet in the document, in a stable order, paired with its id.
 fn bullets_of(doc: &ResumeDoc) -> Vec<(String, String)> {
-    doc.experience
-        .iter()
-        .chain(doc.projects.iter())
-        .chain(doc.leadership.iter())
+    doc.roles()
         .flat_map(|role| role.bullets.iter())
         .filter(|bullet| !bullet.text.trim().is_empty())
         .map(|bullet| (bullet.id.clone(), bullet.text.clone()))
@@ -124,12 +121,7 @@ pub fn apply(doc: &ResumeDoc, bullets: &[(String, String)], raw: &str) -> (Resum
 }
 
 fn set_bullet(doc: &mut ResumeDoc, id: &str, text: &str) -> bool {
-    for role in doc
-        .experience
-        .iter_mut()
-        .chain(doc.projects.iter_mut())
-        .chain(doc.leadership.iter_mut())
-    {
+    for role in doc.roles_mut() {
         for bullet in role.bullets.iter_mut() {
             if bullet.id == id {
                 bullet.text = text.to_string();

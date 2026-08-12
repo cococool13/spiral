@@ -2,7 +2,7 @@
 // Two columns with no interleaving, which is what keeps it expressible in Word.
 
 #set page(paper: "us-letter", margin: (x: 52pt, y: 52pt))
-#set text(font: "Liberation Serif", size: 10.5pt, fill: rgb("#111111"))
+#set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.62em, spacing: 0.85em)
 
 #let rail = 96pt
