@@ -1,5 +1,6 @@
 pub mod model;
 pub mod parse_text;
+pub mod store;
 
 pub fn run() {
     tauri::Builder::default()
