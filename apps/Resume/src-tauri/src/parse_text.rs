@@ -5,7 +5,7 @@
 //! leaves in place rather than guessing, because the Check screen is where a
 //! human resolves ambiguity and a confident wrong guess is worse than a blank.
 
-use crate::model::{Contact, DateMark, ResumeDoc};
+use crate::model::{bullet_id, entry_id, Bullet, Contact, DateMark, ResumeDoc, Role, School};
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -210,6 +210,119 @@ fn parse_skills(body: &[String]) -> Vec<String> {
         .collect()
 }
 
+const BULLET_MARKS: [char; 5] = ['-', '•', '*', '–', '▪'];
+
+fn is_bullet(line: &str) -> bool {
+    line.starts_with(BULLET_MARKS)
+}
+
+fn bullet_text(line: &str) -> String {
+    line.trim_start_matches(BULLET_MARKS).trim().to_string()
+}
+
+/// "Analyst, Admiralty" · "Analyst at Admiralty" · "Analyst — Admiralty".
+/// One separator only; a title containing a comma keeps everything after the
+/// first one as the organisation, which the Check screen lets a human fix.
+fn split_title_and_org(line: &str) -> (String, String) {
+    for sep in [" — ", " – ", " - ", ", ", " at ", " | "] {
+        if let Some((title, org)) = line.split_once(sep) {
+            return (title.trim().to_string(), org.trim().to_string());
+        }
+    }
+    (line.trim().to_string(), String::new())
+}
+
+/// A block is one entry: its heading lines, then its bullets. A new block
+/// begins at the first non-bullet line after a bullet or a date has been seen.
+fn blocks_of(body: &[String]) -> Vec<Vec<String>> {
+    let mut blocks: Vec<Vec<String>> = Vec::new();
+    let mut seen_detail = false;
+    for line in body {
+        let starts_new = !is_bullet(line) && seen_detail;
+        if blocks.is_empty() || starts_new {
+            blocks.push(Vec::new());
+            seen_detail = false;
+        }
+        if is_bullet(line) || parse_date_range(line).is_some() {
+            seen_detail = true;
+        }
+        blocks.last_mut().expect("just pushed").push(line.clone());
+    }
+    blocks
+}
+
+fn parse_role(block: &[String], section: &str, index: usize) -> Role {
+    let mut role = Role {
+        id: entry_id(section, index),
+        ..Role::default()
+    };
+    let mut heading_taken = false;
+    let mut bullet_index = 0usize;
+    for line in block {
+        if is_bullet(line) {
+            role.bullets.push(Bullet {
+                id: bullet_id(section, index, bullet_index),
+                text: bullet_text(line),
+            });
+            bullet_index += 1;
+            continue;
+        }
+        if let Some((start, end)) = parse_date_range(line) {
+            role.start = start;
+            role.end = end;
+            // The date may share the line with the title: strip it, keep the rest.
+            let rest = line.replace(&role.start.raw, "").replace(&role.end.raw, "");
+            let rest = rest
+                .trim_matches(|c: char| !c.is_alphanumeric())
+                .trim()
+                .to_string();
+            if !heading_taken && !rest.is_empty() {
+                let (title, org) = split_title_and_org(&rest);
+                role.title = title;
+                role.organization = org;
+                heading_taken = true;
+            }
+            continue;
+        }
+        if !heading_taken {
+            let (title, org) = split_title_and_org(line);
+            role.title = title;
+            role.organization = org;
+            heading_taken = true;
+        } else if role.location.is_empty() {
+            role.location = line.clone();
+        }
+    }
+    role
+}
+
+fn parse_school(block: &[String], index: usize) -> School {
+    let mut school = School {
+        id: entry_id("edu", index),
+        ..School::default()
+    };
+    let mut note_index = 0usize;
+    for line in block {
+        if is_bullet(line) {
+            school.notes.push(Bullet {
+                id: bullet_id("edu", index, note_index),
+                text: bullet_text(line),
+            });
+            note_index += 1;
+        } else if let Some((start, end)) = parse_date_range(line) {
+            school.start = start;
+            school.end = end;
+        } else if school.institution.is_empty() {
+            school.institution = line.clone();
+        } else if school.credential.is_empty() {
+            school.credential = line.clone();
+        } else if school.location.is_empty() {
+            school.location = line.clone();
+        }
+    }
+    school
+}
+
 pub fn parse_text(input: &str) -> ResumeDoc {
     let lines = lines_of(input);
     if lines.is_empty() {
@@ -230,7 +343,27 @@ pub fn parse_text(input: &str) -> ResumeDoc {
         match section {
             Section::Summary => doc.summary = body.join(" "),
             Section::Skills => doc.skills = parse_skills(body),
-            Section::Experience | Section::Education | Section::Projects => {}
+            Section::Experience => {
+                doc.experience = blocks_of(body)
+                    .iter()
+                    .enumerate()
+                    .map(|(i, block)| parse_role(block, "exp", i))
+                    .collect();
+            }
+            Section::Projects => {
+                doc.projects = blocks_of(body)
+                    .iter()
+                    .enumerate()
+                    .map(|(i, block)| parse_role(block, "proj", i))
+                    .collect();
+            }
+            Section::Education => {
+                doc.education = blocks_of(body)
+                    .iter()
+                    .enumerate()
+                    .map(|(i, block)| parse_school(block, i))
+                    .collect();
+            }
         }
     }
     doc
@@ -352,5 +485,51 @@ Rust, Analysis, Notation
         assert_eq!(doc.summary, "Analytical engine programmer.");
         assert_eq!(doc.skills, vec!["Rust", "Analysis", "Notation"]);
         assert_eq!(doc.contact.name, "Ada Lovelace");
+    }
+
+    #[test]
+    fn builds_a_role_from_a_title_line_a_date_line_and_bullets() {
+        let doc = parse_text(SAMPLE);
+        assert_eq!(doc.experience.len(), 1);
+        let role = &doc.experience[0];
+        assert_eq!(role.title, "Analyst");
+        assert_eq!(role.organization, "Admiralty");
+        assert_eq!(role.start.year, Some(2021));
+        assert!(role.end.present);
+        assert_eq!(role.bullets.len(), 1);
+        assert_eq!(role.bullets[0].text, "Wrote the first algorithm");
+        assert_eq!(role.bullets[0].id, "exp-0-b-0");
+        assert_eq!(role.id, "exp-0");
+    }
+
+    #[test]
+    fn a_date_on_the_same_line_as_the_title_still_works() {
+        let doc = parse_text(
+            "Ada\n\nEXPERIENCE\nAnalyst, Admiralty (Jan 2021 - Mar 2023)\n- Did the work\n",
+        );
+        let role = &doc.experience[0];
+        assert_eq!(role.title, "Analyst");
+        assert_eq!(role.organization, "Admiralty");
+        assert_eq!(role.end.year, Some(2023));
+        assert_eq!(role.bullets.len(), 1);
+    }
+
+    #[test]
+    fn a_second_entry_starts_at_the_next_non_bullet_line() {
+        let doc = parse_text(
+            "Ada\n\nEXPERIENCE\nAnalyst, Admiralty\n2021 - 2023\n- One\nIntern, Works\n2020 - 2021\n- Two\n",
+        );
+        assert_eq!(doc.experience.len(), 2);
+        assert_eq!(doc.experience[1].title, "Intern");
+        assert_eq!(doc.experience[1].bullets[0].id, "exp-1-b-0");
+    }
+
+    #[test]
+    fn education_keeps_institution_and_credential() {
+        let doc = parse_text(SAMPLE);
+        assert_eq!(doc.education.len(), 1);
+        assert_eq!(doc.education[0].institution, "University of London");
+        assert_eq!(doc.education[0].credential, "BSc Mathematics, 2019");
+        assert_eq!(doc.education[0].id, "edu-0");
     }
 }
