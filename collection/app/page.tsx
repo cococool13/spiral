@@ -1,9 +1,11 @@
 import AppGrid from "@/components/AppGrid";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
+import Showcase from "@/components/home/Showcase";
 import MotionProvider from "@/components/MotionProvider";
 import Nav from "@/components/Nav";
 import OtherWork from "@/components/OtherWork";
+import TaglineReveal from "@/components/resume/TaglineReveal";
 import ScrollProgress from "@/components/ScrollProgress";
 
 export default function Home() {
@@ -16,6 +18,15 @@ export default function Home() {
       <ScrollProgress />
       <main>
         <Hero />
+        <Showcase />
+        <TaglineReveal
+          lines={[
+            "Every one of these could have",
+            "an account, a subscription",
+            "and a process that never stops.",
+            "None of them do.",
+          ]}
+        />
         <AppGrid />
         <OtherWork />
       </main>

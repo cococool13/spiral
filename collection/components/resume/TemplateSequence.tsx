@@ -3,6 +3,7 @@
 import { m, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
 import { useRef } from "react";
+import { useCrossfade } from "@/lib/useCrossfade";
 
 /** Every sheet is a real render from the app: the same Typst engine that writes
  *  the PDF, run over one sample resume. Nothing here is a mockup, which is the
@@ -29,28 +30,7 @@ function Sheet({
   index: number;
   progress: ReturnType<typeof useScroll>["scrollYProgress"];
 }) {
-  const span = 1 / SHEETS.length;
-  // Each sheet owns one span. The transitions straddle the boundary between
-  // spans so the outgoing sheet is still fading while the next is already
-  // arriving — without the overlap there is a stretch of scroll where one has
-  // left and the next has not started, and the stage is simply empty.
-  const fade = span * 0.25;
-  const from = index * span;
-  const to = (index + 1) * span;
-  const first = index === 0;
-  const last = index === SHEETS.length - 1;
-
-  // The first sheet is already there when the section arrives; the last one
-  // stays, so the sequence ends on a resume rather than on nothing.
-  const stops = [from - fade, from + fade, to - fade, to + fade];
-  const opacity = useTransform(progress, stops, [first ? 1 : 0, 1, 1, last ? 1 : 0]);
-  const y = useTransform(progress, stops, [
-    first ? "0%" : "7%",
-    "0%",
-    "0%",
-    last ? "0%" : "-5%",
-  ]);
-  const scale = useTransform(progress, stops, [first ? 1 : 0.95, 1, 1, last ? 1 : 0.97]);
+  const { opacity, y, scale } = useCrossfade(progress, index, SHEETS.length);
 
   return (
     <m.figure
