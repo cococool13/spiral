@@ -4,6 +4,12 @@
 >
 > **Note on this plan's density.** M1's plan carried every line of implementation code because it was written to be handed off cold. This one is executed in the same session that wrote it, so it carries the *interfaces*, the decisions, and the code that is genuinely non-obvious — the Typst `World`, the data bridge, the template contract — and lets the routine parts follow from them. Test code is given in full, because the tests are the specification.
 
+**Status (2026-08-11):** Tasks 1–5 implemented on branch `feat/resume-m1`. 45 Rust tests, 18 frontend tests, clippy warning-free, `pnpm build` and `check-hex` clean. All five templates were rendered to PNG and inspected by eye, and the picker layout was checked in a browser harness at 880px (the window's minimum) and at desktop width — five cards in one row, no overflow. **Not verified: the picker inside the real Tauri window, on either platform.** Tauri IPC cannot run in a plain browser, so the harness proved the CSS and the SVGs but not `invoke`.
+
+Two defects were found by looking rather than by testing, and both are fixed:
+1. `parse_text` silently dropped leftover header text — "London" vanished between paste and page. It is now kept as `contact.location`.
+2. `rule`'s hairline floated midway between its heading and the body, reading as if it belonged to the content.
+
 **Goal:** Pick a style and see your own resume in it, five ways, rendered by the same engine that will produce the PDF.
 
 **Architecture:** One embedded Typst engine in Rust compiles a template source to a `PagedDocument`, then exports it as PDF bytes or one SVG per page. The resume never enters the template source as text — it is passed as JSON through Typst's `sys.inputs`, so a name containing a quote cannot break or inject anything. Templates are Typst files compiled into the binary with `include_str!`; the frontend never sees Typst, only finished SVG.
