@@ -83,10 +83,7 @@ fn parse_contact(header: &[String]) -> Contact {
         // Phone | Email". The details have already been lifted out above, so
         // what remains before the first separator is the name.
         if index == 0 {
-            let remainder = leftover
-                .trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
-                .trim()
-                .to_string();
+            let remainder = strip_separators(&leftover).to_string();
             let mut name = remainder.clone();
             // Whatever follows the name on line one is still text the user
             // typed — a job title, a city. Splitting the name off and throwing
@@ -102,9 +99,7 @@ fn parse_contact(header: &[String]) -> Contact {
             if !name.is_empty() {
                 contact.name = name;
             }
-            let rest = rest
-                .trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
-                .trim();
+            let rest = strip_separators(&rest);
             if !rest.is_empty() && contact.location.is_empty() {
                 contact.location = rest.to_string();
             }
@@ -114,10 +109,7 @@ fn parse_contact(header: &[String]) -> Contact {
         // is not an email, a phone number or a link is text the user typed and
         // we would otherwise throw away.
         if index > 0 && contact.location.is_empty() {
-            let remainder = leftover
-                .trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
-                .trim()
-                .to_string();
+            let remainder = strip_separators(&leftover).to_string();
             if !remainder.is_empty() {
                 contact.location = remainder;
             }
@@ -363,6 +355,22 @@ fn split_title_and_org(line: &str) -> (String, String) {
 
 /// A block is one entry: its heading lines, then its bullets. A new block
 /// begins at the first non-bullet line after a bullet or a date has been seen.
+/// Contact lines arrive wrapped in the separators that divided them.
+fn strip_separators(text: &str) -> &str {
+    text.trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
+        .trim()
+}
+
+/// One entry per block, ids minted from `section`. Experience, Projects and
+/// Leadership are the same shape and differ only in that prefix.
+fn roles_of(body: &[String], section: &str) -> Vec<Role> {
+    blocks_of(body)
+        .iter()
+        .enumerate()
+        .map(|(i, block)| parse_role(block, section, i))
+        .collect()
+}
+
 fn blocks_of(body: &[String]) -> Vec<Vec<String>> {
     let mut blocks: Vec<Vec<String>> = Vec::new();
     let mut seen_detail = false;
@@ -472,32 +480,14 @@ pub fn parse_text(input: &str) -> ResumeDoc {
         match section {
             Section::Summary => doc.summary = body.join(" "),
             Section::Skills => doc.skills = parse_skills(body),
-            Section::Experience => {
-                doc.experience = blocks_of(body)
-                    .iter()
-                    .enumerate()
-                    .map(|(i, block)| parse_role(block, "exp", i))
-                    .collect();
-            }
-            Section::Projects => {
-                doc.projects = blocks_of(body)
-                    .iter()
-                    .enumerate()
-                    .map(|(i, block)| parse_role(block, "proj", i))
-                    .collect();
-            }
+            Section::Experience => doc.experience = roles_of(body, "exp"),
+            Section::Projects => doc.projects = roles_of(body, "proj"),
+            Section::Leadership => doc.leadership = roles_of(body, "lead"),
             Section::Education => {
                 doc.education = blocks_of(body)
                     .iter()
                     .enumerate()
                     .map(|(i, block)| parse_school(block, i))
-                    .collect();
-            }
-            Section::Leadership => {
-                doc.leadership = blocks_of(body)
-                    .iter()
-                    .enumerate()
-                    .map(|(i, block)| parse_role(block, "lead", i))
                     .collect();
             }
             Section::Awards => doc.awards = parse_lines(body),

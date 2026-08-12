@@ -177,6 +177,10 @@ pub async fn download(
     let mut received: u64 = 0;
     let mut last_percent = u8::MAX;
     let mut stream = response.bytes_stream();
+    // Hashed as it arrives. Re-reading the finished file meant a second full
+    // pass over 2.5 GB — tens of seconds on a slow disk — for bytes that had
+    // just been in memory.
+    let mut hasher = Sha256::new();
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.map_err(|_| {
@@ -184,6 +188,7 @@ pub async fn download(
         })?;
         file.write_all(&chunk)
             .map_err(|e| format!("Could not write to {}: {e}.", temp_path.display()))?;
+        hasher.update(&chunk);
         received += chunk.len() as u64;
         let percent = (received.min(total) * 100)
             .checked_div(total)
@@ -201,7 +206,7 @@ pub async fn download(
     }
     drop(file);
 
-    let actual = hash_of(&temp_path)?;
+    let actual = to_hex(&hasher.finalize());
     if actual != entry.sha256 {
         let _ = std::fs::remove_file(&temp_path);
         return Err(

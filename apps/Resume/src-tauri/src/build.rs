@@ -102,10 +102,14 @@ pub fn build(
     // The free tier's wording pass. When a model tier arrives it takes this same
     // slot and the same stage name, so the build screen's vocabulary does not
     // change under the user.
-    let doc = &if tighten {
-        crate::tighten::tighten_doc(doc)
+    // Borrowed when the pass is off: the document is only read from here on,
+    // so there is nothing to gain from copying it.
+    let tightened;
+    let doc = if tighten {
+        tightened = crate::tighten::tighten_doc(doc);
+        &tightened
     } else {
-        doc.clone()
+        doc
     };
     report(progress("Tightening wording", 25));
 

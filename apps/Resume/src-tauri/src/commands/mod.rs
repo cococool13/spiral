@@ -19,7 +19,6 @@ pub mod engine;
 // command by its real module path.
 pub use building::{BuildRequest, BuildResult, BuiltFile};
 
-use crate::model::ResumeDoc;
 use crate::store::{Store, StoredDoc};
 use serde::Serialize;
 use tauri::Manager;
@@ -31,17 +30,9 @@ pub struct StorageInfo {
     pub exists: bool,
 }
 
-pub fn save_into(
-    store: &Store,
-    doc: &ResumeDoc,
-    template: &str,
-    format: &str,
-    accent: &str,
-    tighten: bool,
-    saved_at: &str,
-) -> Result<(), String> {
+pub fn save_into(store: &Store, stored: &StoredDoc) -> Result<(), String> {
     store
-        .save(doc, template, format, accent, tighten, saved_at)
+        .save(stored)
         .map_err(|e| {
         format!(
             "Could not save to {}: {e}. Check the folder is writable, or clear stored data in Settings.",
@@ -66,25 +57,11 @@ fn store_for(app: &tauri::AppHandle) -> Result<Store, String> {
         .map_err(|e| format!("Could not find this machine's application data folder: {e}."))
 }
 
+/// The frontend sends the record it wants stored, field for field. Nothing is
+/// assembled here, so nothing here can assemble it wrongly.
 #[tauri::command]
-pub fn save_document(
-    app: tauri::AppHandle,
-    doc: ResumeDoc,
-    template: String,
-    format: String,
-    accent: String,
-    tighten: bool,
-    saved_at: String,
-) -> Result<(), String> {
-    save_into(
-        &store_for(&app)?,
-        &doc,
-        &template,
-        &format,
-        &accent,
-        tighten,
-        &saved_at,
-    )
+pub fn save_document(app: tauri::AppHandle, stored: StoredDoc) -> Result<(), String> {
+    save_into(&store_for(&app)?, &stored)
 }
 
 #[tauri::command]
@@ -115,13 +92,25 @@ pub fn delete_stored_data(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::ResumeDoc;
+
+    fn stored_for(doc: ResumeDoc, template: &str) -> StoredDoc {
+        StoredDoc {
+            doc,
+            saved_at: "2026-08-11T10:00:00Z".to_string(),
+            template: template.to_string(),
+            format: "pdf".to_string(),
+            accent: "ink".to_string(),
+            tighten: true,
+        }
+    }
     #[test]
     fn save_and_load_go_through_one_store() {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
         let mut doc = ResumeDoc::empty();
         doc.contact.name = "Ada".into();
-        save_into(&store, &doc, "column", "pdf", "ink", true, "2026-08-11T10:00:00Z").unwrap();
+        save_into(&store, &stored_for(doc, "column")).unwrap();
         assert_eq!(load_from(&store).unwrap().unwrap().doc.contact.name, "Ada");
     }
     #[test]
@@ -131,7 +120,7 @@ mod tests {
         let blocked = dir.path().join("blocked");
         std::fs::write(&blocked, b"x").unwrap();
         let store = Store::new(blocked);
-        let err = save_into(&store, &ResumeDoc::empty(), "", "", "", true, "now").unwrap_err();
+        let err = save_into(&store, &stored_for(ResumeDoc::empty(), "")).unwrap_err();
         assert!(err.starts_with("Could not save"), "got {err}");
         assert!(err.contains("Settings"), "no next step in: {err}");
     }

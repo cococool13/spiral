@@ -1,7 +1,7 @@
 //! Thumbnails, the build itself, and saving what it produced.
 
 use super::{engine::{engine_of, model_ready}, store_for};
-use crate::build::{self, Built, Format, Progress};
+use crate::build::{self, Format, Progress};
 use crate::keys;
 use crate::model::ResumeDoc;
 use crate::provider::Provider;
@@ -25,38 +25,52 @@ pub struct Thumbnail {
     pub error: String,
 }
 
+/// The twelve cards. Each template is an independent compile, so they run on
+/// their own threads: twelve sequential compiles took about 250 ms, which is
+/// long enough for the Style screen to look stuck.
 pub fn render_all_thumbnails(doc: &ResumeDoc, accent: &str) -> Vec<Thumbnail> {
-    templates::all()
-        .iter()
-        .map(|template| match templates::to_svg_pages(template, doc, accent) {
-            Ok(mut pages) if !pages.is_empty() => Thumbnail {
-                id: template.id.to_string(),
-                name: template.name.to_string(),
-                svg: pages.remove(0),
-                error: String::new(),
-            },
-            Ok(_) => Thumbnail {
-                id: template.id.to_string(),
-                name: template.name.to_string(),
-                svg: String::new(),
-                error: "This style produced no pages. Choose another one.".to_string(),
-            },
-            Err(message) => Thumbnail {
-                id: template.id.to_string(),
-                name: template.name.to_string(),
-                svg: String::new(),
-                error: message,
-            },
-        })
-        .collect()
+    std::thread::scope(|scope| {
+        let running: Vec<_> = templates::all()
+            .iter()
+            .map(|template| scope.spawn(move || one_thumbnail(template, doc, accent)))
+            .collect();
+        running
+            .into_iter()
+            .map(|handle| {
+                handle.join().unwrap_or_else(|_| Thumbnail {
+                    id: String::new(),
+                    name: String::new(),
+                    svg: String::new(),
+                    error: "This style could not be drawn. Choose another one.".to_string(),
+                })
+            })
+            .collect()
+    })
 }
 
-/// Twelve compiles, roughly half a second in total. Deliberately synchronous:
-/// the Style
-/// screen has nothing to show until they are all done, and a progress bar for
-/// a fifth of a second would be theatre.
+fn one_thumbnail(template: &templates::Template, doc: &ResumeDoc, accent: &str) -> Thumbnail {
+    let (svg, error) = match templates::to_svg_pages(template, doc, accent) {
+        Ok(mut pages) if !pages.is_empty() => (pages.remove(0), String::new()),
+        Ok(_) => (
+            String::new(),
+            "This style produced no pages. Choose another one.".to_string(),
+        ),
+        Err(message) => (String::new(), message),
+    };
+    Thumbnail {
+        id: template.id.to_string(),
+        name: template.name.to_string(),
+        svg,
+        error,
+    }
+}
+
+/// `async` so Tauri runs this off the main thread: the twelve compiles used to
+/// block the webview, which is why "Setting your resume in twelve styles…" was
+/// liable never to paint. Still one shot with no progress bar — a fraction of a
+/// second of progress would be theatre.
 #[tauri::command]
-pub fn render_thumbnails(doc: ResumeDoc, accent: String) -> Vec<Thumbnail> {
+pub async fn render_thumbnails(doc: ResumeDoc, accent: String) -> Vec<Thumbnail> {
     render_all_thumbnails(&doc, &accent)
 }
 
@@ -87,9 +101,17 @@ fn stage(name: &str, percent: u8, engine: &str) -> Progress {
     }
 }
 
+/// What the Save button needs, and nothing else — in particular not the page
+/// SVGs, which the Result screen already holds.
+pub struct Saveable {
+    pub bytes: Vec<u8>,
+    pub suggested_name: String,
+    pub format: Format,
+}
+
 /// Holds the one built file between the Build screen and the Save button.
 #[derive(Default)]
-pub struct BuiltFile(pub Mutex<Option<Built>>);
+pub struct BuiltFile(pub Mutex<Option<Saveable>>);
 
 /// Grouped because the build takes five choices and Rust rightly complains at
 /// a function with eight parameters. The frontend sends one object.
@@ -101,6 +123,96 @@ pub struct BuildRequest {
     pub format: String,
     pub accent: String,
     pub tighten: bool,
+}
+
+/// The outcome of the wording pass, whichever tier ran it.
+struct Rewritten {
+    doc: ResumeDoc,
+    /// What ran, in the words shown on the build screen and the result.
+    engine: String,
+    /// One line per rewrite the fact gate refused. Never an error.
+    notes: Vec<String>,
+    used_model: bool,
+}
+
+/// Choose a tier and run it. Extracted from `build_document` because tier
+/// selection, sidecar lifetime and the engine's own name are one concern and
+/// laying out a page is another — a fifth tier belongs here and nowhere else.
+///
+/// The model pass runs whenever a tier is ready — a saved key, or the offline
+/// model installed. It is deliberately *not* gated on `tighten`: that toggle is
+/// the free rule-based pass, and letting it switch off a configured engine meant
+/// a user with a key silently got no rewrite at all. It replaces the
+/// deterministic tightening rather than stacking on top of it — two passes over
+/// the same sentence is how wording gets mangled.
+async fn rewrite_wording(
+    app: &tauri::AppHandle,
+    doc: ResumeDoc,
+    on_progress: &Channel<Progress>,
+) -> Result<Rewritten, String> {
+    let free = |doc| Rewritten {
+        doc,
+        engine: OFFLINE_ENGINE.to_string(),
+        notes: Vec::new(),
+        used_model: false,
+    };
+
+    let root = store_for(app)?.path().to_path_buf();
+    let (stored, provider) = engine_of(app)?;
+    if !model_ready(&root, &provider) {
+        return Ok(free(doc));
+    }
+
+    if stored.provider == "local" {
+        // The offline engine: a process on this machine, reachable only on
+        // loopback, speaking the same shape as any other endpoint.
+        let entry = crate::local::catalogue().ok_or_else(|| {
+            "This build has no offline model. Use your own API key, or the free rule-based pass."
+                .to_string()
+        })?;
+        let binary = app
+            .path()
+            .resolve("binaries/llama-server", tauri::path::BaseDirectory::Resource)
+            .map_err(|_| "This build has no offline engine bundled.".to_string())?;
+        let port = crate::sidecar::free_port()?;
+        let engine_process =
+            crate::sidecar::Sidecar::start(&binary, &crate::local::model_path(&root, &entry), port)?;
+        let _ = on_progress.send(stage("Starting the offline engine", 5, LOCAL_ENGINE));
+        crate::sidecar::wait_until_ready(port, crate::sidecar::READY_ATTEMPTS).await?;
+        let _ = on_progress.send(stage("Rewriting wording", 10, LOCAL_ENGINE));
+        let local = Provider::Local {
+            base_url: engine_process.url(),
+        };
+        let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &local, "", &stored.model).await?;
+        // The fact gate has just run inside `rewrite_doc`. Naming it is the one
+        // stage that shows the promise doing work.
+        let _ = on_progress.send(stage("Checking facts", 12, LOCAL_ENGINE));
+        // The sidecar is dropped here, which kills it. Nothing keeps running
+        // after a build.
+        drop(engine_process);
+        return Ok(Rewritten {
+            doc,
+            engine: LOCAL_ENGINE.to_string(),
+            notes: outcome.notes,
+            used_model: true,
+        });
+    }
+
+    // `model_ready` said a key is there; if it vanished between the two calls,
+    // the free pass is a working answer, not an error.
+    let Some(key) = keys::read(provider.id()) else {
+        return Ok(free(doc));
+    };
+    let named = format!("Rewritten with your key at {}", provider.host());
+    let _ = on_progress.send(stage("Rewriting wording", 10, &named));
+    let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, &key, &stored.model).await?;
+    let _ = on_progress.send(stage("Checking facts", 12, &named));
+    Ok(Rewritten {
+        doc,
+        engine: named,
+        notes: outcome.notes,
+        used_model: true,
+    })
 }
 
 #[tauri::command]
@@ -122,60 +234,13 @@ pub async fn build_document(
     })?;
     let format = Format::parse(&format)?;
 
-    // The model pass runs whenever a model tier is ready — a saved key, or the
-    // offline model installed. It is deliberately *not* gated on `tighten`:
-    // that toggle is the free rule-based pass, and letting it switch off a
-    // configured engine meant a user with a key silently got no rewrite at all.
-    // It replaces the deterministic tightening rather than stacking on top of
-    // it — two passes over the same sentence is how wording gets mangled.
-    let root = store_for(&app)?.path().to_path_buf();
-    let (stored, provider) = engine_of(&app)?;
-    let (doc, engine, notes, used_model) = if !model_ready(&root, &provider) {
-        (doc, OFFLINE_ENGINE.to_string(), Vec::new(), false)
-    } else if stored.provider == "local" {
-        // The offline engine: a process on this machine, reachable only on
-        // loopback, speaking the same shape as any other endpoint.
-        let entry = crate::local::catalogue().ok_or_else(|| {
-            "This build has no offline model. Use your own API key, or the free rule-based pass."
-                .to_string()
-        })?;
-        let binary = app
-            .path()
-            .resolve("binaries/llama-server", tauri::path::BaseDirectory::Resource)
-            .map_err(|_| "This build has no offline engine bundled.".to_string())?;
-        let port = crate::sidecar::free_port()?;
-        let engine_process =
-            crate::sidecar::Sidecar::start(&binary, &crate::local::model_path(&root, &entry), port)?;
-        let _ = on_progress.send(stage("Starting the offline engine", 5, LOCAL_ENGINE));
-        crate::sidecar::wait_until_ready(port, crate::sidecar::READY_ATTEMPTS).await?;
-        let _ = on_progress.send(stage("Rewriting wording", 10, LOCAL_ENGINE));
-        let provider = Provider::Local {
-            base_url: engine_process.url(),
-        };
-        let (rewritten, outcome) =
-            crate::rewrite::rewrite_doc(&doc, &provider, "", &stored.model).await?;
-        // The fact gate has just run inside `rewrite_doc`. Naming it is the one
-        // stage that shows the promise doing work.
-        let _ = on_progress.send(stage("Checking facts", 12, LOCAL_ENGINE));
-        // The sidecar is dropped here, which kills it. Nothing keeps
-        // running after a build.
-        drop(engine_process);
-        (rewritten, LOCAL_ENGINE.to_string(), outcome.notes, true)
-    } else {
-        // `model_ready` said a key is there; if it vanished between the two
-        // calls, the free pass is a working answer, not an error.
-        match keys::read(provider.id()) {
-            Some(key) => {
-                let named = format!("Rewritten with your key at {}", provider.host());
-                let _ = on_progress.send(stage("Rewriting wording", 10, &named));
-                let (rewritten, outcome) =
-                    crate::rewrite::rewrite_doc(&doc, &provider, &key, &stored.model).await?;
-                let _ = on_progress.send(stage("Checking facts", 12, &named));
-                (rewritten, named, outcome.notes, true)
-            }
-            None => (doc, OFFLINE_ENGINE.to_string(), Vec::new(), false),
-        }
-    };
+    let rewritten = rewrite_wording(&app, doc, &on_progress).await?;
+    let Rewritten {
+        doc,
+        engine,
+        notes,
+        used_model,
+    } = rewritten;
 
     // Every stage from here on carries the engine name, so the build screen
     // says what is doing the work while it is being done.
@@ -192,16 +257,22 @@ pub async fn build_document(
         },
     )?;
 
-    let response = BuildResult {
-        pages: result.pages.clone(),
-        suggested_name: result.suggested_name.clone(),
-        engine,
-        notes,
-    };
+    // The save path needs the bytes and the name; the preview pages belong to
+    // the response and are moved into it. Keeping a second copy of every page
+    // SVG alive for the life of the app bought nothing.
     *built.0.lock().map_err(|_| {
         "The last build could not be stored. Build it again.".to_string()
-    })? = Some(result);
-    Ok(response)
+    })? = Some(Saveable {
+        bytes: result.bytes,
+        suggested_name: result.suggested_name.clone(),
+        format: result.format,
+    });
+    Ok(BuildResult {
+        pages: result.pages,
+        suggested_name: result.suggested_name,
+        engine,
+        notes,
+    })
 }
 
 /// Opens the system save dialog and writes the built file to whatever path the

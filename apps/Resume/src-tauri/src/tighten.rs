@@ -12,15 +12,6 @@
 
 use crate::model::ResumeDoc;
 
-/// Advice attached to a bullet. Never a change — the app does not know a number
-/// the user did not write, so it says so instead of inventing one.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Note {
-    pub bullet_id: String,
-    pub message: String,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tightened {
     pub text: String,
@@ -169,42 +160,13 @@ pub fn tighten_bullet(text: &str, present_tense: bool) -> Tightened {
 /// field is cloned through untouched.
 pub fn tighten_doc(doc: &ResumeDoc) -> ResumeDoc {
     let mut out = doc.clone();
-    for role in out
-        .experience
-        .iter_mut()
-        .chain(out.projects.iter_mut())
-        .chain(out.leadership.iter_mut())
-    {
+    for role in out.roles_mut() {
         let present = role.end.present;
         for bullet in role.bullets.iter_mut() {
             bullet.text = tighten_bullet(&bullet.text, present).text;
         }
     }
     out
-}
-
-/// Every note the document would raise, in document order.
-pub fn review(doc: &ResumeDoc) -> Vec<Note> {
-    let mut notes = Vec::new();
-    for role in doc
-        .experience
-        .iter()
-        .chain(doc.projects.iter())
-        .chain(doc.leadership.iter())
-    {
-        for bullet in &role.bullets {
-            if bullet.text.trim().is_empty() {
-                continue;
-            }
-            for message in tighten_bullet(&bullet.text, role.end.present).notes {
-                notes.push(Note {
-                    bullet_id: bullet.id.clone(),
-                    message,
-                });
-            }
-        }
-    }
-    notes
 }
 
 #[cfg(test)]
@@ -292,21 +254,6 @@ mod tests {
 
     // --- The guarantee -----------------------------------------------------
 
-    fn digits_of(text: &str) -> Vec<String> {
-        let mut runs = Vec::new();
-        let mut current = String::new();
-        for c in text.chars() {
-            if c.is_ascii_digit() {
-                current.push(c);
-            } else if !current.is_empty() {
-                runs.push(std::mem::take(&mut current));
-            }
-        }
-        if !current.is_empty() {
-            runs.push(current);
-        }
-        runs
-    }
 
     /// The deterministic tier's fact gate. Every rule works on the opening
     /// clause; if one ever reaches into the body of a sentence, this fails.
@@ -328,8 +275,8 @@ mod tests {
             for present in [true, false] {
                 let out = tighten_bullet(case, present).text;
                 assert_eq!(
-                    digits_of(case),
-                    digits_of(&out),
+                    crate::gate::digit_runs(case),
+                    crate::gate::digit_runs(&out),
                     "numbers changed\n  before: {case}\n  after:  {out}"
                 );
             }
@@ -367,26 +314,5 @@ mod tests {
         assert_eq!(out.experience[0].bullets[0].id, doc.experience[0].bullets[0].id);
     }
 
-    #[test]
-    fn review_reports_notes_against_the_bullet_they_belong_to() {
-        let doc = crate::parse_text::parse_text(
-            "Ada\n\nEXPERIENCE\nAnalyst, Admiralty\n2021 - 2022\n- Wrote the parser\n- Cut latency by 40%\n",
-        );
-        let notes = review(&doc);
-        assert_eq!(notes.len(), 1, "expected only the no-number note: {notes:?}");
-        assert_eq!(notes[0].bullet_id, "exp-0-b-0");
-        assert!(notes[0].message.contains("quantify"));
-    }
 
-    #[test]
-    fn an_empty_bullet_raises_nothing() {
-        let mut doc = crate::model::ResumeDoc::empty();
-        let mut role = crate::model::Role::default();
-        role.bullets.push(crate::model::Bullet {
-            id: "exp-0-b-0".into(),
-            text: "   ".into(),
-        });
-        doc.experience.push(role);
-        assert!(review(&doc).is_empty());
-    }
 }

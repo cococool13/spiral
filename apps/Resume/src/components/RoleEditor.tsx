@@ -1,15 +1,6 @@
+import { nextBulletId } from "../lib/ids";
 import type { BulletReview, Role } from "../lib/types";
 import { Field } from "./Field";
-
-/** Same reasoning as `nextRoleId`: a count is not an identity once anything can
- *  be removed. Bullet ids are how a model rewrite finds its way home. */
-function nextBulletId(role: Role): string {
-  const prefix = `${role.id}-b-`;
-  const used = role.bullets
-    .map((bullet) => Number.parseInt(bullet.id.slice(prefix.length), 10))
-    .filter((n) => Number.isFinite(n));
-  return `${prefix}${used.length === 0 ? 0 : Math.max(...used) + 1}`;
-}
 
 export function RoleEditor({
   role,
@@ -95,7 +86,7 @@ export function RoleEditor({
           onClick={() =>
             onChange({
               ...role,
-              bullets: [...role.bullets, { id: nextBulletId(role), text: "" }],
+              bullets: [...role.bullets, { id: nextBulletId(role.id, role.bullets.map((b) => b.id)), text: "" }],
             })
           }
         >

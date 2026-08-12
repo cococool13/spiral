@@ -62,6 +62,9 @@ export interface ResumeDoc {
   skills: SkillGroup[];
 }
 
+/** PDF or Word. Chosen on the Format step, before anything is built. */
+export type ExportFormat = "pdf" | "docx";
+
 /** The five choices that make a build. They travel together everywhere — the
  *  same five are saved, built, and re-built — so they are one value rather
  *  than five parameters repeated at every call site. Mirrors `BuildRequest`
@@ -69,21 +72,16 @@ export interface ResumeDoc {
 export interface Draft {
   doc: ResumeDoc;
   template: string;
-  format: string;
+  /** Empty until the Format step is reached — a closed set, not a free string,
+   *  so a bad value cannot travel to Rust and be rejected there instead. */
+  format: ExportFormat | "";
   accent: string;
   tighten: boolean;
 }
 
-/** PDF or Word. Chosen on the Format step, before anything is built. */
-export type ExportFormat = "pdf" | "docx";
 
-export interface StoredDoc {
-  doc: ResumeDoc;
+export interface StoredDoc extends Draft {
   savedAt: string;
-  template: string;
-  format: string;
-  accent: string;
-  tighten: boolean;
 }
 
 /** One of six swatches. The hex comes from Rust — the frontend may not hold

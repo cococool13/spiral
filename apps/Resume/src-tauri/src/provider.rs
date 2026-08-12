@@ -54,7 +54,12 @@ impl Provider {
                 if trimmed.is_empty() {
                     return Err("Enter the base URL of the service you want to use.".to_string());
                 }
-                if !trimmed.starts_with("http://") && !trimmed.starts_with("https://") {
+                // `reqwest` is already here and already carries `url`; hand-rolled
+                // scheme checks and host splitting disagreed about what a base URL
+                // is depending on which of the two you asked.
+                let parsed = reqwest::Url::parse(trimmed)
+                    .map_err(|_| "That base URL could not be read. Check it and try again.".to_string())?;
+                if !matches!(parsed.scheme(), "http" | "https") {
                     return Err(
                         "That base URL needs to start with http:// or https://.".to_string()
                     );
@@ -92,12 +97,17 @@ impl Provider {
         match self {
             Provider::Anthropic => "api.anthropic.com".to_string(),
             Provider::OpenAi => "api.openai.com".to_string(),
-            Provider::Compatible { base_url } => base_url
-                .split("://")
-                .nth(1)
-                .and_then(|rest| rest.split('/').next())
-                .unwrap_or(base_url)
-                .to_string(),
+            Provider::Compatible { base_url } => reqwest::Url::parse(base_url)
+                .ok()
+                .and_then(|url| {
+                    url.host_str().map(|host| match url.port() {
+                        Some(port) => format!("{host}:{port}"),
+                        None => host.to_string(),
+                    })
+                })
+                // `parse` already accepted this URL, so this is unreachable in
+                // practice — showing the raw value beats showing nothing.
+                .unwrap_or_else(|| base_url.clone()),
             // Never a remote name, whatever port it lands on.
             Provider::Local { .. } => "127.0.0.1".to_string(),
         }

@@ -18,9 +18,34 @@ use typst_layout::PagedDocument;
 /// a single document with no imports, so there is nothing else to resolve.
 pub struct ResumeWorld {
     library: LazyHash<Library>,
-    book: LazyHash<FontBook>,
-    fonts: Vec<Font>,
+    fonts: &'static Faces,
     main: Source,
+}
+
+/// The bundled faces and their book. Parsing eight Liberation faces plus the
+/// typst-assets fallbacks and building the `FontBook` costs about 8 ms and the
+/// result never varies, so it is done once for the process rather than once per
+/// compile — the Style screen alone compiles twelve times.
+struct Faces {
+    fonts: Vec<Font>,
+    book: LazyHash<FontBook>,
+}
+
+static FACES: std::sync::OnceLock<Faces> = std::sync::OnceLock::new();
+
+fn faces() -> &'static Faces {
+    FACES.get_or_init(|| {
+        // The resume faces come first so a template asking for one gets it, and
+        // typst-assets supplies the maths and monospace fallbacks behind them.
+        let fonts: Vec<Font> = RESUME_FACES
+            .iter()
+            .map(|bytes| Bytes::new(*bytes))
+            .chain(typst_assets::fonts().map(Bytes::new))
+            .flat_map(Font::iter)
+            .collect();
+        let book = LazyHash::new(FontBook::from_fonts(&fonts));
+        Faces { fonts, book }
+    })
 }
 
 /// The faces a resume is set in. Committed under `assets/fonts/`, compiled into
@@ -48,19 +73,9 @@ impl ResumeWorld {
     /// app: a name containing a quote, a backslash, or a `#` is data here, and
     /// data cannot become syntax.
     pub fn with_inputs(source: String, inputs: Dict) -> Self {
-        // The resume faces come first so a template asking for one gets it, and
-        // typst-assets supplies the maths and monospace fallbacks behind them.
-        let fonts: Vec<Font> = RESUME_FACES
-            .iter()
-            .map(|bytes| Bytes::new(*bytes))
-            .chain(typst_assets::fonts().map(Bytes::new))
-            .flat_map(Font::iter)
-            .collect();
-        let book = FontBook::from_fonts(&fonts);
         Self {
             library: LazyHash::new(Library::builder().with_inputs(inputs).build()),
-            book: LazyHash::new(book),
-            fonts,
+            fonts: faces(),
             main: Source::new(main_id(), source),
         }
     }
@@ -82,7 +97,7 @@ impl World for ResumeWorld {
     }
 
     fn book(&self) -> &LazyHash<FontBook> {
-        &self.book
+        &self.fonts.book
     }
 
     fn main(&self) -> FileId {
@@ -102,7 +117,7 @@ impl World for ResumeWorld {
     }
 
     fn font(&self, index: usize) -> Option<Font> {
-        self.fonts.get(index).cloned()
+        self.fonts.fonts.get(index).cloned()
     }
 
     /// No clock. A resume must render byte-identically every time, and the only

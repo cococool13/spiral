@@ -1,48 +1,50 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Stepper, type Step } from "./components/Stepper";
 import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
-import {
-  emptyDoc,
-  type BuildResult,
-  type Draft,
-  type ExportFormat,
-  type ResumeDoc,
-} from "./lib/types";
+import { emptyDoc, type BuildResult, type Draft, type ResumeDoc } from "./lib/types";
 import { Build } from "./screens/Build";
 import { Check } from "./screens/Check";
 import { Format } from "./screens/Format";
 import { Input } from "./screens/Input";
 import { Result } from "./screens/Result";
 import { Settings } from "./screens/Settings";
+import { useDebounced } from "./lib/useDebounced";
 import { Style } from "./screens/Style";
 
 export default function App() {
-  const [doc, setDoc] = useState<ResumeDoc>(emptyDoc());
+  const [draft, setDraft] = useState<Draft>({
+    doc: emptyDoc(),
+    template: "",
+    format: "",
+    accent: "ink",
+    tighten: true,
+  });
   const [step, setStep] = useState<Step>("input");
   const [reached, setReached] = useState<Step[]>(["input"]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [template, setTemplate] = useState("");
-  const [format, setFormat] = useState<ExportFormat | "">("");
   const [versions, setVersions] = useState<BuildResult[]>([]);
   const [showing, setShowing] = useState(0);
   const [usesModel, setUsesModel] = useState(false);
   const [rebuilding, setRebuilding] = useState(0);
   const [saveError, setSaveError] = useState("");
-  const [accent, setAccent] = useState("ink");
-  const [tighten, setTighten] = useState(true);
+
+  // The saved copy waits for typing to stop. Every keystroke used to write the
+  // whole document to disk through a synchronous command.
+  const settled = useDebounced(draft);
 
   useEffect(() => {
     loadDocument()
       .then((stored) => {
-        if (stored) {
-          setDoc(stored.doc);
-          setSavedAt(stored.savedAt);
-          setTemplate(stored.template);
-          setFormat(stored.format === "pdf" || stored.format === "docx" ? stored.format : "");
-          if (stored.accent) setAccent(stored.accent);
-          setTighten(stored.tighten);
-        }
+        if (!stored) return;
+        setSavedAt(stored.savedAt);
+        setDraft({
+          doc: stored.doc,
+          template: stored.template,
+          format: stored.format === "pdf" || stored.format === "docx" ? stored.format : "",
+          accent: stored.accent || "ink",
+          tighten: stored.tighten,
+        });
       })
       .catch(() => setSavedAt(null));
   }, []);
@@ -56,67 +58,48 @@ export default function App() {
       .catch(() => setUsesModel(false));
   }, []);
 
-  const draft: Draft = { doc, template, format, accent, tighten };
+  // Only what the user changed is written back. Saving unconditionally meant
+  // opening the app and touching nothing still rewrote the file, which moved
+  // "saved from…" to today every launch.
+  const edited = useRef(false);
+
+  function edit(changed: Partial<Draft>) {
+    edited.current = true;
+    setDraft((current) => ({ ...current, ...changed }));
+  }
+
+  // Persistence failures used to be swallowed, so an unwritable folder meant
+  // the user kept working on a document that was never being saved.
+  useEffect(() => {
+    if (!edited.current) return;
+    void saveDocument(settled)
+      .then(() => setSaveError(""))
+      .catch((e) => setSaveError(`${e}`));
+  }, [settled]);
 
   // Stable identity: an inline arrow here re-ran Input's drag-drop effect on
   // every render of this component, stacking listeners.
-  const onInputReady = useCallback(
-    (next: ResumeDoc) => {
-      setDoc(next);
-      persist({ doc: next });
-      setStep("check");
-      setReached((seen) => (seen.includes("check") ? seen : [...seen, "check"]));
-    },
-    // `persist` closes over the current draft, so the whole draft is the dep.
-    [doc, template, format, accent, tighten],
-  );
+  const onInputReady = useCallback((doc: ResumeDoc) => {
+    edited.current = true;
+    setDraft((current) => ({ ...current, doc }));
+    setStep("check");
+    setReached((seen) => (seen.includes("check") ? seen : [...seen, "check"]));
+  }, []);
 
   function goTo(next: Step) {
     setStep(next);
     setReached((seen) => (seen.includes(next) ? seen : [...seen, next]));
   }
 
-  // Persistence failures used to be swallowed, so an unwritable folder meant
-  // the user kept working on a document that was never being saved.
-  //
-  // Takes the one field that changed: React state has not caught up when this
-  // runs, so passing the whole draft from a setter would save the old value.
-  function persist(changed: Partial<Draft>) {
-    void saveDocument({ ...draft, ...changed })
-      .then(() => setSaveError(""))
-      .catch((e) => setSaveError(`${e}`));
-  }
-
-  function update(next: ResumeDoc) {
-    setDoc(next);
-    persist({ doc: next });
+  function update(doc: ResumeDoc) {
+    edit({ doc });
   }
 
   /** Every style choice invalidates the built versions: they were set in the
    *  previous one. */
   function choose(changed: Partial<Draft>) {
+    edit(changed);
     setVersions([]);
-    persist(changed);
-  }
-
-  function chooseTemplate(id: string) {
-    setTemplate(id);
-    choose({ template: id });
-  }
-
-  function chooseTighten(next: boolean) {
-    setTighten(next);
-    choose({ tighten: next });
-  }
-
-  function chooseAccent(next: string) {
-    setAccent(next);
-    choose({ accent: next });
-  }
-
-  function chooseFormat(next: ExportFormat) {
-    setFormat(next);
-    choose({ format: next });
   }
 
   return (
@@ -136,7 +119,7 @@ export default function App() {
             onClose={() => setSettingsOpen(false)}
             onEngineChanged={(info) => setUsesModel(info.usesModel)}
             onCleared={() => {
-              setDoc(emptyDoc());
+              edit({ doc: emptyDoc() });
               setSavedAt(null);
               setStep("input");
               setReached(["input"]);
@@ -164,32 +147,32 @@ export default function App() {
             ) : null}
             {step === "check" ? (
               <Check
-                doc={doc}
-                tighten={tighten}
+                doc={draft.doc}
+                tighten={draft.tighten}
                 onChange={update}
-                onTighten={chooseTighten}
+                onTighten={(tighten) => choose({ tighten })}
                 onContinue={() => goTo("style")}
               />
             ) : null}
             {step === "style" ? (
               <Style
-                doc={doc}
-                chosen={template}
-                accent={accent}
-                onChoose={chooseTemplate}
-                onChooseAccent={chooseAccent}
+                doc={draft.doc}
+                chosen={draft.template}
+                accent={draft.accent}
+                onChoose={(template) => choose({ template })}
+                onChooseAccent={(accent) => choose({ accent })}
                 onContinue={() => goTo("format")}
               />
             ) : null}
             {step === "format" ? (
-              <Format chosen={format} onChoose={chooseFormat} onContinue={() => goTo("build")} />
+              <Format chosen={draft.format} onChoose={(format) => choose({ format })} onContinue={() => goTo("build")} />
             ) : null}
-            {step === "build" && format !== "" ? (
+            {step === "build" && draft.format !== "" ? (
               versions.length > 0 && rebuilding === 0 ? (
                 <Result
                   versions={versions}
                   showing={showing}
-                  format={format}
+                  format={draft.format}
                   canRewrite={usesModel}
                   onShow={setShowing}
                   onRewrite={() => setRebuilding((n) => n + 1)}
@@ -204,7 +187,7 @@ export default function App() {
                   // A fresh key remounts the screen, which is what makes
                   // "rewrite the wording again" actually run a second build.
                   key={`${versions.length}-${rebuilding}`}
-                  draft={{ ...draft, format }}
+                  draft={draft}
                   onDone={(result) => {
                     setVersions((all) => [...all, result]);
                     setShowing(versions.length);

@@ -2,20 +2,10 @@ import { useEffect, useState } from "react";
 import { Field } from "../components/Field";
 import { ListEditor } from "../components/ListEditor";
 import { RoleEditor } from "../components/RoleEditor";
+import { nextEntryId } from "../lib/ids";
 import { reviewWording } from "../lib/ipc";
+import { useDebounced } from "../lib/useDebounced";
 import { emptyRole, type BulletReview, type ResumeDoc, type Role } from "../lib/types";
-
-/** The next free id for a section. Deriving it from `roles.length` collided
- *  after a removal — deleting the first of [exp-0, exp-1] and adding one
- *  produced a second "exp-1", which made two roles share bullet ids and let a
- *  model rewrite land on the wrong bullet. */
-function nextRoleId(prefix: string, roles: Role[]): string {
-  const used = roles
-    .map((role) => Number.parseInt(role.id.slice(prefix.length + 1), 10))
-    .filter((n) => Number.isFinite(n));
-  const next = used.length === 0 ? 0 : Math.max(...used) + 1;
-  return `${prefix}-${next}`;
-}
 
 /** One editable section of roles. Both fields are stated by the caller: the
  *  add-button label used to be derived from the heading text, so renaming
@@ -58,7 +48,7 @@ function roleSection(
       <button
         type="button"
         className="btn"
-        onClick={() => onChange([...roles, emptyRole(nextRoleId(idPrefix, roles))])}
+        onClick={() => onChange([...roles, emptyRole(nextEntryId(idPrefix, roles.map((r) => r.id)))])}
       >
         Add {entry}
       </button>
@@ -80,10 +70,13 @@ export function Check({
   onContinue: () => void;
 }) {
   const [reviews, setReviews] = useState<BulletReview[]>([]);
+  // The review re-tightens every bullet in the document, so it waits for the
+  // typing to stop rather than running per keystroke.
+  const settled = useDebounced(doc);
 
   useEffect(() => {
     let current = true;
-    reviewWording(doc)
+    reviewWording(settled)
       .then((next) => {
         if (current) setReviews(next);
       })
@@ -93,7 +86,7 @@ export function Check({
     return () => {
       current = false;
     };
-  }, [doc]);
+  }, [settled]);
 
   const shown = tighten ? reviews : [];
 

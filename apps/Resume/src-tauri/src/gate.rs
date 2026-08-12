@@ -29,7 +29,7 @@ const MAX_GROWTH: f32 = 1.6;
 /// The cost is that a rewrite which legitimately reorders two number-bearing
 /// clauses is refused. That is the safe direction to fail: the user keeps their
 /// own wording, and nothing false reaches the page.
-fn digit_runs(text: &str) -> Vec<String> {
+pub(crate) fn digit_runs(text: &str) -> Vec<String> {
     let mut runs = Vec::new();
     let mut current = String::new();
     for c in text.chars() {

@@ -61,25 +61,12 @@ impl Store {
         self.root.join(FILE)
     }
 
-    pub fn save(
-        &self,
-        doc: &ResumeDoc,
-        template: &str,
-        format: &str,
-        accent: &str,
-        tighten: bool,
-        saved_at: &str,
-    ) -> io::Result<()> {
+    /// Takes the record itself. It used to take the same six fields
+    /// positionally through three layers, which meant a seventh field was
+    /// three signatures to change — and a `doc.clone()` on every save.
+    pub fn save(&self, stored: &StoredDoc) -> io::Result<()> {
         fs::create_dir_all(&self.root)?;
-        let stored = StoredDoc {
-            doc: doc.clone(),
-            saved_at: saved_at.to_string(),
-            template: template.to_string(),
-            format: format.to_string(),
-            accent: accent.to_string(),
-            tighten,
-        };
-        let json = serde_json::to_vec_pretty(&stored)
+        let json = serde_json::to_vec_pretty(stored)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         let temp = self.root.join("resume.json.tmp");
         fs::write(&temp, json)?;
@@ -107,6 +94,24 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn record(
+        doc: ResumeDoc,
+        template: &str,
+        format: &str,
+        accent: &str,
+        tighten: bool,
+        saved_at: &str,
+    ) -> StoredDoc {
+        StoredDoc {
+            doc,
+            saved_at: saved_at.to_string(),
+            template: template.to_string(),
+            format: format.to_string(),
+            accent: accent.to_string(),
+            tighten,
+        }
+    }
     use crate::model::ResumeDoc;
 
     fn doc_named(name: &str) -> ResumeDoc {
@@ -127,7 +132,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
         store
-            .save(&doc_named("Ada"), "column", "pdf", "ink", true, "2026-08-11T10:00:00Z")
+            .save(&record(doc_named("Ada"), "column", "pdf", "ink", true, "2026-08-11T10:00:00Z"))
             .unwrap();
         let stored = store.load().unwrap().unwrap();
         assert_eq!(stored.doc.contact.name, "Ada");
@@ -139,10 +144,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
         store
-            .save(&doc_named("Ada"), "column", "pdf", "ink", true, "2026-08-11T10:00:00Z")
+            .save(&record(doc_named("Ada"), "column", "pdf", "ink", true, "2026-08-11T10:00:00Z"))
             .unwrap();
         store
-            .save(&doc_named("Grace"), "", "", "", true, "2026-08-11T11:00:00Z")
+            .save(&record(doc_named("Grace"), "", "", "", true, "2026-08-11T11:00:00Z"))
             .unwrap();
         assert_eq!(store.load().unwrap().unwrap().doc.contact.name, "Grace");
     }
@@ -152,7 +157,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().join("resume"));
         store
-            .save(&doc_named("Ada"), "column", "pdf", "ink", true, "2026-08-11T10:00:00Z")
+            .save(&record(doc_named("Ada"), "column", "pdf", "ink", true, "2026-08-11T10:00:00Z"))
             .unwrap();
         store.delete_all().unwrap();
         assert!(!store.path().exists());
@@ -163,7 +168,7 @@ mod tests {
     fn the_chosen_template_comes_back_with_the_document() {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
-        store.save(&doc_named("Ada"), "ledger", "docx", "navy", false, "2026-08-11T10:00:00Z").unwrap();
+        store.save(&record(doc_named("Ada"), "ledger", "docx", "navy", false, "2026-08-11T10:00:00Z")).unwrap();
         let stored = store.load().unwrap().unwrap();
         assert_eq!(stored.template, "ledger");
         assert_eq!(stored.format, "docx");

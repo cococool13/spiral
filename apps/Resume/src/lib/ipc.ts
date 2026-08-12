@@ -45,8 +45,7 @@ export function listAccents(): Promise<Accent[]> {
 
 export function saveDocument(draft: Draft): Promise<void> {
   return invoke<void>("save_document", {
-    ...draft,
-    savedAt: new Date().toISOString(),
+    stored: { ...draft, savedAt: new Date().toISOString() },
   });
 }
 

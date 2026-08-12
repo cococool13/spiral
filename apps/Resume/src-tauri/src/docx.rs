@@ -221,39 +221,33 @@ pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle, accent: &str) -> Result<Vec<u
         file = file.add_paragraph(body(&doc.summary, style));
     }
 
-    if !doc.experience.is_empty() {
-        file = push_section(file, "Experience");
-        for role in &doc.experience {
-            for paragraph in role_block(role, style) {
-                file = file.add_paragraph(paragraph);
-            }
+    // The order a reader meets the entry sections, written once. Each is
+    // already a list of paragraphs by the time it gets here, so the walk does
+    // not care whether it holds roles or schools.
+    for (title, paragraphs) in [
+        (
+            "Experience",
+            doc.experience.iter().flat_map(|r| role_block(r, style)).collect::<Vec<_>>(),
+        ),
+        (
+            "Projects",
+            doc.projects.iter().flat_map(|r| role_block(r, style)).collect(),
+        ),
+        (
+            "Education",
+            doc.education.iter().flat_map(|s| school_block(s, style)).collect(),
+        ),
+        (
+            "Leadership & Activities",
+            doc.leadership.iter().flat_map(|r| role_block(r, style)).collect(),
+        ),
+    ] {
+        if paragraphs.is_empty() {
+            continue;
         }
-    }
-
-    if !doc.projects.is_empty() {
-        file = push_section(file, "Projects");
-        for role in &doc.projects {
-            for paragraph in role_block(role, style) {
-                file = file.add_paragraph(paragraph);
-            }
-        }
-    }
-
-    if !doc.education.is_empty() {
-        file = push_section(file, "Education");
-        for school in &doc.education {
-            for paragraph in school_block(school, style) {
-                file = file.add_paragraph(paragraph);
-            }
-        }
-    }
-
-    if !doc.leadership.is_empty() {
-        file = push_section(file, "Leadership & Activities");
-        for role in &doc.leadership {
-            for paragraph in role_block(role, style) {
-                file = file.add_paragraph(paragraph);
-            }
+        file = push_section(file, title);
+        for paragraph in paragraphs {
+            file = file.add_paragraph(paragraph);
         }
     }
 
@@ -305,7 +299,7 @@ mod tests {
 
     fn sample() -> ResumeDoc {
         crate::parse_text::parse_text(
-            "Ada Lovelace\nada@example.com · London\n\nEXPERIENCE\nAnalyst, Admiralty\nJan 2021 - Present\n- Wrote the first algorithm\n\nEDUCATION\nUniversity of London\nBSc Mathematics\n\nSKILLS\nRust, Analysis\n",
+            "Ada Lovelace\nada@example.com · London\n\nEXPERIENCE\nAnalyst, Admiralty\nJan 2021 - Present\n- Wrote the first algorithm\n\nPROJECTS\nDifference Engine\n- Drafted the notes\n\nEDUCATION\nUniversity of London\nBSc Mathematics\n\nLEADERSHIP & ACTIVITIES\nPresident, Mathematical Society\n- Ran a weekly seminar\n\nAWARDS\nDe Morgan Medal\n\nSKILLS\nRust, Analysis\n\nINTERESTS\nWeaving\n",
         )
     }
 
@@ -325,7 +319,10 @@ mod tests {
 
     /// Every fact in `sample()`. One list, so the Word check and the PDF/Word
     /// twin check below cannot test different things.
-    const FACTS: [&str; 11] = [
+    /// One fact from every section. It used to name only contact, experience,
+    /// education and skills — so a template could drop projects, leadership,
+    /// awards or interests entirely and the twin test stayed green.
+    const FACTS: [&str; 18] = [
         "Ada Lovelace",
         "ada@example.com",
         "London",
@@ -334,9 +331,16 @@ mod tests {
         "Jan 2021",
         "Present",
         "Wrote the first algorithm",
+        "Difference Engine",
+        "Drafted the notes",
         "University of London",
         "BSc Mathematics",
+        "President",
+        "Mathematical Society",
+        "Ran a weekly seminar",
+        "De Morgan Medal",
         "Rust",
+        "Weaving",
     ];
 
     /// Line breaks and capitals are layout decisions, not content ones — a
