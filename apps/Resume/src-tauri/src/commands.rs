@@ -36,10 +36,10 @@ pub struct Thumbnail {
     pub error: String,
 }
 
-pub fn render_all_thumbnails(doc: &ResumeDoc) -> Vec<Thumbnail> {
+pub fn render_all_thumbnails(doc: &ResumeDoc, accent: &str) -> Vec<Thumbnail> {
     templates::all()
         .iter()
-        .map(|template| match templates::to_svg_pages(template, doc) {
+        .map(|template| match templates::to_svg_pages(template, doc, accent) {
             Ok(mut pages) if !pages.is_empty() => Thumbnail {
                 id: template.id.to_string(),
                 name: template.name.to_string(),
@@ -67,9 +67,10 @@ pub fn save_into(
     doc: &ResumeDoc,
     template: &str,
     format: &str,
+    accent: &str,
     saved_at: &str,
 ) -> Result<(), String> {
-    store.save(doc, template, format, saved_at).map_err(|e| {
+    store.save(doc, template, format, accent, saved_at).map_err(|e| {
         format!(
             "Could not save to {}: {e}. Check the folder is writable, or clear stored data in Settings.",
             store.path().display()
@@ -93,6 +94,27 @@ fn store_for(app: &tauri::AppHandle) -> Result<Store, String> {
         .map_err(|e| format!("Could not find this machine's application data folder: {e}."))
 }
 
+/// The six swatches, served from Rust because the hex values may not live in
+/// the frontend — `check-hex` allows colours only in the brand token file, and
+/// these are the user's document colours, not Spiral's.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Accent {
+    pub id: String,
+    pub hex: String,
+}
+
+#[tauri::command]
+pub fn list_accents() -> Vec<Accent> {
+    crate::accent::ACCENTS
+        .iter()
+        .map(|(id, hex)| Accent {
+            id: id.to_string(),
+            hex: format!("#{hex}"),
+        })
+        .collect()
+}
+
 #[tauri::command]
 pub fn parse_pasted_text(text: String) -> ResumeDoc {
     parse_text::parse_text(&text)
@@ -102,8 +124,8 @@ pub fn parse_pasted_text(text: String) -> ResumeDoc {
 /// screen has nothing to show until they are all done, and a progress bar for
 /// a fifth of a second would be theatre.
 #[tauri::command]
-pub fn render_thumbnails(doc: ResumeDoc) -> Vec<Thumbnail> {
-    render_all_thumbnails(&doc)
+pub fn render_thumbnails(doc: ResumeDoc, accent: String) -> Vec<Thumbnail> {
+    render_all_thumbnails(&doc, &accent)
 }
 
 /// What the Build screen gets back. The bytes stay in Rust — sending a whole
@@ -125,6 +147,7 @@ pub fn build_document(
     doc: ResumeDoc,
     template: String,
     format: String,
+    accent: String,
     on_progress: Channel<Progress>,
     built: State<'_, BuiltFile>,
 ) -> Result<BuildResult, String> {
@@ -133,7 +156,7 @@ pub fn build_document(
     })?;
     let format = Format::parse(&format)?;
 
-    let result = build::build(&doc, template, format, |progress| {
+    let result = build::build(&doc, template, format, &accent, |progress| {
         // A dropped channel means the user left the screen; the build finishing
         // anyway is harmless, so this failure is deliberately ignored.
         let _ = on_progress.send(progress);
@@ -200,9 +223,10 @@ pub fn save_document(
     doc: ResumeDoc,
     template: String,
     format: String,
+    accent: String,
     saved_at: String,
 ) -> Result<(), String> {
-    save_into(&store_for(&app)?, &doc, &template, &format, &saved_at)
+    save_into(&store_for(&app)?, &doc, &template, &format, &accent, &saved_at)
 }
 
 #[tauri::command]
@@ -246,13 +270,13 @@ mod tests {
         let store = Store::new(dir.path().to_path_buf());
         let mut doc = ResumeDoc::empty();
         doc.contact.name = "Ada".into();
-        save_into(&store, &doc, "column", "pdf", "2026-08-11T10:00:00Z").unwrap();
+        save_into(&store, &doc, "column", "pdf", "ink", "2026-08-11T10:00:00Z").unwrap();
         assert_eq!(load_from(&store).unwrap().unwrap().doc.contact.name, "Ada");
     }
 
     #[test]
     fn thumbnails_come_back_one_per_template_as_svg() {
-        let thumbs = render_all_thumbnails(&ResumeDoc::empty());
+        let thumbs = render_all_thumbnails(&ResumeDoc::empty(), "ink");
         assert_eq!(thumbs.len(), 5);
         for thumb in &thumbs {
             assert!(thumb.error.is_empty(), "{} errored: {}", thumb.id, thumb.error);
@@ -271,8 +295,8 @@ mod tests {
         let mut grace = ResumeDoc::empty();
         grace.contact.name = "Grace Hopper".into();
 
-        let first = render_all_thumbnails(&ada);
-        let second = render_all_thumbnails(&grace);
+        let first = render_all_thumbnails(&ada, "ink");
+        let second = render_all_thumbnails(&grace, "ink");
         for (a, b) in first.iter().zip(second.iter()) {
             assert_ne!(a.svg, b.svg, "{} rendered the same thing for two names", a.id);
         }
@@ -285,7 +309,7 @@ mod tests {
         let blocked = dir.path().join("blocked");
         std::fs::write(&blocked, b"x").unwrap();
         let store = Store::new(blocked);
-        let err = save_into(&store, &ResumeDoc::empty(), "", "", "now").unwrap_err();
+        let err = save_into(&store, &ResumeDoc::empty(), "", "", "", "now").unwrap_err();
         assert!(err.starts_with("Could not save"), "got {err}");
         assert!(err.contains("Settings"), "no next step in: {err}");
     }

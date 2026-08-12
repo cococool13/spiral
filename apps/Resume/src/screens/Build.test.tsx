@@ -9,6 +9,7 @@ const buildDocument = vi.fn(
     _doc: unknown,
     _template: string,
     _format: string,
+    _accent: string,
     onProgress: (p: Progress) => void,
   ): Promise<BuildResult> => {
     onProgress({ stage: "Reading structure", percent: 15 });
@@ -18,8 +19,8 @@ const buildDocument = vi.fn(
 );
 
 vi.mock("../lib/ipc", () => ({
-  buildDocument: (d: unknown, t: string, f: string, p: (x: Progress) => void) =>
-    buildDocument(d, t, f, p),
+  buildDocument: (d: unknown, t: string, f: string, a: string, p: (x: Progress) => void) =>
+    buildDocument(d, t, f, a, p),
 }));
 
 describe("Build", () => {
@@ -31,6 +32,7 @@ describe("Build", () => {
         doc={emptyDoc()}
         template="column"
         format="pdf"
+        accent="ink"
         onDone={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -42,7 +44,7 @@ describe("Build", () => {
   it("hands the finished build up", async () => {
     const onDone = vi.fn();
     render(
-      <Build doc={emptyDoc()} template="column" format="pdf" onDone={onDone} onBack={vi.fn()} />,
+      <Build doc={emptyDoc()} template="column" format="pdf" accent="ink" onDone={onDone} onBack={vi.fn()} />,
     );
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(onDone.mock.calls[0][0].suggestedName).toBe("Ada-Lovelace-resume.pdf");
@@ -51,7 +53,7 @@ describe("Build", () => {
   it("builds exactly once", async () => {
     const onDone = vi.fn();
     render(
-      <Build doc={emptyDoc()} template="column" format="pdf" onDone={onDone} onBack={vi.fn()} />,
+      <Build doc={emptyDoc()} template="column" format="pdf" accent="ink" onDone={onDone} onBack={vi.fn()} />,
     );
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(buildDocument).toHaveBeenCalledTimes(1);
@@ -61,7 +63,7 @@ describe("Build", () => {
     buildDocument.mockRejectedValueOnce("The template failed to typeset: nope.");
     const onBack = vi.fn();
     render(
-      <Build doc={emptyDoc()} template="column" format="pdf" onDone={vi.fn()} onBack={onBack} />,
+      <Build doc={emptyDoc()} template="column" format="pdf" accent="ink" onDone={vi.fn()} onBack={onBack} />,
     );
     await waitFor(() => expect(screen.getByText(/failed to typeset/)).toBeTruthy());
     expect(screen.getByRole("button", { name: "Back to Style" })).toBeTruthy();

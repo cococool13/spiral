@@ -7,7 +7,7 @@
 
 #let section(title) = {
   v(6pt)
-  text(size: 10pt, weight: "bold", tracking: 0.08em, upper(title))
+  text(size: 10pt, weight: "bold", tracking: 0.08em, fill: accent, upper(title))
   v(2pt)
 }
 

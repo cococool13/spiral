@@ -8,9 +8,9 @@
 
 #let doc = json(bytes(sys.inputs.resume))
 
-// The accent a template may use for rules and the name. Ink until the user can
-// choose one (M3); a template must not invent its own colour.
-#let accent = rgb("#111111")
+// The one colour the user chose, validated against a closed set in Rust before
+// it ever reaches this file. A template must not invent its own colour.
+#let accent = rgb("#" + sys.inputs.accent)
 #let quiet = rgb("#555555")
 
 // "Jan 2021 — Present", or whichever half exists. Dates are shown exactly as

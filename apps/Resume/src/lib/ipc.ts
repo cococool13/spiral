@@ -2,6 +2,7 @@
 // lets every screen be tested in jsdom without a running backend.
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type {
+  Accent,
   BuildResult,
   Progress,
   ResumeDoc,
@@ -14,19 +15,25 @@ export function parsePastedText(text: string): Promise<ResumeDoc> {
   return invoke<ResumeDoc>("parse_pasted_text", { text });
 }
 
-export function renderThumbnails(doc: ResumeDoc): Promise<Thumbnail[]> {
-  return invoke<Thumbnail[]>("render_thumbnails", { doc });
+export function renderThumbnails(doc: ResumeDoc, accent: string): Promise<Thumbnail[]> {
+  return invoke<Thumbnail[]>("render_thumbnails", { doc, accent });
+}
+
+export function listAccents(): Promise<Accent[]> {
+  return invoke<Accent[]>("list_accents");
 }
 
 export function saveDocument(
   doc: ResumeDoc,
   template: string,
   format: string,
+  accent: string,
 ): Promise<void> {
   return invoke<void>("save_document", {
     doc,
     template,
     format,
+    accent,
     savedAt: new Date().toISOString(),
   });
 }
@@ -49,11 +56,18 @@ export function buildDocument(
   doc: ResumeDoc,
   template: string,
   format: string,
+  accent: string,
   onProgress: (progress: Progress) => void,
 ): Promise<BuildResult> {
   const channel = new Channel<Progress>();
   channel.onmessage = onProgress;
-  return invoke<BuildResult>("build_document", { doc, template, format, onProgress: channel });
+  return invoke<BuildResult>("build_document", {
+    doc,
+    template,
+    format,
+    accent,
+    onProgress: channel,
+  });
 }
 
 /** Resolves to the path written, or null when the user closed the dialog. */

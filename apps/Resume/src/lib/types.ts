@@ -58,6 +58,14 @@ export interface StoredDoc {
   savedAt: string;
   template: string;
   format: string;
+  accent: string;
+}
+
+/** One of six swatches. The hex comes from Rust — the frontend may not hold
+ *  colour values, because `check-hex` allows them only in the token file. */
+export interface Accent {
+  id: string;
+  hex: string;
 }
 
 /** One card in the style picker. `error` is set instead of `svg` when a

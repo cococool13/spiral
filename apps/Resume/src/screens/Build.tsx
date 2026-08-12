@@ -9,12 +9,14 @@ export function Build({
   doc,
   template,
   format,
+  accent,
   onDone,
   onBack,
 }: {
   doc: ResumeDoc;
   template: string;
   format: ExportFormat;
+  accent: string;
   onDone: (result: BuildResult) => void;
   onBack: () => void;
 }) {
@@ -23,7 +25,7 @@ export function Build({
 
   useEffect(() => {
     let current = true;
-    buildDocument(doc, template, format, (next) => {
+    buildDocument(doc, template, format, accent, (next) => {
       if (current) setProgress(next);
     })
       .then((result) => {

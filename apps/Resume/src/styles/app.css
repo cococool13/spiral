@@ -352,6 +352,27 @@ body {
   font-size: 13px;
 }
 
+.accents {
+  display: flex;
+  gap: var(--spiral-unit);
+}
+
+/* 44px of hit area around a 24px swatch — the target rule applies to a colour
+   chip exactly as it applies to a button. */
+.accent {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--spiral-conc-03);
+  border-radius: var(--spiral-radius-ctl);
+  background-clip: content-box;
+  cursor: pointer;
+}
+
+.accent[aria-checked="true"] {
+  box-shadow: 0 0 0 2px var(--spiral-red);
+}
+
 .build__stage {
   margin: 0 0 var(--spiral-unit);
   font-family: var(--spiral-font-mono);

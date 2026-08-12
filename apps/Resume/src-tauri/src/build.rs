@@ -88,9 +88,10 @@ pub fn build(
     doc: &ResumeDoc,
     template: &Template,
     format: Format,
+    accent: &str,
     report: impl Fn(Progress),
 ) -> Result<Built, String> {
-    let inputs = templates::inputs_for(doc)?;
+    let inputs = templates::inputs_for(doc, accent)?;
     report(progress("Reading structure", 15));
 
     let document = render::compile(templates::source_for(template), inputs)?;
@@ -101,7 +102,7 @@ pub fn build(
 
     let bytes = match format {
         Format::Pdf => render::document_to_pdf(&document)?,
-        Format::Docx => docx::to_docx(doc, &template.docx)?,
+        Format::Docx => docx::to_docx(doc, &template.docx, accent)?,
     };
     report(progress("Preparing the file", 100));
 
@@ -130,6 +131,7 @@ mod tests {
             &sample(),
             templates::find("column").unwrap(),
             format,
+            "ink",
             |p| seen.lock().unwrap().push(p),
         )
         .unwrap();

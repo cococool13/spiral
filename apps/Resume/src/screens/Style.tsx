@@ -1,24 +1,35 @@
 import { useEffect, useState } from "react";
-import { renderThumbnails } from "../lib/ipc";
-import type { ResumeDoc, Thumbnail } from "../lib/types";
+import { listAccents, renderThumbnails } from "../lib/ipc";
+import type { Accent, ResumeDoc, Thumbnail } from "../lib/types";
 
 export function Style({
   doc,
   chosen,
+  accent,
   onChoose,
+  onChooseAccent,
   onContinue,
 }: {
   doc: ResumeDoc;
   chosen: string;
+  accent: string;
   onChoose: (id: string) => void;
+  onChooseAccent: (id: string) => void;
   onContinue: () => void;
 }) {
   const [thumbnails, setThumbnails] = useState<Thumbnail[] | null>(null);
+  const [accents, setAccents] = useState<Accent[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    listAccents()
+      .then(setAccents)
+      .catch(() => setAccents([]));
+  }, []);
+
+  useEffect(() => {
     let current = true;
-    renderThumbnails(doc)
+    renderThumbnails(doc, accent)
       .then((next) => {
         if (current) setThumbnails(next);
       })
@@ -28,7 +39,7 @@ export function Style({
     return () => {
       current = false;
     };
-  }, [doc]);
+  }, [doc, accent]);
 
   if (error) {
     return (
@@ -72,6 +83,22 @@ export function Style({
                 <span className="style-card__name">{thumbnail.name}</span>
               </button>
             ))}
+      </div>
+
+      <h3 className="panel__heading">Accent</h3>
+      <div className="accents" role="radiogroup" aria-label="Accent colour">
+        {accents.map((swatch) => (
+          <button
+            key={swatch.id}
+            type="button"
+            role="radio"
+            aria-checked={accent === swatch.id}
+            aria-label={swatch.id}
+            className="accent"
+            style={{ background: swatch.hex }}
+            onClick={() => onChooseAccent(swatch.id)}
+          />
+        ))}
       </div>
 
       <div className="panel__actions">

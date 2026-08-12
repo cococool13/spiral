@@ -66,12 +66,13 @@ fn quiet(text: &str, style: &DocxStyle) -> Paragraph {
 /// Word has no paragraph border in this writer's vocabulary, so the rule is a
 /// one-cell borderless table carrying a bottom edge — which is also exactly how
 /// Word itself draws a heading rule.
-fn section(title: &str, style: &DocxStyle) -> Vec<DocumentChild> {
+fn section(title: &str, style: &DocxStyle, accent: &str) -> Vec<DocumentChild> {
     let heading = Paragraph::new().add_run(
         Run::new()
             .add_text(title.to_uppercase())
             .fonts(RunFonts::new().ascii(style.font).hi_ansi(style.font))
             .size(style.body_size)
+            .color(accent)
             .bold(),
     );
     let heading = spaced(heading, SECTION_BEFORE, 40);
@@ -164,7 +165,8 @@ fn school_block(school: &School, style: &DocxStyle) -> Vec<Paragraph> {
     out
 }
 
-pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle) -> Result<Vec<u8>, String> {
+pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle, accent: &str) -> Result<Vec<u8>, String> {
+    let accent = crate::accent::resolve(accent);
     let mut file = Docx::new();
 
     // The name block.
@@ -197,7 +199,7 @@ pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle) -> Result<Vec<u8>, String> {
     }
 
     let push_section = |mut file: Docx, title: &str| -> Docx {
-        for child in section(title, style) {
+        for child in section(title, style, accent) {
             file = match child {
                 DocumentChild::Table(table) => file.add_table(*table),
                 DocumentChild::Paragraph(paragraph) => file.add_paragraph(*paragraph),
@@ -275,14 +277,14 @@ mod tests {
     /// A .docx is a zip, and every zip starts "PK".
     #[test]
     fn produces_a_file_word_would_recognise() {
-        let bytes = to_docx(&sample(), &SERIF).unwrap();
+        let bytes = to_docx(&sample(), &SERIF, "ink").unwrap();
         assert_eq!(&bytes[..2], b"PK", "not a zip archive");
         assert!(bytes.len() > 2000, "suspiciously small: {}", bytes.len());
     }
 
     #[test]
     fn an_empty_document_still_produces_a_valid_file() {
-        let bytes = to_docx(&ResumeDoc::empty(), &SERIF).unwrap();
+        let bytes = to_docx(&ResumeDoc::empty(), &SERIF, "ink").unwrap();
         assert_eq!(&bytes[..2], b"PK");
     }
 
@@ -290,7 +292,7 @@ mod tests {
     /// the way to Word. The document XML is inside the zip, so read it back.
     #[test]
     fn every_fact_reaches_the_word_file() {
-        let bytes = to_docx(&sample(), &SERIF).unwrap();
+        let bytes = to_docx(&sample(), &SERIF, "ink").unwrap();
         let text = document_xml(&bytes);
         for expected in [
             "Ada Lovelace",
@@ -312,7 +314,7 @@ mod tests {
     #[test]
     fn every_template_declares_a_word_twin_that_builds() {
         for template in templates::all() {
-            let bytes = to_docx(&sample(), &template.docx)
+            let bytes = to_docx(&sample(), &template.docx, "ink")
                 .unwrap_or_else(|e| panic!("{} has no working Word twin: {e}", template.id));
             assert_eq!(&bytes[..2], b"PK", "{} produced no zip", template.id);
         }
@@ -320,7 +322,7 @@ mod tests {
 
     #[test]
     fn the_declared_font_is_the_one_written_into_the_file() {
-        let bytes = to_docx(&sample(), &SERIF).unwrap();
+        let bytes = to_docx(&sample(), &SERIF, "ink").unwrap();
         assert!(document_xml(&bytes).contains("Times New Roman"));
     }
 

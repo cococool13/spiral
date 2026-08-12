@@ -9,7 +9,7 @@
 // words and the air goes below it. `block` with explicit spacing is what stops
 // paragraph spacing from opening a gap Typst would otherwise insert on my behalf.
 #let section(title) = block(above: 11pt, below: 6pt)[
-  #text(size: 9.5pt, weight: "bold", tracking: 0.1em)[#upper(title)]
+  #text(size: 9.5pt, weight: "bold", tracking: 0.1em, fill: accent)[#upper(title)]
   #v(2pt, weak: true)
   #line(length: 100%, stroke: 0.5pt + quiet)
 ]

@@ -24,6 +24,7 @@ export default function App() {
   const [template, setTemplate] = useState("");
   const [format, setFormat] = useState<ExportFormat | "">("");
   const [built, setBuilt] = useState<BuildResult | null>(null);
+  const [accent, setAccent] = useState("ink");
 
   useEffect(() => {
     loadDocument()
@@ -33,6 +34,7 @@ export default function App() {
           setSavedAt(stored.savedAt);
           setTemplate(stored.template);
           setFormat(stored.format === "pdf" || stored.format === "docx" ? stored.format : "");
+          if (stored.accent) setAccent(stored.accent);
         }
       })
       .catch(() => setSavedAt(null));
@@ -45,19 +47,25 @@ export default function App() {
 
   function update(next: ResumeDoc) {
     setDoc(next);
-    void saveDocument(next, template, format).catch(() => undefined);
+    void saveDocument(next, template, format, accent).catch(() => undefined);
   }
 
   function chooseTemplate(id: string) {
     setTemplate(id);
     setBuilt(null);
-    void saveDocument(doc, id, format).catch(() => undefined);
+    void saveDocument(doc, id, format, accent).catch(() => undefined);
+  }
+
+  function chooseAccent(next: string) {
+    setAccent(next);
+    setBuilt(null);
+    void saveDocument(doc, template, format, next).catch(() => undefined);
   }
 
   function chooseFormat(next: ExportFormat) {
     setFormat(next);
     setBuilt(null);
-    void saveDocument(doc, template, next).catch(() => undefined);
+    void saveDocument(doc, template, next, accent).catch(() => undefined);
   }
 
   return (
@@ -113,7 +121,9 @@ export default function App() {
               <Style
                 doc={doc}
                 chosen={template}
+                accent={accent}
                 onChoose={chooseTemplate}
+                onChooseAccent={chooseAccent}
                 onContinue={() => goTo("format")}
               />
             ) : null}
@@ -135,6 +145,7 @@ export default function App() {
                   doc={doc}
                   template={template}
                   format={format}
+                  accent={accent}
                   onDone={setBuilt}
                   onBack={() => goTo("style")}
                 />

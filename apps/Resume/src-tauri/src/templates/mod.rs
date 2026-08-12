@@ -109,23 +109,30 @@ pub fn source_for(template: &Template) -> String {
     format!("{PRELUDE}\n{}", template.source)
 }
 
-/// The document, as Typst sees it. One key, one JSON string.
-pub fn inputs_for(doc: &ResumeDoc) -> Result<Dict, String> {
+/// The document and the chosen accent, as Typst sees them. The accent is
+/// resolved through the closed set first, so a template can never receive a
+/// value the user did not pick from six swatches.
+pub fn inputs_for(doc: &ResumeDoc, accent: &str) -> Result<Dict, String> {
     let json = serde_json::to_string(doc)
         .map_err(|e| format!("Could not prepare the resume for typesetting: {e}."))?;
     let mut inputs = Dict::new();
     inputs.insert(Str::from("resume"), json.into_value());
+    inputs.insert(Str::from("accent"), crate::accent::resolve(accent).into_value());
     Ok(inputs)
 }
 
 /// One page of SVG per page of resume, for a given template.
-pub fn to_svg_pages(template: &Template, doc: &ResumeDoc) -> Result<Vec<String>, String> {
-    crate::render::svg_pages_with_inputs(source_for(template), inputs_for(doc)?)
+pub fn to_svg_pages(
+    template: &Template,
+    doc: &ResumeDoc,
+    accent: &str,
+) -> Result<Vec<String>, String> {
+    crate::render::svg_pages_with_inputs(source_for(template), inputs_for(doc, accent)?)
 }
 
 /// The finished PDF for a given template.
-pub fn to_pdf(template: &Template, doc: &ResumeDoc) -> Result<Vec<u8>, String> {
-    crate::render::pdf_with_inputs(source_for(template), inputs_for(doc)?)
+pub fn to_pdf(template: &Template, doc: &ResumeDoc, accent: &str) -> Result<Vec<u8>, String> {
+    crate::render::pdf_with_inputs(source_for(template), inputs_for(doc, accent)?)
 }
 
 #[cfg(test)]
@@ -178,7 +185,7 @@ Rust, Analysis, Notation
     #[test]
     fn every_registered_template_compiles_with_an_empty_document() {
         for template in all() {
-            to_svg_pages(template, &ResumeDoc::empty())
+            to_svg_pages(template, &ResumeDoc::empty(), "ink")
                 .unwrap_or_else(|e| panic!("template {} failed on an empty doc: {e}", template.id));
         }
     }
@@ -187,7 +194,7 @@ Rust, Analysis, Notation
     fn a_filled_resume_renders_one_page_in_every_template() {
         let doc = crate::parse_text::parse_text(SAMPLE_RESUME);
         for template in all() {
-            let pages = to_svg_pages(template, &doc)
+            let pages = to_svg_pages(template, &doc, "ink")
                 .unwrap_or_else(|e| panic!("template {} failed: {e}", template.id));
             assert_eq!(pages.len(), 1, "{} paginated unexpectedly", template.id);
         }
@@ -197,7 +204,7 @@ Rust, Analysis, Notation
     fn a_name_full_of_quotes_survives_the_round_trip() {
         let mut doc = ResumeDoc::empty();
         doc.contact.name = "Ada \"The Enchantress\" O'Byron \\ Lovelace".into();
-        let svg = to_svg_pages(&all()[0], &doc).unwrap().remove(0);
+        let svg = to_svg_pages(&all()[0], &doc, "ink").unwrap().remove(0);
         assert!(svg.starts_with("<svg"), "a quoted name broke the render");
     }
 
@@ -214,10 +221,31 @@ Rust, Analysis, Notation
         }
     }
 
+    /// The accent has to actually reach the page, in every template — a
+    /// swatch that changes nothing is worse than no swatch.
+    #[test]
+    fn choosing_an_accent_changes_every_template() {
+        let doc = crate::parse_text::parse_text(SAMPLE_RESUME);
+        for template in all() {
+            let ink = to_svg_pages(template, &doc, "ink").unwrap();
+            let navy = to_svg_pages(template, &doc, "navy").unwrap();
+            assert_ne!(ink, navy, "{} ignores the accent", template.id);
+        }
+    }
+
+    /// And an accent the user could not have chosen must change nothing at all.
+    #[test]
+    fn an_invented_accent_renders_exactly_like_ink() {
+        let doc = crate::parse_text::parse_text(SAMPLE_RESUME);
+        let ink = to_svg_pages(&all()[0], &doc, "ink").unwrap();
+        let hostile = to_svg_pages(&all()[0], &doc, "hotpink").unwrap();
+        assert_eq!(ink, hostile);
+    }
+
     #[test]
     fn a_template_produces_a_real_pdf() {
         let doc = crate::parse_text::parse_text(SAMPLE_RESUME);
-        let pdf = to_pdf(find("column").unwrap(), &doc).unwrap();
+        let pdf = to_pdf(find("column").unwrap(), &doc, "ink").unwrap();
         assert!(pdf.starts_with(b"%PDF-"));
     }
 }
@@ -235,10 +263,10 @@ mod dump {
         let out = std::path::Path::new(&dir);
         std::fs::create_dir_all(out).unwrap();
         for template in super::all() {
-            let svg = super::to_svg_pages(template, &doc).unwrap().remove(0);
+            let svg = super::to_svg_pages(template, &doc, "ink").unwrap().remove(0);
             let path = out.join(format!("{}.svg", template.id));
             std::fs::write(&path, svg).unwrap();
-            let docx = crate::docx::to_docx(&doc, &template.docx).unwrap();
+            let docx = crate::docx::to_docx(&doc, &template.docx, "ink").unwrap();
             let docx_path = out.join(format!("{}.docx", template.id));
             std::fs::write(&docx_path, docx).unwrap();
             println!("wrote {} and {}", path.display(), docx_path.display());

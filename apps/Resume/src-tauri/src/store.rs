@@ -27,6 +27,9 @@ pub struct StoredDoc {
     /// "pdf" or "docx", or empty before the Format step is reached.
     #[serde(default)]
     pub format: String,
+    /// The accent name, resolved through a closed set before it is ever used.
+    #[serde(default)]
+    pub accent: String,
 }
 
 pub struct Store {
@@ -51,6 +54,7 @@ impl Store {
         doc: &ResumeDoc,
         template: &str,
         format: &str,
+        accent: &str,
         saved_at: &str,
     ) -> io::Result<()> {
         fs::create_dir_all(&self.root)?;
@@ -59,6 +63,7 @@ impl Store {
             saved_at: saved_at.to_string(),
             template: template.to_string(),
             format: format.to_string(),
+            accent: accent.to_string(),
         };
         let json = serde_json::to_vec_pretty(&stored)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
@@ -108,7 +113,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
         store
-            .save(&doc_named("Ada"), "column", "pdf", "2026-08-11T10:00:00Z")
+            .save(&doc_named("Ada"), "column", "pdf", "ink", "2026-08-11T10:00:00Z")
             .unwrap();
         let stored = store.load().unwrap().unwrap();
         assert_eq!(stored.doc.contact.name, "Ada");
@@ -120,10 +125,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
         store
-            .save(&doc_named("Ada"), "column", "pdf", "2026-08-11T10:00:00Z")
+            .save(&doc_named("Ada"), "column", "pdf", "ink", "2026-08-11T10:00:00Z")
             .unwrap();
         store
-            .save(&doc_named("Grace"), "", "", "2026-08-11T11:00:00Z")
+            .save(&doc_named("Grace"), "", "", "", "2026-08-11T11:00:00Z")
             .unwrap();
         assert_eq!(store.load().unwrap().unwrap().doc.contact.name, "Grace");
     }
@@ -133,7 +138,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().join("resume"));
         store
-            .save(&doc_named("Ada"), "column", "pdf", "2026-08-11T10:00:00Z")
+            .save(&doc_named("Ada"), "column", "pdf", "ink", "2026-08-11T10:00:00Z")
             .unwrap();
         store.delete_all().unwrap();
         assert!(!store.path().exists());
@@ -144,10 +149,11 @@ mod tests {
     fn the_chosen_template_comes_back_with_the_document() {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
-        store.save(&doc_named("Ada"), "ledger", "docx", "2026-08-11T10:00:00Z").unwrap();
+        store.save(&doc_named("Ada"), "ledger", "docx", "navy", "2026-08-11T10:00:00Z").unwrap();
         let stored = store.load().unwrap().unwrap();
         assert_eq!(stored.template, "ledger");
         assert_eq!(stored.format, "docx");
+        assert_eq!(stored.accent, "navy");
     }
 
     /// A file written before the Style screen existed has no `template` key.
