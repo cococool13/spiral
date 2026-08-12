@@ -273,6 +273,37 @@ pub fn clear_api_key(app: tauri::AppHandle) -> Result<EngineInfo, String> {
 }
 
 #[tauri::command]
+pub fn offline_model_status(app: tauri::AppHandle) -> Result<crate::local::ModelStatus, String> {
+    Ok(crate::local::status(store_for(&app)?.path()))
+}
+
+/// Downloads the offline model, reporting real bytes. Nothing here starts on
+/// its own — the user asks for it, having been told the size first.
+#[tauri::command]
+pub async fn download_offline_model(
+    app: tauri::AppHandle,
+    on_progress: Channel<crate::local::DownloadProgress>,
+) -> Result<crate::local::ModelStatus, String> {
+    let root = store_for(&app)?.path().to_path_buf();
+    let entry = crate::local::catalogue().ok_or_else(|| {
+        "This build has no offline model to download. Use your own API key, or the free rule-based pass."
+            .to_string()
+    })?;
+    crate::local::download(&root, &entry, |progress| {
+        let _ = on_progress.send(progress);
+    })
+    .await?;
+    Ok(crate::local::status(&root))
+}
+
+#[tauri::command]
+pub fn remove_offline_model(app: tauri::AppHandle) -> Result<crate::local::ModelStatus, String> {
+    let root = store_for(&app)?.path().to_path_buf();
+    crate::local::remove(&root)?;
+    Ok(crate::local::status(&root))
+}
+
+#[tauri::command]
 pub fn parse_pasted_text(text: String) -> ResumeDoc {
     parse_text::parse_text(&text)
 }
@@ -339,6 +370,45 @@ pub async fn build_document(
     // over the same sentence is how wording gets mangled.
     let (doc, engine, notes) = if tighten {
         let (stored, provider) = engine_of(&app)?;
+        let local = stored.provider == "local";
+        if local {
+            // The offline engine: a process on this machine, reachable only on
+            // loopback, speaking the same shape as any other endpoint.
+            let root = store_for(&app)?.path().to_path_buf();
+            let entry = crate::local::catalogue().ok_or_else(|| {
+                "This build has no offline model. Use your own API key, or the free rule-based pass."
+                    .to_string()
+            })?;
+            let binary = app
+                .path()
+                .resolve("binaries/llama-server", tauri::path::BaseDirectory::Resource)
+                .map_err(|_| "This build has no offline engine bundled.".to_string())?;
+            let port = crate::sidecar::free_port()?;
+            let engine_process =
+                crate::sidecar::Sidecar::start(&binary, &crate::local::model_path(&root, &entry), port)?;
+            let _ = on_progress.send(Progress {
+                stage: "Starting the offline engine".to_string(),
+                percent: 5,
+            });
+            crate::sidecar::wait_until_ready(port, 120).await?;
+            let _ = on_progress.send(Progress {
+                stage: "Rewriting wording".to_string(),
+                percent: 10,
+            });
+            let provider = Provider::Compatible {
+                base_url: engine_process.url(),
+            };
+            let (rewritten, outcome) =
+                crate::rewrite::rewrite_doc(&doc, &provider, "", &stored.model).await?;
+            // The sidecar is dropped here, which kills it. Nothing keeps
+            // running after a build.
+            drop(engine_process);
+            (
+                rewritten,
+                "Rewritten on this computer — nothing left it".to_string(),
+                outcome.notes,
+            )
+        } else {
         match keys::read(provider.id()) {
             Some(key) => {
                 let _ = on_progress.send(Progress {
@@ -351,6 +421,7 @@ pub async fn build_document(
                 (rewritten, engine, outcome.notes)
             }
             None => (doc, "Built offline, no network used".to_string(), Vec::new()),
+        }
         }
     } else {
         (doc, "Built offline, no network used".to_string(), Vec::new())

@@ -38,6 +38,12 @@ impl Provider {
         match id {
             "anthropic" => Ok(Provider::Anthropic),
             "openai" => Ok(Provider::OpenAi),
+            // The offline engine speaks the same OpenAI-compatible shape, so
+            // it needs no new request code — only a different destination,
+            // resolved to loopback when the sidecar starts.
+            "local" => Ok(Provider::Compatible {
+                base_url: String::new(),
+            }),
             "compatible" => {
                 let trimmed = base_url.trim().trim_end_matches('/');
                 if trimmed.is_empty() {
@@ -211,6 +217,9 @@ pub async fn send(
         Provider::Anthropic => request
             .header("x-api-key", key)
             .header("anthropic-version", "2023-06-01"),
+        // The offline sidecar needs no credential, and sending an empty
+        // bearer header to it would be noise at best.
+        _ if key.is_empty() => request,
         _ => request.header("authorization", format!("Bearer {key}")),
     };
 

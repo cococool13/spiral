@@ -108,7 +108,7 @@ Each produces working, testable software on its own.
 | **M4** | File import — DOCX, then PDF | Drop your existing resume in |
 | **M5** | Deterministic tightening engine | The free tier's wording pass |
 | **M6** | BYO API key, fact-freeze diff gate, rewrite-again, version strip | The paid tier |
-| **M7** | Optional local model download and sidecar | The offline model tier |
+| **M7** | Optional local model download and sidecar | The offline model tier — built; needs two release-time artifacts, see `docs/offline-model.md` |
 
 ## Risks, accepted
 

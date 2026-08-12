@@ -149,6 +149,23 @@ export interface BuildResult {
   notes: string[];
 }
 
+/** The optional offline model. `available: false` means this build ships no
+ *  pinned model, and the UI says so rather than offering a broken download. */
+export interface ModelStatus {
+  available: boolean;
+  name: string;
+  /** Already formatted — "2.5 GB". The UI never does size arithmetic. */
+  size: string;
+  installed: boolean;
+  path: string;
+}
+
+export interface DownloadProgress {
+  received: number;
+  total: number;
+  percent: number;
+}
+
 /** What Settings may know about the engine. There is deliberately no key
  *  field — the frontend can learn whether one exists, never what it is. */
 export interface EngineInfo {

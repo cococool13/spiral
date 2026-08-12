@@ -18,6 +18,16 @@ const saveEngine = vi.fn(async (): Promise<EngineInfo> => base);
 
 vi.mock("../lib/ipc", () => ({
   engineInfo: () => engineInfo(),
+  // The offline panel has its own tests; here it only needs to render.
+  offlineModelStatus: async () => ({
+    available: false,
+    name: "",
+    size: "",
+    installed: false,
+    path: "",
+  }),
+  downloadOfflineModel: vi.fn(),
+  removeOfflineModel: vi.fn(),
   saveApiKey: (key: string) => saveApiKey(key),
   clearApiKey: () => clearApiKey(),
   saveEngine: () => saveEngine(),
@@ -82,6 +92,16 @@ describe("EngineSettings", () => {
     render(<EngineSettings onChanged={vi.fn()} />);
     await screen.findByLabelText(/Paste your key/);
     expect(screen.queryByRole("button", { name: "Remove the key" })).toBeNull();
+  });
+
+  /** The offline engine needs no credential, so the key section is not shown
+   *  at all — an empty key field there would be a question with no answer. */
+  it("hides the key section entirely for the offline engine", async () => {
+    engineInfo.mockResolvedValueOnce({ ...base, provider: "local", host: "127.0.0.1" });
+    render(<EngineSettings onChanged={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText(/Wording engine/)).toBeTruthy());
+    expect(screen.queryByLabelText(/Paste your key/)).toBeNull();
+    expect(screen.queryByText(/billed separately/)).toBeNull();
   });
 
   it("asks for a base URL only for a custom service", async () => {

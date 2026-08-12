@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { clearApiKey, engineInfo, saveApiKey, saveEngine } from "../lib/ipc";
 import type { EngineInfo } from "../lib/types";
 import { Field } from "./Field";
+import { OfflineModel } from "./OfflineModel";
 
 const PROVIDERS = [
   { id: "anthropic", name: "Anthropic" },
   { id: "openai", name: "OpenAI" },
   { id: "compatible", name: "Another service" },
+  { id: "local", name: "The offline model on this computer" },
 ];
 
 /** The engine lives here and nowhere else. The main flow never asks and never
@@ -93,6 +95,10 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
         </button>
       </div>
 
+      <OfflineModel />
+
+      {info.provider === "local" ? null : (
+        <>
       <h3 className="panel__heading">Your API key</h3>
       <p className="panel__lede">
         This is an API key, not your Claude or ChatGPT subscription — they are different things,
@@ -144,6 +150,8 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
           </button>
         ) : null}
       </div>
+        </>
+      )}
     </>
   );
 }

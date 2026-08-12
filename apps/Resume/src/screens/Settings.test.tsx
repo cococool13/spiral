@@ -17,6 +17,15 @@ vi.mock("../lib/ipc", () => ({
   saveEngine: vi.fn(),
   saveApiKey: vi.fn(),
   clearApiKey: vi.fn(),
+  offlineModelStatus: vi.fn(async () => ({
+    available: false,
+    name: "",
+    size: "",
+    installed: false,
+    path: "",
+  })),
+  downloadOfflineModel: vi.fn(),
+  removeOfflineModel: vi.fn(),
 }));
 
 describe("Settings", () => {

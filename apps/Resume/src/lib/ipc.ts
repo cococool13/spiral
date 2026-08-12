@@ -5,7 +5,9 @@ import type {
   Accent,
   BuildResult,
   BulletReview,
+  DownloadProgress,
   EngineInfo,
+  ModelStatus,
   Progress,
   ResumeDoc,
   StorageInfo,
@@ -85,6 +87,23 @@ export function buildDocument(
     request: { doc, template, format, accent, tighten },
     onProgress: channel,
   });
+}
+
+export function offlineModelStatus(): Promise<ModelStatus> {
+  return invoke<ModelStatus>("offline_model_status");
+}
+
+/** Downloads the offline model, reporting real bytes as they arrive. */
+export function downloadOfflineModel(
+  onProgress: (progress: DownloadProgress) => void,
+): Promise<ModelStatus> {
+  const channel = new Channel<DownloadProgress>();
+  channel.onmessage = onProgress;
+  return invoke<ModelStatus>("download_offline_model", { onProgress: channel });
+}
+
+export function removeOfflineModel(): Promise<ModelStatus> {
+  return invoke<ModelStatus>("remove_offline_model");
 }
 
 export function engineInfo(): Promise<EngineInfo> {
