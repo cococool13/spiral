@@ -27,12 +27,15 @@ To pin one:
    **Qwen3 4B Instruct**, and any comparable 4B instruct model works. Q4_K_M is
    the size/quality point the spec assumed: roughly 2.5 GB, running in about
    3 GB of RAM.
-2. Download it once, from the publisher's own repository.
-3. Compute its SHA-256 and byte length:
+2. Take the URL from the publisher's own repository, never a mirror.
+3. Pin it with one command, which downloads once and writes the url, hash and
+   byte length together:
    ```bash
-   shasum -a 256 model.gguf && wc -c < model.gguf
+   pnpm pin-model "<direct-url-to.gguf>"
    ```
-4. Write both into `assets/model-catalogue.json`, along with the direct URL.
+   Doing this by hand means transcribing a 64-character hash into JSON, and a
+   typo there does not fail loudly — the app rejects every download and reports
+   the file as corrupt.
 
 The download path then verifies every future download against that hash, writes
 to a `.part` file, and renames only on a match — an interrupted or corrupted
