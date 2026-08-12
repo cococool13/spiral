@@ -70,6 +70,16 @@ export default function AppCard({ app }: { app: SpiralApp }) {
         ) : (
           <DisabledPill />
         )}
+        {/* A shipped app still has a page worth reading; it just leads with the
+            download rather than with the reading. */}
+        {shipped && app.page ? (
+          <a
+            href={app.page}
+            className="font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
+          >
+            What it does
+          </a>
+        ) : null}
         <span className="ml-auto font-mono text-[11px] uppercase tracking-widest text-gray">
           Free
         </span>
