@@ -5,7 +5,9 @@
 //! leaves in place rather than guessing, because the Check screen is where a
 //! human resolves ambiguity and a confident wrong guess is worse than a blank.
 
-use crate::model::{bullet_id, entry_id, Bullet, Contact, DateMark, ResumeDoc, Role, School};
+use crate::model::{
+    bullet_id, entry_id, Bullet, Contact, DateMark, ResumeDoc, Role, School, SkillGroup,
+};
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -166,6 +168,9 @@ pub enum Section {
     Education,
     Projects,
     Skills,
+    Leadership,
+    Awards,
+    Interests,
 }
 
 /// Headings people actually type, lowercased. Anything not here is body text.
@@ -187,6 +192,22 @@ const HEADINGS: &[(&str, Section)] = &[
     ("skills", Section::Skills),
     ("technical skills", Section::Skills),
     ("core skills", Section::Skills),
+    ("skills & interests", Section::Skills),
+    ("skills and interests", Section::Skills),
+    ("skills & proficiencies", Section::Skills),
+    ("top skills", Section::Skills),
+    ("leadership", Section::Leadership),
+    ("leadership & activities", Section::Leadership),
+    ("leadership activities", Section::Leadership),
+    ("activities", Section::Leadership),
+    ("activities & extracurriculars", Section::Leadership),
+    ("extracurriculars", Section::Leadership),
+    ("volunteer experience", Section::Leadership),
+    ("awards", Section::Awards),
+    ("honors", Section::Awards),
+    ("awards & accomplishments", Section::Awards),
+    ("honors & awards", Section::Awards),
+    ("interests", Section::Interests),
 ];
 
 /// A heading is short, matches the list, and carries no sentence punctuation.
@@ -221,12 +242,64 @@ pub fn split_sections(lines: &[String]) -> (Vec<String>, Vec<(Section, Vec<Strin
     (header, sections)
 }
 
-/// Skills are written as one comma-separated line, several lines, or bullets.
-/// All three collapse to the same list.
-fn parse_skills(body: &[String]) -> Vec<String> {
+fn split_items(line: &str) -> Vec<String> {
+    line.split([',', '·', '|', ';'])
+        .map(|s| s.trim_start_matches(BULLET_MARKS).trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+/// A label is a short run of words before a colon — "Technical: Rust, Python".
+/// The length cap stops a sentence containing a colon from becoming a label.
+fn labelled(line: &str) -> Option<(String, &str)> {
+    let stripped = line.trim_start_matches(BULLET_MARKS).trim();
+    let (label, rest) = stripped.split_once(':')?;
+    let label = label.trim();
+    if label.is_empty() || label.chars().count() > 28 || label.contains('.') {
+        return None;
+    }
+    Some((label.to_string(), rest))
+}
+
+/// Skills come as one comma-separated line, several lines, bullets, or the
+/// labelled groups the university templates use. All four collapse to the same
+/// shape: an unlabelled group is simply one with an empty label.
+fn parse_skills(body: &[String]) -> Vec<SkillGroup> {
+    let mut groups: Vec<SkillGroup> = Vec::new();
+    let mut loose: Vec<String> = Vec::new();
+    for line in body {
+        match labelled(line) {
+            Some((label, rest)) => groups.push(SkillGroup {
+                label,
+                items: split_items(rest),
+            }),
+            None => loose.extend(split_items(line)),
+        }
+    }
+    if !loose.is_empty() {
+        groups.insert(
+            0,
+            SkillGroup {
+                label: String::new(),
+                items: loose,
+            },
+        );
+    }
+    groups
+}
+
+/// Awards and interests are plain lines — one per entry, or one comma-separated
+/// line. Nothing is inferred beyond that.
+fn parse_lines(body: &[String]) -> Vec<String> {
     body.iter()
-        .flat_map(|line| line.split([',', '·', '|']))
-        .map(|s| s.trim_start_matches(['-', '•', '*', '–']).trim().to_string())
+        .flat_map(|line| {
+            let stripped = line.trim_start_matches(BULLET_MARKS).trim();
+            if stripped.contains(',') && stripped.split(',').count() > 1 && stripped.len() < 120 {
+                split_items(stripped)
+            } else {
+                vec![stripped.to_string()]
+            }
+        })
         .filter(|s| !s.is_empty())
         .collect()
 }
@@ -385,6 +458,15 @@ pub fn parse_text(input: &str) -> ResumeDoc {
                     .map(|(i, block)| parse_school(block, i))
                     .collect();
             }
+            Section::Leadership => {
+                doc.leadership = blocks_of(body)
+                    .iter()
+                    .enumerate()
+                    .map(|(i, block)| parse_role(block, "lead", i))
+                    .collect();
+            }
+            Section::Awards => doc.awards = parse_lines(body),
+            Section::Interests => doc.interests = parse_lines(body),
         }
     }
     doc
@@ -520,7 +602,9 @@ Rust, Analysis, Notation
     fn summary_and_skills_land_on_the_document() {
         let doc = parse_text(SAMPLE);
         assert_eq!(doc.summary, "Analytical engine programmer.");
-        assert_eq!(doc.skills, vec!["Rust", "Analysis", "Notation"]);
+        assert_eq!(doc.skills.len(), 1);
+        assert_eq!(doc.skills[0].label, "");
+        assert_eq!(doc.skills[0].items, vec!["Rust", "Analysis", "Notation"]);
         assert_eq!(doc.contact.name, "Ada Lovelace");
     }
 
@@ -559,6 +643,40 @@ Rust, Analysis, Notation
         assert_eq!(doc.experience.len(), 2);
         assert_eq!(doc.experience[1].title, "Intern");
         assert_eq!(doc.experience[1].bullets[0].id, "exp-1-b-0");
+    }
+
+    #[test]
+    fn labelled_skill_lines_become_groups() {
+        let doc = parse_text(
+            "Ada\n\nSKILLS\nTechnical: Rust, Python\nLanguage: French, Latin\n",
+        );
+        assert_eq!(doc.skills.len(), 2);
+        assert_eq!(doc.skills[0].label, "Technical");
+        assert_eq!(doc.skills[0].items, vec!["Rust", "Python"]);
+        assert_eq!(doc.skills[1].label, "Language");
+    }
+
+    /// A sentence that happens to contain a colon is not a category.
+    #[test]
+    fn a_long_phrase_before_a_colon_is_not_a_label() {
+        let doc = parse_text(
+            "Ada\n\nSKILLS\nThings I have used across many teams: Rust, Python\n",
+        );
+        assert_eq!(doc.skills.len(), 1);
+        assert_eq!(doc.skills[0].label, "");
+    }
+
+    #[test]
+    fn leadership_awards_and_interests_are_parsed() {
+        let doc = parse_text(
+            "Ada\n\nLEADERSHIP & ACTIVITIES\nPresident, Chess Club\n2021 - 2022\n- Ran the league\n\nAWARDS\nDean's List\nDe Morgan Medal\n\nINTERESTS\nWeaving, Number theory\n",
+        );
+        assert_eq!(doc.leadership.len(), 1);
+        assert_eq!(doc.leadership[0].title, "President");
+        assert_eq!(doc.leadership[0].id, "lead-0");
+        assert_eq!(doc.leadership[0].bullets[0].id, "lead-0-b-0");
+        assert_eq!(doc.awards, vec!["Dean's List", "De Morgan Medal"]);
+        assert_eq!(doc.interests, vec!["Weaving", "Number theory"]);
     }
 
     #[test]

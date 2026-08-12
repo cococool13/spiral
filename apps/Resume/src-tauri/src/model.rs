@@ -59,15 +59,39 @@ pub struct School {
     pub notes: Vec<Bullet>,
 }
 
+/// Skills as the university templates present them: either one flat list, or
+/// labelled groups — "Technical: Rust, Python". An unlabelled group is the flat
+/// case, so there is one representation rather than two.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillGroup {
+    pub label: String,
+    pub items: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ResumeDoc {
     pub contact: Contact,
+    /// The one-line positioning statement the mid-career templates lead with.
+    /// Never parsed — a heading like this is a claim, and the app does not
+    /// invent claims. The Check screen offers the field; it stays empty unless
+    /// the person writes one.
+    #[serde(default)]
+    pub headline: String,
     pub summary: String,
     pub experience: Vec<Role>,
     pub education: Vec<School>,
     pub projects: Vec<Role>,
-    pub skills: Vec<String>,
+    /// Clubs, societies, volunteering — the section every university template
+    /// has and no commercial one does.
+    #[serde(default)]
+    pub leadership: Vec<Role>,
+    #[serde(default)]
+    pub awards: Vec<String>,
+    #[serde(default)]
+    pub interests: Vec<String>,
+    pub skills: Vec<SkillGroup>,
 }
 
 impl ResumeDoc {

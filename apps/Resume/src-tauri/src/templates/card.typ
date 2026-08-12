@@ -14,6 +14,19 @@
   v(2pt)
 }
 
+#let role-entry(role) = {
+  grid(
+    columns: (1fr, auto),
+    align: (left, right),
+    text(weight: "bold")[#role-heading(role)],
+    text(size: 9pt, fill: quiet)[#date-range(role.start, role.end)],
+  )
+  for bullet in bullets-of(role) {
+    block(inset: (left: 12pt), above: 3pt, below: 3pt)[• #bullet]
+  }
+  v(4pt)
+}
+
 #block(
   width: 100%,
   fill: rgb("#f0efec"),
@@ -24,6 +37,7 @@
     #linebreak()
     #text(size: 9.5pt, fill: quiet)[#contact-line()]
   ]
+  #if doc.headline != "" [ #linebreak() #text(weight: "bold")[#doc.headline] ]
 ]
 
 #block(inset: (x: body-margin, y: 26pt))[
@@ -34,29 +48,12 @@
 
   #if has(doc.experience) [
     #section("Experience")
-    #for role in doc.experience [
-      #grid(
-        columns: (1fr, auto),
-        align: (left, right),
-        text(weight: "bold")[#role-heading(role)],
-        text(size: 9pt, fill: quiet)[#date-range(role.start, role.end)],
-      )
-      #for bullet in bullets-of(role) [
-        #block(inset: (left: 12pt), above: 3pt, below: 3pt)[• #bullet]
-      ]
-      #v(4pt)
-    ]
+    #for role in doc.experience [ #role-entry(role) ]
   ]
 
   #if has(doc.projects) [
     #section("Projects")
-    #for role in doc.projects [
-      #text(weight: "bold")[#role-heading(role)]
-      #for bullet in bullets-of(role) [
-        #block(inset: (left: 12pt), above: 3pt, below: 3pt)[• #bullet]
-      ]
-      #v(4pt)
-    ]
+    #for role in doc.projects [ #role-entry(role) ]
   ]
 
   #if has(doc.education) [
@@ -68,11 +65,27 @@
         [#text(weight: "bold")[#school.institution]#if school.credential != "" [ — #school.credential]],
         text(size: 9pt, fill: quiet)[#date-range(school.start, school.end)],
       )
+      #for note in school.notes [ #block(inset: (left: 12pt), above: 3pt, below: 3pt)[#note.text] ]
     ]
+  ]
+
+  #if has(doc.leadership) [
+    #section("Leadership & Activities")
+    #for role in doc.leadership [ #role-entry(role) ]
+  ]
+
+  #if has(doc.awards) [
+    #section("Awards")
+    #doc.awards.join(linebreak())
   ]
 
   #if has(doc.skills) [
     #section("Skills")
-    #doc.skills.join(" · ")
+    #skills-lines().join(linebreak())
+  ]
+
+  #if has(doc.interests) [
+    #section("Interests")
+    #doc.interests.join(" · ")
   ]
 ]

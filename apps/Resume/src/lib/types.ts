@@ -41,13 +41,25 @@ export interface School {
   notes: Bullet[];
 }
 
+/** Skills either as one flat list (empty label) or as labelled groups —
+ *  "Technical: Rust, Python". One representation, not two. */
+export interface SkillGroup {
+  label: string;
+  items: string[];
+}
+
 export interface ResumeDoc {
   contact: Contact;
+  /** Never parsed — a headline is a claim, and the app does not invent claims. */
+  headline: string;
   summary: string;
   experience: Role[];
   education: School[];
   projects: Role[];
-  skills: string[];
+  leadership: Role[];
+  awards: string[];
+  interests: string[];
+  skills: SkillGroup[];
 }
 
 /** PDF or Word. Chosen on the Format step, before anything is built. */
@@ -89,10 +101,14 @@ export function emptyDate(): DateMark {
 export function emptyDoc(): ResumeDoc {
   return {
     contact: { name: "", email: "", phone: "", location: "", links: [] },
+    headline: "",
     summary: "",
     experience: [],
     education: [],
     projects: [],
+    leadership: [],
+    awards: [],
+    interests: [],
     skills: [],
   };
 }

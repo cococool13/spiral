@@ -21,6 +21,17 @@
   v(-6pt)
 }
 
+#let role-entry(role) = {
+  row(
+    date-range(role.start, role.end),
+    [
+      #text(weight: "bold")[#role-heading(role)]
+      #for bullet in bullets-of(role) [ #block(above: 3pt, below: 3pt)[• #bullet] ]
+    ],
+  )
+  v(5pt)
+}
+
 #row(
   [],
   [
@@ -29,6 +40,7 @@
       #linebreak()
       #text(size: 9.5pt, fill: quiet)[#contact-line(sep: "  ·  ")]
     ]
+    #if doc.headline != "" [ #linebreak() #text(weight: "bold")[#doc.headline] ]
   ],
 )
 
@@ -39,34 +51,12 @@
 
 #if has(doc.experience) [
   #section("Experience")
-  #for role in doc.experience [
-    #row(
-      date-range(role.start, role.end),
-      [
-        #text(weight: "bold")[#role-heading(role)]
-        #for bullet in bullets-of(role) [
-          #block(above: 3pt, below: 3pt)[• #bullet]
-        ]
-      ],
-    )
-    #v(5pt)
-  ]
+  #for role in doc.experience [ #role-entry(role) ]
 ]
 
 #if has(doc.projects) [
   #section("Projects")
-  #for role in doc.projects [
-    #row(
-      date-range(role.start, role.end),
-      [
-        #text(weight: "bold")[#role-heading(role)]
-        #for bullet in bullets-of(role) [
-          #block(above: 3pt, below: 3pt)[• #bullet]
-        ]
-      ],
-    )
-    #v(5pt)
-  ]
+  #for role in doc.projects [ #role-entry(role) ]
 ]
 
 #if has(doc.education) [
@@ -76,17 +66,30 @@
       date-range(school.start, school.end),
       [
         #text(weight: "bold")[#school.institution]
-        #if school.credential != "" [
-          #linebreak()
-          #school.credential
-        ]
+        #if school.credential != "" [ #linebreak() #school.credential ]
+        #for note in school.notes [ #linebreak() #note.text ]
       ],
     )
     #v(4pt)
   ]
 ]
 
+#if has(doc.leadership) [
+  #section("Leadership & Activities")
+  #for role in doc.leadership [ #role-entry(role) ]
+]
+
+#if has(doc.awards) [
+  #section("Awards")
+  #row([], doc.awards.join(linebreak()))
+]
+
 #if has(doc.skills) [
   #section("Skills")
-  #row([], doc.skills.join(" · "))
+  #row([], skills-lines().join(linebreak()))
+]
+
+#if has(doc.interests) [
+  #section("Interests")
+  #row([], doc.interests.join(" · "))
 ]

@@ -41,6 +41,12 @@
 
 #let bullets-of(role) = role.bullets.map(b => b.text).filter(t => t != "")
 
+// Skills as lines ready to set: "Technical: Rust, Python", or one plain list
+// when the person never used categories.
+#let skills-lines() = doc.skills.map(group => {
+  if group.label == "" { group.items.join(" · ") } else { group.label + ": " + group.items.join(", ") }
+}).filter(line => line != "")
+
 // True when the section has anything worth a heading. Templates call this so an
 // empty resume renders as a clean page rather than a list of bare headings.
 #let has(items) = items.len() > 0

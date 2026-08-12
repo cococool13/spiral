@@ -248,13 +248,13 @@ body {
   }
 }
 
-/* One row, always. The window cannot be narrower than 880px, which leaves
-   about 150px per card — enough to tell the five shapes apart at a glance,
-   which is the whole job of this screen. An auto-fill grid wrapped 4+1 and
-   orphaned the last style below the fold. */
+/* Twelve styles. A fixed five-across row was right when there were five; with
+   twelve it would leave two orphans on a third row. auto-fill at 150px gives
+   five across at the 880px minimum and six or more on a wider window, filling
+   every row evenly at any size. */
 .styles {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: calc(var(--spiral-unit) * 1.5);
 }
 
@@ -350,6 +350,10 @@ body {
 .format-card__note {
   color: var(--spiral-steel);
   font-size: 13px;
+}
+
+.list-editor {
+  margin-bottom: calc(var(--spiral-unit) * 2);
 }
 
 .accents {

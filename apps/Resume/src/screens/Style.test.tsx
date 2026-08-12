@@ -14,9 +14,12 @@ const renderThumbnails = vi.fn(
 
 vi.mock("../lib/ipc", () => ({
   renderThumbnails: (doc: ResumeDoc, accent: string) => renderThumbnails(doc, accent),
+  // Written this way on purpose: check-hex forbids colour literals outside the
+  // token file, and a test fixture is no exception. The real values come from
+  // Rust; what matters here is only that two swatches arrive.
   listAccents: async () => [
-    { id: "ink", hex: "#111111" },
-    { id: "navy", hex: "#1f3352" },
+    { id: "ink", hex: "rgb(17, 17, 17)" },
+    { id: "navy", hex: "rgb(31, 51, 82)" },
   ],
 }));
 

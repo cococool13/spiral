@@ -6,19 +6,33 @@
 #set par(justify: false, leading: 0.62em, spacing: 0.9em)
 
 // The rule belongs to the heading, not to the body — so it sits tight under the
-// words and the air goes below it. `block` with explicit spacing is what stops
-// paragraph spacing from opening a gap Typst would otherwise insert on my behalf.
+// words and the air goes below it.
 #let section(title) = block(above: 11pt, below: 6pt)[
   #text(size: 9.5pt, weight: "bold", tracking: 0.1em, fill: accent)[#upper(title)]
   #v(2pt, weak: true)
   #line(length: 100%, stroke: 0.5pt + quiet)
 ]
 
+#let role-entry(role) = {
+  grid(
+    columns: (1fr, auto),
+    align: (left, right),
+    text(weight: "bold")[#role-heading(role)],
+    text(size: 9.5pt, style: "italic", fill: quiet)[#date-range(role.start, role.end)],
+  )
+  for bullet in bullets-of(role) {
+    block(inset: (left: 14pt), above: 3pt, below: 3pt)[• #bullet]
+  }
+  v(5pt)
+}
+
 #text(size: 20pt, weight: "bold")[#doc.contact.name]
 #if contact-line() != "" [
   #linebreak()
   #text(size: 9.5pt, fill: quiet)[#contact-line()]
 ]
+
+#if doc.headline != "" [ #text(weight: "bold")[#doc.headline] ]
 
 #if doc.summary != "" [
   #section("Summary")
@@ -27,29 +41,12 @@
 
 #if has(doc.experience) [
   #section("Experience")
-  #for role in doc.experience [
-    #grid(
-      columns: (1fr, auto),
-      align: (left, right),
-      text(weight: "bold")[#role-heading(role)],
-      text(size: 9.5pt, style: "italic", fill: quiet)[#date-range(role.start, role.end)],
-    )
-    #for bullet in bullets-of(role) [
-      #block(inset: (left: 14pt), above: 3pt, below: 3pt)[• #bullet]
-    ]
-    #v(5pt)
-  ]
+  #for role in doc.experience [ #role-entry(role) ]
 ]
 
 #if has(doc.projects) [
   #section("Projects")
-  #for role in doc.projects [
-    #text(weight: "bold")[#role-heading(role)]
-    #for bullet in bullets-of(role) [
-      #block(inset: (left: 14pt), above: 3pt, below: 3pt)[• #bullet]
-    ]
-    #v(5pt)
-  ]
+  #for role in doc.projects [ #role-entry(role) ]
 ]
 
 #if has(doc.education) [
@@ -61,10 +58,26 @@
       [#text(weight: "bold")[#school.institution]#if school.credential != "" [ — #school.credential]],
       text(size: 9.5pt, style: "italic", fill: quiet)[#date-range(school.start, school.end)],
     )
+    #for note in school.notes [ #block(inset: (left: 14pt), above: 3pt, below: 3pt)[#note.text] ]
   ]
+]
+
+#if has(doc.leadership) [
+  #section("Leadership & Activities")
+  #for role in doc.leadership [ #role-entry(role) ]
+]
+
+#if has(doc.awards) [
+  #section("Awards")
+  #doc.awards.join(linebreak())
 ]
 
 #if has(doc.skills) [
   #section("Skills")
-  #doc.skills.join(" · ")
+  #skills-lines().join(linebreak())
+]
+
+#if has(doc.interests) [
+  #section("Interests")
+  #doc.interests.join(" · ")
 ]

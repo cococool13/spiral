@@ -1,6 +1,37 @@
 import { Field } from "../components/Field";
+import { ListEditor } from "../components/ListEditor";
 import { RoleEditor } from "../components/RoleEditor";
-import { emptyRole, type ResumeDoc } from "../lib/types";
+import { emptyRole, type ResumeDoc, type Role } from "../lib/types";
+
+/** Experience and Leadership are the same shape, edited the same way. Writing
+ *  the list twice would guarantee they drift. */
+function roleSection(
+  heading: string,
+  idPrefix: string,
+  roles: Role[],
+  onChange: (roles: Role[]) => void,
+) {
+  return (
+    <>
+      <h3 className="panel__heading">{heading}</h3>
+      {roles.map((role, i) => (
+        <RoleEditor
+          key={role.id}
+          role={role}
+          onChange={(next) => onChange(roles.map((r, j) => (j === i ? next : r)))}
+          onRemove={() => onChange(roles.filter((_, j) => j !== i))}
+        />
+      ))}
+      <button
+        type="button"
+        className="btn"
+        onClick={() => onChange([...roles, emptyRole(`${idPrefix}-${roles.length}`)])}
+      >
+        Add {heading === "Experience" ? "a role" : "an activity"}
+      </button>
+    </>
+  );
+}
 
 export function Check({
   doc,
@@ -42,31 +73,71 @@ export function Check({
         />
       </div>
 
-      <h3 className="panel__heading">Experience</h3>
-      {doc.experience.map((role, i) => (
-        <RoleEditor
-          key={role.id}
-          role={role}
-          onChange={(next) =>
-            onChange({ ...doc, experience: doc.experience.map((r, j) => (j === i ? next : r)) })
-          }
-          onRemove={() =>
-            onChange({ ...doc, experience: doc.experience.filter((_, j) => j !== i) })
-          }
-        />
+      <Field
+        label="Headline"
+        value={doc.headline}
+        onChange={(headline) => onChange({ ...doc, headline })}
+      />
+
+      {roleSection("Experience", "exp", doc.experience, (experience) =>
+        onChange({ ...doc, experience }),
+      )}
+
+      {roleSection("Leadership & activities", "lead", doc.leadership, (leadership) =>
+        onChange({ ...doc, leadership }),
+      )}
+
+      <h3 className="panel__heading">Skills</h3>
+      {doc.skills.map((group, i) => (
+        // Groups are positional; the whole list is replaced on every edit.
+        // biome-ignore lint/suspicious/noArrayIndexKey: groups are ordinal
+        <div className="entry" key={i}>
+          <Field
+            label="Category (leave blank for a plain list)"
+            value={group.label}
+            onChange={(label) =>
+              onChange({
+                ...doc,
+                skills: doc.skills.map((g, j) => (j === i ? { ...g, label } : g)),
+              })
+            }
+          />
+          <ListEditor
+            label="Skills"
+            items={group.items}
+            addLabel="Add a skill"
+            onChange={(items) =>
+              onChange({
+                ...doc,
+                skills: doc.skills.map((g, j) => (j === i ? { ...g, items } : g)),
+              })
+            }
+          />
+        </div>
       ))}
       <button
         type="button"
         className="btn"
-        onClick={() =>
-          onChange({
-            ...doc,
-            experience: [...doc.experience, emptyRole(`exp-${doc.experience.length}`)],
-          })
-        }
+        onClick={() => onChange({ ...doc, skills: [...doc.skills, { label: "", items: [] }] })}
       >
-        Add a role
+        Add a skill group
       </button>
+
+      <h3 className="panel__heading">Awards</h3>
+      <ListEditor
+        label="Awards"
+        items={doc.awards}
+        addLabel="Add an award"
+        onChange={(awards) => onChange({ ...doc, awards })}
+      />
+
+      <h3 className="panel__heading">Interests</h3>
+      <ListEditor
+        label="Interests"
+        items={doc.interests}
+        addLabel="Add an interest"
+        onChange={(interests) => onChange({ ...doc, interests })}
+      />
 
       <div className="panel__actions">
         <button type="button" className="btn btn--primary" onClick={onContinue}>

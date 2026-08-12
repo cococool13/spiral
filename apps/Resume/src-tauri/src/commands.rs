@@ -277,7 +277,7 @@ mod tests {
     #[test]
     fn thumbnails_come_back_one_per_template_as_svg() {
         let thumbs = render_all_thumbnails(&ResumeDoc::empty(), "ink");
-        assert_eq!(thumbs.len(), 5);
+        assert_eq!(thumbs.len(), 12);
         for thumb in &thumbs {
             assert!(thumb.error.is_empty(), "{} errored: {}", thumb.id, thumb.error);
             assert!(thumb.svg.starts_with("<svg"), "{} is not an SVG", thumb.id);

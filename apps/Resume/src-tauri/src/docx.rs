@@ -209,6 +209,10 @@ pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle, accent: &str) -> Result<Vec<u
         file
     };
 
+    if !doc.headline.is_empty() {
+        file = file.add_paragraph(spaced(bold(&doc.headline, style), ENTRY_BEFORE, 40));
+    }
+
     if !doc.summary.is_empty() {
         file = push_section(file, "Summary");
         file = file.add_paragraph(body(&doc.summary, style));
@@ -241,9 +245,37 @@ pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle, accent: &str) -> Result<Vec<u
         }
     }
 
+    if !doc.leadership.is_empty() {
+        file = push_section(file, "Leadership & Activities");
+        for role in &doc.leadership {
+            for paragraph in role_block(role, style) {
+                file = file.add_paragraph(paragraph);
+            }
+        }
+    }
+
+    if !doc.awards.is_empty() {
+        file = push_section(file, "Awards");
+        for award in &doc.awards {
+            file = file.add_paragraph(body(award, style));
+        }
+    }
+
     if !doc.skills.is_empty() {
         file = push_section(file, "Skills");
-        file = file.add_paragraph(body(&doc.skills.join(" · "), style));
+        for group in &doc.skills {
+            let line = if group.label.is_empty() {
+                group.items.join(" · ")
+            } else {
+                format!("{}: {}", group.label, group.items.join(", "))
+            };
+            file = file.add_paragraph(body(&line, style));
+        }
+    }
+
+    if !doc.interests.is_empty() {
+        file = push_section(file, "Interests");
+        file = file.add_paragraph(body(&doc.interests.join(" · "), style));
     }
 
     let mut buffer = Cursor::new(Vec::new());

@@ -29,7 +29,7 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 4. **Inputs:** PDF, DOCX, pasted text, and a guided from-scratch form. *(Against the recommendation of deferring PDF to v1.1; PDF parsing is the single largest source of garbled input.)*
 5. **Exports:** PDF **and** DOCX. This constrains template design permanently — see Template envelope.
 6. **The app is Spiral; the resume is not.** Full Spiral identity in the chrome. Templates use system-safe professional faces, ink on paper, one user-chosen accent. No mark, no red, no watermark on the user's document.
-7. **Live thumbnails.** The style picker renders the user's own parsed content in each of ~5 templates, at page scale. No generic sample images.
+7. **Live thumbnails.** The style picker renders the user's own parsed content in every template, at page scale. No generic sample images.
 8. **Flow order:** Input → Check → Style → Format → Build → Result. Format is chosen before building, one step later than in the original brief, because nothing depends on it earlier.
 9. **The Check step is load-bearing.** An editable list of every extracted fact, shown before any styling. It is the only place a mis-parse can be caught, and it is what makes decision 3 meaningful rather than decorative.
 10. **Engine choice lives in Settings only.** The main flow never asks and never upsells. It names what it used, plainly, on the build screen and under the result.
@@ -40,6 +40,10 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 15. **Data persists locally**, stated and deletable. The parsed resume and past versions live in the app data folder — never uploaded, never synced. Settings shows the exact folder path and one button: "Delete everything Spiral Resume has stored."
 16. **Both platforms in v1.** *(Against the recommendation of macOS first; this doubles pagination QA and ships an unsigned Windows binary for a document people submit to employers.)*
 17. **One optional local model,** ~2.5 GB, 4B-class instruct, 4-bit quantised, run through a bundled llama.cpp sidecar. The download size is stated before it starts.
+20. **Twelve templates, not five.** *(Decided 2026-08-12.)* Five are Spiral's own; seven follow the structure of published university and commercial resume templates Cohen researched. Structure only — no third-party file is bundled, no prompt text is copied, and no source institution is named in the app, because that would read as endorsement. Recorded in `docs/template-lineage.md`.
+21. **The document model grew to match them:** `headline`, `leadership`, `awards`, `interests`, and skills became labelled groups. `headline` is never parsed — a headline is a claim about a person, and decision 3 forbids the app inventing claims.
+22. **Every template renders every section.** A user with awards who picks Column must not lose them. Silently dropping content is the failure this app exists to prevent.
+
 18. **Explicitly out of v1:** job-description tailoring, cover letters, ATS match scores. An ATS score would be an invented number, which "state, never sell" forbids.
 19. **Typst, embedded as a Rust crate, is the renderer.** *(Decided 2026-08-11, after the main session, to resolve Risk 1 below.)* One in-process engine produces both the PDF and the SVG thumbnails from the same template source, so preview and export cannot disagree and pagination is identical on both platforms. The costs are accepted: templates are authored in Typst markup rather than HTML/CSS, embedding requires implementing Typst's `World` trait and bundling the resume faces, and the binary grows by roughly 15–25 MB in a collection that advertises 4.6 MB. **This is the largest binary in Spiral, and the README must say so plainly rather than quietly dropping the lightweight claim for this app.**
 
@@ -49,7 +53,7 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 | --- | --- | --- |
 | 1 | **Input** | Drop a PDF or DOCX, paste text, or start from scratch in a guided form. |
 | 2 | **Check** | Every extracted fact, editable. Contact block, each role, each date, each school, each number. |
-| 3 | **Style** | ~5 templates, each card a live render of the user's content. |
+| 3 | **Style** | Twelve templates, each card a live render of the user's content, plus one accent colour. |
 | 4 | **Format** | PDF or DOCX. |
 | 5 | **Build** | Real stages with real percent: Reading structure · Checking facts · Setting type · Rendering pages. |
 | 6 | **Result** | The finished document. Download · Try another style · (Rewrite the wording again). |
