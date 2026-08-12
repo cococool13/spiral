@@ -29,10 +29,24 @@ pub struct Thumbnail {
 /// their own threads: twelve sequential compiles took about 250 ms, which is
 /// long enough for the Style screen to look stuck.
 pub fn render_all_thumbnails(doc: &ResumeDoc, accent: &str) -> Vec<Thumbnail> {
+    // Built once and shared: it depends only on the resume and the accent, and
+    // constructing it costs about half of a compile.
+    let library = match templates::std_for(doc, accent) {
+        Ok(library) => library,
+        Err(message) => {
+            return templates::all()
+                .iter()
+                .map(|template| failed_card(template, message.clone()))
+                .collect();
+        }
+    };
     std::thread::scope(|scope| {
         let running: Vec<_> = templates::all()
             .iter()
-            .map(|template| scope.spawn(move || one_thumbnail(template, doc, accent)))
+            .map(|template| {
+                let library = library.clone();
+                scope.spawn(move || one_thumbnail(template, library))
+            })
             .collect();
         running
             .into_iter()
@@ -48,20 +62,25 @@ pub fn render_all_thumbnails(doc: &ResumeDoc, accent: &str) -> Vec<Thumbnail> {
     })
 }
 
-fn one_thumbnail(template: &templates::Template, doc: &ResumeDoc, accent: &str) -> Thumbnail {
-    let (svg, error) = match templates::to_svg_pages(template, doc, accent) {
-        Ok(mut pages) if !pages.is_empty() => (pages.remove(0), String::new()),
-        Ok(_) => (
-            String::new(),
-            "This style produced no pages. Choose another one.".to_string(),
-        ),
-        Err(message) => (String::new(), message),
-    };
+fn one_thumbnail(template: &templates::Template, library: crate::render::Std) -> Thumbnail {
+    match templates::to_card(template, library) {
+        Ok(Some(svg)) => Thumbnail {
+            id: template.id.to_string(),
+            name: template.name.to_string(),
+            svg,
+            error: String::new(),
+        },
+        Ok(None) => failed_card(template, "This style produced no pages. Choose another one."),
+        Err(message) => failed_card(template, message),
+    }
+}
+
+fn failed_card(template: &templates::Template, message: impl Into<String>) -> Thumbnail {
     Thumbnail {
         id: template.id.to_string(),
         name: template.name.to_string(),
-        svg,
-        error,
+        svg: String::new(),
+        error: message.into(),
     }
 }
 

@@ -233,6 +233,18 @@ pub fn to_svg_pages(
     crate::render::svg_pages_with_inputs(source_for(template), inputs_for(doc, accent)?)
 }
 
+/// The standard library every template of one document shares. The resume and
+/// the accent are the only things in it, so twelve style cards need one.
+pub fn std_for(doc: &ResumeDoc, accent: &str) -> Result<crate::render::Std, String> {
+    Ok(crate::render::Std::with_inputs(inputs_for(doc, accent)?))
+}
+
+/// The style card: page one only, from a library shared with every other card.
+pub fn to_card(template: &Template, library: crate::render::Std) -> Result<Option<String>, String> {
+    let document = crate::render::compile_with(source_for(template), library)?;
+    Ok(crate::render::document_to_first_svg_page(&document))
+}
+
 /// The finished PDF for a given template. The build path goes through
 /// `render::compile` directly, because it needs the compiled document for the
 /// preview pages too — so this is the tests' way in, and nothing else's.

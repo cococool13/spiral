@@ -17,9 +17,26 @@ use typst_layout::PagedDocument;
 /// A world holding exactly one source file and the bundled fonts. A resume is
 /// a single document with no imports, so there is nothing else to resolve.
 pub struct ResumeWorld {
-    library: LazyHash<Library>,
+    library: Std,
     fonts: &'static Faces,
     main: Source,
+}
+
+/// The Typst standard library, built around one set of `sys.inputs`.
+///
+/// Building it costs about half of a whole compile — it constructs every module
+/// in the language — and it depends on nothing but the inputs. Twelve thumbnails
+/// are twelve compiles of *the same* document, so they share one of these
+/// instead of building twelve identical copies.
+#[derive(Clone)]
+pub struct Std(std::sync::Arc<LazyHash<Library>>);
+
+impl Std {
+    pub fn with_inputs(inputs: Dict) -> Self {
+        Std(std::sync::Arc::new(LazyHash::new(
+            Library::builder().with_inputs(inputs).build(),
+        )))
+    }
 }
 
 /// The bundled faces and their book. Parsing eight Liberation faces plus the
@@ -73,8 +90,12 @@ impl ResumeWorld {
     /// app: a name containing a quote, a backslash, or a `#` is data here, and
     /// data cannot become syntax.
     pub fn with_inputs(source: String, inputs: Dict) -> Self {
+        Self::with_std(source, Std::with_inputs(inputs))
+    }
+
+    pub fn with_std(source: String, library: Std) -> Self {
         Self {
-            library: LazyHash::new(Library::builder().with_inputs(inputs).build()),
+            library,
             fonts: faces(),
             main: Source::new(main_id(), source),
         }
@@ -93,7 +114,7 @@ fn main_id() -> FileId {
 
 impl World for ResumeWorld {
     fn library(&self) -> &LazyHash<Library> {
-        &self.library
+        &self.library.0
     }
 
     fn book(&self) -> &LazyHash<FontBook> {
@@ -157,7 +178,11 @@ pub fn svg_pages_with_inputs(source: String, inputs: Dict) -> Result<Vec<String>
 /// is shown — and compiling twice to report two stages would be a lie about
 /// where the time went.
 pub fn compile(source: String, inputs: Dict) -> Result<PagedDocument, String> {
-    let world = ResumeWorld::with_inputs(source, inputs);
+    compile_with(source, Std::with_inputs(inputs))
+}
+
+pub fn compile_with(source: String, library: Std) -> Result<PagedDocument, String> {
+    let world = ResumeWorld::with_std(source, library);
     typst::compile(&world).output.map_err(first_error)
 }
 
@@ -172,6 +197,16 @@ pub fn document_to_svg_pages(document: &PagedDocument) -> Vec<String> {
         .iter()
         .map(|page| typst_svg::svg(page, &options))
         .collect()
+}
+
+/// Only the first page. A style card shows one page, and drawing the rest of a
+/// three-page resume twelve times over is work nobody ever sees — SVG export
+/// costs more than the compile that produced the document.
+pub fn document_to_first_svg_page(document: &PagedDocument) -> Option<String> {
+    document
+        .pages()
+        .first()
+        .map(|page| typst_svg::svg(page, &typst_svg::SvgOptions::default()))
 }
 
 /// Typst reports every problem at once; the user needs the first one, phrased
