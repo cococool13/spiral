@@ -115,6 +115,44 @@ pub fn list_accents() -> Vec<Accent> {
         .collect()
 }
 
+/// Reads a resume the user pointed at. `Ok(None)` means they dismissed the
+/// picker, which is not a failure.
+#[tauri::command]
+pub async fn import_resume_file(app: tauri::AppHandle) -> Result<Option<ResumeDoc>, String> {
+    let Some(chosen) = app
+        .dialog()
+        .file()
+        .add_filter("Resume", &["pdf", "docx"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+    let path = chosen
+        .into_path()
+        .map_err(|e| format!("That file cannot be opened: {e}. Choose another one."))?;
+    Ok(Some(import_from(&path)?))
+}
+
+/// The drag-and-drop path. The path comes from the window's own drop event, so
+/// it is a file the user physically dropped — but it is still read through the
+/// same extension check as everything else.
+#[tauri::command]
+pub fn import_dropped_file(path: String) -> Result<ResumeDoc, String> {
+    import_from(std::path::Path::new(&path))
+}
+
+fn import_from(path: &std::path::Path) -> Result<ResumeDoc, String> {
+    let text = crate::import::from_path(path)?;
+    let doc = parse_text::parse_text(&text);
+    if doc.contact.name.is_empty() && doc.experience.is_empty() && doc.education.is_empty() {
+        return Err(format!(
+            "Nothing could be read out of {}. Open it, copy the text, and paste it instead.",
+            path.display()
+        ));
+    }
+    Ok(doc)
+}
+
 #[tauri::command]
 pub fn parse_pasted_text(text: String) -> ResumeDoc {
     parse_text::parse_text(&text)
@@ -257,6 +295,41 @@ pub fn delete_stored_data(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An importable file that yields nothing is worse than an error: the user
+    /// would land on an empty Check screen with no idea why.
+    #[test]
+    fn a_file_that_parses_to_nothing_is_reported_rather_than_shown_as_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("empty.docx");
+        let doc = ResumeDoc::empty();
+        let template = templates::find("column").unwrap();
+        std::fs::write(
+            &path,
+            crate::docx::to_docx(&doc, &template.docx, "ink").unwrap(),
+        )
+        .unwrap();
+        let err = import_from(&path).unwrap_err();
+        assert!(err.contains("paste it instead"), "got {err}");
+    }
+
+    #[test]
+    fn a_real_file_imports_into_a_document() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ada.docx");
+        let original = parse_text::parse_text(
+            "Ada Lovelace\nada@example.com\n\nEXPERIENCE\nAnalyst, Admiralty\nJan 2021 - Present\n- Wrote it\n",
+        );
+        let template = templates::find("column").unwrap();
+        std::fs::write(
+            &path,
+            crate::docx::to_docx(&original, &template.docx, "ink").unwrap(),
+        )
+        .unwrap();
+        let back = import_from(&path).unwrap();
+        assert_eq!(back.contact.name, "Ada Lovelace");
+        assert_eq!(back.experience[0].organization, "Admiralty");
+    }
 
     #[test]
     fn parsing_is_reachable_through_the_command_layer() {

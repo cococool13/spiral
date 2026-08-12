@@ -2,6 +2,7 @@ pub mod accent;
 pub mod build;
 pub mod commands;
 pub mod docx;
+pub mod import;
 pub mod model;
 pub mod parse_text;
 pub mod render;
@@ -14,6 +15,8 @@ pub fn run() {
         .manage(commands::BuiltFile::default())
         .invoke_handler(tauri::generate_handler![
             commands::parse_pasted_text,
+            commands::import_resume_file,
+            commands::import_dropped_file,
             commands::list_accents,
             commands::render_thumbnails,
             commands::build_document,

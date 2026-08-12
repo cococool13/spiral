@@ -43,6 +43,10 @@ fn lines_of(input: &str) -> Vec<String> {
 /// a leftover "· ·  London ·" back into "London".
 const CONTACT_SEPARATORS: [char; 6] = ['·', '|', ',', '-', '–', '•'];
 
+/// Separators that can divide a name from the contact details beside it on one
+/// line. A bare hyphen is deliberately absent: "Anne-Marie" must survive.
+const NAME_SEPARATORS: [&str; 5] = ["·", "|", "•", " - ", " — "];
+
 fn parse_contact(header: &[String]) -> Contact {
     let mut contact = Contact::default();
     if let Some(first) = header.first() {
@@ -72,6 +76,24 @@ fn parse_contact(header: &[String]) -> Contact {
             let owned = found.to_string();
             if !contact.links.contains(&owned) {
                 contact.links.push(owned);
+            }
+        }
+
+        // Many templates put everything on line one: "Ada Lovelace | Address |
+        // Phone | Email". The details have already been lifted out above, so
+        // what remains before the first separator is the name.
+        if index == 0 {
+            let mut remainder = leftover
+                .trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
+                .trim()
+                .to_string();
+            for separator in NAME_SEPARATORS {
+                if let Some((head, _)) = remainder.split_once(separator) {
+                    remainder = head.trim().to_string();
+                }
+            }
+            if !remainder.is_empty() {
+                contact.name = remainder;
             }
         }
 
@@ -497,6 +519,27 @@ mod tests {
     fn keeps_the_leftover_header_text_as_a_location() {
         let doc = parse_text("Ada Lovelace\nLondon · (555) 123-4567 · ada@example.com\n");
         assert_eq!(doc.contact.location, "London");
+    }
+
+    /// Templates that put the whole contact block on line one used to make the
+    /// entire line the person's name.
+    #[test]
+    fn a_name_sharing_its_line_with_contact_details_is_read_alone() {
+        let doc = parse_text("Ada Lovelace | 12 Acacia Ave | (555) 123-4567 | ada@example.com\n");
+        assert_eq!(doc.contact.name, "Ada Lovelace");
+        assert_eq!(doc.contact.email, "ada@example.com");
+    }
+
+    #[test]
+    fn a_hyphenated_name_is_not_split() {
+        let doc = parse_text("Anne-Marie Saint-Clair\nanne@example.com\n");
+        assert_eq!(doc.contact.name, "Anne-Marie Saint-Clair");
+    }
+
+    #[test]
+    fn a_name_with_a_spaced_dash_before_details_is_split_there() {
+        let doc = parse_text("Ada Lovelace - ada@example.com\n");
+        assert_eq!(doc.contact.name, "Ada Lovelace");
     }
 
     #[test]

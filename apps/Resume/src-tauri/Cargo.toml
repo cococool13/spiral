@@ -13,7 +13,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 codegen-units = 1
 lto = true
 opt-level = "s"
-panic = "abort"
+# No `panic = "abort"`. This app parses files the user downloaded from the
+# internet, and the PDF reader panics on malformed input. `catch_unwind` does
+# nothing under abort, so unwinding is what turns a bad resume into a sentence
+# instead of a dead window. Costs a little binary size; worth it here.
 strip = true
 
 [build-dependencies]
@@ -32,6 +35,8 @@ typst-assets = { version = "0.15", features = ["fonts"] }
 typst-layout = "0.15"
 docx-rs = { version = "0.4", default-features = false }
 tauri-plugin-dialog = "2"
+zip = "8"
+pdf-extract = "0.12"
 
 [dev-dependencies]
 tempfile = "3"

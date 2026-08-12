@@ -19,6 +19,16 @@ export function renderThumbnails(doc: ResumeDoc, accent: string): Promise<Thumbn
   return invoke<Thumbnail[]>("render_thumbnails", { doc, accent });
 }
 
+/** Opens the file picker. Resolves to null when the user dismisses it. */
+export function importResumeFile(): Promise<ResumeDoc | null> {
+  return invoke<ResumeDoc | null>("import_resume_file");
+}
+
+/** Reads a file the user dropped onto the window. */
+export function importDroppedFile(path: string): Promise<ResumeDoc> {
+  return invoke<ResumeDoc>("import_dropped_file", { path });
+}
+
 export function listAccents(): Promise<Accent[]> {
   return invoke<Accent[]>("list_accents");
 }

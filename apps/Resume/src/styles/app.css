@@ -130,6 +130,12 @@ body {
   max-width: 720px;
 }
 
+/* The window is the drop target; this is the only feedback it needs. */
+.panel--drop {
+  outline: 2px dashed var(--spiral-red);
+  outline-offset: calc(var(--spiral-unit) * 2);
+}
+
 .panel--wide {
   max-width: 880px;
 }
