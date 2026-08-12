@@ -1,12 +1,14 @@
-import type { Role } from "../lib/types";
+import type { BulletReview, Role } from "../lib/types";
 import { Field } from "./Field";
 
 export function RoleEditor({
   role,
+  reviews,
   onChange,
   onRemove,
 }: {
   role: Role;
+  reviews: BulletReview[];
   onChange: (role: Role) => void;
   onRemove: () => void;
 }) {
@@ -31,23 +33,51 @@ export function RoleEditor({
         />
       </div>
       <span className="field__label">Bullets</span>
-      {role.bullets.map((bullet) => (
-        <input
-          key={bullet.id}
-          className="field__input"
-          type="text"
-          aria-label={`Bullet in ${role.title || "this role"}`}
-          value={bullet.text}
-          onChange={(e) =>
-            onChange({
-              ...role,
-              bullets: role.bullets.map((b) =>
-                b.id === bullet.id ? { ...b, text: e.target.value } : b,
-              ),
-            })
-          }
-        />
-      ))}
+      {role.bullets.map((bullet) => {
+        const review = reviews.find((r) => r.bulletId === bullet.id);
+        return (
+          <div key={bullet.id}>
+            <input
+              className="field__input"
+              type="text"
+              aria-label={`Bullet in ${role.title || "this role"}`}
+              value={bullet.text}
+              onChange={(e) =>
+                onChange({
+                  ...role,
+                  bullets: role.bullets.map((b) =>
+                    b.id === bullet.id ? { ...b, text: e.target.value } : b,
+                  ),
+                })
+              }
+            />
+            {review && review.tightened !== bullet.text ? (
+              <p className="bullet-note">
+                Will become: {review.tightened}{" "}
+                <button
+                  type="button"
+                  className="btn btn--inline"
+                  onClick={() =>
+                    onChange({
+                      ...role,
+                      bullets: role.bullets.map((b) =>
+                        b.id === bullet.id ? { ...b, text: review.tightened } : b,
+                      ),
+                    })
+                  }
+                >
+                  Use it now
+                </button>
+              </p>
+            ) : null}
+            {review?.notes.map((note) => (
+              <p className="bullet-note bullet-note--flag" key={note}>
+                {note}
+              </p>
+            ))}
+          </div>
+        );
+      })}
       <div className="panel__actions">
         <button
           type="button"

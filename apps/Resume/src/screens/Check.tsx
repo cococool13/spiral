@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Field } from "../components/Field";
 import { ListEditor } from "../components/ListEditor";
 import { RoleEditor } from "../components/RoleEditor";
-import { emptyRole, type ResumeDoc, type Role } from "../lib/types";
+import { reviewWording } from "../lib/ipc";
+import { emptyRole, type BulletReview, type ResumeDoc, type Role } from "../lib/types";
 
 /** Experience and Leadership are the same shape, edited the same way. Writing
  *  the list twice would guarantee they drift. */
@@ -9,6 +11,7 @@ function roleSection(
   heading: string,
   idPrefix: string,
   roles: Role[],
+  reviews: BulletReview[],
   onChange: (roles: Role[]) => void,
 ) {
   return (
@@ -18,6 +21,7 @@ function roleSection(
         <RoleEditor
           key={role.id}
           role={role}
+          reviews={reviews}
           onChange={(next) => onChange(roles.map((r, j) => (j === i ? next : r)))}
           onRemove={() => onChange(roles.filter((_, j) => j !== i))}
         />
@@ -35,13 +39,35 @@ function roleSection(
 
 export function Check({
   doc,
+  tighten,
   onChange,
+  onTighten,
   onContinue,
 }: {
   doc: ResumeDoc;
+  tighten: boolean;
   onChange: (doc: ResumeDoc) => void;
+  onTighten: (tighten: boolean) => void;
   onContinue: () => void;
 }) {
+  const [reviews, setReviews] = useState<BulletReview[]>([]);
+
+  useEffect(() => {
+    let current = true;
+    reviewWording(doc)
+      .then((next) => {
+        if (current) setReviews(next);
+      })
+      .catch(() => {
+        if (current) setReviews([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [doc]);
+
+  const shown = tighten ? reviews : [];
+
   return (
     <section className="panel panel--wide">
       <h2 className="panel__title">Check what we read</h2>
@@ -79,11 +105,24 @@ export function Check({
         onChange={(headline) => onChange({ ...doc, headline })}
       />
 
-      {roleSection("Experience", "exp", doc.experience, (experience) =>
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={tighten}
+          onChange={(e) => onTighten(e.target.checked)}
+        />
+        Tighten my wording when building
+      </label>
+      <p className="panel__lede">
+        Removes filler like "responsible for" and flags bullets with no numbers. It never changes
+        a name, a date or a number.
+      </p>
+
+      {roleSection("Experience", "exp", doc.experience, shown, (experience) =>
         onChange({ ...doc, experience }),
       )}
 
-      {roleSection("Leadership & activities", "lead", doc.leadership, (leadership) =>
+      {roleSection("Leadership & activities", "lead", doc.leadership, shown, (leadership) =>
         onChange({ ...doc, leadership }),
       )}
 

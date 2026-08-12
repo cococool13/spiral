@@ -4,6 +4,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import type {
   Accent,
   BuildResult,
+  BulletReview,
   Progress,
   ResumeDoc,
   StorageInfo,
@@ -29,6 +30,11 @@ export function importDroppedFile(path: string): Promise<ResumeDoc> {
   return invoke<ResumeDoc>("import_dropped_file", { path });
 }
 
+/** What the free wording pass would change, and what it wants to flag. */
+export function reviewWording(doc: ResumeDoc): Promise<BulletReview[]> {
+  return invoke<BulletReview[]>("review_wording", { doc });
+}
+
 export function listAccents(): Promise<Accent[]> {
   return invoke<Accent[]>("list_accents");
 }
@@ -38,12 +44,14 @@ export function saveDocument(
   template: string,
   format: string,
   accent: string,
+  tighten: boolean,
 ): Promise<void> {
   return invoke<void>("save_document", {
     doc,
     template,
     format,
     accent,
+    tighten,
     savedAt: new Date().toISOString(),
   });
 }
@@ -67,6 +75,7 @@ export function buildDocument(
   template: string,
   format: string,
   accent: string,
+  tighten: boolean,
   onProgress: (progress: Progress) => void,
 ): Promise<BuildResult> {
   const channel = new Channel<Progress>();
@@ -76,6 +85,7 @@ export function buildDocument(
     template,
     format,
     accent,
+    tighten,
     onProgress: channel,
   });
 }

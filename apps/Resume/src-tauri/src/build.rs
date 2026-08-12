@@ -89,13 +89,24 @@ pub fn build(
     template: &Template,
     format: Format,
     accent: &str,
+    tighten: bool,
     report: impl Fn(Progress),
 ) -> Result<Built, String> {
-    let inputs = templates::inputs_for(doc, accent)?;
     report(progress("Reading structure", 15));
 
+    // The free tier's wording pass. When a model tier arrives it takes this same
+    // slot and the same stage name, so the build screen's vocabulary does not
+    // change under the user.
+    let doc = &if tighten {
+        crate::tighten::tighten_doc(doc)
+    } else {
+        doc.clone()
+    };
+    report(progress("Tightening wording", 25));
+
+    let inputs = templates::inputs_for(doc, accent)?;
     let document = render::compile(templates::source_for(template), inputs)?;
-    report(progress("Setting type", 55));
+    report(progress("Setting type", 60));
 
     let pages = render::document_to_svg_pages(&document);
     report(progress("Rendering pages", 85));
@@ -132,6 +143,7 @@ mod tests {
             templates::find("column").unwrap(),
             format,
             "ink",
+            true,
             |p| seen.lock().unwrap().push(p),
         )
         .unwrap();
@@ -179,11 +191,25 @@ mod tests {
             stages,
             vec![
                 "Reading structure",
+                "Tightening wording",
                 "Setting type",
                 "Rendering pages",
                 "Preparing the file"
             ]
         );
+    }
+
+    /// Turning tightening off has to actually reach the page, or the toggle is
+    /// decoration.
+    #[test]
+    fn tightening_changes_the_document_and_turning_it_off_does_not() {
+        let doc = crate::parse_text::parse_text(
+            "Ada Lovelace\n\nEXPERIENCE\nAnalyst, Admiralty\n2021 - 2022\n- Responsible for writing the parser\n",
+        );
+        let template = templates::find("column").unwrap();
+        let on = build(&doc, template, Format::Pdf, "ink", true, |_| {}).unwrap();
+        let off = build(&doc, template, Format::Pdf, "ink", false, |_| {}).unwrap();
+        assert_ne!(on.pages, off.pages, "the tighten flag reached nothing");
     }
 
     #[test]

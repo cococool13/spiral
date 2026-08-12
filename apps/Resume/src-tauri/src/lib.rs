@@ -7,6 +7,7 @@ pub mod model;
 pub mod parse_text;
 pub mod render;
 pub mod store;
+pub mod tighten;
 pub mod templates;
 
 pub fn run() {
@@ -19,6 +20,7 @@ pub fn run() {
             commands::import_dropped_file,
             commands::list_accents,
             commands::render_thumbnails,
+            commands::review_wording,
             commands::build_document,
             commands::save_built_document,
             commands::save_document,

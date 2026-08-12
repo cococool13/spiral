@@ -71,6 +71,7 @@ export interface StoredDoc {
   template: string;
   format: string;
   accent: string;
+  tighten: boolean;
 }
 
 /** One of six swatches. The hex comes from Rust — the frontend may not hold
@@ -123,6 +124,14 @@ export function emptyRole(id: string): Role {
     end: emptyDate(),
     bullets: [],
   };
+}
+
+/** What tightening would do to one bullet, shown on the Check screen before
+ *  anything is built. `notes` is advice, never a change. */
+export interface BulletReview {
+  bulletId: string;
+  tightened: string;
+  notes: string[];
 }
 
 /** One stage of the build, reported by Rust after the work it names finished. */

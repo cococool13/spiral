@@ -25,6 +25,7 @@ export default function App() {
   const [format, setFormat] = useState<ExportFormat | "">("");
   const [built, setBuilt] = useState<BuildResult | null>(null);
   const [accent, setAccent] = useState("ink");
+  const [tighten, setTighten] = useState(true);
 
   useEffect(() => {
     loadDocument()
@@ -35,6 +36,7 @@ export default function App() {
           setTemplate(stored.template);
           setFormat(stored.format === "pdf" || stored.format === "docx" ? stored.format : "");
           if (stored.accent) setAccent(stored.accent);
+          setTighten(stored.tighten);
         }
       })
       .catch(() => setSavedAt(null));
@@ -47,25 +49,31 @@ export default function App() {
 
   function update(next: ResumeDoc) {
     setDoc(next);
-    void saveDocument(next, template, format, accent).catch(() => undefined);
+    void saveDocument(next, template, format, accent, tighten).catch(() => undefined);
   }
 
   function chooseTemplate(id: string) {
     setTemplate(id);
     setBuilt(null);
-    void saveDocument(doc, id, format, accent).catch(() => undefined);
+    void saveDocument(doc, id, format, accent, tighten).catch(() => undefined);
+  }
+
+  function chooseTighten(next: boolean) {
+    setTighten(next);
+    setBuilt(null);
+    void saveDocument(doc, template, format, accent, next).catch(() => undefined);
   }
 
   function chooseAccent(next: string) {
     setAccent(next);
     setBuilt(null);
-    void saveDocument(doc, template, format, next).catch(() => undefined);
+    void saveDocument(doc, template, format, next, tighten).catch(() => undefined);
   }
 
   function chooseFormat(next: ExportFormat) {
     setFormat(next);
     setBuilt(null);
-    void saveDocument(doc, template, next, accent).catch(() => undefined);
+    void saveDocument(doc, template, next, accent, tighten).catch(() => undefined);
   }
 
   return (
@@ -115,7 +123,13 @@ export default function App() {
               </>
             ) : null}
             {step === "check" ? (
-              <Check doc={doc} onChange={update} onContinue={() => goTo("style")} />
+              <Check
+                doc={doc}
+                tighten={tighten}
+                onChange={update}
+                onTighten={chooseTighten}
+                onContinue={() => goTo("style")}
+              />
             ) : null}
             {step === "style" ? (
               <Style
@@ -146,6 +160,7 @@ export default function App() {
                   template={template}
                   format={format}
                   accent={accent}
+                  tighten={tighten}
                   onDone={setBuilt}
                   onBack={() => goTo("style")}
                 />

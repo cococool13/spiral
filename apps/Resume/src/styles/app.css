@@ -362,6 +362,32 @@ body {
   margin-bottom: calc(var(--spiral-unit) * 2);
 }
 
+.bullet-note {
+  margin: calc(var(--spiral-unit) * 0.5) 0 var(--spiral-unit);
+  color: var(--spiral-steel);
+  font-size: 13px;
+}
+
+.bullet-note--flag {
+  padding-left: var(--spiral-unit);
+  border-left: 2px solid var(--spiral-conc-03);
+}
+
+.btn--inline {
+  min-height: 32px;
+  padding: 0 calc(var(--spiral-unit) * 1.5);
+  font-size: 13px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spiral-unit);
+  min-height: 44px;
+  margin-top: calc(var(--spiral-unit) * 3);
+  cursor: pointer;
+}
+
 .accents {
   display: flex;
   gap: var(--spiral-unit);

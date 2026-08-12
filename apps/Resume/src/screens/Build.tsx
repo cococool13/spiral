@@ -10,6 +10,7 @@ export function Build({
   template,
   format,
   accent,
+  tighten,
   onDone,
   onBack,
 }: {
@@ -17,6 +18,7 @@ export function Build({
   template: string;
   format: ExportFormat;
   accent: string;
+  tighten: boolean;
   onDone: (result: BuildResult) => void;
   onBack: () => void;
 }) {
@@ -25,7 +27,7 @@ export function Build({
 
   useEffect(() => {
     let current = true;
-    buildDocument(doc, template, format, accent, (next) => {
+    buildDocument(doc, template, format, accent, tighten, (next) => {
       if (current) setProgress(next);
     })
       .then((result) => {

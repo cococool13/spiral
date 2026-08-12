@@ -68,14 +68,17 @@ pub fn save_into(
     template: &str,
     format: &str,
     accent: &str,
+    tighten: bool,
     saved_at: &str,
 ) -> Result<(), String> {
-    store.save(doc, template, format, accent, saved_at).map_err(|e| {
+    store
+        .save(doc, template, format, accent, tighten, saved_at)
+        .map_err(|e| {
         format!(
             "Could not save to {}: {e}. Check the folder is writable, or clear stored data in Settings.",
             store.path().display()
         )
-    })
+        })
 }
 
 pub fn load_from(store: &Store) -> Result<Option<StoredDoc>, String> {
@@ -153,6 +156,43 @@ fn import_from(path: &std::path::Path) -> Result<ResumeDoc, String> {
     Ok(doc)
 }
 
+/// What the Check screen shows beside each bullet: the tightened wording, and
+/// any advice. Advice is never a change.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BulletReview {
+    pub bullet_id: String,
+    pub tightened: String,
+    pub notes: Vec<String>,
+}
+
+#[tauri::command]
+pub fn review_wording(doc: ResumeDoc) -> Vec<BulletReview> {
+    let mut out = Vec::new();
+    for role in doc
+        .experience
+        .iter()
+        .chain(doc.projects.iter())
+        .chain(doc.leadership.iter())
+    {
+        for bullet in &role.bullets {
+            if bullet.text.trim().is_empty() {
+                continue;
+            }
+            let result = crate::tighten::tighten_bullet(&bullet.text, role.end.present);
+            // Only worth showing when there is something to say.
+            if result.text != bullet.text || !result.notes.is_empty() {
+                out.push(BulletReview {
+                    bullet_id: bullet.id.clone(),
+                    tightened: result.text,
+                    notes: result.notes,
+                });
+            }
+        }
+    }
+    out
+}
+
 #[tauri::command]
 pub fn parse_pasted_text(text: String) -> ResumeDoc {
     parse_text::parse_text(&text)
@@ -186,6 +226,7 @@ pub fn build_document(
     template: String,
     format: String,
     accent: String,
+    tighten: bool,
     on_progress: Channel<Progress>,
     built: State<'_, BuiltFile>,
 ) -> Result<BuildResult, String> {
@@ -194,7 +235,7 @@ pub fn build_document(
     })?;
     let format = Format::parse(&format)?;
 
-    let result = build::build(&doc, template, format, &accent, |progress| {
+    let result = build::build(&doc, template, format, &accent, tighten, |progress| {
         // A dropped channel means the user left the screen; the build finishing
         // anyway is harmless, so this failure is deliberately ignored.
         let _ = on_progress.send(progress);
@@ -262,9 +303,18 @@ pub fn save_document(
     template: String,
     format: String,
     accent: String,
+    tighten: bool,
     saved_at: String,
 ) -> Result<(), String> {
-    save_into(&store_for(&app)?, &doc, &template, &format, &accent, &saved_at)
+    save_into(
+        &store_for(&app)?,
+        &doc,
+        &template,
+        &format,
+        &accent,
+        tighten,
+        &saved_at,
+    )
 }
 
 #[tauri::command]
@@ -343,7 +393,7 @@ mod tests {
         let store = Store::new(dir.path().to_path_buf());
         let mut doc = ResumeDoc::empty();
         doc.contact.name = "Ada".into();
-        save_into(&store, &doc, "column", "pdf", "ink", "2026-08-11T10:00:00Z").unwrap();
+        save_into(&store, &doc, "column", "pdf", "ink", true, "2026-08-11T10:00:00Z").unwrap();
         assert_eq!(load_from(&store).unwrap().unwrap().doc.contact.name, "Ada");
     }
 
@@ -382,7 +432,7 @@ mod tests {
         let blocked = dir.path().join("blocked");
         std::fs::write(&blocked, b"x").unwrap();
         let store = Store::new(blocked);
-        let err = save_into(&store, &ResumeDoc::empty(), "", "", "", "now").unwrap_err();
+        let err = save_into(&store, &ResumeDoc::empty(), "", "", "", true, "now").unwrap_err();
         assert!(err.starts_with("Could not save"), "got {err}");
         assert!(err.contains("Settings"), "no next step in: {err}");
     }
