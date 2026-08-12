@@ -118,18 +118,22 @@ chmod +x src-tauri/binaries/llama-server-*
 
 - [ ] **Step 3: Declare it**
 
-In `src-tauri/tauri.conf.json`, under `bundle`:
+`externalBin` lives in `src-tauri/tauri.bundle.conf.json`, not the base config:
 
 ```json
-"externalBin": ["binaries/llama-server"]
+{ "bundle": { "externalBin": ["binaries/llama-server"] } }
 ```
 
-Tauri appends the target triple itself. **Do this in the same commit as the binaries** — `tauri build` fails if `externalBin` names a file that is not there.
+Tauri appends the target triple itself. It is a separate file because
+`tauri-build` validates the path at *compile* time — declared in the base
+config, `cargo test` fails on every machine that has not built the sidecar,
+which is every CI runner and every fresh clone. Bundle with `pnpm bundle`,
+which merges it; `pnpm tauri build` on its own deliberately does not.
 
 - [ ] **Step 4: Verify the build carries it**
 
 ```bash
-cd apps/Resume && pnpm tauri build
+cd apps/Resume && pnpm bundle
 ```
 
 Expected: the bundle builds, and `Spiral Resume.app/Contents/MacOS/` contains `llama-server`.

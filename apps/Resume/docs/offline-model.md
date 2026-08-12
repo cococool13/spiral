@@ -51,8 +51,11 @@ custom endpoint, and every answer passes through the same fact gate.
 
 Before packaging, put the official release build for each platform in
 `src-tauri/binaries/`, following Tauri's sidecar naming
-(`llama-server-<target-triple>`), and declare it in `tauri.conf.json` under
-`bundle.externalBin`. Both platforms need their own binary; macOS builds must be
+(`llama-server-<target-triple>`). `pnpm build-sidecar` does both, building a
+statically linked one from a pinned llama.cpp — the official release binaries
+link ten dylibs and cannot be carried by `externalBin`. The declaration lives in
+`tauri.bundle.conf.json` so that a machine without the binary can still compile
+and test the app; `pnpm bundle` is the command that merges it. Both platforms need their own binary; macOS builds must be
 signed and notarised along with the app.
 
 Until a binary is present, `Sidecar::start` returns *"This build has no offline
