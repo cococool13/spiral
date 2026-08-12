@@ -8,6 +8,7 @@
 use crate::model::ResumeDoc;
 use crate::parse_text;
 use crate::store::{Store, StoredDoc};
+use crate::templates;
 use serde::Serialize;
 use tauri::Manager;
 
@@ -18,8 +19,52 @@ pub struct StorageInfo {
     pub exists: bool,
 }
 
-pub fn save_into(store: &Store, doc: &ResumeDoc, saved_at: &str) -> Result<(), String> {
-    store.save(doc, saved_at).map_err(|e| {
+/// One card in the style picker: the first page of the user's own resume, set
+/// in that template. `error` is populated instead of `svg` when a template
+/// fails, so one broken template shows one broken card rather than blanking
+/// the whole screen.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Thumbnail {
+    pub id: String,
+    pub name: String,
+    pub svg: String,
+    pub error: String,
+}
+
+pub fn render_all_thumbnails(doc: &ResumeDoc) -> Vec<Thumbnail> {
+    templates::all()
+        .iter()
+        .map(|template| match templates::to_svg_pages(template, doc) {
+            Ok(mut pages) if !pages.is_empty() => Thumbnail {
+                id: template.id.to_string(),
+                name: template.name.to_string(),
+                svg: pages.remove(0),
+                error: String::new(),
+            },
+            Ok(_) => Thumbnail {
+                id: template.id.to_string(),
+                name: template.name.to_string(),
+                svg: String::new(),
+                error: "This style produced no pages. Choose another one.".to_string(),
+            },
+            Err(message) => Thumbnail {
+                id: template.id.to_string(),
+                name: template.name.to_string(),
+                svg: String::new(),
+                error: message,
+            },
+        })
+        .collect()
+}
+
+pub fn save_into(
+    store: &Store,
+    doc: &ResumeDoc,
+    template: &str,
+    saved_at: &str,
+) -> Result<(), String> {
+    store.save(doc, template, saved_at).map_err(|e| {
         format!(
             "Could not save to {}: {e}. Check the folder is writable, or clear stored data in Settings.",
             store.path().display()
@@ -48,9 +93,22 @@ pub fn parse_pasted_text(text: String) -> ResumeDoc {
     parse_text::parse_text(&text)
 }
 
+/// Five compiles, roughly 200 ms in total. Deliberately synchronous: the Style
+/// screen has nothing to show until they are all done, and a progress bar for
+/// a fifth of a second would be theatre.
 #[tauri::command]
-pub fn save_document(app: tauri::AppHandle, doc: ResumeDoc, saved_at: String) -> Result<(), String> {
-    save_into(&store_for(&app)?, &doc, &saved_at)
+pub fn render_thumbnails(doc: ResumeDoc) -> Vec<Thumbnail> {
+    render_all_thumbnails(&doc)
+}
+
+#[tauri::command]
+pub fn save_document(
+    app: tauri::AppHandle,
+    doc: ResumeDoc,
+    template: String,
+    saved_at: String,
+) -> Result<(), String> {
+    save_into(&store_for(&app)?, &doc, &template, &saved_at)
 }
 
 #[tauri::command]
@@ -94,8 +152,36 @@ mod tests {
         let store = Store::new(dir.path().to_path_buf());
         let mut doc = ResumeDoc::empty();
         doc.contact.name = "Ada".into();
-        save_into(&store, &doc, "2026-08-11T10:00:00Z").unwrap();
+        save_into(&store, &doc, "column", "2026-08-11T10:00:00Z").unwrap();
         assert_eq!(load_from(&store).unwrap().unwrap().doc.contact.name, "Ada");
+    }
+
+    #[test]
+    fn thumbnails_come_back_one_per_template_as_svg() {
+        let thumbs = render_all_thumbnails(&ResumeDoc::empty());
+        assert_eq!(thumbs.len(), 5);
+        for thumb in &thumbs {
+            assert!(thumb.error.is_empty(), "{} errored: {}", thumb.id, thumb.error);
+            assert!(thumb.svg.starts_with("<svg"), "{} is not an SVG", thumb.id);
+            assert!(!thumb.name.is_empty());
+        }
+    }
+
+    /// Typst renders text as glyph outlines, so the name cannot be grepped out
+    /// of the SVG. What *can* be proved is that the card is a render of this
+    /// document rather than a fixed sample: change the document, change the SVG.
+    #[test]
+    fn a_thumbnail_is_a_render_of_this_document_not_a_sample() {
+        let mut ada = ResumeDoc::empty();
+        ada.contact.name = "Ada Lovelace".into();
+        let mut grace = ResumeDoc::empty();
+        grace.contact.name = "Grace Hopper".into();
+
+        let first = render_all_thumbnails(&ada);
+        let second = render_all_thumbnails(&grace);
+        for (a, b) in first.iter().zip(second.iter()) {
+            assert_ne!(a.svg, b.svg, "{} rendered the same thing for two names", a.id);
+        }
     }
 
     #[test]
@@ -105,7 +191,7 @@ mod tests {
         let blocked = dir.path().join("blocked");
         std::fs::write(&blocked, b"x").unwrap();
         let store = Store::new(blocked);
-        let err = save_into(&store, &ResumeDoc::empty(), "now").unwrap_err();
+        let err = save_into(&store, &ResumeDoc::empty(), "", "now").unwrap_err();
         assert!(err.starts_with("Could not save"), "got {err}");
         assert!(err.contains("Settings"), "no next step in: {err}");
     }

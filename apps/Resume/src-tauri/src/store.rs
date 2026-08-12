@@ -20,6 +20,10 @@ const FILE: &str = "resume.json";
 pub struct StoredDoc {
     pub doc: ResumeDoc,
     pub saved_at: String,
+    /// The template id chosen on the Style screen, or empty before one is.
+    /// `default` so a file written before styles existed still loads.
+    #[serde(default)]
+    pub template: String,
 }
 
 pub struct Store {
@@ -39,11 +43,12 @@ impl Store {
         self.root.join(FILE)
     }
 
-    pub fn save(&self, doc: &ResumeDoc, saved_at: &str) -> io::Result<()> {
+    pub fn save(&self, doc: &ResumeDoc, template: &str, saved_at: &str) -> io::Result<()> {
         fs::create_dir_all(&self.root)?;
         let stored = StoredDoc {
             doc: doc.clone(),
             saved_at: saved_at.to_string(),
+            template: template.to_string(),
         };
         let json = serde_json::to_vec_pretty(&stored)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
@@ -93,7 +98,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
         store
-            .save(&doc_named("Ada"), "2026-08-11T10:00:00Z")
+            .save(&doc_named("Ada"), "column", "2026-08-11T10:00:00Z")
             .unwrap();
         let stored = store.load().unwrap().unwrap();
         assert_eq!(stored.doc.contact.name, "Ada");
@@ -105,10 +110,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf());
         store
-            .save(&doc_named("Ada"), "2026-08-11T10:00:00Z")
+            .save(&doc_named("Ada"), "column", "2026-08-11T10:00:00Z")
             .unwrap();
         store
-            .save(&doc_named("Grace"), "2026-08-11T11:00:00Z")
+            .save(&doc_named("Grace"), "", "2026-08-11T11:00:00Z")
             .unwrap();
         assert_eq!(store.load().unwrap().unwrap().doc.contact.name, "Grace");
     }
@@ -118,11 +123,32 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().join("resume"));
         store
-            .save(&doc_named("Ada"), "2026-08-11T10:00:00Z")
+            .save(&doc_named("Ada"), "column", "2026-08-11T10:00:00Z")
             .unwrap();
         store.delete_all().unwrap();
         assert!(!store.path().exists());
         assert!(store.load().unwrap().is_none());
+    }
+
+    #[test]
+    fn the_chosen_template_comes_back_with_the_document() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(dir.path().to_path_buf());
+        store.save(&doc_named("Ada"), "ledger", "2026-08-11T10:00:00Z").unwrap();
+        assert_eq!(store.load().unwrap().unwrap().template, "ledger");
+    }
+
+    /// A file written before the Style screen existed has no `template` key.
+    /// It must still load, or M1's users lose their resume to a schema change.
+    #[test]
+    fn a_file_without_a_template_key_still_loads() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(dir.path().to_path_buf());
+        let legacy = r#"{"doc":{"contact":{"name":"Ada","email":"","phone":"","location":"","links":[]},"summary":"","experience":[],"education":[],"projects":[],"skills":[]},"savedAt":"2026-08-11T10:00:00Z"}"#;
+        std::fs::write(dir.path().join("resume.json"), legacy).unwrap();
+        let stored = store.load().unwrap().expect("legacy file should load");
+        assert_eq!(stored.doc.contact.name, "Ada");
+        assert_eq!(stored.template, "");
     }
 
     #[test]

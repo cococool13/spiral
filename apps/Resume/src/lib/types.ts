@@ -53,6 +53,16 @@ export interface ResumeDoc {
 export interface StoredDoc {
   doc: ResumeDoc;
   savedAt: string;
+  template: string;
+}
+
+/** One card in the style picker. `error` is set instead of `svg` when a
+ *  template fails, so one bad style cannot blank the screen. */
+export interface Thumbnail {
+  id: string;
+  name: string;
+  svg: string;
+  error: string;
 }
 
 export interface StorageInfo {

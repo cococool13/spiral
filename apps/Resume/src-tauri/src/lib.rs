@@ -9,6 +9,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             commands::parse_pasted_text,
+            commands::render_thumbnails,
             commands::save_document,
             commands::load_document,
             commands::storage_info,

@@ -248,6 +248,65 @@ body {
   }
 }
 
+.styles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: calc(var(--spiral-unit) * 2);
+}
+
+.style-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spiral-unit);
+  padding: var(--spiral-unit);
+  border: 1px solid var(--spiral-conc-03);
+  border-radius: 0;
+  background: var(--spiral-conc-02);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--spiral-dur-fast) var(--spiral-ease);
+}
+
+.style-card:hover {
+  border-color: var(--spiral-steel);
+}
+
+.style-card[aria-checked="true"] {
+  border-color: var(--spiral-red);
+  box-shadow: inset 0 0 0 1px var(--spiral-red);
+}
+
+/* The page itself. A US Letter sheet is 1:1.294, and holding that ratio is what
+   makes the card read as a piece of paper rather than a picture of one. */
+.style-card__page {
+  display: block;
+  aspect-ratio: 1 / 1.294;
+  overflow: hidden;
+  background: var(--spiral-paper);
+  border: 1px solid var(--spiral-conc-03);
+}
+
+.style-card__page svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.style-card__failed {
+  display: block;
+  aspect-ratio: 1 / 1.294;
+  padding: var(--spiral-unit);
+  border-left: 2px solid var(--spiral-red);
+  background: var(--spiral-paper);
+  font-size: 13px;
+}
+
+.style-card__name {
+  font-variation-settings: "wdth" var(--spiral-wdth-heading), "wght" var(--spiral-wght-heading);
+}
+
 .path {
   padding: var(--spiral-unit) calc(var(--spiral-unit) * 1.5);
   border: 1px solid var(--spiral-conc-03);

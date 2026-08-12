@@ -5,6 +5,7 @@ import { emptyDoc, type ResumeDoc } from "./lib/types";
 import { Check } from "./screens/Check";
 import { Input } from "./screens/Input";
 import { Settings } from "./screens/Settings";
+import { Style } from "./screens/Style";
 
 export default function App() {
   const [doc, setDoc] = useState<ResumeDoc>(emptyDoc());
@@ -12,6 +13,7 @@ export default function App() {
   const [reached, setReached] = useState<Step[]>(["input"]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [template, setTemplate] = useState("");
 
   useEffect(() => {
     loadDocument()
@@ -19,6 +21,7 @@ export default function App() {
         if (stored) {
           setDoc(stored.doc);
           setSavedAt(stored.savedAt);
+          setTemplate(stored.template);
         }
       })
       .catch(() => setSavedAt(null));
@@ -31,7 +34,12 @@ export default function App() {
 
   function update(next: ResumeDoc) {
     setDoc(next);
-    void saveDocument(next).catch(() => undefined);
+    void saveDocument(next, template).catch(() => undefined);
+  }
+
+  function chooseTemplate(id: string) {
+    setTemplate(id);
+    void saveDocument(doc, id).catch(() => undefined);
   }
 
   return (
@@ -83,8 +91,16 @@ export default function App() {
             {step === "check" ? (
               <Check doc={doc} onChange={update} onContinue={() => goTo("style")} />
             ) : null}
-            {step !== "input" && step !== "check" ? (
-              <p>Style, Format and Build arrive in M2 and M3.</p>
+            {step === "style" ? (
+              <Style
+                doc={doc}
+                chosen={template}
+                onChoose={chooseTemplate}
+                onContinue={() => goTo("format")}
+              />
+            ) : null}
+            {step === "format" || step === "build" ? (
+              <p>Format and Build arrive in M3.</p>
             ) : null}
           </main>
         </>
