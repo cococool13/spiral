@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import AppPageLayout from "@/components/app-page/AppPageLayout";
+import HeroProof from "@/components/app-page/HeroProof";
+import RemovalRules from "@/components/app-page/RemovalRules";
 import { appPage } from "@/lib/appPages";
 
 const page = appPage("clean");
@@ -11,5 +13,18 @@ export const metadata: Metadata = {
 };
 
 export default function CleanPage() {
-  return <AppPageLayout page={page} />;
+  return (
+    <AppPageLayout
+      page={page}
+      afterHero={
+        <HeroProof
+          eyebrow="What it may do to a file"
+          heading="Three verdicts, decided before you run it."
+          note="A cleaner's screenshot tells you nothing about whether to trust it. The rule governing permanent deletion tells you everything."
+        >
+          <RemovalRules />
+        </HeroProof>
+      }
+    />
+  );
 }

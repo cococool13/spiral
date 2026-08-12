@@ -205,14 +205,13 @@ export const appPages: AppPage[] = [
         body: "That is the quit. Nothing survives it.",
       },
     ],
-    factsHeading: "Measured, not estimated.",
-    factsNote:
-      "Taken on Apple silicon, and written in the app's README rather than on a slide.",
+    // No `factsHeading`: these lead the page in the hero artifact, so the
+    // layout's own numbers section would say them twice.
     facts: [
       { label: "Binary", value: "4.6 MB" },
       { label: "Idle memory", value: "95 MB" },
       { label: "Window on screen", value: "Under a second" },
-      { label: "Thumbnail cache ceiling", value: "200 MB" },
+      { label: "Background processes", value: "None" },
     ],
     faq: [
       {
