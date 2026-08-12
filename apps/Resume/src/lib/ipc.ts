@@ -11,10 +11,15 @@ export function renderThumbnails(doc: ResumeDoc): Promise<Thumbnail[]> {
   return invoke<Thumbnail[]>("render_thumbnails", { doc });
 }
 
-export function saveDocument(doc: ResumeDoc, template: string): Promise<void> {
+export function saveDocument(
+  doc: ResumeDoc,
+  template: string,
+  format: string,
+): Promise<void> {
   return invoke<void>("save_document", {
     doc,
     template,
+    format,
     savedAt: new Date().toISOString(),
   });
 }

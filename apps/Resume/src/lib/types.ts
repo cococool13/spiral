@@ -50,10 +50,14 @@ export interface ResumeDoc {
   skills: string[];
 }
 
+/** PDF or Word. Chosen on the Format step, before anything is built. */
+export type ExportFormat = "pdf" | "docx";
+
 export interface StoredDoc {
   doc: ResumeDoc;
   savedAt: string;
   template: string;
+  format: string;
 }
 
 /** One card in the style picker. `error` is set instead of `svg` when a

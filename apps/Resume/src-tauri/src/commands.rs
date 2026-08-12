@@ -62,9 +62,10 @@ pub fn save_into(
     store: &Store,
     doc: &ResumeDoc,
     template: &str,
+    format: &str,
     saved_at: &str,
 ) -> Result<(), String> {
-    store.save(doc, template, saved_at).map_err(|e| {
+    store.save(doc, template, format, saved_at).map_err(|e| {
         format!(
             "Could not save to {}: {e}. Check the folder is writable, or clear stored data in Settings.",
             store.path().display()
@@ -106,9 +107,10 @@ pub fn save_document(
     app: tauri::AppHandle,
     doc: ResumeDoc,
     template: String,
+    format: String,
     saved_at: String,
 ) -> Result<(), String> {
-    save_into(&store_for(&app)?, &doc, &template, &saved_at)
+    save_into(&store_for(&app)?, &doc, &template, &format, &saved_at)
 }
 
 #[tauri::command]
@@ -152,7 +154,7 @@ mod tests {
         let store = Store::new(dir.path().to_path_buf());
         let mut doc = ResumeDoc::empty();
         doc.contact.name = "Ada".into();
-        save_into(&store, &doc, "column", "2026-08-11T10:00:00Z").unwrap();
+        save_into(&store, &doc, "column", "pdf", "2026-08-11T10:00:00Z").unwrap();
         assert_eq!(load_from(&store).unwrap().unwrap().doc.contact.name, "Ada");
     }
 
@@ -191,7 +193,7 @@ mod tests {
         let blocked = dir.path().join("blocked");
         std::fs::write(&blocked, b"x").unwrap();
         let store = Store::new(blocked);
-        let err = save_into(&store, &ResumeDoc::empty(), "", "now").unwrap_err();
+        let err = save_into(&store, &ResumeDoc::empty(), "", "", "now").unwrap_err();
         assert!(err.starts_with("Could not save"), "got {err}");
         assert!(err.contains("Settings"), "no next step in: {err}");
     }
