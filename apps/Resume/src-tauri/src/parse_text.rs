@@ -5,7 +5,7 @@
 //! leaves in place rather than guessing, because the Check screen is where a
 //! human resolves ambiguity and a confident wrong guess is worse than a blank.
 
-use crate::model::{Contact, ResumeDoc};
+use crate::model::{Contact, DateMark, ResumeDoc};
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -66,6 +66,76 @@ fn parse_contact(header: &[String]) -> Contact {
         }
     }
     contact
+}
+
+const MONTHS: &[&str] = &[
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+];
+
+fn month_number(word: &str) -> Option<u8> {
+    let w = word.trim_end_matches('.').to_lowercase();
+    if w.len() < 3 {
+        return None;
+    }
+    MONTHS
+        .iter()
+        .position(|m| *m == w || m.starts_with(&w))
+        .map(|i| i as u8 + 1)
+}
+
+fn side_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    // Either "Present"/"Current"/"Now", or an optional month word plus a year.
+    RE.get_or_init(|| {
+        Regex::new(r"(?i)\b(present|current|now)\b|\b([A-Za-z]{3,9}\.?)?\s*(\d{4})\b").unwrap()
+    })
+}
+
+fn separator_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"(?i)\s+(?:-|–|—|to|until)\s+").unwrap())
+}
+
+fn parse_one_date(text: &str) -> Option<DateMark> {
+    let caps = side_re().captures(text)?;
+    let raw = caps.get(0)?.as_str().trim().to_string();
+    if caps.get(1).is_some() {
+        return Some(DateMark {
+            raw,
+            year: None,
+            month: None,
+            present: true,
+        });
+    }
+    let year = caps.get(3)?.as_str().parse::<u16>().ok()?;
+    let month = caps.get(2).and_then(|m| month_number(m.as_str()));
+    Some(DateMark {
+        raw,
+        year: Some(year),
+        month,
+        present: false,
+    })
+}
+
+/// A date range needs two sides and a separator. One lone year is a date on a
+/// degree line, not a range, and returning `None` for it keeps the entry
+/// splitter from mistaking an education line for the start of a new role.
+pub fn parse_date_range(line: &str) -> Option<(DateMark, DateMark)> {
+    let split = separator_re().find(line)?;
+    let left = &line[..split.start()];
+    let right = &line[split.end()..];
+    Some((parse_one_date(left)?, parse_one_date(right)?))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,6 +315,35 @@ Rust, Analysis, Notation
         let (_, sections) = split_sections(&lines);
         assert_eq!(sections.len(), 1);
         assert_eq!(sections[0].1, vec![long.to_string()]);
+    }
+
+    #[test]
+    fn reads_a_month_year_range() {
+        let (start, end) = parse_date_range("Jan 2021 - Mar 2023").unwrap();
+        assert_eq!(start.year, Some(2021));
+        assert_eq!(start.month, Some(1));
+        assert_eq!(end.year, Some(2023));
+        assert_eq!(end.month, Some(3));
+        assert!(!end.present);
+    }
+
+    #[test]
+    fn reads_present_as_an_open_end() {
+        let (_, end) = parse_date_range("2021 – Present").unwrap();
+        assert!(end.present);
+        assert_eq!(end.year, None);
+    }
+
+    #[test]
+    fn keeps_the_raw_text_exactly_as_written() {
+        let (start, _) = parse_date_range("September 2019 to May 2023").unwrap();
+        assert_eq!(start.raw, "September 2019");
+    }
+
+    #[test]
+    fn a_line_without_a_range_is_not_a_date_line() {
+        assert!(parse_date_range("Analyst, Admiralty").is_none());
+        assert!(parse_date_range("Graduated 2019").is_none());
     }
 
     #[test]
