@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod model;
 pub mod parse_text;
+pub mod render;
 pub mod store;
 
 pub fn run() {
