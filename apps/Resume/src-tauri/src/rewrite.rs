@@ -150,8 +150,49 @@ pub async fn rewrite_doc(
             },
         ));
     }
-    let raw = crate::provider::send(provider, key, model, SYSTEM, &prompt_for(&bullets)).await?;
-    Ok(apply(doc, &bullets, &raw))
+    // Sent in batches. One request for the whole document meant a long resume
+    // overflowed the model's context, the reply came back cut in half, and the
+    // JSON would not parse — so *every* bullet was discarded and the user was
+    // told the service replied with something unreadable. Measured: 64 bullets
+    // in one request lost all 64. In batches the cost of a long resume is more
+    // requests, not less resume.
+    let mut out = doc.clone();
+    let mut outcome = Outcome {
+        rewritten: 0,
+        rejected: 0,
+        notes: Vec::new(),
+    };
+    for batch in bullets.chunks(BATCH) {
+        let raw = crate::provider::send(provider, key, model, SYSTEM, &prompt_for(batch)).await?;
+        let (next, part) = apply(&out, batch, &raw);
+        out = next;
+        outcome.rewritten += part.rewritten;
+        outcome.rejected += part.rejected;
+        outcome.notes.extend(part.notes);
+    }
+    outcome.notes = summarise(outcome.notes);
+    Ok((out, outcome))
+}
+
+/// How many bullets go in one request. Twenty is roughly 1,600 tokens of
+/// prompt and reply against the offline engine's 8,192 — comfortable for even
+/// unusually long bullets, and few enough requests that a long resume is not
+/// noticeably slower.
+const BATCH: usize = 20;
+
+/// The same rejection repeated once per bullet is noise, and identical strings
+/// collide as React keys on the result screen. One line, with a count.
+fn summarise(notes: Vec<String>) -> Vec<String> {
+    let mut seen: Vec<(String, usize)> = Vec::new();
+    for note in notes {
+        match seen.iter_mut().find(|(text, _)| *text == note) {
+            Some((_, count)) => *count += 1,
+            None => seen.push((note, 1)),
+        }
+    }
+    seen.into_iter()
+        .map(|(note, count)| if count == 1 { note } else { format!("{note} (×{count})") })
+        .collect()
 }
 
 #[cfg(test)]

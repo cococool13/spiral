@@ -1,5 +1,6 @@
 pub mod accent;
 pub mod build;
+pub mod engine_bench;
 pub mod commands;
 pub mod docx;
 pub mod gate;

@@ -151,6 +151,24 @@ impl Provider {
                 "system": system,
                 "messages": [{ "role": "user", "content": user }],
             }),
+            // The offline engine gets a schema, not just "some JSON". llama.cpp
+            // compiles it into a grammar, so a malformed reply is not merely
+            // unlikely — it cannot be generated. Measured without it: a batch of
+            // twenty bullets came back missing its final brace, and every bullet
+            // in that batch was discarded. Hosted providers keep `json_object`,
+            // which is what they are tested against.
+            Provider::Local { .. } => json!({
+                "model": model,
+                "max_completion_tokens": MAX_TOKENS,
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": { "name": "bullets", "strict": true, "schema": reply_schema() },
+                },
+                "messages": [
+                    { "role": "system", "content": system },
+                    { "role": "user", "content": user },
+                ],
+            }),
             _ => json!({
                 "model": model,
                 "max_completion_tokens": MAX_TOKENS,
@@ -162,6 +180,27 @@ impl Provider {
             }),
         }
     }
+}
+
+/// The exact shape `rewrite::Reply` deserialises. Kept beside the request that
+/// asks for it so the two cannot drift.
+fn reply_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "bullets": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": { "n": { "type": "integer" }, "text": { "type": "string" } },
+                    "required": ["n", "text"],
+                    "additionalProperties": false,
+                },
+            },
+        },
+        "required": ["bullets"],
+        "additionalProperties": false,
+    })
 }
 
 #[derive(Deserialize)]

@@ -44,9 +44,11 @@ pub fn arguments(model: &Path, port: u16) -> Vec<String> {
         // from the local network is not something anyone asked for.
         "--host".into(),
         "127.0.0.1".into(),
-        // A resume is short; a big window would cost memory for nothing.
+        // Room for a batch of bullets and its reply, with headroom for unusually
+        // long ones. Bullets are batched in `rewrite`, so this does not have to
+        // hold a whole resume — it holds one request.
         "--ctx-size".into(),
-        "4096".into(),
+        "8192".into(),
         // The whole document's bullets in one request, with room for the reply.
         "--n-predict".into(),
         "2048".into(),
