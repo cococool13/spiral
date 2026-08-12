@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Stepper, type Step } from "./components/Stepper";
 import { loadDocument, saveDocument } from "./lib/ipc";
 import {
@@ -27,6 +27,7 @@ export default function App() {
   const [showing, setShowing] = useState(0);
   const [hasKey, setHasKey] = useState(false);
   const [rebuilding, setRebuilding] = useState(0);
+  const [saveError, setSaveError] = useState("");
   const [accent, setAccent] = useState("ink");
   const [tighten, setTighten] = useState(true);
 
@@ -45,38 +46,64 @@ export default function App() {
       .catch(() => setSavedAt(null));
   }, []);
 
+  // Stable identity: an inline arrow here re-ran Input's drag-drop effect on
+  // every render of this component, stacking listeners.
+  const onInputReady = useCallback(
+    (next: ResumeDoc) => {
+      setDoc(next);
+      persist(next, template, format, accent, tighten);
+      setStep("check");
+      setReached((seen) => (seen.includes("check") ? seen : [...seen, "check"]));
+    },
+    [template, format, accent, tighten],
+  );
+
   function goTo(next: Step) {
     setStep(next);
     setReached((seen) => (seen.includes(next) ? seen : [...seen, next]));
   }
 
+  // Persistence failures used to be swallowed, so an unwritable folder meant
+  // the user kept working on a document that was never being saved.
+  function persist(
+    next: ResumeDoc,
+    nextTemplate: string,
+    nextFormat: string,
+    nextAccent: string,
+    nextTighten: boolean,
+  ) {
+    void saveDocument(next, nextTemplate, nextFormat, nextAccent, nextTighten)
+      .then(() => setSaveError(""))
+      .catch((e) => setSaveError(`${e}`));
+  }
+
   function update(next: ResumeDoc) {
     setDoc(next);
-    void saveDocument(next, template, format, accent, tighten).catch(() => undefined);
+    persist(next, template, format, accent, tighten);
   }
 
   function chooseTemplate(id: string) {
     setTemplate(id);
     setVersions([]);
-    void saveDocument(doc, id, format, accent, tighten).catch(() => undefined);
+    persist(doc, id, format, accent, tighten);
   }
 
   function chooseTighten(next: boolean) {
     setTighten(next);
     setVersions([]);
-    void saveDocument(doc, template, format, accent, next).catch(() => undefined);
+    persist(doc, template, format, accent, next);
   }
 
   function chooseAccent(next: string) {
     setAccent(next);
     setVersions([]);
-    void saveDocument(doc, template, format, next, tighten).catch(() => undefined);
+    persist(doc, template, format, next, tighten);
   }
 
   function chooseFormat(next: ExportFormat) {
     setFormat(next);
     setVersions([]);
-    void saveDocument(doc, template, next, accent, tighten).catch(() => undefined);
+    persist(doc, template, next, accent, tighten);
   }
 
   return (
@@ -108,6 +135,7 @@ export default function App() {
         <>
           <Stepper current={step} reached={reached} onJump={goTo} />
           <main className="app__main">
+            {saveError ? <p className="notice notice--warn">{saveError}</p> : null}
             {step === "input" ? (
               <>
                 {savedAt ? (
@@ -118,12 +146,7 @@ export default function App() {
                     </button>
                   </p>
                 ) : null}
-                <Input
-                  onReady={(next) => {
-                    update(next);
-                    goTo("check");
-                  }}
-                />
+                <Input onReady={onInputReady} />
               </>
             ) : null}
             {step === "check" ? (

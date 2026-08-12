@@ -5,6 +5,18 @@ import { RoleEditor } from "../components/RoleEditor";
 import { reviewWording } from "../lib/ipc";
 import { emptyRole, type BulletReview, type ResumeDoc, type Role } from "../lib/types";
 
+/** The next free id for a section. Deriving it from `roles.length` collided
+ *  after a removal — deleting the first of [exp-0, exp-1] and adding one
+ *  produced a second "exp-1", which made two roles share bullet ids and let a
+ *  model rewrite land on the wrong bullet. */
+function nextRoleId(prefix: string, roles: Role[]): string {
+  const used = roles
+    .map((role) => Number.parseInt(role.id.slice(prefix.length + 1), 10))
+    .filter((n) => Number.isFinite(n));
+  const next = used.length === 0 ? 0 : Math.max(...used) + 1;
+  return `${prefix}-${next}`;
+}
+
 /** Experience and Leadership are the same shape, edited the same way. Writing
  *  the list twice would guarantee they drift. */
 function roleSection(
@@ -29,7 +41,7 @@ function roleSection(
       <button
         type="button"
         className="btn"
-        onClick={() => onChange([...roles, emptyRole(`${idPrefix}-${roles.length}`)])}
+        onClick={() => onChange([...roles, emptyRole(nextRoleId(idPrefix, roles))])}
       >
         Add {heading === "Experience" ? "a role" : "an activity"}
       </button>

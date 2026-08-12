@@ -91,7 +91,37 @@ pub struct ResumeDoc {
     pub awards: Vec<String>,
     #[serde(default)]
     pub interests: Vec<String>,
+    /// Read through a compatibility shim: files written before skills gained
+    /// labels stored a flat `["Rust", "Analysis"]`. Without this, such a file
+    /// fails to deserialize, `Store::load` maps the failure to "no document",
+    /// and the user's entire saved resume disappears on upgrade.
+    #[serde(default, deserialize_with = "skills_from_either_shape")]
     pub skills: Vec<SkillGroup>,
+}
+
+/// Accepts both the current shape (labelled groups) and the original one (a
+/// flat list of strings), so no stored resume is ever discarded for being old.
+fn skills_from_either_shape<'de, D>(deserializer: D) -> Result<Vec<SkillGroup>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Either {
+        Groups(Vec<SkillGroup>),
+        Flat(Vec<String>),
+    }
+
+    Ok(match Either::deserialize(deserializer)? {
+        Either::Groups(groups) => groups,
+        // An unlabelled list is one group with no label — the same
+        // representation the parser produces today.
+        Either::Flat(items) if items.is_empty() => Vec::new(),
+        Either::Flat(items) => vec![SkillGroup {
+            label: String::new(),
+            items,
+        }],
+    })
 }
 
 impl ResumeDoc {
@@ -120,6 +150,26 @@ mod tests {
         let json = serde_json::to_string(&doc).unwrap();
         let back: ResumeDoc = serde_json::from_str(&json).unwrap();
         assert_eq!(doc, back);
+    }
+
+    /// Found in review: a resume saved before skills gained labels was silently
+    /// discarded on upgrade, because the type change made the whole file fail
+    /// to parse and `Store::load` treats that as "no document".
+    #[test]
+    fn a_document_saved_with_flat_skills_still_loads() {
+        let legacy = r#"{"contact":{"name":"Ada","email":"","phone":"","location":"","links":[]},"summary":"","experience":[],"education":[],"projects":[],"skills":["Rust","Analysis"]}"#;
+        let doc: ResumeDoc = serde_json::from_str(legacy).expect("an older resume must still load");
+        assert_eq!(doc.contact.name, "Ada");
+        assert_eq!(doc.skills.len(), 1);
+        assert_eq!(doc.skills[0].label, "");
+        assert_eq!(doc.skills[0].items, vec!["Rust", "Analysis"]);
+    }
+
+    #[test]
+    fn the_current_grouped_shape_still_loads() {
+        let current = r#"{"contact":{"name":"Ada","email":"","phone":"","location":"","links":[]},"summary":"","experience":[],"education":[],"projects":[],"skills":[{"label":"Technical","items":["Rust"]}]}"#;
+        let doc: ResumeDoc = serde_json::from_str(current).unwrap();
+        assert_eq!(doc.skills[0].label, "Technical");
     }
 
     #[test]

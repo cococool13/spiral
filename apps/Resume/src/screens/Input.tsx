@@ -12,9 +12,14 @@ export function Input({ onReady }: { onReady: (doc: ResumeDoc) => void }) {
   // Dropping the file you already have is the shortest path through this app,
   // so the whole window is the target rather than a small rectangle.
   useEffect(() => {
+    // `cancelled` matters as much as `stop`: registering is async, so a cleanup
+    // that runs before the handle resolves would otherwise leave the listener
+    // attached forever, and every re-registration would stack another one.
+    let cancelled = false;
     let stop: (() => void) | undefined;
     getCurrentWebview()
       .onDragDropEvent(async (event) => {
+        if (cancelled) return;
         if (event.payload.type === "over") {
           setOver(true);
           return;
@@ -37,10 +42,17 @@ export function Input({ onReady }: { onReady: (doc: ResumeDoc) => void }) {
         }
       })
       .then((unlisten) => {
+        if (cancelled) {
+          unlisten();
+          return;
+        }
         stop = unlisten;
       })
       .catch(() => undefined);
-    return () => stop?.();
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
   }, [onReady]);
 
   async function run(work: () => Promise<ResumeDoc | null>) {

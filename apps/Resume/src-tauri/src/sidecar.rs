@@ -98,8 +98,20 @@ impl Drop for Sidecar {
     }
 }
 
-/// Wait until the server answers, or give up with a sentence. A 4B model takes
-/// a few seconds to load; a minute is generous and finite.
+/// Half-second polls. A 2.5 GB model that is not in the page cache — the first
+/// build after a reboot — routinely takes longer than a minute to load, and the
+/// original one-minute budget failed those builds while the load was nearly
+/// done, throwing the work away. Three minutes covers a cold start on a slow
+/// disk and is still finite.
+pub const READY_ATTEMPTS: u32 = 360;
+
+/// Found in review: the original one-minute budget failed cold starts. A
+/// runtime test of a constant asserts nothing, so this is checked where it
+/// belongs — at compile time. Lowering the budget below three minutes stops
+/// the build rather than silently reintroducing the bug.
+const _: () = assert!(READY_ATTEMPTS / 2 >= 180);
+
+/// Wait until the server answers, or give up with a sentence.
 pub async fn wait_until_ready(port: u16, attempts: u32) -> Result<(), String> {
     let client = reqwest::Client::new();
     let health = format!("http://127.0.0.1:{port}/health");
@@ -111,7 +123,10 @@ pub async fn wait_until_ready(port: u16, attempts: u32) -> Result<(), String> {
         }
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
-    Err("The offline engine did not start. Try again, or use your own API key.".to_string())
+    Err(
+        "The offline model is taking longer than three minutes to load, so the build was stopped. It is usually faster the second time. Build again, or use your own API key."
+            .to_string(),
+    )
 }
 
 #[cfg(test)]

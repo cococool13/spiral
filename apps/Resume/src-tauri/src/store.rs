@@ -182,6 +182,22 @@ mod tests {
         assert!(stored.tighten, "a file from before the setting must default to on");
     }
 
+    /// The regression the review found: this file is what M1–M4 actually wrote,
+    /// and before the compatibility shim it made `load` return `None` — the
+    /// user's whole resume gone, silently, on first launch after upgrading.
+    #[test]
+    fn a_file_written_before_skills_had_labels_still_loads() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(dir.path().to_path_buf());
+        let legacy = r#"{"doc":{"contact":{"name":"Ada","email":"","phone":"","location":"","links":[]},"summary":"","experience":[],"education":[],"projects":[],"skills":["Rust","Analysis"]},"savedAt":"2026-08-11T10:00:00Z","template":"column"}"#;
+        std::fs::write(dir.path().join("resume.json"), legacy).unwrap();
+
+        let stored = store.load().unwrap().expect("an older resume must not be discarded");
+        assert_eq!(stored.doc.contact.name, "Ada");
+        assert_eq!(stored.doc.skills[0].items, vec!["Rust", "Analysis"]);
+        assert_eq!(stored.template, "column");
+    }
+
     #[test]
     fn a_corrupt_file_reads_as_no_document_rather_than_an_error() {
         let dir = tempfile::tempdir().unwrap();
@@ -190,3 +206,4 @@ mod tests {
         assert!(store.load().unwrap().is_none());
     }
 }
+

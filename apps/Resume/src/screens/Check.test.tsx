@@ -82,6 +82,40 @@ describe("Check", () => {
     expect(onTighten).toHaveBeenCalledWith(false);
   });
 
+  /** Found in review: ids came from `roles.length`, so removing an earlier role
+   *  and adding one produced a duplicate id — and duplicate bullet ids let a
+   *  model rewrite land on the wrong role's bullet. */
+  it("never reuses a role id after an earlier role is removed", () => {
+    const first = emptyRole("exp-0");
+    const second = emptyRole("exp-1");
+    const doc: ResumeDoc = { ...emptyDoc(), experience: [first, second] };
+    const onChange = vi.fn();
+
+    const { rerender } = render(
+      <Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />,
+    );
+    // Remove the first role, leaving [exp-1].
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove this role" })[0]);
+    const afterRemoval: ResumeDoc = onChange.mock.calls[0][0];
+    expect(afterRemoval.experience.map((r) => r.id)).toEqual(["exp-1"]);
+
+    onChange.mockClear();
+    rerender(
+      <Check
+        doc={afterRemoval}
+        tighten={false}
+        onChange={onChange}
+        onTighten={vi.fn()}
+        onContinue={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add a role" }));
+
+    const ids = onChange.mock.calls[0][0].experience.map((r: { id: string }) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(["exp-1", "exp-2"]);
+  });
+
   it("adds an empty role for a resume that parsed nothing", () => {
     const onChange = vi.fn();
     render(<Check doc={emptyDoc()} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);

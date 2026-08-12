@@ -60,7 +60,13 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
           <select
             className="field__input"
             value={info.provider}
-            onChange={(e) => run(() => saveEngine(e.target.value, "", info.baseUrl), "Saved.")}
+            // Local until saved, like the fields beside it. Saving on change
+            // made "Another service" unreachable: it was rejected for having no
+            // base URL, and the base URL field only appears once the provider
+            // has been accepted.
+            onChange={(e) =>
+              setInfo({ ...info, provider: e.target.value, model: "" })
+            }
           >
             {PROVIDERS.map((provider) => (
               <option key={provider.id} value={provider.id}>
@@ -71,7 +77,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
         </label>
 
         <Field
-          label="Model"
+          label="Model (blank uses the recommended one)"
           value={info.model}
           onChange={(model) => setInfo({ ...info, model })}
         />

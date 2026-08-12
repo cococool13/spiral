@@ -221,7 +221,8 @@ fn engine_of(app: &tauri::AppHandle) -> Result<(EngineSettings, Provider), Strin
 pub fn engine_info(app: tauri::AppHandle) -> Result<EngineInfo, String> {
     let (stored, provider) = engine_of(&app)?;
     Ok(EngineInfo {
-        has_key: keys::has(provider.id()),
+        // An engine that needs no credential never reports one.
+        has_key: provider.needs_key() && keys::has(provider.id()),
         host: provider.host(),
         provider: stored.provider,
         model: stored.model,
@@ -261,6 +262,9 @@ pub fn save_engine(
 #[tauri::command]
 pub fn save_api_key(app: tauri::AppHandle, key: String) -> Result<EngineInfo, String> {
     let (_, provider) = engine_of(&app)?;
+    if !provider.needs_key() {
+        return Err("The offline engine runs on this computer and needs no key.".to_string());
+    }
     keys::store(provider.id(), &key)?;
     engine_info(app)
 }
@@ -390,12 +394,12 @@ pub async fn build_document(
                 stage: "Starting the offline engine".to_string(),
                 percent: 5,
             });
-            crate::sidecar::wait_until_ready(port, 120).await?;
+            crate::sidecar::wait_until_ready(port, crate::sidecar::READY_ATTEMPTS).await?;
             let _ = on_progress.send(Progress {
                 stage: "Rewriting wording".to_string(),
                 percent: 10,
             });
-            let provider = Provider::Compatible {
+            let provider = Provider::Local {
                 base_url: engine_process.url(),
             };
             let (rewritten, outcome) =

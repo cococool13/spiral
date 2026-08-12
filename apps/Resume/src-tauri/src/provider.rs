@@ -31,6 +31,11 @@ pub enum Provider {
     /// Any OpenAI-compatible endpoint: OpenRouter, Groq, Together, or a local
     /// Ollama or LM Studio server.
     Compatible { base_url: String },
+    /// The bundled offline engine. A distinct variant rather than a
+    /// `Compatible` with a loopback URL, because it has its own identity: it
+    /// needs no credential, and sharing `Compatible`'s keychain account meant
+    /// a key saved for one silently became the other's.
+    Local { base_url: String },
 }
 
 impl Provider {
@@ -40,8 +45,8 @@ impl Provider {
             "openai" => Ok(Provider::OpenAi),
             // The offline engine speaks the same OpenAI-compatible shape, so
             // it needs no new request code — only a different destination,
-            // resolved to loopback when the sidecar starts.
-            "local" => Ok(Provider::Compatible {
+            // filled in when the sidecar starts.
+            "local" => Ok(Provider::Local {
                 base_url: String::new(),
             }),
             "compatible" => {
@@ -69,6 +74,7 @@ impl Provider {
             Provider::Anthropic => "anthropic",
             Provider::OpenAi => "openai",
             Provider::Compatible { .. } => "compatible",
+            Provider::Local { .. } => "local",
         }
     }
 
@@ -92,14 +98,24 @@ impl Provider {
                 .and_then(|rest| rest.split('/').next())
                 .unwrap_or(base_url)
                 .to_string(),
+            // Never a remote name, whatever port it lands on.
+            Provider::Local { .. } => "127.0.0.1".to_string(),
         }
+    }
+
+    /// True when this engine authenticates. The offline one does not, and
+    /// asking for a key it will never use is a question with no answer.
+    pub fn needs_key(&self) -> bool {
+        !matches!(self, Provider::Local { .. })
     }
 
     fn endpoint(&self) -> String {
         match self {
             Provider::Anthropic => "https://api.anthropic.com/v1/messages".to_string(),
             Provider::OpenAi => "https://api.openai.com/v1/chat/completions".to_string(),
-            Provider::Compatible { base_url } => format!("{base_url}/chat/completions"),
+            Provider::Compatible { base_url } | Provider::Local { base_url } => {
+                format!("{base_url}/chat/completions")
+            }
         }
     }
 
@@ -313,6 +329,20 @@ mod tests {
         assert!(message.contains("api.anthropic.com"));
         assert!(message.contains("subscription login"));
         assert!(!message.contains("sk-"));
+    }
+
+    /// Found in review: `local` resolved to a `Compatible`, whose id is
+    /// "compatible" — so a key saved for a custom endpoint was reported as
+    /// belonging to the offline engine, and saving one while offline was
+    /// selected overwrote the other provider's credential.
+    #[test]
+    fn the_offline_engine_has_its_own_identity_and_needs_no_key() {
+        let local = Provider::parse("local", "").unwrap();
+        assert_eq!(local.id(), "local");
+        assert_ne!(local.id(), Provider::parse("compatible", "https://x.test/v1").unwrap().id());
+        assert_eq!(local.host(), "127.0.0.1");
+        assert!(!local.needs_key());
+        assert!(Provider::Anthropic.needs_key());
     }
 
     #[test]

@@ -83,17 +83,30 @@ fn parse_contact(header: &[String]) -> Contact {
         // Phone | Email". The details have already been lifted out above, so
         // what remains before the first separator is the name.
         if index == 0 {
-            let mut remainder = leftover
+            let remainder = leftover
                 .trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
                 .trim()
                 .to_string();
+            let mut name = remainder.clone();
+            // Whatever follows the name on line one is still text the user
+            // typed — a job title, a city. Splitting the name off and throwing
+            // the rest away is the same data loss the location fix addressed
+            // for the lines below it.
+            let mut rest = String::new();
             for separator in NAME_SEPARATORS {
-                if let Some((head, _)) = remainder.split_once(separator) {
-                    remainder = head.trim().to_string();
+                if let Some((head, tail)) = name.clone().split_once(separator) {
+                    name = head.trim().to_string();
+                    rest = tail.trim().to_string();
                 }
             }
-            if !remainder.is_empty() {
-                contact.name = remainder;
+            if !name.is_empty() {
+                contact.name = name;
+            }
+            let rest = rest
+                .trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
+                .trim();
+            if !rest.is_empty() && contact.location.is_empty() {
+                contact.location = rest.to_string();
             }
         }
 
@@ -528,6 +541,16 @@ mod tests {
         let doc = parse_text("Ada Lovelace | 12 Acacia Ave | (555) 123-4567 | ada@example.com\n");
         assert_eq!(doc.contact.name, "Ada Lovelace");
         assert_eq!(doc.contact.email, "ada@example.com");
+    }
+
+    /// Found in review: the name split kept the head and discarded the tail, so
+    /// a title or city sharing line one vanished from the document entirely.
+    #[test]
+    fn text_after_the_name_on_line_one_is_kept_rather_than_dropped() {
+        let doc = parse_text("Ada Lovelace | Senior Engineer | ada@example.com\n");
+        assert_eq!(doc.contact.name, "Ada Lovelace");
+        assert_eq!(doc.contact.email, "ada@example.com");
+        assert_eq!(doc.contact.location, "Senior Engineer");
     }
 
     #[test]

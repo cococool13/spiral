@@ -104,6 +104,27 @@ describe("EngineSettings", () => {
     expect(screen.queryByText(/billed separately/)).toBeNull();
   });
 
+  /** Found in review: saving on change rejected "compatible" for having no base
+   *  URL, and the base URL field only rendered once the provider was already
+   *  saved — so every OpenAI-compatible endpoint was unreachable. */
+  it("lets a custom service be chosen and its base URL entered before saving", async () => {
+    render(<EngineSettings onChanged={vi.fn()} />);
+    await screen.findByLabelText("Service");
+
+    fireEvent.change(screen.getByLabelText("Service"), { target: { value: "compatible" } });
+
+    // Choosing does not save — so nothing can reject it for being incomplete.
+    expect(saveEngine).not.toHaveBeenCalled();
+    // …and the field needed to complete it is now on screen.
+    expect(screen.getByLabelText("Base URL")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Base URL"), {
+      target: { value: "http://localhost:11434/v1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save these settings" }));
+    await waitFor(() => expect(saveEngine).toHaveBeenCalled());
+  });
+
   it("asks for a base URL only for a custom service", async () => {
     engineInfo.mockResolvedValueOnce({
       ...base,

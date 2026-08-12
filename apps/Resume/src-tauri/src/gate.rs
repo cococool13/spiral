@@ -21,6 +21,14 @@ pub enum Verdict {
 /// tightening — the one job of the paid tier is to make bullets sharper.
 const MAX_GROWTH: f32 = 1.6;
 
+/// Numbers **in the order they appear**. Order is the point: a sorted multiset
+/// cannot tell "6 engineers over 18 months" from "18 engineers over 6 months",
+/// because both sort to the same pair — and that swap is exactly the kind of
+/// fabrication this gate exists to stop.
+///
+/// The cost is that a rewrite which legitimately reorders two number-bearing
+/// clauses is refused. That is the safe direction to fail: the user keeps their
+/// own wording, and nothing false reaches the page.
 fn digit_runs(text: &str) -> Vec<String> {
     let mut runs = Vec::new();
     let mut current = String::new();
@@ -34,7 +42,6 @@ fn digit_runs(text: &str) -> Vec<String> {
     if !current.is_empty() {
         runs.push(current);
     }
-    runs.sort_unstable();
     runs
 }
 
@@ -141,6 +148,24 @@ mod tests {
             rejected(
                 "Cut report turnaround substantially",
                 "Cut report turnaround by 40%",
+            ),
+            "changed a number"
+        );
+    }
+
+    /// Found in review. Both sides contain a 6 and an 18, so a sorted-multiset
+    /// comparison called this rewrite faithful — while it claims the person
+    /// managed three times the people for a third of the time.
+    ///
+    /// **Mutation proof:** re-add `runs.sort_unstable()` to `digit_runs` and
+    /// this test fails; every other test in this module still passes, which is
+    /// why the bug survived the original suite.
+    #[test]
+    fn rejects_two_numbers_swapped_between_facts() {
+        assert_eq!(
+            rejected(
+                "Managed 6 engineers over 18 months",
+                "Managed 18 engineers over 6 months",
             ),
             "changed a number"
         );
@@ -262,3 +287,4 @@ mod tests {
         );
     }
 }
+
