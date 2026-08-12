@@ -61,6 +61,12 @@ export default function AppCard({ app }: { app: SpiralApp }) {
           <a href={app.source.url} className="glass-pill">
             View the source
           </a>
+        ) : app.page ? (
+          // Not shipped, but there is something to read. A real link beats a
+          // dead pill, and it is the only way anyone reaches the page.
+          <a href={app.page} className="glass-pill">
+            See what it does
+          </a>
         ) : (
           <DisabledPill />
         )}

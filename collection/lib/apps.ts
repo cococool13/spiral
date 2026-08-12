@@ -27,6 +27,8 @@ export interface SpiralApp {
   noWindowsBinary?: true;
   /** Inline SVG path data drawn in a 24x24 viewBox, stroke-based. */
   iconPath: string;
+  /** A page on this site that explains the app. Rendered as the card's link. */
+  page?: string;
   /**
    * Homebrew cask token, for the apps in the cococool13/spiral tap. Present
    * only where a signed macOS build exists — a brew command for an app with no
@@ -87,6 +89,17 @@ export const apps: SpiralApp[] = [
     },
     // A shield with two setting lines: policy, under protection.
     iconPath: "M12 3l7 3v5.5c0 4.5-3 7.5-7 9.5-4-2-7-5-7-9.5V6zM9 11h6M9 14h4",
+  },
+  {
+    // The only app with a page of its own so far, because it is the only one
+    // whose product is something you have to *see* to understand. The card
+    // sends people there rather than offering an installer that does not exist.
+    slug: "resume",
+    name: "Spiral Resume",
+    tagline: "Twelve typeset layouts. It is never allowed to change a fact.",
+    status: "coming-soon",
+    page: "/resume/",
+    iconPath: "M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6",
   },
   {
     slug: "dashboard",
