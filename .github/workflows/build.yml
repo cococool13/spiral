@@ -249,6 +249,73 @@ jobs:
         working-directory: apps/clean/src-tauri
         run: cargo test
 
+  # Spiral Resume. The app shipped without a job here, so its 169 Rust tests and
+  # 76 frontend tests only ever ran on the machine that wrote them.
+  #
+  # No `tauri build`: bundling needs the `llama-server` sidecar, which is built
+  # from source by `pnpm build-sidecar` and deliberately not in the repository.
+  # That is why `externalBin` lives in `tauri.bundle.conf.json` rather than the
+  # base config — declared in the base, `tauri-build` refuses to compile at all
+  # on any machine without the binary, which is every runner and every fresh
+  # clone.
+  resume:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/Resume
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/Resume/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/Resume/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      # Typst and its font set dominate this crate's build; without the cache
+      # every run pays several minutes for dependencies that never change.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/Resume/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # src/styles/tokens.css and src/assets/brand come from /brand and are
+      # gitignored, so they must exist before check-hex and tsc read them.
+      - name: Sync brand assets
+        run: pnpm sync-brand
+
+      - name: Quality gates (hex guard + typecheck)
+        run: pnpm check:hex && pnpm tsc --noEmit
+
+      # Before the Rust steps: `tauri::generate_context!` resolves `frontendDist`
+      # at compile time, so the crate does not build until the Vite export exists.
+      - name: Build the frontend
+        run: pnpm build
+
+      - name: Frontend tests
+        run: pnpm test
+
+      - name: Rust tests
+        working-directory: apps/Resume/src-tauri
+        run: cargo test
+
+      # The fact gate, the safety rules and the template lints are all enforced
+      # here. Warnings are errors: this crate has no crate-wide allow.
+      - name: Clippy
+        working-directory: apps/Resume/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
   # Everything below a tag is the shared workflow's job. It was extracted from
   # the copy that used to live here, and keeping both meant maintaining two of
   # them — the failure this repo keeps rediscovering, most recently when four
