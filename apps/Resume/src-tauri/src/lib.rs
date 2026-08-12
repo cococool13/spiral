@@ -2,10 +2,15 @@ pub mod accent;
 pub mod build;
 pub mod commands;
 pub mod docx;
+pub mod gate;
 pub mod import;
 pub mod model;
+pub mod keys;
 pub mod parse_text;
+pub mod provider;
 pub mod render;
+pub mod rewrite;
+pub mod settings;
 pub mod store;
 pub mod tighten;
 pub mod templates;
@@ -19,6 +24,10 @@ pub fn run() {
             commands::import_resume_file,
             commands::import_dropped_file,
             commands::list_accents,
+            commands::engine_info,
+            commands::save_engine,
+            commands::save_api_key,
+            commands::clear_api_key,
             commands::render_thumbnails,
             commands::review_wording,
             commands::build_document,

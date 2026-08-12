@@ -23,7 +23,10 @@ export default function App() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [template, setTemplate] = useState("");
   const [format, setFormat] = useState<ExportFormat | "">("");
-  const [built, setBuilt] = useState<BuildResult | null>(null);
+  const [versions, setVersions] = useState<BuildResult[]>([]);
+  const [showing, setShowing] = useState(0);
+  const [hasKey, setHasKey] = useState(false);
+  const [rebuilding, setRebuilding] = useState(0);
   const [accent, setAccent] = useState("ink");
   const [tighten, setTighten] = useState(true);
 
@@ -54,25 +57,25 @@ export default function App() {
 
   function chooseTemplate(id: string) {
     setTemplate(id);
-    setBuilt(null);
+    setVersions([]);
     void saveDocument(doc, id, format, accent, tighten).catch(() => undefined);
   }
 
   function chooseTighten(next: boolean) {
     setTighten(next);
-    setBuilt(null);
+    setVersions([]);
     void saveDocument(doc, template, format, accent, next).catch(() => undefined);
   }
 
   function chooseAccent(next: string) {
     setAccent(next);
-    setBuilt(null);
+    setVersions([]);
     void saveDocument(doc, template, format, next, tighten).catch(() => undefined);
   }
 
   function chooseFormat(next: ExportFormat) {
     setFormat(next);
-    setBuilt(null);
+    setVersions([]);
     void saveDocument(doc, template, next, accent, tighten).catch(() => undefined);
   }
 
@@ -91,6 +94,7 @@ export default function App() {
         <main className="app__main">
           <Settings
             onClose={() => setSettingsOpen(false)}
+            onEngineChanged={(info) => setHasKey(info.hasKey)}
             onCleared={() => {
               setDoc(emptyDoc());
               setSavedAt(null);
@@ -145,24 +149,39 @@ export default function App() {
               <Format chosen={format} onChoose={chooseFormat} onContinue={() => goTo("build")} />
             ) : null}
             {step === "build" && format !== "" ? (
-              built ? (
+              versions.length > 0 && rebuilding === 0 ? (
                 <Result
-                  result={built}
+                  versions={versions}
+                  showing={showing}
                   format={format}
+                  canRewrite={hasKey && tighten}
+                  onShow={setShowing}
+                  onRewrite={() => setRebuilding((n) => n + 1)}
                   onAnotherStyle={() => {
-                    setBuilt(null);
+                    setVersions([]);
+                    setShowing(0);
                     goTo("style");
                   }}
                 />
               ) : (
                 <Build
+                  // A fresh key remounts the screen, which is what makes
+                  // "rewrite the wording again" actually run a second build.
+                  key={`${versions.length}-${rebuilding}`}
                   doc={doc}
                   template={template}
                   format={format}
                   accent={accent}
                   tighten={tighten}
-                  onDone={setBuilt}
-                  onBack={() => goTo("style")}
+                  onDone={(result) => {
+                    setVersions((all) => [...all, result]);
+                    setShowing(versions.length);
+                    setRebuilding(0);
+                  }}
+                  onBack={() => {
+                    setRebuilding(0);
+                    goTo("style");
+                  }}
                 />
               )
             ) : null}

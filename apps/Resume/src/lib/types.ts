@@ -143,4 +143,19 @@ export interface Progress {
 export interface BuildResult {
   pages: string[];
   suggestedName: string;
+  /** What actually ran, stated plainly on the result. */
+  engine: string;
+  /** One line per rewrite the fact gate refused. Not errors. */
+  notes: string[];
+}
+
+/** What Settings may know about the engine. There is deliberately no key
+ *  field — the frontend can learn whether one exists, never what it is. */
+export interface EngineInfo {
+  provider: string;
+  model: string;
+  baseUrl: string;
+  hasKey: boolean;
+  /** The exact host a key would be sent to, shown before anything is sent. */
+  host: string;
 }

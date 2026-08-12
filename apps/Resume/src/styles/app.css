@@ -409,6 +409,18 @@ body {
   box-shadow: 0 0 0 2px var(--spiral-red);
 }
 
+.versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spiral-unit);
+  margin-bottom: calc(var(--spiral-unit) * 2);
+}
+
+.versions .btn[aria-checked="true"] {
+  border-color: var(--spiral-red);
+  color: var(--spiral-red);
+}
+
 .build__stage {
   margin: 0 0 var(--spiral-unit);
   font-family: var(--spiral-font-mono);

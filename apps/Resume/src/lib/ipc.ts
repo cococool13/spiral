@@ -5,6 +5,7 @@ import type {
   Accent,
   BuildResult,
   BulletReview,
+  EngineInfo,
   Progress,
   ResumeDoc,
   StorageInfo,
@@ -81,13 +82,30 @@ export function buildDocument(
   const channel = new Channel<Progress>();
   channel.onmessage = onProgress;
   return invoke<BuildResult>("build_document", {
-    doc,
-    template,
-    format,
-    accent,
-    tighten,
+    request: { doc, template, format, accent, tighten },
     onProgress: channel,
   });
+}
+
+export function engineInfo(): Promise<EngineInfo> {
+  return invoke<EngineInfo>("engine_info");
+}
+
+export function saveEngine(
+  provider: string,
+  model: string,
+  baseUrl: string,
+): Promise<EngineInfo> {
+  return invoke<EngineInfo>("save_engine", { provider, model, baseUrl });
+}
+
+/** The key goes straight to the OS keychain and is never read back. */
+export function saveApiKey(key: string): Promise<EngineInfo> {
+  return invoke<EngineInfo>("save_api_key", { key });
+}
+
+export function clearApiKey(): Promise<EngineInfo> {
+  return invoke<EngineInfo>("clear_api_key");
 }
 
 /** Resolves to the path written, or null when the user closed the dialog. */

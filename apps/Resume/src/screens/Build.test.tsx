@@ -15,7 +15,12 @@ const buildDocument = vi.fn(
   ): Promise<BuildResult> => {
     onProgress({ stage: "Reading structure", percent: 15 });
     onProgress({ stage: "Preparing the file", percent: 100 });
-    return { pages: ["<svg id='p1'></svg>"], suggestedName: "Ada-Lovelace-resume.pdf" };
+    return {
+      pages: ["<svg id='p1'></svg>"],
+      suggestedName: "Ada-Lovelace-resume.pdf",
+      engine: "Built offline, no network used",
+      notes: [],
+    };
   },
 );
 

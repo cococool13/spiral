@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
+import { EngineSettings } from "../components/EngineSettings";
 import { deleteStoredData, storageInfo } from "../lib/ipc";
+import type { EngineInfo } from "../lib/types";
 
 export function Settings({
   onClose,
   onCleared,
+  onEngineChanged,
 }: {
   onClose: () => void;
   onCleared: () => void;
+  onEngineChanged: (info: EngineInfo) => void;
 }) {
   const [path, setPath] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -31,6 +35,8 @@ export function Settings({
   return (
     <section className="panel">
       <h2 className="panel__title">Settings</h2>
+
+      <EngineSettings onChanged={onEngineChanged} />
 
       <h3 className="panel__heading">Stored on this machine</h3>
       <p className="panel__lede">

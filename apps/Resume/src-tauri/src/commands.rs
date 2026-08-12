@@ -6,6 +6,9 @@
 //! temporary folder; the `#[tauri::command]` wrappers only resolve the real one.
 
 use crate::build::{self, Built, Format, Progress};
+use crate::keys;
+use crate::provider::Provider;
+use crate::settings::{self, EngineSettings};
 use crate::model::ResumeDoc;
 use crate::parse_text;
 use crate::store::{Store, StoredDoc};
@@ -193,6 +196,82 @@ pub fn review_wording(doc: ResumeDoc) -> Vec<BulletReview> {
     out
 }
 
+/// Everything the Settings screen needs to describe the engine — and nothing
+/// it must not have. There is no key field here, by design: the frontend can
+/// learn *whether* a key exists, never what it is.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineInfo {
+    pub provider: String,
+    pub model: String,
+    pub base_url: String,
+    pub has_key: bool,
+    /// The exact hostname the key would be sent to, shown before anything is.
+    pub host: String,
+}
+
+fn engine_of(app: &tauri::AppHandle) -> Result<(EngineSettings, Provider), String> {
+    let root = store_for(app)?.path().to_path_buf();
+    let stored = settings::load(&root);
+    let provider = Provider::parse(&stored.provider, &stored.base_url)?;
+    Ok((stored, provider))
+}
+
+#[tauri::command]
+pub fn engine_info(app: tauri::AppHandle) -> Result<EngineInfo, String> {
+    let (stored, provider) = engine_of(&app)?;
+    Ok(EngineInfo {
+        has_key: keys::has(provider.id()),
+        host: provider.host(),
+        provider: stored.provider,
+        model: stored.model,
+        base_url: stored.base_url,
+    })
+}
+
+#[tauri::command]
+pub fn save_engine(
+    app: tauri::AppHandle,
+    provider: String,
+    model: String,
+    base_url: String,
+) -> Result<EngineInfo, String> {
+    // Validate before writing, so a bad base URL is refused rather than stored.
+    Provider::parse(&provider, &base_url)?;
+    let root = store_for(&app)?.path().to_path_buf();
+    let model = if model.trim().is_empty() {
+        Provider::parse(&provider, &base_url)?.default_model().to_string()
+    } else {
+        model.trim().to_string()
+    };
+    settings::save(
+        &root,
+        &EngineSettings {
+            provider,
+            model,
+            base_url,
+        },
+    )
+    .map_err(|e| format!("Could not save these settings: {e}."))?;
+    engine_info(app)
+}
+
+/// The key goes straight to the OS keychain. It is never returned, logged, or
+/// written to the app data folder.
+#[tauri::command]
+pub fn save_api_key(app: tauri::AppHandle, key: String) -> Result<EngineInfo, String> {
+    let (_, provider) = engine_of(&app)?;
+    keys::store(provider.id(), &key)?;
+    engine_info(app)
+}
+
+#[tauri::command]
+pub fn clear_api_key(app: tauri::AppHandle) -> Result<EngineInfo, String> {
+    let (_, provider) = engine_of(&app)?;
+    keys::clear(provider.id())?;
+    engine_info(app)
+}
+
 #[tauri::command]
 pub fn parse_pasted_text(text: String) -> ResumeDoc {
     parse_text::parse_text(&text)
@@ -214,36 +293,89 @@ pub fn render_thumbnails(doc: ResumeDoc, accent: String) -> Vec<Thumbnail> {
 pub struct BuildResult {
     pub pages: Vec<String>,
     pub suggested_name: String,
+    /// Named plainly on the result screen: what actually ran.
+    pub engine: String,
+    /// One line per rewrite the fact gate refused. Never an error.
+    pub notes: Vec<String>,
 }
 
 /// Holds the one built file between the Build screen and the Save button.
 #[derive(Default)]
 pub struct BuiltFile(pub Mutex<Option<Built>>);
 
+/// Grouped because the build takes five choices and Rust rightly complains at
+/// a function with eight parameters. The frontend sends one object.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuildRequest {
+    pub doc: ResumeDoc,
+    pub template: String,
+    pub format: String,
+    pub accent: String,
+    pub tighten: bool,
+}
+
 #[tauri::command]
-pub fn build_document(
-    doc: ResumeDoc,
-    template: String,
-    format: String,
-    accent: String,
-    tighten: bool,
-    on_progress: Channel<Progress>,
+pub async fn build_document(
+    app: tauri::AppHandle,
+    request: BuildRequest,
     built: State<'_, BuiltFile>,
+    on_progress: Channel<Progress>,
 ) -> Result<BuildResult, String> {
+    let BuildRequest {
+        doc,
+        template,
+        format,
+        accent,
+        tighten,
+    } = request;
     let template = templates::find(&template).ok_or_else(|| {
         "That style is no longer available. Go back to Style and choose another one.".to_string()
     })?;
     let format = Format::parse(&format)?;
 
-    let result = build::build(&doc, template, format, &accent, tighten, |progress| {
-        // A dropped channel means the user left the screen; the build finishing
-        // anyway is harmless, so this failure is deliberately ignored.
-        let _ = on_progress.send(progress);
-    })?;
+    // The model pass, when the user has configured a key. It replaces the
+    // deterministic tightening rather than stacking on top of it — two passes
+    // over the same sentence is how wording gets mangled.
+    let (doc, engine, notes) = if tighten {
+        let (stored, provider) = engine_of(&app)?;
+        match keys::read(provider.id()) {
+            Some(key) => {
+                let _ = on_progress.send(Progress {
+                    stage: "Rewriting wording".to_string(),
+                    percent: 10,
+                });
+                let (rewritten, outcome) =
+                    crate::rewrite::rewrite_doc(&doc, &provider, &key, &stored.model).await?;
+                let engine = format!("Rewritten with your key at {}", provider.host());
+                (rewritten, engine, outcome.notes)
+            }
+            None => (doc, "Built offline, no network used".to_string(), Vec::new()),
+        }
+    } else {
+        (doc, "Built offline, no network used".to_string(), Vec::new())
+    };
+
+    // When the model already rewrote the wording, the deterministic pass is
+    // skipped — but its stage name still appears, so the build screen's
+    // vocabulary does not change under the user.
+    let used_model = engine.starts_with("Rewritten");
+    let result = build::build(
+        &doc,
+        template,
+        format,
+        &accent,
+        tighten && !used_model,
+        |progress| {
+            let _ = on_progress.send(progress);
+        },
+    )?;
 
     let response = BuildResult {
         pages: result.pages.clone(),
         suggested_name: result.suggested_name.clone(),
+        engine,
+        notes,
     };
     *built.0.lock().map_err(|_| {
         "The last build could not be stored. Build it again.".to_string()
