@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { emptyDoc, emptyRole, type ResumeDoc } from "../lib/types";
+import { emptyDoc, emptyRole, emptySchool, type ResumeDoc, type School } from "../lib/types";
 import { Check } from "./Check";
 
 // The wording review is a Rust call; jsdom has no backend.
@@ -12,6 +12,14 @@ const reviewWording = vi.fn(async () => [
   },
 ]);
 vi.mock("../lib/ipc", () => ({ reviewWording: () => reviewWording() }));
+
+function school(): School {
+  const next = emptySchool("edu-0");
+  next.institution = "University of London";
+  next.credential = "BSc Mathematics";
+  next.notes = [{ id: "edu-0-b-0", text: "GPA 3.9" }];
+  return next;
+}
 
 function docWithRole(): ResumeDoc {
   const role = emptyRole("exp-0");
@@ -121,5 +129,64 @@ describe("Check", () => {
     render(<Check doc={emptyDoc()} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Add a role" }));
     expect(onChange.mock.calls[0][0].experience[0].id).toBe("exp-0");
+  });
+
+  /** Education and Projects parsed but had no editor at all: a school read out
+   *  of a PDF could not be corrected, and a wrong graduation year went to the
+   *  printed page. */
+  it("edits a school the parser produced", () => {
+    const onChange = vi.fn();
+    const doc = { ...docWithRole(), education: [school()] };
+    render(<Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+
+    expect((screen.getByLabelText("Institution") as HTMLInputElement).value).toBe(
+      "University of London",
+    );
+    fireEvent.change(screen.getByLabelText("Qualification"), { target: { value: "BSc Maths" } });
+    expect(onChange.mock.calls[0][0].education[0].credential).toBe("BSc Maths");
+  });
+
+  it("edits a project, and calls its fields by project words", () => {
+    const onChange = vi.fn();
+    const project = emptyRole("proj-0");
+    project.title = "Difference Engine";
+    const doc = { ...docWithRole(), projects: [project] };
+    render(<Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+
+    expect((screen.getByLabelText("Project") as HTMLInputElement).value).toBe("Difference Engine");
+    fireEvent.change(screen.getByLabelText("Project"), { target: { value: "Analytical Engine" } });
+    expect(onChange.mock.calls[0][0].projects[0].title).toBe("Analytical Engine");
+  });
+
+  /** An entry added here has to be indistinguishable from a parsed one, or a
+   *  model rewrite cannot find its way back to the bullet it rewrote. */
+  it("mints ids in the shapes Rust mints", () => {
+    const onChange = vi.fn();
+    const doc = { ...docWithRole(), projects: [], education: [] };
+    render(<Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add a project" }));
+    expect(onChange.mock.calls[0][0].projects[0].id).toBe("proj-0");
+
+    fireEvent.click(screen.getByRole("button", { name: "Add a school" }));
+    expect(onChange.mock.calls[1][0].education[0].id).toBe("edu-0");
+  });
+
+  it("adds a note to a school under that school's id", () => {
+    const onChange = vi.fn();
+    const doc = { ...docWithRole(), education: [school()] };
+    render(<Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add a note" }));
+    expect(onChange.mock.calls[0][0].education[0].notes[1].id).toBe("edu-0-b-1");
+  });
+
+  it("removes a school", () => {
+    const onChange = vi.fn();
+    const doc = { ...docWithRole(), education: [school()] };
+    render(<Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove this school" }));
+    expect(onChange.mock.calls[0][0].education).toEqual([]);
   });
 });

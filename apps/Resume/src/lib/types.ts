@@ -136,6 +136,20 @@ export function emptyRole(id: string): Role {
   };
 }
 
+/** Ids match Rust's `entry_id("edu", n)`, so a school added here is
+ *  indistinguishable from one the parser produced. */
+export function emptySchool(id: string): School {
+  return {
+    id,
+    institution: "",
+    credential: "",
+    location: "",
+    start: emptyDate(),
+    end: emptyDate(),
+    notes: [],
+  };
+}
+
 /** What tightening would do to one bullet, shown on the Check screen before
  *  anything is built. `notes` is advice, never a change. */
 export interface BulletReview {

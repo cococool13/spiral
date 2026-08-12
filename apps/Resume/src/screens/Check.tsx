@@ -1,27 +1,52 @@
 import { useEffect, useState } from "react";
 import { Field } from "../components/Field";
 import { ListEditor } from "../components/ListEditor";
-import { RoleEditor } from "../components/RoleEditor";
+import { RoleEditor, type EntryWords } from "../components/RoleEditor";
+import { SchoolEditor } from "../components/SchoolEditor";
 import { nextEntryId } from "../lib/ids";
 import { reviewWording } from "../lib/ipc";
 import { useDebounced } from "../lib/useDebounced";
-import { emptyRole, type BulletReview, type ResumeDoc, type Role } from "../lib/types";
+import {
+  emptyRole,
+  emptySchool,
+  type BulletReview,
+  type ResumeDoc,
+  type Role,
+  type School,
+} from "../lib/types";
 
-/** One editable section of roles. Both fields are stated by the caller: the
+/** One editable section of roles. Every label is stated by the caller: the
  *  add-button label used to be derived from the heading text, so renaming
- *  "Experience" silently turned "Add a role" into "Add an activity". */
+ *  "Experience" silently turned "Add a role" into "Add an activity".
+ *
+ *  `idPrefix` must match what Rust mints (`model.rs::entry_id`), or an entry
+ *  added here would not be the same kind of thing as one that was parsed. */
 interface RoleSection {
   heading: string;
-  /** What one entry is called, for the add button. */
-  entry: string;
   idPrefix: string;
+  add: string;
+  words: EntryWords;
 }
 
-const EXPERIENCE: RoleSection = { heading: "Experience", entry: "a role", idPrefix: "exp" };
+const EXPERIENCE: RoleSection = {
+  heading: "Experience",
+  idPrefix: "exp",
+  add: "Add a role",
+  words: { title: "Title", organization: "Employer", remove: "Remove this role" },
+};
+
+const PROJECTS: RoleSection = {
+  heading: "Projects",
+  idPrefix: "proj",
+  add: "Add a project",
+  words: { title: "Project", organization: "Built for", remove: "Remove this project" },
+};
+
 const LEADERSHIP: RoleSection = {
   heading: "Leadership & activities",
-  entry: "an activity",
   idPrefix: "lead",
+  add: "Add an activity",
+  words: { title: "Role", organization: "Organisation", remove: "Remove this activity" },
 };
 
 /** Experience and Leadership are the same shape, edited the same way. Writing
@@ -32,7 +57,7 @@ function roleSection(
   reviews: BulletReview[],
   onChange: (roles: Role[]) => void,
 ) {
-  const { heading, entry, idPrefix } = section;
+  const { heading, idPrefix, add, words } = section;
   return (
     <>
       <h3 className="panel__heading">{heading}</h3>
@@ -40,6 +65,7 @@ function roleSection(
         <RoleEditor
           key={role.id}
           role={role}
+          words={words}
           reviews={reviews}
           onChange={(next) => onChange(roles.map((r, j) => (j === i ? next : r)))}
           onRemove={() => onChange(roles.filter((_, j) => j !== i))}
@@ -50,7 +76,35 @@ function roleSection(
         className="btn"
         onClick={() => onChange([...roles, emptyRole(nextEntryId(idPrefix, roles.map((r) => r.id)))])}
       >
-        Add {entry}
+        {add}
+      </button>
+    </>
+  );
+}
+
+/** Education is the one section that is not a list of roles: a school has an
+ *  institution and a qualification, and its notes are facts rather than
+ *  achievements. Same editing shape, different fields. */
+function educationSection(schools: School[], onChange: (schools: School[]) => void) {
+  return (
+    <>
+      <h3 className="panel__heading">Education</h3>
+      {schools.map((school, i) => (
+        <SchoolEditor
+          key={school.id}
+          school={school}
+          onChange={(next) => onChange(schools.map((s, j) => (j === i ? next : s)))}
+          onRemove={() => onChange(schools.filter((_, j) => j !== i))}
+        />
+      ))}
+      <button
+        type="button"
+        className="btn"
+        onClick={() =>
+          onChange([...schools, emptySchool(nextEntryId("edu", schools.map((s) => s.id)))])
+        }
+      >
+        Add a school
       </button>
     </>
   );
@@ -143,6 +197,10 @@ export function Check({
       {roleSection(EXPERIENCE, doc.experience, shown, (experience) =>
         onChange({ ...doc, experience }),
       )}
+
+      {roleSection(PROJECTS, doc.projects, shown, (projects) => onChange({ ...doc, projects }))}
+
+      {educationSection(doc.education, (education) => onChange({ ...doc, education }))}
 
       {roleSection(LEADERSHIP, doc.leadership, shown, (leadership) =>
         onChange({ ...doc, leadership }),

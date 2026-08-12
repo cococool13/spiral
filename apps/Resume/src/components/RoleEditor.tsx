@@ -2,13 +2,24 @@ import { nextBulletId } from "../lib/ids";
 import type { BulletReview, Role } from "../lib/types";
 import { Field } from "./Field";
 
+/** What one entry is called on screen. A project has no employer and a
+ *  volunteering entry is not a "role", so the words come from the section
+ *  rather than being fixed here — the fields and the editing are identical. */
+export interface EntryWords {
+  title: string;
+  organization: string;
+  remove: string;
+}
+
 export function RoleEditor({
   role,
+  words,
   reviews,
   onChange,
   onRemove,
 }: {
   role: Role;
+  words: EntryWords;
   reviews: BulletReview[];
   onChange: (role: Role) => void;
   onRemove: () => void;
@@ -16,9 +27,13 @@ export function RoleEditor({
   return (
     <article className="entry">
       <div className="entry__grid">
-        <Field label="Title" value={role.title} onChange={(title) => onChange({ ...role, title })} />
         <Field
-          label="Employer"
+          label={words.title}
+          value={role.title}
+          onChange={(title) => onChange({ ...role, title })}
+        />
+        <Field
+          label={words.organization}
           value={role.organization}
           onChange={(organization) => onChange({ ...role, organization })}
         />
@@ -41,7 +56,7 @@ export function RoleEditor({
             <input
               className="field__input"
               type="text"
-              aria-label={`Bullet in ${role.title || "this role"}`}
+              aria-label={`Bullet in ${role.title || words.title}`}
               value={bullet.text}
               onChange={(e) =>
                 onChange({
@@ -93,7 +108,7 @@ export function RoleEditor({
           Add a bullet
         </button>
         <button type="button" className="btn" onClick={onRemove}>
-          Remove this role
+          {words.remove}
         </button>
       </div>
     </article>
