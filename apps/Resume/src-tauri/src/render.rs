@@ -125,23 +125,33 @@ pub fn to_svg_pages(source: String) -> Result<Vec<String>, String> {
 }
 
 pub fn pdf_with_inputs(source: String, inputs: Dict) -> Result<Vec<u8>, String> {
-    let document = compile(source, inputs)?;
-    typst_pdf::pdf(&document, &typst_pdf::PdfOptions::default()).map_err(first_error)
+    document_to_pdf(&compile(source, inputs)?)
 }
 
 pub fn svg_pages_with_inputs(source: String, inputs: Dict) -> Result<Vec<String>, String> {
-    let document = compile(source, inputs)?;
+    Ok(document_to_svg_pages(&compile(source, inputs)?))
+}
+
+/// Compile once and keep the document. The staged build needs the typesetting
+/// and the exporting to be separate steps, because each one is a stage the user
+/// is shown — and compiling twice to report two stages would be a lie about
+/// where the time went.
+pub fn compile(source: String, inputs: Dict) -> Result<PagedDocument, String> {
+    let world = ResumeWorld::with_inputs(source, inputs);
+    typst::compile(&world).output.map_err(first_error)
+}
+
+pub fn document_to_pdf(document: &PagedDocument) -> Result<Vec<u8>, String> {
+    typst_pdf::pdf(document, &typst_pdf::PdfOptions::default()).map_err(first_error)
+}
+
+pub fn document_to_svg_pages(document: &PagedDocument) -> Vec<String> {
     let options = typst_svg::SvgOptions::default();
-    Ok(document
+    document
         .pages()
         .iter()
         .map(|page| typst_svg::svg(page, &options))
-        .collect())
-}
-
-fn compile(source: String, inputs: Dict) -> Result<PagedDocument, String> {
-    let world = ResumeWorld::with_inputs(source, inputs);
-    typst::compile(&world).output.map_err(first_error)
+        .collect()
 }
 
 /// Typst reports every problem at once; the user needs the first one, phrased

@@ -5,12 +5,16 @@
 //! `save_into` and `load_from` exist so the logic is testable against a
 //! temporary folder; the `#[tauri::command]` wrappers only resolve the real one.
 
+use crate::build::{self, Built, Format, Progress};
 use crate::model::ResumeDoc;
 use crate::parse_text;
 use crate::store::{Store, StoredDoc};
 use crate::templates;
 use serde::Serialize;
-use tauri::Manager;
+use std::sync::Mutex;
+use tauri::ipc::Channel;
+use tauri::{Manager, State};
+use tauri_plugin_dialog::DialogExt;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -100,6 +104,94 @@ pub fn parse_pasted_text(text: String) -> ResumeDoc {
 #[tauri::command]
 pub fn render_thumbnails(doc: ResumeDoc) -> Vec<Thumbnail> {
     render_all_thumbnails(&doc)
+}
+
+/// What the Build screen gets back. The bytes stay in Rust — sending a whole
+/// PDF through IPC and back again to save it would be pure waste, and the file
+/// has no business existing in the webview at all.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuildResult {
+    pub pages: Vec<String>,
+    pub suggested_name: String,
+}
+
+/// Holds the one built file between the Build screen and the Save button.
+#[derive(Default)]
+pub struct BuiltFile(pub Mutex<Option<Built>>);
+
+#[tauri::command]
+pub fn build_document(
+    doc: ResumeDoc,
+    template: String,
+    format: String,
+    on_progress: Channel<Progress>,
+    built: State<'_, BuiltFile>,
+) -> Result<BuildResult, String> {
+    let template = templates::find(&template).ok_or_else(|| {
+        "That style is no longer available. Go back to Style and choose another one.".to_string()
+    })?;
+    let format = Format::parse(&format)?;
+
+    let result = build::build(&doc, template, format, |progress| {
+        // A dropped channel means the user left the screen; the build finishing
+        // anyway is harmless, so this failure is deliberately ignored.
+        let _ = on_progress.send(progress);
+    })?;
+
+    let response = BuildResult {
+        pages: result.pages.clone(),
+        suggested_name: result.suggested_name.clone(),
+    };
+    *built.0.lock().map_err(|_| {
+        "The last build could not be stored. Build it again.".to_string()
+    })? = Some(result);
+    Ok(response)
+}
+
+/// Opens the system save dialog and writes the built file to whatever path the
+/// user picked. The app never chooses a folder itself and never writes anywhere
+/// the user did not name.
+///
+/// `Ok(None)` means the user closed the dialog. Cancelling is not a failure and
+/// must not be reported as one.
+#[tauri::command]
+pub async fn save_built_document(
+    app: tauri::AppHandle,
+    built: State<'_, BuiltFile>,
+) -> Result<Option<String>, String> {
+    let (bytes, suggested, extension) = {
+        let guard = built
+            .0
+            .lock()
+            .map_err(|_| "The built file could not be read. Build it again.".to_string())?;
+        let file = guard
+            .as_ref()
+            .ok_or_else(|| "There is nothing built yet. Build your resume first.".to_string())?;
+        (
+            file.bytes.clone(),
+            file.suggested_name.clone(),
+            file.format.extension(),
+        )
+    };
+
+    let Some(chosen) = app
+        .dialog()
+        .file()
+        .set_file_name(&suggested)
+        .add_filter(extension.to_uppercase(), &[extension])
+        .blocking_save_file()
+    else {
+        return Ok(None);
+    };
+
+    let path = chosen
+        .into_path()
+        .map_err(|e| format!("That location cannot be written to: {e}. Choose another folder."))?;
+
+    std::fs::write(&path, bytes)
+        .map_err(|e| format!("Could not write {}: {e}. Choose another folder.", path.display()))?;
+    Ok(Some(path.display().to_string()))
 }
 
 #[tauri::command]

@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { Stepper, type Step } from "./components/Stepper";
 import { loadDocument, saveDocument } from "./lib/ipc";
-import { emptyDoc, type ExportFormat, type ResumeDoc } from "./lib/types";
+import {
+  emptyDoc,
+  type BuildResult,
+  type ExportFormat,
+  type ResumeDoc,
+} from "./lib/types";
+import { Build } from "./screens/Build";
 import { Check } from "./screens/Check";
 import { Format } from "./screens/Format";
 import { Input } from "./screens/Input";
+import { Result } from "./screens/Result";
 import { Settings } from "./screens/Settings";
 import { Style } from "./screens/Style";
 
@@ -16,6 +23,7 @@ export default function App() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [template, setTemplate] = useState("");
   const [format, setFormat] = useState<ExportFormat | "">("");
+  const [built, setBuilt] = useState<BuildResult | null>(null);
 
   useEffect(() => {
     loadDocument()
@@ -42,11 +50,13 @@ export default function App() {
 
   function chooseTemplate(id: string) {
     setTemplate(id);
+    setBuilt(null);
     void saveDocument(doc, id, format).catch(() => undefined);
   }
 
   function chooseFormat(next: ExportFormat) {
     setFormat(next);
+    setBuilt(null);
     void saveDocument(doc, template, next).catch(() => undefined);
   }
 
@@ -110,7 +120,26 @@ export default function App() {
             {step === "format" ? (
               <Format chosen={format} onChoose={chooseFormat} onContinue={() => goTo("build")} />
             ) : null}
-            {step === "build" ? <p>Build arrives next.</p> : null}
+            {step === "build" && format !== "" ? (
+              built ? (
+                <Result
+                  result={built}
+                  format={format}
+                  onAnotherStyle={() => {
+                    setBuilt(null);
+                    goTo("style");
+                  }}
+                />
+              ) : (
+                <Build
+                  doc={doc}
+                  template={template}
+                  format={format}
+                  onDone={setBuilt}
+                  onBack={() => goTo("style")}
+                />
+              )
+            ) : null}
           </main>
         </>
       )}

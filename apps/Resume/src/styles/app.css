@@ -352,6 +352,56 @@ body {
   font-size: 13px;
 }
 
+.build__stage {
+  margin: 0 0 var(--spiral-unit);
+  font-family: var(--spiral-font-mono);
+  font-size: 14px;
+}
+
+.build__bar {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: 4px;
+  border: 0;
+  background: var(--spiral-conc-03);
+  appearance: none;
+}
+
+.build__bar::-webkit-progress-bar {
+  background: var(--spiral-conc-03);
+}
+
+.build__bar::-webkit-progress-value {
+  background: var(--spiral-red);
+  transition: width var(--spiral-dur-fast) var(--spiral-ease);
+}
+
+.build__percent {
+  margin: var(--spiral-unit) 0 0;
+  color: var(--spiral-steel);
+  font-family: var(--spiral-font-mono);
+  font-size: 13px;
+}
+
+.result__pages {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spiral-unit) * 2);
+  max-width: 520px;
+}
+
+.result__page {
+  border: 1px solid var(--spiral-conc-03);
+  background: var(--spiral-paper);
+}
+
+.result__page svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .path {
   padding: var(--spiral-unit) calc(var(--spiral-unit) * 1.5);
   border: 1px solid var(--spiral-conc-03);

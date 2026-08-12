@@ -1,3 +1,4 @@
+pub mod build;
 pub mod commands;
 pub mod docx;
 pub mod model;
@@ -8,9 +9,13 @@ pub mod templates;
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .manage(commands::BuiltFile::default())
         .invoke_handler(tauri::generate_handler![
             commands::parse_pasted_text,
             commands::render_thumbnails,
+            commands::build_document,
+            commands::save_built_document,
             commands::save_document,
             commands::load_document,
             commands::storage_info,

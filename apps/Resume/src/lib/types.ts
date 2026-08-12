@@ -100,3 +100,14 @@ export function emptyRole(id: string): Role {
     bullets: [],
   };
 }
+
+/** One stage of the build, reported by Rust after the work it names finished. */
+export interface Progress {
+  stage: string;
+  percent: number;
+}
+
+export interface BuildResult {
+  pages: string[];
+  suggestedName: string;
+}
