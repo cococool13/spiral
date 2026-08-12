@@ -37,21 +37,28 @@ fn lines_of(input: &str) -> Vec<String> {
 }
 
 /// The contact block is whatever sits above the first section heading.
+/// Separators people put between contact details. Stripping them is what turns
+/// a leftover "· ·  London ·" back into "London".
+const CONTACT_SEPARATORS: [char; 6] = ['·', '|', ',', '-', '–', '•'];
+
 fn parse_contact(header: &[String]) -> Contact {
     let mut contact = Contact::default();
     if let Some(first) = header.first() {
         contact.name = first.clone();
     }
-    for line in header {
-        if contact.email.is_empty() {
-            if let Some(m) = email_re().find(line) {
+    for (index, line) in header.iter().enumerate() {
+        let mut leftover = line.clone();
+        if let Some(m) = email_re().find(line) {
+            if contact.email.is_empty() {
                 contact.email = m.as_str().to_string();
             }
+            leftover = leftover.replace(m.as_str(), "");
         }
-        if contact.phone.is_empty() {
-            if let Some(m) = phone_re().find(line) {
+        if let Some(m) = phone_re().find(line) {
+            if contact.phone.is_empty() {
                 contact.phone = m.as_str().trim().to_string();
             }
+            leftover = leftover.replace(m.as_str(), "");
         }
         for m in link_re().find_iter(line) {
             let found = m.as_str();
@@ -59,9 +66,23 @@ fn parse_contact(header: &[String]) -> Contact {
             if contact.email.contains(found) || line.contains(&format!("@{found}")) {
                 continue;
             }
+            leftover = leftover.replace(found, "");
             let owned = found.to_string();
             if !contact.links.contains(&owned) {
                 contact.links.push(owned);
+            }
+        }
+
+        // The name line is the name, never a location. Everything below it that
+        // is not an email, a phone number or a link is text the user typed and
+        // we would otherwise throw away.
+        if index > 0 && contact.location.is_empty() {
+            let remainder = leftover
+                .trim_matches(|c: char| c.is_whitespace() || CONTACT_SEPARATORS.contains(&c))
+                .trim()
+                .to_string();
+            if !remainder.is_empty() {
+                contact.location = remainder;
             }
         }
     }
@@ -384,6 +405,22 @@ mod tests {
         let doc = parse_text("Ada Lovelace\nLondon · (555) 123-4567 · ada@example.com\n");
         assert_eq!(doc.contact.email, "ada@example.com");
         assert_eq!(doc.contact.phone, "(555) 123-4567");
+    }
+
+    /// Whatever is left on a header line after the email, phone and links have
+    /// been taken is almost always the place the person lives. Dropping it
+    /// would lose text the user typed, which is the one thing this parser must
+    /// never do.
+    #[test]
+    fn keeps_the_leftover_header_text_as_a_location() {
+        let doc = parse_text("Ada Lovelace\nLondon · (555) 123-4567 · ada@example.com\n");
+        assert_eq!(doc.contact.location, "London");
+    }
+
+    #[test]
+    fn does_not_mistake_the_name_line_for_a_location() {
+        let doc = parse_text("Ada Lovelace\nada@example.com\n");
+        assert_eq!(doc.contact.location, "");
     }
 
     #[test]

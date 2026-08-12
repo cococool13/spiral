@@ -7,7 +7,7 @@
 //! computer as it does here.
 
 use typst::diag::{FileError, FileResult, SourceDiagnostic};
-use typst::foundations::{Bytes, Datetime, Duration};
+use typst::foundations::{Bytes, Datetime, Dict, Duration};
 use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
@@ -40,6 +40,14 @@ const RESUME_FACES: [&[u8]; 8] = [
 
 impl ResumeWorld {
     pub fn new(source: String) -> Self {
+        Self::with_inputs(source, Dict::new())
+    }
+
+    /// The resume reaches a template through `sys.inputs`, never through the
+    /// source text. That is the whole reason there is no escaping code in this
+    /// app: a name containing a quote, a backslash, or a `#` is data here, and
+    /// data cannot become syntax.
+    pub fn with_inputs(source: String, inputs: Dict) -> Self {
         // The resume faces come first so a template asking for one gets it, and
         // typst-assets supplies the maths and monospace fallbacks behind them.
         let fonts: Vec<Font> = RESUME_FACES
@@ -50,7 +58,7 @@ impl ResumeWorld {
             .collect();
         let book = FontBook::from_fonts(&fonts);
         Self {
-            library: LazyHash::new(Library::default()),
+            library: LazyHash::new(Library::builder().with_inputs(inputs).build()),
             book: LazyHash::new(book),
             fonts,
             main: Source::new(main_id(), source),
@@ -107,14 +115,22 @@ impl World for ResumeWorld {
 
 /// Compile a template to PDF bytes, or to the first Typst error as a sentence.
 pub fn to_pdf(source: String) -> Result<Vec<u8>, String> {
-    let document = compile(source)?;
-    typst_pdf::pdf(&document, &typst_pdf::PdfOptions::default()).map_err(first_error)
+    pdf_with_inputs(source, Dict::new())
 }
 
 /// Compile a template to one SVG string per page. Same source, same engine, so
 /// a thumbnail cannot show something the PDF will not.
 pub fn to_svg_pages(source: String) -> Result<Vec<String>, String> {
-    let document = compile(source)?;
+    svg_pages_with_inputs(source, Dict::new())
+}
+
+pub fn pdf_with_inputs(source: String, inputs: Dict) -> Result<Vec<u8>, String> {
+    let document = compile(source, inputs)?;
+    typst_pdf::pdf(&document, &typst_pdf::PdfOptions::default()).map_err(first_error)
+}
+
+pub fn svg_pages_with_inputs(source: String, inputs: Dict) -> Result<Vec<String>, String> {
+    let document = compile(source, inputs)?;
     let options = typst_svg::SvgOptions::default();
     Ok(document
         .pages()
@@ -123,8 +139,8 @@ pub fn to_svg_pages(source: String) -> Result<Vec<String>, String> {
         .collect())
 }
 
-fn compile(source: String) -> Result<PagedDocument, String> {
-    let world = ResumeWorld::new(source);
+fn compile(source: String, inputs: Dict) -> Result<PagedDocument, String> {
+    let world = ResumeWorld::with_inputs(source, inputs);
     typst::compile(&world).output.map_err(first_error)
 }
 

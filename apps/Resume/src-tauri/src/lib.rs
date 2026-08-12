@@ -3,6 +3,7 @@ pub mod model;
 pub mod parse_text;
 pub mod render;
 pub mod store;
+pub mod templates;
 
 pub fn run() {
     tauri::Builder::default()
