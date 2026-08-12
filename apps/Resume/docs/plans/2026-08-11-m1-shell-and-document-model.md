@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status (2026-08-11):** Tasks 1–13 implemented on branch `feat/resume-m1`. Automated gates all pass — 26 Rust tests, 13 frontend tests, clippy warning-free, `pnpm build` and `check-hex` clean, and `pnpm tauri dev` compiles and launches the window on macOS. **Task 13 Step 5 — the by-hand native walkthrough — is NOT done on either platform, and Windows has not been built at all.** Until that is run, M1 is code-complete, not verified.
+
 **Goal:** An app you can open, paste or type a resume into, correct what it read, close, and reopen tomorrow with your work intact.
 
 **Architecture:** Tauri 2 desktop app. Rust owns the document model, the plain-text parser, and on-disk persistence; React owns every pixel. The frontend talks to Rust through four typed IPC commands and holds no durable state of its own. The document model defined here is the contract every later milestone builds on — templates render it, the exporter serialises it, and the fact-freeze gate diffs it.
