@@ -235,7 +235,7 @@ mod tests {
     /// than offer a download that cannot work. When a release pins one, this
     /// test documents what changes.
     #[test]
-    fn an_unpinned_catalogue_reports_the_model_as_unavailable() {
+    fn the_catalogue_decides_whether_the_model_is_offered() {
         let dir = tempfile::tempdir().unwrap();
         let status = status(dir.path());
         if catalogue().is_none() {
@@ -318,7 +318,27 @@ mod tests {
         assert_eq!(std::fs::read(&path).unwrap(), body);
         let seen = seen.into_inner().unwrap();
         assert_eq!(seen.last().unwrap().percent, 100);
-        assert!(status(dir.path()).installed || catalogue().is_none());
+    }
+
+    /// `status` reports on the *catalogue's* file, not on whatever happens to
+    /// be in the folder. The download test above writes its own fixture name,
+    /// so it can say nothing about this.
+    #[test]
+    fn a_model_in_place_is_reported_as_installed() {
+        let Some(entry) = catalogue() else {
+            return; // Unpinned build: there is nothing to install.
+        };
+        let dir = tempfile::tempdir().unwrap();
+        assert!(!status(dir.path()).installed, "reported before anything was there");
+
+        let path = model_path(dir.path(), &entry);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, b"stand-in for the model").unwrap();
+
+        let status = status(dir.path());
+        assert!(status.installed, "a model in place was not seen");
+        assert!(status.available, "a pinned catalogue must be offered");
+        assert_eq!(status.path, path.display().to_string());
     }
 
     struct TinyServer {

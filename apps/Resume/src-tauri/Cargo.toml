@@ -22,6 +22,11 @@ strip = true
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+# The shape the Tauri template ships. Without it the CLI falls back to
+# `--features tauri/custom-protocol`, which does not resolve `tauri-macros`.
+custom-protocol = ["tauri/custom-protocol"]
+
 [dependencies]
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }

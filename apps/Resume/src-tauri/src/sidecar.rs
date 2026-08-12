@@ -12,7 +12,7 @@
 //! reports the offline model as unavailable rather than failing at run time.
 
 use std::net::TcpListener;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 
 /// Where the sidecar is reachable. Loopback only — this is the whole point of
@@ -59,6 +59,20 @@ pub fn arguments(model: &Path, port: u16) -> Vec<String> {
 pub struct Sidecar {
     child: Child,
     pub port: u16,
+}
+
+/// Where Tauri puts an `externalBin` sidecar: **beside the app's own
+/// executable**, not under `Resources`. On macOS that is
+/// `Spiral Resume.app/Contents/MacOS/llama-server`; in `tauri dev` it is
+/// `target/debug/llama-server`. Resolving it as a resource found nothing, and
+/// the offline tier reported itself unbundled in a build that bundled it.
+pub fn beside_this_binary(name: &str) -> Result<PathBuf, String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("Could not find this application's own location: {e}."))?;
+    let folder = exe
+        .parent()
+        .ok_or_else(|| "This application is not in a folder.".to_string())?;
+    Ok(folder.join(name))
 }
 
 impl Sidecar {
@@ -131,7 +145,6 @@ pub async fn wait_until_ready(port: u16, attempts: u32) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     /// The offline tier's entire promise: nothing leaves this computer.
     #[test]
@@ -161,6 +174,17 @@ mod tests {
 
     /// Both missing-prerequisite cases must be sentences a person can act on,
     /// not a spawn error. They are also the states this build is actually in.
+    /// Tauri puts an `externalBin` beside the app executable. Resolving it as a
+    /// resource pointed at `Contents/Resources/binaries/`, which the bundler
+    /// never writes — so a build that shipped the engine reported it missing.
+    #[test]
+    fn the_sidecar_is_looked_for_beside_this_binary() {
+        let found = beside_this_binary("llama-server").unwrap();
+        let exe = std::env::current_exe().unwrap();
+        assert_eq!(found.parent(), exe.parent(), "not beside the executable");
+        assert_eq!(found.file_name().unwrap(), "llama-server");
+    }
+
     #[test]
     fn a_missing_binary_or_model_explains_itself() {
         let dir = tempfile::tempdir().unwrap();

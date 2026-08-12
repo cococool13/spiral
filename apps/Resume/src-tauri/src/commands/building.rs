@@ -188,10 +188,7 @@ async fn rewrite_wording(
             "This build has no offline model. Use your own API key, or the free rule-based pass."
                 .to_string()
         })?;
-        let binary = app
-            .path()
-            .resolve("binaries/llama-server", tauri::path::BaseDirectory::Resource)
-            .map_err(|_| "This build has no offline engine bundled.".to_string())?;
+        let binary = crate::sidecar::beside_this_binary("llama-server")?;
         let port = crate::sidecar::free_port()?;
         let engine_process =
             crate::sidecar::Sidecar::start(&binary, &crate::local::model_path(&root, &entry), port)?;
