@@ -15,26 +15,26 @@ name: release-resume
 # own comment warns that requiring a signed updater bundle from an app that
 # never produced one fails the release for no reason.
 #
-# WHAT THIS RELEASE CONTAINS, AND WHAT IT DOES NOT
+# ALL THREE ENGINE TIERS ARE IN THIS RELEASE
 #
-# It builds with `pnpm tauri build` — the plain config, not
-# `src-tauri/tauri.bundle.conf.json`. So the `llama-server` sidecar is *not*
-# bundled and the offline model tier is unavailable in the released app, which
-# reports exactly that on screen rather than offering a download that would
-# fail. The deterministic tier and the bring-your-own-key tier are complete.
+# `sidecar: true` builds `llama-server` on each runner before Tauri packages
+# the app — a native compile, not a cross-compile, which is why it happens on
+# both runners rather than once. `bundle-config` then merges
+# `src-tauri/tauri.bundle.conf.json`, the file that declares the sidecar as an
+# `externalBin`; it is kept separate so that a machine without the binary can
+# still compile and test the app with the plain config.
 #
-# Turning the offline tier on is a later release and needs three things in this
-# order, because any other order ships something broken:
+# The model itself is not in the release. It is a 2.7 GB download the user
+# chooses in Settings, verified against the sha256 pinned in
+# `apps/Resume/assets/model-catalogue.json` before it is installed.
 #
-#   1. `pnpm build-sidecar` runs on the macOS runner before `tauri build`, and
-#      the Windows equivalent gets written — the script refuses to run anywhere
-#      but macOS today.
-#   2. The build uses `--config src-tauri/tauri.bundle.conf.json` so Tauri
-#      copies the sidecar into the bundle.
-#   3. Only then `pnpm pin-model <url>`. Pinning a model while the sidecar is
-#      still absent would offer the user a 2.5 GB download the app cannot run.
+# The cost is build time: llama.cpp is compiled twice on macOS (arm64 and
+# x86_64, for the universal bundle) and once on Windows. If a release ever
+# needs to skip it, drop `sidecar` and `bundle-config` — the app then reports
+# the offline tier as unavailable on screen, which is a supported state and
+# not a failure.
 #
-# apps/Resume/docs/offline-model.md is the checklist for all three.
+# apps/Resume/docs/offline-model.md is the record of what had to be true first.
 
 on:
   push:
@@ -58,3 +58,5 @@ jobs:
       macos: true
       windows: true
       updater: false
+      sidecar: true
+      bundle-config: src-tauri/tauri.bundle.conf.json

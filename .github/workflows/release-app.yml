@@ -54,6 +54,21 @@ on:
         description: Rust target triple for the macOS build
         type: string
         default: universal-apple-darwin
+      sidecar:
+        description: >
+          Run `pnpm build-sidecar` on each runner before building. A sidecar is
+          a native compile, not a cross-compile, so each platform builds its
+          own. Only Spiral Resume has one.
+        type: boolean
+        default: false
+      bundle-config:
+        description: >
+          An extra Tauri config to merge in, relative to the app directory —
+          `src-tauri/tauri.bundle.conf.json` for an app whose sidecar is
+          declared separately, so a machine without the binary can still
+          compile the app. Empty means build with the plain config.
+        type: string
+        default: ""
 
 jobs:
   macos:
@@ -143,20 +158,25 @@ jobs:
       - name: Sync brand assets
         run: pnpm run --if-present sync-brand
 
+      # Before the build: the sidecar has to exist for the bundler to copy it.
+      - name: Build the sidecar
+        if: inputs.sidecar
+        run: pnpm build-sidecar
+
       # Universal, to match every previous release: one download that runs
       # native on both architectures. Two steps rather than one conditional
       # env: the signing key must be absent, not empty, when there is no
       # updater — see the note on TAURI_KEY above.
       - name: Build, sign, and notarize (with updater artifacts)
         if: inputs.updater
-        run: pnpm tauri build --target ${{ inputs.macos-target }}
+        run: pnpm tauri build --target ${{ inputs.macos-target }} ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
       - name: Build, sign, and notarize
         if: ${{ !inputs.updater }}
-        run: pnpm tauri build --target ${{ inputs.macos-target }}
+        run: pnpm tauri build --target ${{ inputs.macos-target }} ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
 
       # The DMG is what a person downloads and exists either way.
       - name: Upload macOS bundles
@@ -216,16 +236,20 @@ jobs:
       - name: Sync brand assets
         run: pnpm run --if-present sync-brand
 
+      - name: Build the sidecar
+        if: inputs.sidecar
+        run: pnpm build-sidecar
+
       - name: Build Tauri app (with updater artifacts)
         if: inputs.updater
-        run: pnpm tauri build
+        run: pnpm tauri build ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
       - name: Build Tauri app
         if: ${{ !inputs.updater }}
-        run: pnpm tauri build
+        run: pnpm tauri build ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
 
       - name: Upload Windows bundles
         uses: actions/upload-artifact@v7
