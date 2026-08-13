@@ -12,7 +12,9 @@
 //!    Without putting a marker back, every achievement arrives as an ordinary
 //!    line and `parse_text` reads a role's bullets as its location.
 
+use regex::Regex;
 use std::io::{Cursor, Read};
+use std::sync::OnceLock;
 
 const DOCUMENT: &str = "word/document.xml";
 
@@ -20,15 +22,32 @@ pub fn text_from_docx(bytes: &[u8]) -> Result<String, String> {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes.to_vec()))
         .map_err(|_| "That file is not a Word document. Choose a .docx file.".to_string())?;
     let mut xml = String::new();
+    // Read the names first: naming what the file actually is needs the whole
+    // archive, and `by_name` holds a borrow of it while it fails.
+    let names: Vec<String> = archive.file_names().map(str::to_string).collect();
     archive
         .by_name(DOCUMENT)
-        .map_err(|_| {
-            "That Word file has no document inside it. Open it in Word, save it again, and retry."
-                .to_string()
-        })?
+        .map_err(|_| other_zip(&names))?
         .read_to_string(&mut xml)
         .map_err(|e| format!("That Word file could not be read: {e}. Try saving it again."))?;
     Ok(text_from_document_xml(&xml))
+}
+
+/// Every modern document format is a zip, so "this is not a .docx" is not a
+/// useful thing to tell someone holding a file that plainly is a document. The
+/// names inside say which one it is, and each one has a different next step.
+fn other_zip(names: &[String]) -> String {
+    let has = |needle: &str| names.iter().any(|name| name.starts_with(needle));
+    if has("content.xml") {
+        return "That is an OpenDocument file (.odt), not a Word file. Save it as .docx or PDF, or paste the text instead.".to_string();
+    }
+    if has("Index/") || has("index.xml") || has("QuickLook/") {
+        return "That is a Pages document. Open it in Pages and use Export To → Word or PDF, or paste the text instead.".to_string();
+    }
+    if has("ppt/") || has("xl/") {
+        return "That is a slide deck or a spreadsheet, not a resume document. Choose a PDF or a Word file, or paste the text instead.".to_string();
+    }
+    "That Word file has no document inside it. Open it in Word, save it again, and retry.".to_string()
 }
 
 /// Split on paragraph boundaries, then read each paragraph.
@@ -60,10 +79,35 @@ fn next_text_open(haystack: &str) -> Option<usize> {
     None
 }
 
+/// Tabs and line breaks are elements, not characters. A tab is how Word puts a
+/// date on the right of a heading, so dropping it welds "EDUCATION" to "2019"
+/// and hides both from the parser; a break is a real new line.
+///
+/// A tab *character* is `<w:tab/>` with nothing in it. `<w:tab w:pos="4320"/>`
+/// is a tab stop inside the paragraph's properties — a ruler setting, not
+/// content — so the empty form is the only one matched.
+fn layout_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"<w:tab\s*/>|<w:br\b[^>]*>").unwrap())
+}
+
+fn with_layout_characters(body: &str) -> String {
+    layout_re()
+        .replace_all(body, |caps: &regex::Captures| {
+            if caps[0].starts_with("<w:br") {
+                "<w:t>\n</w:t>"
+            } else {
+                "<w:t> </w:t>"
+            }
+        })
+        .into_owned()
+}
+
 fn paragraph_text(paragraph: &str) -> String {
     let body = paragraph.split("</w:p>").next().unwrap_or(paragraph);
+    let body = &with_layout_characters(body);
     let mut text = String::new();
-    let mut rest = body;
+    let mut rest = body.as_str();
     while let Some(start) = next_text_open(rest) {
         let after = &rest[start..];
         let Some(open) = after.find('>') else { break };
@@ -121,10 +165,29 @@ mod tests {
     /// a heading was read as the start of a text run and every tag up to the
     /// next `</w:t>` was pasted onto the page as literal XML. Real templates
     /// are full of tabs, so this affected most imported headings.
+    ///
+    /// And a tab is a space, not nothing: Word writes "Analyst<tab>Jan 2021"
+    /// where a paste would have a run of spaces, and welding the two together
+    /// hides the date from the parser.
     #[test]
-    fn a_tab_element_is_not_mistaken_for_a_text_element() {
+    fn a_tab_element_becomes_a_space_rather_than_raw_xml() {
         let xml = r#"<w:p><w:r><w:t>EDUCATION</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t>2019</w:t></w:r></w:p>"#;
-        assert_eq!(text_from_document_xml(xml), "EDUCATION2019");
+        assert_eq!(text_from_document_xml(xml), "EDUCATION 2019");
+    }
+
+    /// A tab stop is a ruler setting in the paragraph's properties. It is not a
+    /// character, and reading it as one puts spaces inside the line.
+    #[test]
+    fn a_tab_stop_definition_is_not_a_tab_character() {
+        let xml = r#"<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="9360"/></w:tabs></w:pPr><w:r><w:t>Ada</w:t></w:r></w:p>"#;
+        assert_eq!(text_from_document_xml(xml), "Ada");
+    }
+
+    /// A soft break inside a paragraph is a line, and the parser works in lines.
+    #[test]
+    fn a_line_break_inside_a_paragraph_starts_a_new_line() {
+        let xml = r#"<w:p><w:r><w:t>Ada Lovelace</w:t><w:br/><w:t>London</w:t></w:r></w:p>"#;
+        assert_eq!(text_from_document_xml(xml), "Ada Lovelace\nLondon");
     }
 
     #[test]

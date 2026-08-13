@@ -13,9 +13,9 @@
 
 #let role-entry(role) = {
   text(weight: "bold")[#role-heading(role)]
-  if date-range(role.start, role.end) != "" {
+  if when-and-where(role) != "" {
     linebreak()
-    text(size: 9pt)[#date-range(role.start, role.end)]
+    text(size: 9pt)[#when-and-where(role)]
   }
   for bullet in bullets-of(role) {
     block(inset: (left: 10pt), above: 2pt, below: 2pt)[- #bullet]
@@ -51,9 +51,9 @@
   #for school in doc.education [
     #text(weight: "bold")[#school.institution]
     #if school.credential != "" [ #linebreak() #school.credential ]
-    #if date-range(school.start, school.end) != "" [
+    #if when-and-where(school) != "" [
       #linebreak()
-      #text(size: 9pt)[#date-range(school.start, school.end)]
+      #text(size: 9pt)[#when-and-where(school)]
     ]
     #for note in school.notes [ #linebreak() #note.text ]
     #v(3pt)

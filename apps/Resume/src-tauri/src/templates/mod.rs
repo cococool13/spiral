@@ -267,6 +267,7 @@ Analytical engine programmer with a bias for provable results.
 
 EXPERIENCE
 Analyst, Admiralty
+Portsmouth
 Jan 2021 - Present
 - Wrote the first published algorithm
 - Cut report turnaround from 9 days to 2
@@ -459,6 +460,10 @@ mod dump {
             let svg = super::to_svg_pages(template, &doc, "ink").unwrap().remove(0);
             let path = out.join(format!("{}.svg", template.id));
             std::fs::write(&path, svg).unwrap();
+            // The PDF is what the user sends to an employer, and it is the only
+            // one of the three that shows how the pages actually break.
+            let pdf = super::to_pdf(template, &doc, "ink").unwrap();
+            std::fs::write(out.join(format!("{}.pdf", template.id)), pdf).unwrap();
             let docx = crate::docx::to_docx(&doc, &template.docx, "ink").unwrap();
             let docx_path = out.join(format!("{}.docx", template.id));
             std::fs::write(&docx_path, docx).unwrap();

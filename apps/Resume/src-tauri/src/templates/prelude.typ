@@ -38,6 +38,14 @@
   parts.filter(p => p != "").join(sep)
 }
 
+// When the work happened, and where it happened when the person said so. The
+// templates that set the dates apart from the heading use this, so that a
+// location can never be the one field a template quietly leaves out.
+#let when-and-where(entry) = {
+  let parts = (date-range(entry.start, entry.end), entry.location).filter(p => p != "")
+  parts.join(" · ")
+}
+
 // A role's heading, in the order a reader scans: what you did, then where.
 #let role-heading(role) = {
   let bits = (role.title, role.organization).filter(b => b != "")

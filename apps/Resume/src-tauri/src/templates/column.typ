@@ -16,7 +16,7 @@
     columns: (1fr, auto),
     align: (left, right),
     text(weight: "bold")[#role-heading(role)],
-    text(size: 9.5pt, fill: quiet)[#date-range(role.start, role.end)],
+    text(size: 9.5pt, fill: quiet)[#when-and-where(role)],
   )
   for bullet in bullets-of(role) {
     block(inset: (left: 12pt), above: 3pt, below: 3pt)[• #bullet]
@@ -58,7 +58,7 @@
       columns: (1fr, auto),
       align: (left, right),
       [#text(weight: "bold")[#school.institution]#if school.credential != "" [ — #school.credential]],
-      text(size: 9.5pt, fill: quiet)[#date-range(school.start, school.end)],
+      text(size: 9.5pt, fill: quiet)[#when-and-where(school)],
     )
     #for note in school.notes [ #block(inset: (left: 12pt), above: 3pt, below: 3pt)[#note.text] ]
   ]

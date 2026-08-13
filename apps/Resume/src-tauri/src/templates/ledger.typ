@@ -23,7 +23,7 @@
 
 #let role-entry(role) = {
   row(
-    date-range(role.start, role.end),
+    when-and-where(role),
     [
       #text(weight: "bold")[#role-heading(role)]
       #for bullet in bullets-of(role) [ #block(above: 3pt, below: 3pt)[• #bullet] ]
@@ -63,7 +63,7 @@
   #section("Education")
   #for school in doc.education [
     #row(
-      date-range(school.start, school.end),
+      when-and-where(school),
       [
         #text(weight: "bold")[#school.institution]
         #if school.credential != "" [ #linebreak() #school.credential ]

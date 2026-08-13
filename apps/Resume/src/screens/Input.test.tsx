@@ -75,8 +75,8 @@ describe("Input", () => {
     expect(onReady.mock.calls[0][0].contact.name).toBe("");
   });
 
-  it("names both formats it can read", () => {
+  it("names every format it can read", () => {
     render(<Input onReady={vi.fn()} />);
-    expect(screen.getByText(/PDF or Word/)).toBeTruthy();
+    expect(screen.getByText(/PDF, Word or a text file/)).toBeTruthy();
   });
 });

@@ -282,6 +282,9 @@ pub async fn build_document(
         suggested_name: result.suggested_name.clone(),
         format: result.format,
     });
+    // What the wording pass had to say, then what the page itself has to say.
+    let mut notes = notes;
+    notes.extend(result.notes);
     Ok(BuildResult {
         pages: result.pages,
         suggested_name: result.suggested_name,
