@@ -47,9 +47,11 @@ Three promises, kept the same way in every app:
 
 Spiral Resume is the one app that breaks the megabyte promise, and it says so
 here rather than quietly: it embeds the Typst typesetter so that the preview and
-the exported PDF come from one engine and cannot disagree, which costs roughly
-15–25 MB of renderer and fonts. Every other app in the table is measured in
-single-digit megabytes.
+the exported PDF come from one engine and cannot disagree. Measured on an Apple
+silicon build of 0.1.0, that costs **45 MB installed and a 23 MB download** —
+against Wallpaper's 4.6 MB. The published release is universal and carries both
+architectures, so it is larger again. Every other app in the table is measured
+in single-digit megabytes.
 
 Spiral Dashboard, Weather, Transcribe, and Chat are named on the site and not
 yet started. They are ideas, not promises.
@@ -218,17 +220,22 @@ Each app owns a tag namespace, so one release never drags the others along:
 | Spiral Wallpaper | `v*` | macOS + Windows, updater manifest |
 | Spiral Slim | `slim-v*` | macOS |
 | Spiral Clean | `clean-v*` | macOS only, no updater until M7 |
-| Spiral Resume | `resume-v*` | **no release path yet** — see below |
+| Spiral Resume | `resume-v*` | macOS + Windows, no updater |
 
-All three call the same reusable `.github/workflows/release-app.yml`.
+All four call the same reusable `.github/workflows/release-app.yml`.
 
-Spiral Resume is the exception: `release-resume.yml` has not been written, and
-writing it is not the whole job. Its bundle config declares a `llama-server`
-sidecar that `pnpm build-sidecar` has to produce first, and the model catalogue
-ships with its checksum deliberately empty.
+A Spiral Resume release does not include the offline model tier. The app is
+built with the plain config, so the `llama-server` sidecar is not bundled and
+the app reports that tier as unavailable on screen rather than offering a
+download that would fail — the deterministic and bring-your-own-key tiers are
+complete. Turning the offline tier on is a later release and needs three things
+in this order: build the sidecar on the runner, bundle with
+`src-tauri/tauri.bundle.conf.json`, and only then pin a model. Pinning one while
+the sidecar is still absent would offer a 2.5 GB download the app cannot run.
 [`apps/Resume/docs/offline-model.md`](apps/Resume/docs/offline-model.md) is the
-checklist. Until then the app reports its offline tier as unavailable and says
-so on screen, which is the intended behaviour rather than a bug.
+checklist, and the header of
+[`.github/workflows/release-resume.yml`](.github/workflows/release-resume.yml)
+repeats it where a release engineer will actually see it.
 
 ```bash
 # the tag must match the app's package.json and src-tauri/tauri.conf.json —

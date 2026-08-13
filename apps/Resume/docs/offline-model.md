@@ -1,6 +1,6 @@
 # The offline model — what a release has to do
 
-Date: 2026-08-12
+Date: 2026-08-12 · Ordering and release-path note added 2026-08-13
 
 The offline tier is fully built and fully tested, and **it cannot run until a
 release pins two artifacts that are deliberately absent from this repository**.
@@ -8,6 +8,28 @@ Until then the app reports it as unavailable and says so on screen, rather than
 offering a download that would fail.
 
 This document is the checklist. Both steps are one-time work per model version.
+
+## The order is not optional
+
+`.github/workflows/release-resume.yml` exists and releases the app **without**
+this tier: it builds with the plain config, so no sidecar is bundled and the
+app says the tier is unavailable. That is a shippable state, and it is where
+the app is today.
+
+Turning the tier on takes three steps, and doing them out of order ships
+something broken:
+
+1. **Build the sidecar on the runner.** `pnpm build-sidecar` before
+   `tauri build`. Note that the script refuses to run anywhere but macOS today
+   — the Windows sidecar has not been written, and Resume releases on both.
+2. **Bundle it.** The release has to build with
+   `--config src-tauri/tauri.bundle.conf.json`, which is the only place
+   `externalBin` is declared. The shared release workflow runs a plain
+   `pnpm tauri build`, so this needs a change there or a Resume-specific build
+   step.
+3. **Pin the model, last.** A pinned catalogue with no sidecar in the bundle
+   offers the user a 2.5 GB download that cannot be run once it lands — worse
+   than the honest "not available in this build" the app shows now.
 
 ## Why they are absent
 

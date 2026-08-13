@@ -61,9 +61,9 @@ the website, or website ambition into an app.
 - `README.md` — repo map, current release, downloads, build instructions, roadmap.
 - `brand/README.md` — what is canonical and how each surface consumes it.
 - `collection/README.md` — the website's charter, budgets, and stack.
-- `docs/PRODUCT.md` — the product promise, audience, scope and privacy position.
-  It was written for **Spiral Wallpaper** and still reads as that app's document;
-  each later app carries its own in `apps/<app>/docs/design-spec.md`.
+- `docs/PRODUCT.md` — what every app has in common: audience, purpose, the privacy
+  position, brand personality, design principles. It is **not** the authority on
+  any single app; each app's scope lives in its own spec, which that file links to.
 - `docs/DESIGN.md` — shipped visual system and interaction rules.
 - `apps/<app>/CONTEXT.md` — the app's ubiquitous language. Read it before writing
   code or copy for that app, and use its words. `apps/clean` and `apps/Resume`
@@ -126,13 +126,15 @@ Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
 `.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,
 updater: false` — there is no updater until M7.
 
-**Spiral Resume has no release path yet.** The spec's tag namespace is `resume-v*`, but
-`.github/workflows/release-resume.yml` does not exist, and writing it is not the whole
-job: the bundle config declares a `llama-server` sidecar that `pnpm build-sidecar` has to
-produce first, and `assets/model-catalogue.json` ships with its url, sha256 and bytes
-empty. `apps/Resume/docs/offline-model.md` is the checklist. Until both are done the app
-reports the offline tier as unavailable and says so on screen, which is the intended
-behaviour and not a bug to work around.
+Spiral Resume releases on a `resume-v*` tag through the same shared workflow —
+`.github/workflows/release-resume.yml`, macOS **and** Windows, no updater. **That release
+does not contain the offline model tier.** It builds with the plain config, so the
+`llama-server` sidecar is not bundled and the app reports that tier as unavailable on
+screen rather than offering a download that would fail; the deterministic and
+bring-your-own-key tiers are complete. Enabling the offline tier is a later release and
+has a required order — build the sidecar on the runner, bundle with
+`src-tauri/tauri.bundle.conf.json`, then pin a model. Pinning first would offer a 2.5 GB
+download the app cannot run. `apps/Resume/docs/offline-model.md` is the checklist.
 
 **Every macOS release has a second step CI does not do:** bump the matching cask in
 [`cococool13/homebrew-spiral`](https://github.com/cococool13/homebrew-spiral)
@@ -194,9 +196,10 @@ Fonts or another font CDN. Spiral Clean and Spiral Resume follow the same split.
 
 Spiral Resume adds one of its own: **Typst is embedded as a Rust crate**, so the same template
 source produces the PDF and the SVG thumbnails in-process and the preview cannot disagree with
-the export. It also makes this the largest binary in the collection — roughly 15–25 MB of
-renderer and bundled faces — which the README states plainly rather than dropping the
-lightweight claim quietly.
+the export. It also makes this the largest binary in the collection: an Apple silicon 0.1.0 build
+measures 45 MB installed and a 23 MB DMG, against Wallpaper's 4.6 MB, and the universal
+release carries both architectures. The README states that plainly rather than dropping
+the lightweight claim quietly.
 
 The website is Next.js App Router + React 19 + Tailwind v4 + framer-motion, `output: 'export'`,
 deployed to Netlify from CI on every push to `main`.
