@@ -6,10 +6,12 @@
 //! and every answer goes through exactly the same fact gate. The only thing
 //! that differs is where the request goes — `127.0.0.1`, and nowhere else.
 //!
-//! **The binary is not in this repository.** `scripts/fetch-sidecar.mjs` vendors
-//! the official llama.cpp release build for each platform into `binaries/`
-//! before packaging; see `docs/offline-model.md`. Until it is vendored, the app
-//! reports the offline model as unavailable rather than failing at run time.
+//! **The binary is not in this repository.** `scripts/build-sidecar.mjs` builds
+//! it from a pinned llama.cpp into `binaries/` before packaging — the release
+//! workflow runs that on each platform's own runner, because this is a native
+//! compile rather than a cross-compile. Until it is built, the app reports the
+//! offline model as unavailable rather than failing at run time. See
+//! `docs/offline-model.md`.
 
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
@@ -76,13 +78,17 @@ pub struct Sidecar {
 /// `Spiral Resume.app/Contents/MacOS/llama-server`; in `tauri dev` it is
 /// `target/debug/llama-server`. Resolving it as a resource found nothing, and
 /// the offline tier reported itself unbundled in a build that bundled it.
+/// On Windows the bundled sidecar is `llama-server.exe`, because Tauri keeps
+/// the extension the file was built with. Looking for it without one found
+/// nothing, and the app would have reported itself unbundled on the one
+/// platform where the file was actually there.
 pub fn beside_this_binary(name: &str) -> Result<PathBuf, String> {
     let exe = std::env::current_exe()
         .map_err(|e| format!("Could not find this application's own location: {e}."))?;
     let folder = exe
         .parent()
         .ok_or_else(|| "This application is not in a folder.".to_string())?;
-    Ok(folder.join(name))
+    Ok(folder.join(format!("{name}{}", std::env::consts::EXE_SUFFIX)))
 }
 
 impl Sidecar {
@@ -202,7 +208,12 @@ mod tests {
         let found = beside_this_binary("llama-server").unwrap();
         let exe = std::env::current_exe().unwrap();
         assert_eq!(found.parent(), exe.parent(), "not beside the executable");
-        assert_eq!(found.file_name().unwrap(), "llama-server");
+        // `llama-server` everywhere, `llama-server.exe` on Windows — the name
+        // Tauri actually writes into the bundle on each platform.
+        assert_eq!(
+            found.file_name().unwrap(),
+            std::ffi::OsStr::new(&format!("llama-server{}", std::env::consts::EXE_SUFFIX))
+        );
     }
 
     #[test]
@@ -226,5 +237,97 @@ mod tests {
             Ok(_) => panic!("a missing model started something"),
         };
         assert!(err.contains("not downloaded yet"), "got {err}");
+    }
+}
+
+/// The offline tier, actually running. Every other test in this file tests the
+/// code *around* the engine — the flags, the paths, the error sentences — and
+/// none of them start it. This one does, which is what turns "it should work"
+/// into a command anyone can run.
+///
+/// It is `#[ignore]` because it needs two artifacts that are deliberately not
+/// in this repository — a built sidecar and a 2.7 GB model — and because it
+/// loads that model, which takes the better part of a minute:
+///
+/// ```text
+/// pnpm build-sidecar
+/// SPIRAL_RESUME_MODEL=/path/to/Qwen3.5-4B-Q4_K_M.gguf \
+///   cargo test --lib sidecar::live -- --ignored --nocapture
+/// ```
+#[cfg(test)]
+mod live {
+    use super::*;
+    use crate::model::{Bullet, ResumeDoc, Role};
+
+    fn built_sidecar() -> PathBuf {
+        let triple = if cfg!(target_arch = "aarch64") {
+            "aarch64-apple-darwin"
+        } else {
+            "x86_64-apple-darwin"
+        };
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("binaries")
+            .join(format!("llama-server-{triple}"))
+    }
+
+    /// A bullet with numbers and proper nouns in it, rewritten by a model that
+    /// is running on this machine, and checked by the same fact gate a paid key
+    /// answers to. Anything else — a refusal, a hang, an invented number — is
+    /// the offline tier not working.
+    #[tokio::test]
+    #[ignore]
+    async fn the_offline_engine_rewrites_a_bullet_and_keeps_every_fact() {
+        let model = PathBuf::from(
+            std::env::var("SPIRAL_RESUME_MODEL")
+                .expect("set SPIRAL_RESUME_MODEL to the downloaded .gguf"),
+        );
+        let binary = built_sidecar();
+        assert!(binary.exists(), "run `pnpm build-sidecar` first: {binary:?}");
+
+        // Port 0 asks the OS for a free one, exactly as the build path does.
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let engine = Sidecar::start(&binary, &model, port).expect("the engine did not start");
+        wait_until_ready(port, READY_ATTEMPTS)
+            .await
+            .expect("the engine never became ready");
+
+        let doc = ResumeDoc {
+            experience: vec![Role {
+                id: "exp-0".into(),
+                title: "Analyst".into(),
+                organization: "Admiralty".into(),
+                bullets: vec![Bullet {
+                    id: "exp-0-b-0".into(),
+                    text: "Was responsible for cutting report turnaround from 9 days to 2 days across 6 teams at the Admiralty".into(),
+                }],
+                ..Role::default()
+            }],
+            ..ResumeDoc::empty()
+        };
+
+        let provider = crate::provider::Provider::Local {
+            base_url: engine.url(),
+        };
+        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local")
+            .await
+            .expect("the offline rewrite failed");
+
+        let after = &out.experience[0].bullets[0].text;
+        println!("before: {}", doc.experience[0].bullets[0].text);
+        println!(" after: {after}");
+        println!("rewritten {} · rejected {}", outcome.rewritten, outcome.rejected);
+
+        assert!(!after.is_empty(), "the bullet came back empty");
+        // Whether this particular answer was kept or refused, the facts on the
+        // page are the ones the user wrote. That is the promise, and it is what
+        // running a real model is here to prove.
+        for fact in ["9", "2", "6", "Admiralty"] {
+            assert!(after.contains(fact), "{fact:?} left the page: {after}");
+        }
+        assert_eq!(outcome.rewritten + outcome.rejected, 1);
     }
 }
