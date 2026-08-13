@@ -1,35 +1,39 @@
 # The offline model — what a release has to do
 
-Date: 2026-08-12 · Ordering and release-path note added 2026-08-13
+Date: 2026-08-12 · **Both artifacts landed 2026-08-13; this is now a record, not a to-do**
 
-The offline tier is fully built and fully tested, and **it cannot run until a
-release pins two artifacts that are deliberately absent from this repository**.
-Until then the app reports it as unavailable and says so on screen, rather than
-offering a download that would fail.
+The offline tier needed two artifacts that are deliberately absent from this
+repository: a pinned model and a built sidecar. Both are now in place, the
+release builds them, and the tier has been run.
 
-This document is the checklist. Both steps are one-time work per model version.
+- **The model is pinned.** `assets/model-catalogue.json` carries a url, a
+  sha256 and a byte count. Verified 2026-08-13 by downloading the file: its
+  hash is the pinned hash and its length is the pinned length.
+- **The sidecar is built by the release.** `.github/workflows/release-resume.yml`
+  passes `sidecar: true`, so each runner compiles its own `llama-server` before
+  Tauri packages the app, and `bundle-config` merges the config that declares
+  it.
+- **It has been run.** `cargo test --lib sidecar::live -- --ignored` starts the
+  engine, rewrites a bullet through it, and checks the result against the fact
+  gate. The command is in this document, below.
 
-## The order is not optional
+What follows is how each was done and why it was done that way.
 
-`.github/workflows/release-resume.yml` exists and releases the app **without**
-this tier: it builds with the plain config, so no sidecar is bundled and the
-app says the tier is unavailable. That is a shippable state, and it is where
-the app is today.
+## The order was not optional
 
-Turning the tier on takes three steps, and doing them out of order ships
-something broken:
+Done out of order, each of these ships something broken. They are recorded here
+because a future model version repeats them:
 
 1. **Build the sidecar on the runner.** `pnpm build-sidecar` before
-   `tauri build`. Note that the script refuses to run anywhere but macOS today
-   — the Windows sidecar has not been written, and Resume releases on both.
-2. **Bundle it.** The release has to build with
-   `--config src-tauri/tauri.bundle.conf.json`, which is the only place
-   `externalBin` is declared. The shared release workflow runs a plain
-   `pnpm tauri build`, so this needs a change there or a Resume-specific build
-   step.
-3. **Pin the model, last.** A pinned catalogue with no sidecar in the bundle
-   offers the user a 2.5 GB download that cannot be run once it lands — worse
-   than the honest "not available in this build" the app shows now.
+   `tauri build`. A sidecar is a native compile, not a cross-compile, so every
+   platform builds its own — which is why the shared workflow's `sidecar` input
+   adds the step to both the macOS and the Windows job.
+2. **Bundle it.** `--config src-tauri/tauri.bundle.conf.json` is the only place
+   `externalBin` is declared, and it is kept out of the main config so a machine
+   without the binary can still compile and test the app.
+3. **Pin the model last.** A pinned catalogue with no sidecar in the bundle
+   offers the user a 2.7 GB download that cannot be run once it lands — worse
+   than the honest "not available in this build".
 
 ## Why they are absent
 

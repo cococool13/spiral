@@ -1,5 +1,53 @@
 # changelog
 
+## 2026-08-13 — The offline tier, running
+
+The third engine tier stopped being a thing the code was ready for and became a
+thing that works. Everything below was verified on this machine, not reasoned
+about.
+
+### Verified
+- **The model pin is real.** `assets/model-catalogue.json` was already pinned —
+  the earlier note that it "ships with its checksum deliberately empty" was
+  wrong, taken from a stale document and repeated without being checked.
+  Downloading the file confirms both the sha256 and the byte count.
+- **The engine runs, and the gate holds.** A new `#[ignore]` test starts the
+  sidecar with the model and rewrites a bullet through it:
+  "Was responsible for cutting report turnaround from 9 days to 2 days across 6
+  teams at the Admiralty" came back as "Cut report turnaround from 9 days to 2
+  days across 6 teams at the Admiralty." — tightened, every number and name
+  intact, accepted by the fact gate. Until now every offline-tier test tested
+  the code *around* an engine nobody had started.
+- **It bundles.** `pnpm build-sidecar && pnpm bundle` puts `llama-server` inside
+  `Spiral Resume.app/Contents/MacOS/`, which is exactly where the app looks, and
+  the bundle still passes `codesign --verify --deep --strict`.
+- **The size, measured with it.** 61 MB installed and a 29 MB DMG, of which the
+  engine is 16 MB. The README carried 45 MB / 23 MB from the build before this.
+
+### Fixed
+- `beside_this_binary` looked for `llama-server` with no extension, so on
+  Windows — the one platform where Tauri writes `llama-server.exe` — a bundled
+  sidecar would never have been found. It now uses the platform's own suffix.
+- `scripts/build-sidecar.mjs` refused every platform but macOS. It now builds
+  the Windows sidecar too, CPU-only and statically linked, for the same reason
+  the macOS one is: `externalBin` copies one file and notarisation is cheap when
+  there is nothing else to sign. **Untested** — no Windows machine here; the
+  release runner is where it first runs.
+- The module comment pointed at `scripts/fetch-sidecar.mjs`, which does not
+  exist. The script is `build-sidecar.mjs`, and it builds rather than fetches.
+
+- `pnpm test` in `apps/Resume` broke the moment anyone built the sidecar:
+  `build-sidecar` clones llama.cpp into `src-tauri/target/`, and Vitest's
+  default discovery found 214 test files there instead of 13. The config now
+  looks only at `src/`. Found by running the two commands in the same session,
+  which is the only way it shows up.
+
+### Added
+- `sidecar` and `bundle-config` inputs on the shared `release-app.yml`, both off
+  by default so no other app changes, and both on for Resume.
+- `apps/wallpaper/CONTEXT.md` and `apps/slim/CONTEXT.md`. All four apps now
+  carry their ubiquitous language beside the code.
+
 ## 2026-08-13 — A release path for Resume, and one product document
 
 ### Added
