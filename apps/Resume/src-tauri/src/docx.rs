@@ -135,9 +135,22 @@ fn contact_line(doc: &ResumeDoc) -> String {
         .join(" · ")
 }
 
+/// The twin of the prelude's `when-and-where`. The two halves have to agree,
+/// and a location shown in the PDF and absent from the .docx is the same bug as
+/// a template that never rendered it at all.
+fn when_and_where(dates: &str, location: &str) -> String {
+    [dates, location]
+        .iter()
+        .filter(|part| !part.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
 fn role_block(role: &Role, style: &DocxStyle) -> Vec<Paragraph> {
     let mut out = Vec::new();
     let dates = date_range(&role.start.raw, &role.end.raw, role.end.present);
+    let dates = when_and_where(&dates, &role.location);
     let heading = role_heading(role);
 
     if style.date_rail && !dates.is_empty() {
@@ -161,8 +174,14 @@ fn school_block(school: &School, style: &DocxStyle) -> Vec<Paragraph> {
         out.push(body(&school.credential, style));
     }
     let dates = date_range(&school.start.raw, &school.end.raw, school.end.present);
+    let dates = when_and_where(&dates, &school.location);
     if !dates.is_empty() {
         out.push(quiet(&dates, style));
+    }
+    // A thesis, a GPA, a line of coursework: the Typst half has always shown
+    // these, and the Word half used to drop them on the floor.
+    for note in school.notes.iter().filter(|note| !note.text.is_empty()) {
+        out.push(body(&format!("• {}", note.text), style).indent(Some(240), None, None, None));
     }
     out
 }
@@ -299,7 +318,7 @@ mod tests {
 
     fn sample() -> ResumeDoc {
         crate::parse_text::parse_text(
-            "Ada Lovelace\nada@example.com · London\n\nEXPERIENCE\nAnalyst, Admiralty\nJan 2021 - Present\n- Wrote the first algorithm\n\nPROJECTS\nDifference Engine\n- Drafted the notes\n\nEDUCATION\nUniversity of London\nBSc Mathematics\n\nLEADERSHIP & ACTIVITIES\nPresident, Mathematical Society\n- Ran a weekly seminar\n\nAWARDS\nDe Morgan Medal\n\nSKILLS\nRust, Analysis\n\nINTERESTS\nWeaving\n",
+            "Ada Lovelace\nada@example.com · London\n\nEXPERIENCE\nAnalyst, Admiralty\nPortsmouth\nJan 2021 - Present\n- Wrote the first algorithm\n\nPROJECTS\nDifference Engine\n- Drafted the notes\n\nEDUCATION\nUniversity of London\nBSc Mathematics\nCambridge\n2016 - 2019\n- GPA 3.9\n\nLEADERSHIP & ACTIVITIES\nPresident, Mathematical Society\n- Ran a weekly seminar\n\nAWARDS\nDe Morgan Medal\n\nSKILLS\nRust, Analysis\n\nINTERESTS\nWeaving\n",
         )
     }
 
@@ -320,12 +339,13 @@ mod tests {
     /// One fact from every section, in one list, so the Word check and the
     /// PDF/Word twin check below cannot test different things. A section
     /// missing from here is a section a template may silently stop rendering.
-    const FACTS: [&str; 18] = [
+    const FACTS: [&str; 21] = [
         "Ada Lovelace",
         "ada@example.com",
         "London",
         "Analyst",
         "Admiralty",
+        "Portsmouth",
         "Jan 2021",
         "Present",
         "Wrote the first algorithm",
@@ -333,6 +353,8 @@ mod tests {
         "Drafted the notes",
         "University of London",
         "BSc Mathematics",
+        "Cambridge",
+        "GPA 3.9",
         "President",
         "Mathematical Society",
         "Ran a weekly seminar",

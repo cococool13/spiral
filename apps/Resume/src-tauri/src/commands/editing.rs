@@ -34,7 +34,11 @@ pub async fn import_resume_file(app: tauri::AppHandle) -> Result<Option<ResumeDo
     let Some(chosen) = app
         .dialog()
         .file()
-        .add_filter("Resume", &["pdf", "docx"])
+        .add_filter("Resume", &["pdf", "docx", "txt", "md", "text"])
+        // The reader works from the file's first bytes, not its name, so a
+        // resume with the wrong extension on it is still readable — and a
+        // filter that hides it would be the only thing stopping the user.
+        .add_filter("Any file", &["*"])
         .blocking_pick_file()
     else {
         return Ok(None);

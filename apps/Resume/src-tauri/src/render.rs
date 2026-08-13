@@ -65,6 +65,33 @@ fn faces() -> &'static Faces {
     })
 }
 
+/// Characters no bundled face can draw, in the order they first appear and
+/// without repeats.
+///
+/// This exists because the failure is silent: Typst sets what it can and leaves
+/// the rest of the line blank, so a Japanese or Chinese name simply is not on
+/// the page. Nothing in the file says so, and the user finds out from the
+/// employer. The bundled faces cover Latin, Greek, Cyrillic, Hebrew and Arabic;
+/// CJK is 20 MB of font this app does not carry, so the honest thing is to say
+/// which characters will be missing before the user sends the document.
+pub fn unprintable(text: &str) -> Vec<char> {
+    let faces = faces();
+    let mut missing: Vec<char> = Vec::new();
+    for c in text.chars() {
+        if c.is_whitespace() || c.is_control() || missing.contains(&c) {
+            continue;
+        }
+        let drawn = faces
+            .fonts
+            .iter()
+            .any(|font| font.info().coverage.contains(c as u32));
+        if !drawn {
+            missing.push(c);
+        }
+    }
+    missing
+}
+
 /// The faces a resume is set in. Committed under `assets/fonts/`, compiled into
 /// the binary, and metrically identical to Times New Roman and Arial — which is
 /// what will let the DOCX exporter name those two and still match this PDF page
@@ -266,9 +293,25 @@ mod tests {
         }
     }
 
+    /// The scripts the bundled faces cover must never be reported, and the one
+    /// they do not cover must always be — this is the difference between a
+    /// warning the user can act on and a blank line on their resume.
+    #[test]
+    fn characters_with_no_glyph_are_named_and_the_rest_are_not() {
+        for covered in ["Ada Lovelace", "Ада Лавлейс", "Åsa Ekström", "Ελένη", "أدا"] {
+            assert!(
+                unprintable(covered).is_empty(),
+                "{covered} was reported as unprintable"
+            );
+        }
+        assert_eq!(unprintable("李爱达"), vec!['李', '爱', '达']);
+        assert_eq!(unprintable("エイダ Ada エイダ"), vec!['エ', 'イ', 'ダ']);
+    }
+
     #[test]
     fn the_same_source_renders_identically_twice() {
         assert_eq!(to_svg_pages(HELLO.into()).unwrap(), to_svg_pages(HELLO.into()).unwrap());
     }
 }
+
 

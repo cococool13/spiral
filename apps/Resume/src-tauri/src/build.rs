@@ -64,6 +64,72 @@ pub struct Built {
     pub bytes: Vec<u8>,
     pub suggested_name: String,
     pub format: Format,
+    /// Advice about the document that was built, never a change to it. Shown
+    /// under the result beside whatever the wording pass had to say.
+    pub notes: Vec<String>,
+}
+
+/// Every word in the document, in one string, for checks that care about the
+/// characters rather than the structure.
+fn all_text(doc: &ResumeDoc) -> String {
+    let mut out = vec![
+        doc.contact.name.clone(),
+        doc.contact.location.clone(),
+        doc.headline.clone(),
+        doc.summary.clone(),
+    ];
+    out.extend(doc.contact.links.iter().cloned());
+    for role in doc
+        .experience
+        .iter()
+        .chain(&doc.projects)
+        .chain(&doc.leadership)
+    {
+        out.push(role.title.clone());
+        out.push(role.organization.clone());
+        out.push(role.location.clone());
+        out.push(role.start.raw.clone());
+        out.push(role.end.raw.clone());
+        out.extend(role.bullets.iter().map(|b| b.text.clone()));
+    }
+    for school in &doc.education {
+        out.push(school.institution.clone());
+        out.push(school.credential.clone());
+        out.push(school.location.clone());
+        out.extend(school.notes.iter().map(|n| n.text.clone()));
+    }
+    out.extend(doc.awards.iter().cloned());
+    out.extend(doc.interests.iter().cloned());
+    for group in &doc.skills {
+        out.push(group.label.clone());
+        out.extend(group.items.iter().cloned());
+    }
+    out.join(" ")
+}
+
+/// The bundled faces cover Latin, Greek, Cyrillic, Hebrew and Arabic. A
+/// character outside them — a Chinese or Japanese name, most often — is set as
+/// nothing at all, and the page comes out with a blank where the name was. The
+/// user has to hear that from the app, not from an employer.
+fn glyph_notes(doc: &ResumeDoc) -> Vec<String> {
+    let missing = render::unprintable(&all_text(doc));
+    if missing.is_empty() {
+        return Vec::new();
+    }
+    let shown = missing
+        .iter()
+        .take(8)
+        .map(char::to_string)
+        .collect::<Vec<_>>()
+        .join(" ");
+    let more = if missing.len() > 8 {
+        format!(" and {} more", missing.len() - 8)
+    } else {
+        String::new()
+    };
+    vec![format!(
+        "The resume faces have no letters for {shown}{more}, so those characters are blank on the page. Write those parts in the Latin alphabet, or build this document in a program that has a font for them."
+    )]
 }
 
 /// `Ada Lovelace` → `Ada-Lovelace-resume.pdf`. Anything that is not a letter,
@@ -131,6 +197,7 @@ pub fn build(
         bytes,
         suggested_name: suggested_name(doc, format),
         format,
+        notes: glyph_notes(doc),
     })
 }
 
@@ -157,6 +224,65 @@ mod tests {
         )
         .unwrap();
         (built, seen.into_inner().unwrap())
+    }
+
+    /// A name the faces cannot draw comes out blank, and the app has to be the
+    /// one that says so. Silence here is a resume with no name on it.
+    #[test]
+    fn a_name_the_faces_cannot_draw_is_reported_under_the_result() {
+        let doc = crate::parse_text::parse_text("李爱达\nada@example.com\n");
+        let built = build(
+            &doc,
+            templates::find("sheet").unwrap(),
+            Format::Pdf,
+            "ink",
+            false,
+            |_| {},
+        )
+        .unwrap();
+        assert_eq!(built.notes.len(), 1, "got {:?}", built.notes);
+        assert!(built.notes[0].contains('李'), "got {:?}", built.notes);
+        assert!(built.notes[0].contains("blank"), "got {:?}", built.notes);
+    }
+
+    /// And an ordinary resume is never nagged.
+    #[test]
+    fn a_resume_the_faces_can_draw_gets_no_note() {
+        let (built, _) = record(Format::Pdf);
+        assert!(built.notes.is_empty(), "got {:?}", built.notes);
+    }
+
+    /// Whatever came in has to come out as a file. These are the documents that
+    /// would break a renderer: a bullet longer than a page, a name of nothing
+    /// but punctuation, scripts that read right to left, and emoji. None of
+    /// them may fail the build, because the user has nowhere to go from there.
+    #[test]
+    fn a_hostile_document_still_produces_both_files() {
+        let huge_bullet = "word ".repeat(4_000);
+        let cases = [
+            format!("Ada Lovelace\n\nEXPERIENCE\nAnalyst, Admiralty\n2021 - 2023\n- {huge_bullet}"),
+            "«·—»\n\nEXPERIENCE\n- ok\n".to_string(),
+            "אדה לאבלייס\nada@example.com\n\nEXPERIENCE\nמנתחת, Admiralty\n2021 - 2023\n- כתבה\n"
+                .to_string(),
+            "🙂 Ada 🙂\n\nSKILLS\n🙂, 🙃, 😀\n".to_string(),
+            "Ada\n\nEXPERIENCE\n".repeat(300),
+            format!("{}\n", "x".repeat(50_000)),
+        ];
+        for case in cases {
+            let doc = crate::parse_text::parse_text(&case);
+            for format in [Format::Pdf, Format::Docx] {
+                let built = build(
+                    &doc,
+                    templates::find("column").unwrap(),
+                    format,
+                    "ink",
+                    true,
+                    |_| {},
+                )
+                .unwrap_or_else(|e| panic!("{format:?} failed on {:?}: {e}", &case[..40.min(case.len())]));
+                assert!(!built.bytes.is_empty());
+            }
+        }
     }
 
     #[test]

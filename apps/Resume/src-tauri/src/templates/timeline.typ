@@ -71,7 +71,7 @@
       columns: (1fr, auto),
       align: (left, right),
       [#text(weight: "bold")[#school.institution]#if school.credential != "" [ — #school.credential]],
-      text[#date-range(school.start, school.end)],
+      text[#when-and-where(school)],
     )
     #for note in school.notes [ #linebreak() #note.text ]
     #v(4pt)

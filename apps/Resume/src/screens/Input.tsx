@@ -89,8 +89,8 @@ export function Input({ onReady }: { onReady: (doc: ResumeDoc) => void }) {
         </button>
       </div>
       <p className="panel__lede">
-        PDF or Word, or drop one on this window. Two-column PDFs sometimes come out jumbled — the
-        next screen is where you fix that.
+        PDF, Word or a text file, or drop one on this window. Two-column PDFs sometimes come out
+        jumbled — the next screen is where you fix that.
       </p>
 
       <label className="field">
