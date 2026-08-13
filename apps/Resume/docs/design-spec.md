@@ -26,7 +26,7 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 1. **Shape:** a Tauri desktop app in `apps/`, not a page on the website. The website is a static export with no server, so it cannot host a free AI tier.
 2. **Three engine tiers:** deterministic (default, always available) → optional local model download → the user's own API key. *(Against the recommendation of two tiers; the optional local download is a third thing to build, explain and test.)*
 3. **Facts frozen.** The model may rewrite bullet phrasing and the summary. It never emits a name, employer, title, date, school or number — those are extracted first and re-inserted. Output is diffed against source and rejected on any factual delta.
-4. **Inputs:** PDF, DOCX, pasted text, and a guided from-scratch form. *(Against the recommendation of deferring PDF to v1.1; PDF parsing is the single largest source of garbled input.)*
+4. **Inputs:** PDF, DOCX, pasted text, and a guided from-scratch form. *(Against the recommendation of deferring PDF to v1.1; PDF parsing is the single largest source of garbled input.)* **Widened 2026-08-13:** a file is now read by its first bytes rather than its extension, so a PDF named `.docx` still opens, and a resume kept as plain text (`.txt`, `.md`, UTF-8 or UTF-16) is read through the same parser as a paste. Formats the app cannot read — `.doc`, `.rtf`, `.odt`, Pages, a password-protected PDF — each name themselves and the one action that fixes them.
 5. **Exports:** PDF **and** DOCX. This constrains template design permanently — see Template envelope.
 6. **The app is Spiral; the resume is not.** Full Spiral identity in the chrome. Templates use system-safe professional faces, ink on paper, one user-chosen accent. No mark, no red, no watermark on the user's document.
 7. **Live thumbnails.** The style picker renders the user's own parsed content in every template, at page scale. No generic sample images.
@@ -44,13 +44,14 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 19. **Typst, embedded as a Rust crate, is the renderer.** *(Decided 2026-08-11, after the main session, to resolve Risk 1 below.)* One in-process engine produces both the PDF and the SVG thumbnails from the same template source, so preview and export cannot disagree and pagination is identical on both platforms. The costs are accepted: templates are authored in Typst markup rather than HTML/CSS, embedding requires implementing Typst's `World` trait and bundling the resume faces, and the binary grows by roughly 15–25 MB in a collection that advertises 4.6 MB. **This is the largest binary in Spiral, and the README must say so plainly rather than quietly dropping the lightweight claim for this app.**
 20. **Twelve templates, not five.** *(Decided 2026-08-12.)* Five are Spiral's own; seven follow the structure of published university and commercial resume templates Cohen researched. Structure only — no third-party file is bundled, no prompt text is copied, and no source institution is named in the app, because that would read as endorsement. Recorded in `docs/template-lineage.md`.
 21. **The document model grew to match them:** `headline`, `leadership`, `awards`, `interests`, and skills became labelled groups. `headline` is never parsed — a headline is a claim about a person, and decision 3 forbids the app inventing claims.
-22. **Every template renders every section.** A user with awards who picks Column must not lose them. Silently dropping content is the failure this app exists to prevent.
+22. **Every template renders every section.** A user with awards who picks Column must not lose them. Silently dropping content is the failure this app exists to prevent. **Extended 2026-08-13** to every *field*, after five templates and the whole Word exporter were found never to render a role's location, and Word to drop education notes outright: a field belongs in both halves, and in the shared `FACTS` list in `docx.rs` that proves it.
+23. **A character the bundled faces cannot draw is reported, not printed blank.** *(Decided 2026-08-13.)* Typst sets what it can and leaves the rest of the line empty, so a Chinese or Japanese name simply was not on the page and nothing said so. The faces cover Latin, Greek, Cyrillic, Hebrew and Arabic; CJK is 20 MB of font this app does not carry. The build now names the characters it cannot draw under the result. Bundling a CJK face remains open, and is the only fix that would actually typeset those names.
 
 ## Flow
 
 | Step | Screen | What it does |
 | --- | --- | --- |
-| 1 | **Input** | Drop a PDF or DOCX, paste text, or start from scratch in a guided form. |
+| 1 | **Input** | Drop a PDF, a Word file or a text file, paste text, or start from scratch in a guided form. |
 | 2 | **Check** | Every extracted fact, editable. Contact block, each role, each date, each school, each number. |
 | 3 | **Style** | Twelve templates, each card a live render of the user's content, plus one accent colour. |
 | 4 | **Format** | PDF or DOCX. |
