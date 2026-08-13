@@ -1,0 +1,60 @@
+name: release-resume
+
+# Spiral Resume releases on a `resume-v*` tag, independent of Wallpaper's bare
+# `v*`, Slim's `slim-v*` and Clean's `clean-v*`.
+#
+#   node scripts/version.mjs check resume    # all four version files agree
+#   git tag resume-v0.1.0 && git push origin resume-v0.1.0
+#
+# macOS and Windows, both in v1 — decision 16 of apps/Resume/docs/design-spec.md.
+# macOS is signed with the same Developer ID as every other Spiral app and
+# notarised; Windows is built unsigned, the same accepted gap the README
+# documents for Wallpaper.
+#
+# Updater is off: this app ships no updater plugin, and the shared workflow's
+# own comment warns that requiring a signed updater bundle from an app that
+# never produced one fails the release for no reason.
+#
+# WHAT THIS RELEASE CONTAINS, AND WHAT IT DOES NOT
+#
+# It builds with `pnpm tauri build` — the plain config, not
+# `src-tauri/tauri.bundle.conf.json`. So the `llama-server` sidecar is *not*
+# bundled and the offline model tier is unavailable in the released app, which
+# reports exactly that on screen rather than offering a download that would
+# fail. The deterministic tier and the bring-your-own-key tier are complete.
+#
+# Turning the offline tier on is a later release and needs three things in this
+# order, because any other order ships something broken:
+#
+#   1. `pnpm build-sidecar` runs on the macOS runner before `tauri build`, and
+#      the Windows equivalent gets written — the script refuses to run anywhere
+#      but macOS today.
+#   2. The build uses `--config src-tauri/tauri.bundle.conf.json` so Tauri
+#      copies the sidecar into the bundle.
+#   3. Only then `pnpm pin-model <url>`. Pinning a model while the sidecar is
+#      still absent would offer the user a 2.5 GB download the app cannot run.
+#
+# apps/Resume/docs/offline-model.md is the checklist for all three.
+
+on:
+  push:
+    tags: ["resume-v*"]
+  workflow_dispatch:
+
+jobs:
+  release:
+    # Without this the workflow does not merely fail — it never starts. A
+    # called workflow cannot hold more than its caller was granted, this
+    # repository defaults the token to read, and the shared workflow's publish
+    # job needs `contents: write` to create the release. See release-clean.yml
+    # for the same note.
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-app.yml
+    secrets: inherit
+    with:
+      app-dir: apps/Resume
+      artifact-prefix: resume
+      macos: true
+      windows: true
+      updater: false

@@ -1,5 +1,43 @@
 # changelog
 
+## 2026-08-13 — A release path for Resume, and one product document
+
+### Added
+- `.github/workflows/release-resume.yml`. Spiral Resume releases on a
+  `resume-v*` tag through the same shared `release-app.yml` every other app
+  calls — macOS signed and notarised, Windows unsigned, no updater. Its header
+  states what the release contains and, more usefully, what it does not.
+- `scripts/version.mjs` now knows about Resume. It did not, which meant the
+  release workflow's own version check could not have covered the app it was
+  about to publish. All four of Resume's version files agree at 0.1.0.
+
+### Decided
+The first Resume release ships **without** the offline model tier. The app
+already reports that tier as unavailable and says so on screen, which is a
+shippable, honest state; the deterministic and bring-your-own-key tiers are
+complete. Enabling the offline tier has a required order, now written down in
+`apps/Resume/docs/offline-model.md` and repeated in the workflow header: build
+the sidecar on the runner, bundle with `tauri.bundle.conf.json`, then pin a
+model. Pinning first would offer the user a 2.5 GB download the app cannot run.
+The sidecar script also refuses to run anywhere but macOS, and Resume releases
+on both platforms — that gap is named rather than discovered at tag time.
+
+### Measured
+The release path was proven by building one: `pnpm tauri build` on Apple silicon
+produced a signed `Spiral Resume.app` and DMG from the plain config, with no
+sidecar and no failure. It also produced a number the spec had only estimated —
+45 MB installed and a 23 MB download, where decision 19 guessed the binary would
+grow by 15–25 MB. The README, `CLAUDE.md` and the spec now carry the measurement
+instead of the estimate.
+
+### Rewritten
+`docs/PRODUCT.md` was Spiral Wallpaper's brief while being cited as the
+collection's product document. It now states what every app has in common —
+audience, purpose, the privacy position, brand personality, design principles,
+accessibility — with a row per app pointing at that app's own spec, and says in
+its own second paragraph that it is not the authority on any single app.
+Wallpaper's original sentences are preserved as Wallpaper's row.
+
 ## 2026-08-13 — Spiral Resume, in the documentation
 
 The app was built through M1–M7 and the repo's own documents never learned it
