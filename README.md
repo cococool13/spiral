@@ -43,9 +43,16 @@ Three promises, kept the same way in every app:
 | [**Spiral Wallpaper**](apps/wallpaper/) | Click a wallpaper, it downloads and applies. Browses [Wallhaven](https://wallhaven.cc). 4.6 MB binary, ~95 MB idle RAM, window on screen in 0.23 s. | **v1.0.3** — macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/latest) |
 | [**Spiral Slim**](apps/slim/) | Debloats and hardens Brave, Chrome, Edge, and Firefox with enterprise policies the browsers respect natively. Shows every change before it makes it. | **v1.0.0** — macOS app, scripts everywhere | [Download](https://github.com/cococool13/Spiral-Slim/releases/latest) · [Read the scripts](apps/slim/) |
 | [**Spiral Clean**](apps/clean/) | Reclaims disk space and uninstalls apps, macOS only. Every removal is proven safe by a Rust test suite before it ships. | Unreleased — Clean and Uninstall built | [Design spec](apps/clean/docs/design-spec.md) |
+| [**Spiral Resume**](apps/Resume/) | Your resume in twelve typeset layouts, as a PDF or a Word file. It tightens the wording and is never allowed to change a fact. | Unreleased — the whole flow is built | [Design spec](apps/Resume/docs/design-spec.md) |
 
-Spiral Dashboard, Resume, Weather, Transcribe, and Chat are named on the site
-and not yet started. They are ideas, not promises.
+Spiral Resume is the one app that breaks the megabyte promise, and it says so
+here rather than quietly: it embeds the Typst typesetter so that the preview and
+the exported PDF come from one engine and cannot disagree, which costs roughly
+15–25 MB of renderer and fonts. Every other app in the table is measured in
+single-digit megabytes.
+
+Spiral Dashboard, Weather, Transcribe, and Chat are named on the site and not
+yet started. They are ideas, not promises.
 
 ## Install
 
@@ -126,8 +133,8 @@ pnpm tauri dev
 The app opens. `pnpm tauri build` instead of `pnpm tauri dev` makes an
 installer you can keep.
 
-Swap `apps/wallpaper` for `apps/clean` or `apps/slim/desktop` to run one of
-the others the same way.
+Swap `apps/wallpaper` for `apps/clean`, `apps/Resume` or `apps/slim/desktop` to
+run one of the others the same way.
 
 Two extra commands, if you're changing the code: `pnpm build` refuses to
 finish if any colour is outside the design tokens or TypeScript complains, and
@@ -156,14 +163,16 @@ started that way, and its ADRs still sit beside the code they became.
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
 | [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
 | [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall. macOS only, unreleased. M1–M4 shipped: the Tauri shell, the Full Disk Access gate, the safety core (`catalog`, `scan`, `remove`, `exclude`, `history`) under a 183-test Rust suite plus 10 Vitest tests, the Clean screen, and Uninstall — which removes an app, its containers and its bundle. Optimize and Storage are still stubs. See the [design spec](apps/clean/docs/design-spec.md) and fifteen ADRs | working on the maintenance app |
+| [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows, unreleased. The whole flow is built — import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | working on the resume app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
 
 **Brand assets are never duplicated.** Each surface copies what it needs out of
 `brand/` at build time into a gitignored folder — `collection/public/brand/`,
-`apps/wallpaper/src/assets/brand/`, and `apps/clean/src/assets/brand/` plus
-`apps/clean/src/styles/tokens.css`. Edit `brand/`, never a synced copy.
+`collection/public/brand/`, and `src/assets/brand/` plus `src/styles/tokens.css`
+inside `apps/wallpaper`, `apps/clean` and `apps/Resume`. Edit `brand/`, never a
+synced copy.
 
 ## Working on it
 
@@ -174,6 +183,7 @@ into the one you want.
 cd apps/wallpaper    && pnpm install && pnpm tauri dev   # the desktop app
 cd apps/slim/desktop && pnpm install && pnpm tauri dev   # the Brave wizard
 cd apps/clean        && pnpm install && pnpm tauri dev   # the maintenance app
+cd apps/Resume       && pnpm install && pnpm tauri dev   # the resume app
 cd collection        && pnpm install && pnpm dev         # the website (localhost:3000)
 ```
 
@@ -184,6 +194,9 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | `pnpm build` | `apps/clean` | hex-token guard → typecheck → Vite build |
 | `pnpm test` | `apps/clean` | the frontend suite (Vitest). `pnpm build` does not run it |
 | `cargo test` | `apps/clean/src-tauri` | the safety-core suite — run it before any change to `remove`, `exclude`, or `paths` |
+| `pnpm build` | `apps/Resume` | hex-token guard → typecheck → Vite build |
+| `pnpm test` | `apps/Resume` | the frontend suite (Vitest). `pnpm build` does not run it |
+| `cargo test` | `apps/Resume/src-tauri` | the parser, the fact gate, the templates, and both export halves |
 | `pnpm build` | `collection` | static export into `out/` |
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |
 | `pnpm sync-brand` | any app or `collection` | re-copy brand assets from `brand/` |
@@ -205,8 +218,17 @@ Each app owns a tag namespace, so one release never drags the others along:
 | Spiral Wallpaper | `v*` | macOS + Windows, updater manifest |
 | Spiral Slim | `slim-v*` | macOS |
 | Spiral Clean | `clean-v*` | macOS only, no updater until M7 |
+| Spiral Resume | `resume-v*` | **no release path yet** — see below |
 
 All three call the same reusable `.github/workflows/release-app.yml`.
+
+Spiral Resume is the exception: `release-resume.yml` has not been written, and
+writing it is not the whole job. Its bundle config declares a `llama-server`
+sidecar that `pnpm build-sidecar` has to produce first, and the model catalogue
+ships with its checksum deliberately empty.
+[`apps/Resume/docs/offline-model.md`](apps/Resume/docs/offline-model.md) is the
+checklist. Until then the app reports its offline tier as unavailable and says
+so on screen, which is the intended behaviour rather than a bug.
 
 ```bash
 # the tag must match the app's package.json and src-tauri/tauri.conf.json —
@@ -272,6 +294,11 @@ of scope for v1: animated wallpapers, auto-update, anything that phones home.
 
 **Clean** has its Clean and Uninstall screens working behind a tested safety
 core. Storage and Optimize are stubs, and there is no release until they land.
+
+**Resume** is feature-complete and unreleased: import, the Check screen, twelve
+templates, PDF and Word export, and three engine tiers all work. What stands
+between it and a release is packaging, not features — a release workflow, the
+llama.cpp sidecar, and a pinned model file.
 
 **Slim** is done for what it set out to do. It stays script-first on every
 platform by design — see [`apps/slim/SECURITY.md`](apps/slim/SECURITY.md).

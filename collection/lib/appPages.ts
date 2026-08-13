@@ -79,7 +79,7 @@ export const appPages: AppPage[] = [
       },
       {
         title: "Three engines, one promise",
-        body: "Free rules, your own API key, or a 2.7 GB model that runs on your machine and never opens a connection. The free one does the job.",
+        body: "Free rules, your own API key, or a 2.5 GB model that runs on your machine and never opens a connection. The free one does the job.",
       },
     ],
     stepsHeading: "Three screens, then a file.",
@@ -87,7 +87,7 @@ export const appPages: AppPage[] = [
       {
         n: "01",
         title: "Bring what you have",
-        body: "Paste it, or drop a PDF or Word file onto the window. Nothing is uploaded; the file is read on your computer.",
+        body: "Paste it, or drop a PDF, Word or text file onto the window. It is read by what it is, not what it is called. Nothing is uploaded; the file is read on your computer.",
       },
       {
         n: "02",
@@ -105,7 +105,7 @@ export const appPages: AppPage[] = [
     facts: [
       { label: "Layouts", value: "12" },
       { label: "Style screen", value: "About 2 ms" },
-      { label: "Offline model", value: "2.7 GB, optional" },
+      { label: "Offline model", value: "2.5 GB, optional" },
       { label: "Accounts required", value: "None" },
     ],
     faq: [
