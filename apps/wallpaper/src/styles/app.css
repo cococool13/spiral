@@ -1,3 +1,130 @@
+/* The bar every Spiral app wears. No rule under it: the page and the bar are
+   the same material, and the space is the separation. A line here would be
+   decoration, and decoration is not how this system makes depth. */
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--unit) * 1.5);
+  padding: calc(var(--unit) * 2) calc(var(--unit) * 3);
+}
+
+.bar__mark {
+  width: 20px;
+  height: 20px;
+  background: var(--hlx-01);
+  mask: url("../assets/brand/mark-red.svg") center / contain no-repeat;
+}
+
+.bar__name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--wght-heading);
+  font-variation-settings: "wdth" var(--wdth-heading);
+}
+
+/* "Spiral" recedes so the app's own word is what you read. Legal on the page
+   background and nowhere else — see the contrast rule in docs/DESIGN.md. */
+.bar__collection {
+  color: var(--stl-02);
+  font-weight: 400;
+}
+
+.bar__menu {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* Three rules, which is the one place in this design a line is the point. */
+.bar__bars,
+.bar__bars::before,
+.bar__bars::after {
+  display: block;
+  width: 16px;
+  height: 1px;
+  background: var(--ink-01);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.bar__bars::before,
+.bar__bars::after {
+  content: "";
+  position: absolute;
+}
+
+.bar__bars::before {
+  transform: translateY(-5px);
+}
+
+.bar__bars::after {
+  transform: translateY(5px);
+}
+
+.bar__menu:hover .bar__bars,
+.bar__menu:hover .bar__bars::before,
+.bar__menu:hover .bar__bars::after,
+.bar__menu[aria-expanded="true"] .bar__bars,
+.bar__menu[aria-expanded="true"] .bar__bars::before,
+.bar__menu[aria-expanded="true"] .bar__bars::after {
+  background: var(--hlx-01);
+}
+
+.bar__dot {
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  background: var(--hlx-01);
+}
+
+.bar__panel {
+  position: absolute;
+  top: calc(100% - var(--unit));
+  right: calc(var(--unit) * 3);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  border: 1px solid var(--conc-03);
+  background: var(--conc-02);
+}
+
+.bar__item {
+  display: flex;
+  align-items: center;
+  gap: var(--unit);
+  min-height: 44px;
+  padding: 0 calc(var(--unit) * 2);
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-01);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bar__item:hover,
+.bar__item[aria-current="page"] {
+  background: var(--conc-03);
+}
+
+.bar__item .bar__dot {
+  position: static;
+  margin-left: auto;
+}
+
 /* App chrome + Browse screen (empty shell — Milestone 1). */
 
 .app {
@@ -6,65 +133,11 @@
   height: 100%;
 }
 
-/* Titlebar region — mark left, screen nav right, hairline rule below. */
-.chrome {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: calc(var(--unit) * 2) calc(var(--unit) * 4);
-  border-bottom: 1px solid var(--conc-03);
-  background: var(--conc-01);
-}
-
-.chrome__mark {
-  height: calc(var(--unit) * 3);
-  width: auto;
-  display: block;
-}
-
-.chrome__nav {
-  display: flex;
-  gap: calc(var(--unit) * 3);
-}
-
-.chrome__nav-item {
-  min-height: calc(var(--unit) * 6); /* 48px hit area */
-  background: none;
-  border: none;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--stl-02);
-  padding: var(--unit) 0;
-  cursor: default;
-  transition: color var(--dur-fast) var(--ease);
-}
-
-.chrome__nav-item:hover {
-  color: var(--ink-01);
-}
 
 /* The active screen needs a channel hover cannot borrow. Sharing one
    declaration with :hover made a hovered item identical to the active one,
    so which screen you were on became ambiguous under the cursor. */
-.chrome__nav-item--active {
-  color: var(--ink-01);
-  box-shadow: inset 0 -2px 0 var(--hlx-01);
-}
-
 /* Update available — the red dot device, next to the Settings nav item. */
-.chrome__update-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-left: var(--unit);
-  border-radius: var(--radius-ctl);
-  background: var(--hlx-01);
-  vertical-align: 2px;
-}
-
 /* Browse */
 .browse {
   flex: 1;

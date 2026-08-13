@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import AppBar from "./components/AppBar";
 import { Notice } from "./components/Notice";
 import { Stepper, type Step } from "./components/Stepper";
 import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
@@ -29,9 +30,9 @@ export default function App() {
   const [usesModel, setUsesModel] = useState(false);
   const [rebuilding, setRebuilding] = useState(0);
   const [saveError, setSaveError] = useState("");
-  // Closing Settings returns focus to the control that opened it, rather than
+  // Closing Settings returns focus to the menu that opened it, rather than
   // dropping it on the document.
-  const settingsButton = useRef<HTMLButtonElement>(null);
+  const settingsButton = useRef<HTMLButtonElement | null>(null);
 
   function closeSettings() {
     setSettingsOpen(false);
@@ -112,20 +113,18 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app__bar">
-        <span className="app__mark" aria-hidden="true" />
-        <h1 className="app__title">Spiral Resume</h1>
-        <span className="app__spacer" />
-        <button
-          type="button"
-          className="btn"
-          ref={settingsButton}
-          aria-expanded={settingsOpen}
-          onClick={() => setSettingsOpen((open) => !open)}
-        >
-          Settings
-        </button>
-      </header>
+      <AppBar
+        app="Resume"
+        menuRef={settingsButton}
+        current={settingsOpen ? "settings" : undefined}
+        items={[
+          {
+            id: "settings",
+            label: settingsOpen ? "Close settings" : "Settings",
+            onSelect: () => setSettingsOpen((open) => !open),
+          },
+        ]}
+      />
 
       {settingsOpen ? (
         <main className="app__main">

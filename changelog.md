@@ -1,5 +1,32 @@
 # changelog
 
+## 2026-08-13 — One bar, four apps
+
+Four apps had four different chromes: Wallpaper a text nav, Resume a title bar
+with a Settings button, Clean a six-item sidebar, Slim a step bar. Nothing
+about them said "same collection". They now wear one bar — the mark, the app's
+name, and a single menu — specified once in `docs/DESIGN.md` and implemented in
+each app.
+
+- **The name is the continuity.** "Spiral" recedes at weight 400 in `--stl-02`,
+  the app's own word carries the heading weight. Every bar differs by one word.
+- **Fewer lines, literally.** No rule under the bar in any app. The page and
+  the bar are the same material, and the space is the separation — which is the
+  system's own first principle about where depth comes from.
+- **Clean lost its sidebar.** Six destinations moved into the menu and the app
+  gained back 13rem of width it was spending on navigation it rarely needed.
+- **Wallpaper's update dot** no longer needs a nav item to live on: it is a
+  badge on the menu icon, and it says "something needs attention" in words for
+  anyone who cannot see it.
+- **Slim keeps its ticks.** It is a wizard with no destinations, and an empty
+  menu would be worse than no menu — so it takes the mark and the two-weight
+  name and shows progress where the menu would be. That exception is written
+  down rather than left as an inconsistency.
+
+Nine tests cover the bar's behaviour — open, choose, current, Escape returning
+focus, outside click, and the dot saying its meaning in words — and they ship in
+both apps that carry a menu.
+
 ## 2026-08-13 — The offline tier, running
 
 The third engine tier stopped being a thing the code was ready for and became a

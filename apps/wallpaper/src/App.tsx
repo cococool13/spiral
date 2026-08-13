@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import markRed from "./assets/brand/mark-red.svg";
+import AppBar from "./components/AppBar";
 import { Browse } from "./screens/Browse";
 import { FirstRun } from "./screens/FirstRun";
 import { Settings } from "./screens/Settings";
@@ -44,42 +44,19 @@ function App() {
 
   return (
     <div className="app">
-      <header className="chrome">
-        <img src={markRed} alt="Spiral" className="chrome__mark" />
-        <nav className="chrome__nav">
-          <button
-            className={
-              screen === "browse"
-                ? "chrome__nav-item chrome__nav-item--active"
-                : "chrome__nav-item"
-            }
-            aria-current={screen === "browse" ? "page" : undefined}
-            onClick={() => setScreen("browse")}
-          >
-            Browse
-          </button>
-          <button
-            className={
-              screen === "settings"
-                ? "chrome__nav-item chrome__nav-item--active"
-                : "chrome__nav-item"
-            }
-            aria-current={screen === "settings" ? "page" : undefined}
-            onClick={() => setScreen("settings")}
-          >
-            Settings
-            {/* The dot is decoration; the words next to it carry the meaning.
-                aria-label on a plain span is not exposed, so the update was
-                invisible to screen readers and colour-only to everyone else. */}
-            {update && (
-              <>
-                <span className="chrome__update-dot" aria-hidden="true" />
-                <span className="visually-hidden"> — update available</span>
-              </>
-            )}
-          </button>
-        </nav>
-      </header>
+      <AppBar
+        app="Wallpaper"
+        current={screen}
+        items={[
+          { id: "browse", label: "Browse", onSelect: () => setScreen("browse") },
+          {
+            id: "settings",
+            label: "Settings",
+            dot: Boolean(update),
+            onSelect: () => setScreen("settings"),
+          },
+        ]}
+      />
 
       {/* Browse stays mounted so results and tile states survive navigation. */}
       <div className={screen === "browse" ? "screen" : "screen screen--hidden"}>

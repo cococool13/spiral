@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import Sidebar, { type Destination } from "./components/Sidebar";
+import AppBar from "./components/AppBar";
+import type { Destination } from "./components/Sidebar";
 import FirstRun from "./screens/FirstRun";
 import Clean from "./screens/Clean";
 import Storage from "./screens/Storage";
@@ -8,6 +9,16 @@ import Optimize from "./screens/Optimize";
 import Uninstall from "./screens/Uninstall";
 import History from "./screens/History";
 import Settings from "./screens/Settings";
+
+/** The order a person meets them: what the app does, then what it remembers. */
+const DESTINATIONS: [Destination, string][] = [
+  ["clean", "Clean"],
+  ["storage", "Storage"],
+  ["optimize", "Optimize"],
+  ["uninstall", "Uninstall"],
+  ["history", "History"],
+  ["settings", "Settings"],
+];
 
 const SCREENS: Record<Destination, () => JSX.Element> = {
   clean: Clean,
@@ -54,7 +65,15 @@ export default function App() {
   const Screen = SCREENS[active];
   return (
     <div className="app">
-      <Sidebar active={active} onSelect={setActive} />
+      <AppBar
+        app="Clean"
+        current={active}
+        items={DESTINATIONS.map(([id, label]) => ({
+          id,
+          label,
+          onSelect: () => setActive(id),
+        }))}
+      />
       <main>
         <Screen />
       </main>
