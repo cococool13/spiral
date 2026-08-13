@@ -1,3 +1,5 @@
+/** The app's destinations. The rail that used to render them is gone: every
+ *  Spiral app now wears the same bar, and the bar holds the menu. */
 export type Destination =
   | "clean"
   | "storage"
@@ -5,42 +7,3 @@ export type Destination =
   | "uninstall"
   | "history"
   | "settings";
-
-const VERBS: [Destination, string][] = [
-  ["clean", "Clean"],
-  ["storage", "Storage"],
-  ["optimize", "Optimize"],
-  ["uninstall", "Uninstall"],
-];
-
-const UTILITY: [Destination, string][] = [
-  ["history", "History"],
-  ["settings", "Settings"],
-];
-
-export default function Sidebar({
-  active,
-  onSelect,
-}: {
-  active: Destination;
-  onSelect: (d: Destination) => void;
-}) {
-  const item = ([id, label]: [Destination, string]) => (
-    <button
-      key={id}
-      type="button"
-      aria-current={active === id ? "page" : undefined}
-      onClick={() => onSelect(id)}
-    >
-      {label}
-    </button>
-  );
-
-  return (
-    <nav className="rail" aria-label="Sections">
-      {VERBS.map(item)}
-      <hr />
-      {UTILITY.map(item)}
-    </nav>
-  );
-}
