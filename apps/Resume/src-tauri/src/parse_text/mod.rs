@@ -18,6 +18,18 @@ mod lines;
 
 use crate::model::ResumeDoc;
 use contact::{fill_missing_contact, parse_contact};
+
+/// Whether a line already carries a bullet mark.
+///
+/// The one thing an importer is allowed to ask this module before handing over
+/// its lines. `import/docx` needs it because a Word bullet is a paragraph
+/// property rather than a character, so it has to add a mark — but only when
+/// there is not one there already, and which characters count is a fact that
+/// belongs here with the other eleven.
+pub fn looks_bulleted(line: &str) -> bool {
+    lines::is_bullet(line.trim())
+}
+
 use dates::{parse_date_range, without_dates};
 use entries::{parse_lines, parse_skills, roles_of, schools_of};
 use headings::{merge_repeats, split_sections, Section};
@@ -752,5 +764,36 @@ Skills: Rust, Analysis, Notation
     fn a_summary_written_as_bullets_loses_its_marks() {
         let doc = parse_text("Ada\n\nSUMMARY\n- Ten years in analysis\n- Led three teams\n");
         assert_eq!(doc.summary, "Ten years in analysis Led three teams");
+    }
+
+    /// A letter-spaced heading has to survive whichever door the text came
+    /// through. The repair used to live in `import/pdf`, so this same paste
+    /// lost its whole Education section while the PDF of it kept one — the
+    /// thing `parse_text` exists to make impossible.
+    #[test]
+    fn a_letter_spaced_heading_names_its_section_from_a_paste() {
+        let doc = parse_text(
+            "A D A   L O V E L A C E\nada@example.com\n\nE D U C A T I O N\nUniversity of London\nBSc Mathematics\n2016 - 2019\n",
+        );
+        assert_eq!(doc.contact.name, "ADA LOVELACE");
+        assert_eq!(
+            doc.education.len(),
+            1,
+            "the letter-spaced heading did not name its section"
+        );
+        assert_eq!(doc.education[0].institution, "University of London");
+    }
+
+    /// Word writes a bullet as a paragraph property, so `import/docx` adds a
+    /// mark — but only when the line has none. It used to know three of the
+    /// twelve marks, so "▪ Wrote it" came back as "- ▪ Wrote it".
+    #[test]
+    fn a_line_that_already_has_a_mark_is_not_given_a_second_one() {
+        for mark in ['-', '•', '*', '–', '—', '▪', '▫', '◦', '●', '‣', '∙', '\u{f0b7}'] {
+            assert!(
+                looks_bulleted(&format!("{mark} Wrote the parser")),
+                "{mark:?} was not recognised, so a second mark would be added"
+            );
+        }
     }
 }

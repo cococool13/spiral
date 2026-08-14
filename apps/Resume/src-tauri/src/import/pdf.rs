@@ -49,63 +49,19 @@ fn damaged(bytes: &[u8]) -> String {
         .to_string()
 }
 
-/// Extractors leave ragged whitespace and stray blank lines. Collapsing them
-/// here means `parse_text` sees the same shape it would from a paste.
+/// Drops the blank lines an extractor leaves behind, and nothing else.
+///
+/// It used to collapse whitespace runs and repair letter-spacing too. Both of
+/// those are things `parse_text` does to every source, and doing them here made
+/// this importer the only door that got them: a letter-spaced heading survived
+/// a PDF and vanished from a paste. Worse, the collapse ran *first* and erased
+/// the wide gaps the repair depends on, so the knowledge could not simply move
+/// — the whitespace has to arrive intact. It does now.
 fn tidy(raw: &str) -> String {
     raw.lines()
-        .map(untrack)
-        .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
-        .filter(|line| !line.is_empty())
+        .filter(|line| !line.trim().is_empty())
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-/// "A D A   L O V E L A C E" back into "ADA LOVELACE".
-///
-/// Designers letter-space names and section headings, and a PDF stores the
-/// tracking as real space between the glyphs — so the extractor reads every
-/// letter as a word. Whole sections disappear this way, because a heading like
-/// "E D U C A T I O N" matches nothing.
-///
-/// The word boundary is the wider gap, which is why this runs before the
-/// whitespace collapse above and never after it.
-fn untrack(line: &str) -> String {
-    let words: Vec<String> = split_on_wide_gaps(line)
-        .into_iter()
-        .map(|segment| {
-            let letters: Vec<&str> = segment.split_whitespace().collect();
-            // Three or more, all single characters: this was one word, spread.
-            if letters.len() >= 3 && letters.iter().all(|l| l.chars().count() == 1) {
-                letters.concat()
-            } else {
-                segment
-            }
-        })
-        .collect();
-    words.join(" ")
-}
-
-fn split_on_wide_gaps(line: &str) -> Vec<String> {
-    let mut segments = Vec::new();
-    let mut current = String::new();
-    let mut spaces = 0usize;
-    for c in line.chars() {
-        if c.is_whitespace() {
-            spaces += 1;
-            continue;
-        }
-        if spaces >= 2 && !current.is_empty() {
-            segments.push(std::mem::take(&mut current));
-        } else if spaces == 1 && !current.is_empty() {
-            current.push(' ');
-        }
-        spaces = 0;
-        current.push(c);
-    }
-    if !current.is_empty() {
-        segments.push(current);
-    }
-    segments
 }
 
 #[cfg(test)]
@@ -126,8 +82,6 @@ mod tests {
         assert!(err.contains("paste the text instead"), "got {err}");
     }
 
-    /// Letter-spaced headings and names are how a designed resume loses whole
-    /// sections on the way in.
     /// A password-protected PDF is not a broken one, and telling the user it
     /// might be damaged sends them hunting for a fault that is not there.
     #[test]
@@ -138,27 +92,15 @@ mod tests {
         assert!(err.contains("unprotected copy"), "no next step in: {err}");
     }
 
+    /// `tidy` drops blank lines and touches nothing else. The wide gaps have to
+    /// survive this function — `parse_text` reads them to undo letter-spacing,
+    /// and it cannot do that on whitespace this importer already collapsed.
+    /// The letter-spacing assertions themselves now live in `parse_text/lines`,
+    /// where they cover a paste and a `.docx` too.
     #[test]
-    fn tracking_is_read_back_as_words() {
-        assert_eq!(tidy("A D A   L O V E L A C E"), "ADA LOVELACE");
-        assert_eq!(tidy("E D U C A T I O N"), "EDUCATION");
-    }
-
-    /// And an ordinary line is left exactly as it was. Two initials are not a
-    /// letter-spaced word, and neither is a line with real words in it.
-    #[test]
-    fn ordinary_lines_are_not_squeezed_together() {
-        assert_eq!(tidy("J. R. R. Tolkien"), "J. R. R. Tolkien");
-        assert_eq!(tidy("R  C  Python"), "R C Python");
-        assert_eq!(
-            tidy("ANALYST | Admiralty 2021 — 2023"),
-            "ANALYST | Admiralty 2021 — 2023"
-        );
-    }
-
-    #[test]
-    fn tidy_collapses_ragged_whitespace_without_joining_lines() {
-        assert_eq!(tidy("  Ada   Lovelace \n\n\n  Analyst  "), "Ada Lovelace\nAnalyst");
+    fn tidy_drops_blank_lines_and_leaves_the_gaps_alone() {
+        assert_eq!(tidy("A D A   L O V E L A C E"), "A D A   L O V E L A C E");
+        assert_eq!(tidy("  Ada   Lovelace \n\n\n  Analyst  "), "  Ada   Lovelace \n  Analyst  ");
     }
 
     /// The round trip that matters: a PDF this app produced, read back by this

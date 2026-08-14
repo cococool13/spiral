@@ -118,7 +118,7 @@ mod tests {
         let template = templates::find("column").unwrap();
         std::fs::write(
             &path,
-            crate::docx::to_docx(&doc, &template.docx, "ink").unwrap(),
+            crate::docx::to_docx(&doc, &template.docx, template.sections, "ink").unwrap(),
         )
         .unwrap();
         let err = import_from(&path).unwrap_err();
@@ -134,7 +134,7 @@ mod tests {
         let template = templates::find("column").unwrap();
         std::fs::write(
             &path,
-            crate::docx::to_docx(&original, &template.docx, "ink").unwrap(),
+            crate::docx::to_docx(&original, &template.docx, template.sections, "ink").unwrap(),
         )
         .unwrap();
         let back = import_from(&path).unwrap();

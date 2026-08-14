@@ -139,7 +139,7 @@ mod tests {
         let text = from_bytes(&pdf, Some("docx")).expect("a PDF named .docx is still a PDF");
         assert!(text.contains("Ada Lovelace"), "got {text}");
 
-        let word = crate::docx::to_docx(&doc, &template.docx, "ink").unwrap();
+        let word = crate::docx::to_docx(&doc, &template.docx, template.sections, "ink").unwrap();
         let text = from_bytes(&word, None).expect("a Word file with no extension is still readable");
         assert!(text.contains("Ada Lovelace"), "got {text}");
     }

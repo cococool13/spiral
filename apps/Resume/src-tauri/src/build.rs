@@ -74,17 +74,20 @@ pub struct Built {
 fn all_text(doc: &ResumeDoc) -> String {
     let mut out = vec![
         doc.contact.name.clone(),
+        // Email and phone are printed by `prelude.typ`, so an unprintable
+        // character in either leaves a hole on the page. They were missing from
+        // this walk, which meant the note never named it.
+        doc.contact.email.clone(),
+        doc.contact.phone.clone(),
         doc.contact.location.clone(),
         doc.headline.clone(),
         doc.summary.clone(),
     ];
     out.extend(doc.contact.links.iter().cloned());
-    for role in doc
-        .experience
-        .iter()
-        .chain(&doc.projects)
-        .chain(&doc.leadership)
-    {
+    // `roles()`, not a hand-written chain: `model.rs` says a bullet-bearing
+    // section is added there "and nowhere else", and a second walk that has to
+    // be remembered is exactly how a new section goes unchecked.
+    for role in doc.roles() {
         out.push(role.title.clone());
         out.push(role.organization.clone());
         out.push(role.location.clone());
@@ -188,7 +191,7 @@ pub fn build(
 
     let bytes = match format {
         Format::Pdf => render::document_to_pdf(&document)?,
-        Format::Docx => docx::to_docx(doc, &template.docx, accent)?,
+        Format::Docx => docx::to_docx(doc, &template.docx, template.sections, accent)?,
     };
     report(progress("Preparing the file", 100));
 

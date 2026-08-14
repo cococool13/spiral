@@ -15,6 +15,32 @@ use crate::model::{ResumeDoc, Role, School};
 use docx_rs::*;
 use std::io::Cursor;
 
+/// One part of the document a section can carry.
+///
+/// A section is not one-to-one with a field: `brief` prints skills, awards and
+/// interests together under "Additional", and `bullet` folds skills and
+/// interests into "Skills & Interests".
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Part {
+    Summary,
+    Experience,
+    Projects,
+    Education,
+    Leadership,
+    Awards,
+    Skills,
+    Interests,
+}
+
+/// One section of the finished document: what it is called and what it holds.
+///
+/// An empty title prints the part with no heading, which is how `blend`,
+/// `brief` and `lead` open with the summary.
+pub struct SectionSpec {
+    pub title: &'static str,
+    pub parts: &'static [Part],
+}
+
 /// Everything that differs between the twelve templates, in Word's terms.
 #[derive(Debug, Clone, Copy)]
 pub struct DocxStyle {
@@ -186,7 +212,39 @@ fn school_block(school: &School, style: &DocxStyle) -> Vec<Paragraph> {
     out
 }
 
-pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle, accent: &str) -> Result<Vec<u8>, String> {
+/// Every paragraph one part of the document contributes, already styled.
+fn paragraphs_for(part: Part, doc: &ResumeDoc, style: &DocxStyle) -> Vec<Paragraph> {
+    match part {
+        Part::Summary if doc.summary.is_empty() => Vec::new(),
+        Part::Summary => vec![body(&doc.summary, style)],
+        Part::Experience => doc.experience.iter().flat_map(|r| role_block(r, style)).collect(),
+        Part::Projects => doc.projects.iter().flat_map(|r| role_block(r, style)).collect(),
+        Part::Leadership => doc.leadership.iter().flat_map(|r| role_block(r, style)).collect(),
+        Part::Education => doc.education.iter().flat_map(|s| school_block(s, style)).collect(),
+        Part::Awards => doc.awards.iter().map(|a| body(a, style)).collect(),
+        Part::Skills => doc
+            .skills
+            .iter()
+            .map(|group| {
+                let line = if group.label.is_empty() {
+                    group.items.join(" · ")
+                } else {
+                    format!("{}: {}", group.label, group.items.join(", "))
+                };
+                body(&line, style)
+            })
+            .collect(),
+        Part::Interests if doc.interests.is_empty() => Vec::new(),
+        Part::Interests => vec![body(&doc.interests.join(" · "), style)],
+    }
+}
+
+pub fn to_docx(
+    doc: &ResumeDoc,
+    style: &DocxStyle,
+    sections: &[SectionSpec],
+    accent: &str,
+) -> Result<Vec<u8>, String> {
     let accent = crate::accent::resolve(accent);
     let mut file = Docx::new();
 
@@ -235,63 +293,31 @@ pub fn to_docx(doc: &ResumeDoc, style: &DocxStyle, accent: &str) -> Result<Vec<u
         file = file.add_paragraph(spaced(bold(&doc.headline, style), ENTRY_BEFORE, 40));
     }
 
-    if !doc.summary.is_empty() {
-        file = push_section(file, "Summary");
-        file = file.add_paragraph(body(&doc.summary, style));
-    }
-
-    // The order a reader meets the entry sections, written once. Each is
-    // already a list of paragraphs by the time it gets here, so the walk does
-    // not care whether it holds roles or schools.
-    for (title, paragraphs) in [
-        (
-            "Experience",
-            doc.experience.iter().flat_map(|r| role_block(r, style)).collect::<Vec<_>>(),
-        ),
-        (
-            "Projects",
-            doc.projects.iter().flat_map(|r| role_block(r, style)).collect(),
-        ),
-        (
-            "Education",
-            doc.education.iter().flat_map(|s| school_block(s, style)).collect(),
-        ),
-        (
-            "Leadership & Activities",
-            doc.leadership.iter().flat_map(|r| role_block(r, style)).collect(),
-        ),
-    ] {
+    // The sections, in the order this template puts them, under the names this
+    // template gives them. Both come from the template's own declaration, which
+    // `templates::sections_match_the_typst_source` binds to the `.typ` file.
+    //
+    // This used to be one hardcoded order with one set of headings, run for all
+    // twelve. Seven of them order their sections differently — `brief` leads
+    // with Education and calls Experience "Work Experience"; `lead` opens on
+    // "Core Competencies" — so for those seven the Word file was a different
+    // document from the PDF, and the FACTS test could not see it because it
+    // asserts membership rather than sequence.
+    for spec in sections {
+        let paragraphs: Vec<Paragraph> = spec
+            .parts
+            .iter()
+            .flat_map(|part| paragraphs_for(*part, doc, style))
+            .collect();
         if paragraphs.is_empty() {
             continue;
         }
-        file = push_section(file, title);
+        if !spec.title.is_empty() {
+            file = push_section(file, spec.title);
+        }
         for paragraph in paragraphs {
             file = file.add_paragraph(paragraph);
         }
-    }
-
-    if !doc.awards.is_empty() {
-        file = push_section(file, "Awards");
-        for award in &doc.awards {
-            file = file.add_paragraph(body(award, style));
-        }
-    }
-
-    if !doc.skills.is_empty() {
-        file = push_section(file, "Skills");
-        for group in &doc.skills {
-            let line = if group.label.is_empty() {
-                group.items.join(" · ")
-            } else {
-                format!("{}: {}", group.label, group.items.join(", "))
-            };
-            file = file.add_paragraph(body(&line, style));
-        }
-    }
-
-    if !doc.interests.is_empty() {
-        file = push_section(file, "Interests");
-        file = file.add_paragraph(body(&doc.interests.join(" · "), style));
     }
 
     let mut buffer = Cursor::new(Vec::new());
@@ -316,6 +342,19 @@ mod tests {
         date_rail: false,
     };
 
+    /// The order the five plainest templates use. Tests that are about the
+    /// writer rather than about one template's layout run against this.
+    const CLASSIC_FOR_TESTS: &[SectionSpec] = &[
+        SectionSpec { title: "Summary", parts: &[Part::Summary] },
+        SectionSpec { title: "Experience", parts: &[Part::Experience] },
+        SectionSpec { title: "Projects", parts: &[Part::Projects] },
+        SectionSpec { title: "Education", parts: &[Part::Education] },
+        SectionSpec { title: "Leadership & Activities", parts: &[Part::Leadership] },
+        SectionSpec { title: "Awards", parts: &[Part::Awards] },
+        SectionSpec { title: "Skills", parts: &[Part::Skills] },
+        SectionSpec { title: "Interests", parts: &[Part::Interests] },
+    ];
+
     fn sample() -> ResumeDoc {
         crate::parse_text::parse_text(
             "Ada Lovelace\nada@example.com · London\n\nEXPERIENCE\nAnalyst, Admiralty\nPortsmouth\nJan 2021 - Present\n- Wrote the first algorithm\n\nPROJECTS\nDifference Engine\n- Drafted the notes\n\nEDUCATION\nUniversity of London\nBSc Mathematics\nCambridge\n2016 - 2019\n- GPA 3.9\n\nLEADERSHIP & ACTIVITIES\nPresident, Mathematical Society\n- Ran a weekly seminar\n\nAWARDS\nDe Morgan Medal\n\nSKILLS\nRust, Analysis\n\nINTERESTS\nWeaving\n",
@@ -325,14 +364,14 @@ mod tests {
     /// A .docx is a zip, and every zip starts "PK".
     #[test]
     fn produces_a_file_word_would_recognise() {
-        let bytes = to_docx(&sample(), &SERIF, "ink").unwrap();
+        let bytes = to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap();
         assert_eq!(&bytes[..2], b"PK", "not a zip archive");
         assert!(bytes.len() > 2000, "suspiciously small: {}", bytes.len());
     }
 
     #[test]
     fn an_empty_document_still_produces_a_valid_file() {
-        let bytes = to_docx(&ResumeDoc::empty(), &SERIF, "ink").unwrap();
+        let bytes = to_docx(&ResumeDoc::empty(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap();
         assert_eq!(&bytes[..2], b"PK");
     }
 
@@ -378,12 +417,56 @@ mod tests {
     /// the way to Word. The document XML is inside the zip, so read it back.
     #[test]
     fn every_fact_reaches_the_word_file() {
-        let bytes = to_docx(&sample(), &SERIF, "ink").unwrap();
+        let bytes = to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap();
         let text = squashed(&document_xml(&bytes));
         for expected in FACTS {
             assert!(
                 text.contains(&squashed(expected)),
                 "Word file is missing {expected:?}"
+            );
+        }
+    }
+
+    /// The headings, in the order the template puts them, actually reach the
+    /// Word file.
+    ///
+    /// `FACTS` above asserts membership after squashing case and whitespace, so
+    /// it could never see order — which is how seven templates came to write a
+    /// Word file whose sections ran in a different order, under different
+    /// names, from their own PDF. This reads the headings back out of the .docx
+    /// and holds them against the declaration.
+    #[test]
+    fn the_word_file_follows_the_template_order() {
+        let doc = sample();
+        for template in templates::all() {
+            let xml = document_xml(
+                &to_docx(&doc, &template.docx, template.sections, "ink").unwrap(),
+            );
+            // A section with nothing in it prints no heading — the sample
+            // carries no summary, so "SUMMARY" is legitimately absent. What is
+            // asserted is the order of the headings that are there.
+            let mut at = 0usize;
+            let mut seen: Vec<&str> = Vec::new();
+            for spec in template.sections.iter().filter(|s| !s.title.is_empty()) {
+                // The heading is written into XML, where "&" is "&amp;" — half
+                // these titles contain one.
+                let title = spec.title.to_uppercase().replace('&', "&amp;");
+                let Some(found) = xml[at..].find(&title) else {
+                    assert!(
+                        !xml.contains(&title),
+                        "{}: heading {title:?} appears out of order — expected it after {seen:?}",
+                        template.id
+                    );
+                    continue;
+                };
+                at += found + title.len();
+                seen.push(spec.title);
+            }
+            assert!(
+                seen.len() >= 5,
+                "{}: only {} headings found, so this asserted almost nothing",
+                template.id,
+                seen.len()
             );
         }
     }
@@ -407,7 +490,7 @@ mod tests {
                     .unwrap_or_else(|e| panic!("{} produced an unreadable PDF: {e}", template.id)),
             );
             let from_word = squashed(&document_xml(
-                &to_docx(&doc, &template.docx, "ink").unwrap(),
+                &to_docx(&doc, &template.docx, template.sections, "ink").unwrap(),
             ));
 
             for fact in FACTS {
@@ -429,7 +512,7 @@ mod tests {
     #[test]
     fn every_template_declares_a_word_twin_that_builds() {
         for template in templates::all() {
-            let bytes = to_docx(&sample(), &template.docx, "ink")
+            let bytes = to_docx(&sample(), &template.docx, template.sections, "ink")
                 .unwrap_or_else(|e| panic!("{} has no working Word twin: {e}", template.id));
             assert_eq!(&bytes[..2], b"PK", "{} produced no zip", template.id);
         }
@@ -447,7 +530,7 @@ mod tests {
     /// Mutation proof: drop `.color(INK)` from `run` and only this test fails.
     #[test]
     fn no_run_leaves_its_colour_to_word() {
-        let xml = document_xml(&to_docx(&sample(), &SERIF, "navy").unwrap());
+        let xml = document_xml(&to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "navy").unwrap());
         for (index, block) in xml.split("<w:rPr>").skip(1).enumerate() {
             let properties = block.split("</w:rPr>").next().unwrap_or("");
             assert!(
@@ -461,7 +544,7 @@ mod tests {
     /// close to it.
     #[test]
     fn body_text_is_set_in_the_same_ink_as_the_pdf() {
-        let xml = document_xml(&to_docx(&sample(), &SERIF, "navy").unwrap());
+        let xml = document_xml(&to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "navy").unwrap());
         assert!(
             xml.contains(&format!(r#"<w:color w:val="{INK}""#)),
             "body text is not set in the PDF's ink"
@@ -478,7 +561,7 @@ mod tests {
 
     #[test]
     fn the_declared_font_is_the_one_written_into_the_file() {
-        let bytes = to_docx(&sample(), &SERIF, "ink").unwrap();
+        let bytes = to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap();
         assert!(document_xml(&bytes).contains("Times New Roman"));
     }
 

@@ -123,7 +123,13 @@ fn paragraph_text(paragraph: &str) -> String {
     if text.is_empty() {
         return text;
     }
-    if body.contains("<w:numPr") && !text.starts_with(['-', '•', '*']) {
+    // A `<w:numPr>` paragraph is a bullet Word draws itself, so it arrives with
+    // no mark in the text and one has to be added. Whether a mark is already
+    // there is `parse_text`'s question, not this importer's: asking it here
+    // with a hand-written `['-', '•', '*']` missed nine of the twelve marks in
+    // `BULLET_MARKS`, so a paragraph already starting "▪" came out as "- ▪ …"
+    // and the glyph survived into the bullet.
+    if body.contains("<w:numPr") && !crate::parse_text::looks_bulleted(&text) {
         return format!("- {text}");
     }
     text
@@ -223,7 +229,7 @@ mod tests {
             "Ada Lovelace\nada@example.com · London\n\nEXPERIENCE\nAnalyst, Admiralty\nJan 2021 - Present\n- Wrote the first algorithm\n- Cut turnaround to 2 days\n\nEDUCATION\nUniversity of London\nBSc Mathematics\n\nSKILLS\nRust, Analysis\n",
         );
         let template = crate::templates::find("column").unwrap();
-        let bytes = crate::docx::to_docx(&original, &template.docx, "ink").unwrap();
+        let bytes = crate::docx::to_docx(&original, &template.docx, template.sections, "ink").unwrap();
 
         let text = text_from_docx(&bytes).unwrap();
         let back: ResumeDoc = crate::parse_text::parse_text(&text);
