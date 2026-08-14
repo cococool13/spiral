@@ -614,3 +614,55 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* The offline model list. One row per model: what it is, what it costs, and
+   the one action that applies to it. No card inside a card — the panel is the
+   surface and these are lines on it. */
+.models {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.model {
+  padding: calc(var(--spiral-unit) * 2) 0;
+  border-top: 1px solid var(--spiral-conc-03);
+}
+
+.model__head {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--spiral-unit) * 1.5);
+}
+
+.model__name {
+  font-weight: var(--spiral-wght-heading);
+  font-variation-settings: "wdth" var(--spiral-wdth-heading);
+}
+
+.model__size {
+  font-family: var(--spiral-font-mono);
+  font-size: 12px;
+  color: var(--spiral-steel);
+}
+
+/* The one row a build would actually use. Red is doing its one job: telling
+   you which thing is live. */
+.model__in-use {
+  margin-left: auto;
+  font-family: var(--spiral-font-mono);
+  font-size: 12px;
+  color: var(--spiral-red);
+}
+
+.model__note {
+  margin: var(--spiral-unit) 0 0;
+  color: var(--spiral-steel);
+  font-size: 13px;
+}
+
+.model__actions {
+  display: flex;
+  gap: var(--spiral-unit);
+  margin-top: calc(var(--spiral-unit) * 1.5);
+}

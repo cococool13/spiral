@@ -177,13 +177,24 @@ export interface BuildResult {
 
 /** The optional offline model. `available: false` means this build ships no
  *  pinned model, and the UI says so rather than offering a broken download. */
+/** One offline model, as Settings shows it. */
 export interface ModelStatus {
-  available: boolean;
+  id: string;
   name: string;
-  /** Already formatted — "2.5 GB". The UI never does size arithmetic. */
+  /** One line on what choosing this one costs and buys. */
+  note: string;
+  /** Already formatted — "2.7 GB". The UI never does size arithmetic. */
   size: string;
   installed: boolean;
   path: string;
+  /** The one a build would actually run. At most one row carries this. */
+  inUse: boolean;
+}
+
+export interface ModelList {
+  /** False when this build pinned no models at all. */
+  available: boolean;
+  models: ModelStatus[];
 }
 
 export interface DownloadProgress {

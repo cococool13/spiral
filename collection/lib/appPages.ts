@@ -79,7 +79,7 @@ export const appPages: AppPage[] = [
       },
       {
         title: "Three engines, one promise",
-        body: "Free rules, your own API key, or a 2.5 GB model that runs on your machine and never opens a connection. The free one does the job.",
+        body: "Free rules, your own API key, or a model that runs on your machine and never opens a connection — three sizes, from 1.3 GB up. The free one does the job.",
       },
     ],
     stepsHeading: "Three screens, then a file.",
@@ -105,7 +105,7 @@ export const appPages: AppPage[] = [
     facts: [
       { label: "Layouts", value: "12" },
       { label: "Style screen", value: "About 2 ms" },
-      { label: "Offline model", value: "2.5 GB, optional" },
+      { label: "Offline model", value: "1.3–5.7 GB, optional" },
       { label: "Accounts required", value: "None" },
     ],
     faq: [

@@ -8,7 +8,7 @@ import type {
   Draft,
   DownloadProgress,
   EngineInfo,
-  ModelStatus,
+  ModelList,
   Progress,
   ResumeDoc,
   StorageInfo,
@@ -75,21 +75,28 @@ export function buildDocument(
   });
 }
 
-export function offlineModelStatus(): Promise<ModelStatus> {
-  return invoke<ModelStatus>("offline_model_status");
+export function offlineModelStatus(): Promise<ModelList> {
+  return invoke<ModelList>("offline_model_status");
 }
 
-/** Downloads the offline model, reporting real bytes as they arrive. */
+/** Remembers which offline model to run. Saved whether or not it is on disk. */
+export function chooseOfflineModel(id: string): Promise<ModelList> {
+  return invoke<ModelList>("choose_offline_model", { id });
+}
+
+/** Downloads one offline model, reporting real bytes as they arrive.
+ *  Downloading it also chooses it — nobody fetches gigabytes by accident. */
 export function downloadOfflineModel(
+  id: string,
   onProgress: (progress: DownloadProgress) => void,
-): Promise<ModelStatus> {
+): Promise<ModelList> {
   const channel = new Channel<DownloadProgress>();
   channel.onmessage = onProgress;
-  return invoke<ModelStatus>("download_offline_model", { onProgress: channel });
+  return invoke<ModelList>("download_offline_model", { id, onProgress: channel });
 }
 
-export function removeOfflineModel(): Promise<ModelStatus> {
-  return invoke<ModelStatus>("remove_offline_model");
+export function removeOfflineModel(id: string): Promise<ModelList> {
+  return invoke<ModelList>("remove_offline_model", { id });
 }
 
 export function engineInfo(): Promise<EngineInfo> {

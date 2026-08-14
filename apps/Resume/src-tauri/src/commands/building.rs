@@ -184,8 +184,8 @@ async fn rewrite_wording(
     if stored.provider == "local" {
         // The offline engine: a process on this machine, reachable only on
         // loopback, speaking the same shape as any other endpoint.
-        let entry = crate::local::catalogue().ok_or_else(|| {
-            "This build has no offline model. Use your own API key, or the free rule-based pass."
+        let entry = crate::local::chosen(&root, &stored.offline_model).ok_or_else(|| {
+            "No offline model is chosen. Pick one in Settings, or use your own API key or the free rule-based pass."
                 .to_string()
         })?;
         let binary = crate::sidecar::beside_this_binary("llama-server")?;
