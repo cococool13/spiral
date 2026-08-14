@@ -333,60 +333,48 @@ p {
   }
 }
 
-/* Work card — the cover arrives by disintegrating the panel in front of it.
-   A grid of solid tiles sits over the image and each one fades out on its own
-   delay, so the picture resolves in blocks rather than by crossfading. The
-   image underneath is one lazily-loaded picture; the tiles are flat colour,
-   which is what keeps 7 cards' worth of them cheap.
+/* Work card — the cover is always on show, and hovering washes it through a
+   grid of tiles.
+
+   The tiles start invisible and each one blinks on and off again on its own
+   delay, so a scatter of blocks travels across the picture and clears. Not a
+   reveal: the work is the point and it should not need earning. The tiles are
+   flat colour over one lazily-loaded picture, which is what keeps seven cards'
+   worth of them cheap.
 
    `--tile-delay` is set per tile from a fixed shuffle, so the order is
    scattered but identical on every render and on the server. */
 .work-tile {
   background: var(--spiral-conc-01);
   /* Grows each tile 1px in every direction so neighbours overlap. Without it
-     the subpixel gaps between grid cells let the picture underneath show as a
-     grid of hairlines while the card is at rest — the panel has to read as one
-     flat surface until it breaks. The shadow fades with the tile. */
+     the subpixel gaps between grid cells leave hairlines through the wash. */
   box-shadow: 0 0 0 1px var(--spiral-conc-01);
-  opacity: 1;
-  transition: opacity 260ms var(--spiral-ease);
-  transition-delay: 0ms;
-}
-.work-card:hover .work-tile,
-.work-card:focus-visible .work-tile,
-.work-card:focus-within .work-tile {
-  opacity: 0;
-  transition-delay: var(--tile-delay, 0ms);
-}
-/* The description gives way to the picture; the name and kind stay, over a
-   scrim, because an index whose labels vanish when you look at it is not an
-   index. The reference this follows drops its text entirely — this keeps the
-   two lines that say which project you are looking at. */
-.work-blurb {
-  transition: opacity 220ms var(--spiral-ease);
-}
-.work-card:hover .work-blurb,
-.work-card:focus-within .work-blurb {
   opacity: 0;
 }
-.work-scrim {
-  opacity: 0;
-  transition: opacity 320ms var(--spiral-ease);
-}
-.work-card:hover .work-scrim,
-.work-card:focus-within .work-scrim {
-  opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .work-tile,
-  .work-blurb,
-  .work-scrim {
-    transition-duration: 1ms;
-  }
+@media (hover: hover) and (pointer: fine) {
   .work-card:hover .work-tile,
   .work-card:focus-visible .work-tile,
   .work-card:focus-within .work-tile {
-    transition-delay: 0ms;
+    animation: tile-wash 520ms var(--spiral-ease) both;
+    animation-delay: var(--tile-delay, 0ms);
+  }
+}
+@keyframes tile-wash {
+  0% {
+    opacity: 0;
+  }
+  38% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-card:hover .work-tile,
+  .work-card:focus-visible .work-tile,
+  .work-card:focus-within .work-tile {
+    animation: none;
   }
 }
 

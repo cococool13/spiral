@@ -123,22 +123,37 @@ const TILE_ORDER = (() => {
   return order;
 })();
 
-/** Milliseconds between one tile clearing and the next. 48 tiles at 9ms is a
- *  ~430ms sweep, which finishes just after the 260ms fade of the last tile. */
-const TILE_STEP = 9;
+/** Milliseconds between one tile lighting and the next. 48 tiles at 7ms is a
+ *  ~330ms sweep; with each tile's own 520ms blink the wash runs about 850ms
+ *  end to end, which is one look rather than an animation to sit through. */
+const TILE_STEP = 7;
 
 function WorkCard({ project, index }: { project: OtherProject; index: number }) {
   const body = (
     <>
-      {/* The picture is always in the DOM and always lazy; what changes on
-          hover is the panel in front of it. */}
+      {/* The work leads. It is on screen from the moment the card is, and
+          hovering runs the tiles across it rather than earning it. */}
       <Image
         src={project.cover}
         alt={project.coverAlt}
         width={1200}
         height={750}
-        sizes="(max-width: 640px) 80vw, 420px"
+        sizes="(max-width: 640px) 80vw, 340px"
         className="absolute inset-0 h-full w-full object-cover object-top"
+      />
+
+      {/* Permanent, not hover-only: every label below now sits on a
+          photograph, and which photograph is not something this can know. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 h-3/5"
+        style={{
+          background: [
+            "linear-gradient(180deg, transparent,",
+            "color-mix(in oklab, var(--spiral-ink) 55%, transparent) 45%,",
+            "color-mix(in oklab, var(--spiral-ink) 92%, transparent))",
+          ].join(" "),
+        }}
       />
 
       <div aria-hidden="true" className="absolute inset-0 grid grid-cols-8 grid-rows-6">
@@ -152,28 +167,15 @@ function WorkCard({ project, index }: { project: OtherProject; index: number }) 
         ))}
       </div>
 
-      {/* Sits under the name once the picture is out, so two lines of label
-          survive on top of a photograph. */}
-      <div
-        aria-hidden="true"
-        className="work-scrim absolute inset-x-0 bottom-0 h-2/5"
-        style={{
-          background:
-            "linear-gradient(180deg, transparent, color-mix(in oklab, var(--spiral-ink) 78%, transparent))",
-        }}
-      />
-
       <div className="relative flex h-full flex-col justify-end p-6">
-        <span className="work-blurb absolute left-6 top-6 flex h-10 w-10 items-center justify-center bg-ink font-mono text-xs text-paper">
+        <span className="absolute left-6 top-6 flex h-10 w-10 items-center justify-center bg-ink font-mono text-xs text-paper">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <h3 className="type-heading text-lg text-ink transition-colors duration-300 group-hover:text-paper">
-          {project.name}
-        </h3>
-        <p className="mt-1 font-mono text-[11px] uppercase tracking-widest text-steel transition-colors duration-300 group-hover:text-concrete">
+        <h3 className="type-heading text-lg text-paper">{project.name}</h3>
+        <p className="mt-1 font-mono text-[11px] uppercase tracking-widest text-concrete">
           {project.kind}
         </p>
-        <p className="work-blurb mt-3 text-sm text-steel">{project.description}</p>
+        <p className="mt-3 text-sm text-concrete">{project.description}</p>
       </div>
     </>
   );
@@ -181,9 +183,9 @@ function WorkCard({ project, index }: { project: OtherProject; index: number }) 
   const shell =
     "work-card group relative flex aspect-[4/5] flex-col overflow-hidden border border-conc3 bg-conc1";
 
-  // No link, so no link affordance: an unlinked card reveals its picture and
-  // does nothing else. It used to keep the hover-lift and the image scale of
-  // the linked version, which promised a destination seven times over.
+  // No link, so no link affordance: an unlinked card washes its tiles and does
+  // nothing else. It used to keep the hover-lift and the image scale of the
+  // linked version, which promised a destination seven times over.
   if (!project.href) return <article className={shell}>{body}</article>;
 
   return (
