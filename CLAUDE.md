@@ -131,8 +131,9 @@ all three engine tiers. `sidecar: true` compiles `llama-server` on each runner b
 packaging (a native compile, not a cross-compile, which is why it happens on both), and
 `bundle-config` merges `src-tauri/tauri.bundle.conf.json`, the file that declares it as an
 `externalBin`. That file is kept separate so a machine without the binary can still
-compile and test the app. The model is not in the release: it is a 2.7 GB download the
-user chooses, verified against the sha256 pinned in `assets/model-catalogue.json`.
+compile and test the app. The models are not in the release: `assets/model-catalogue.json` pins three
+sizes of Qwen3.5 — 1.3 GB, 2.7 GB and 5.7 GB — and the user picks one in Settings and
+downloads it, verified against the pinned sha256 before it installs.
 `apps/Resume/docs/offline-model.md` is the record.
 
 **Every macOS release has a second step CI does not do:** bump the matching cask in
@@ -181,7 +182,9 @@ Build Tools.
   carry the same facts, and a test in `docx.rs` proves it.
 - Three engine tiers, chosen in Settings and never upsold in the flow: deterministic
   tightening (default, always available), an optional local model, and the user's own API
-  key. No account, no analytics, no telemetry.
+  key. The local tier offers three model sizes; downloading one chooses it, and with two
+  installed and neither chosen the app asks rather than guessing. No account, no
+  analytics, no telemetry.
 - `parse_text/` is the only thing in the app that knows what a resume is; the importers
   reduce a file to lines and hand it over. Keep it that way — it is what makes a PDF and
   a paste behave identically.

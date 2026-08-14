@@ -46,7 +46,9 @@ pub(super) fn model_ready(root: &std::path::Path, provider: &Provider) -> bool {
     if provider.needs_key() {
         keys::has(provider.id())
     } else {
-        crate::local::status(root).installed
+        // Ready means a model this build would actually run — which, with two
+        // installed and neither chosen, is none of them.
+        crate::local::chosen(root, &crate::settings::load(root).offline_model).is_some()
     }
 }
 
@@ -87,6 +89,8 @@ pub fn save_engine(
             provider,
             model,
             base_url,
+            // Changing provider does not forget which offline model was picked.
+            offline_model: settings::load(&root).offline_model,
         },
     )
     .map_err(|e| format!("Could not save these settings: {e}."))?;
@@ -113,8 +117,24 @@ pub fn clear_api_key(app: tauri::AppHandle) -> Result<EngineInfo, String> {
 }
 
 #[tauri::command]
-pub fn offline_model_status(app: tauri::AppHandle) -> Result<crate::local::ModelStatus, String> {
-    Ok(crate::local::status(store_for(&app)?.path()))
+pub fn offline_model_status(app: tauri::AppHandle) -> Result<crate::local::ModelList, String> {
+    let root = store_for(&app)?.path().to_path_buf();
+    Ok(crate::local::status(&root, &crate::settings::load(&root).offline_model))
+}
+
+/// Remembers which offline model to run. Saved even when it is not downloaded
+/// yet, so choosing one and then fetching it works in either order.
+#[tauri::command]
+pub fn choose_offline_model(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<crate::local::ModelList, String> {
+    let root = store_for(&app)?.path().to_path_buf();
+    let mut stored = crate::settings::load(&root);
+    stored.offline_model = id;
+    crate::settings::save(&root, &stored)
+        .map_err(|e| format!("Could not save that choice: {e}."))?;
+    Ok(crate::local::status(&root, &stored.offline_model))
 }
 
 /// Downloads the offline model, reporting real bytes. Nothing here starts on
@@ -122,23 +142,34 @@ pub fn offline_model_status(app: tauri::AppHandle) -> Result<crate::local::Model
 #[tauri::command]
 pub async fn download_offline_model(
     app: tauri::AppHandle,
+    id: String,
     on_progress: Channel<crate::local::DownloadProgress>,
-) -> Result<crate::local::ModelStatus, String> {
+) -> Result<crate::local::ModelList, String> {
     let root = store_for(&app)?.path().to_path_buf();
-    let entry = crate::local::catalogue().ok_or_else(|| {
-        "This build has no offline model to download. Use your own API key, or the free rule-based pass."
+    let entry = crate::local::find(&id).ok_or_else(|| {
+        "This build does not offer that model. Use your own API key, or the free rule-based pass."
             .to_string()
     })?;
     crate::local::download(&root, &entry, |progress| {
         let _ = on_progress.send(progress);
     })
     .await?;
-    Ok(crate::local::status(&root))
+    // Downloading one is choosing it: nobody fetches gigabytes they did not
+    // intend to use, and leaving the old choice in place would run the model
+    // they just replaced.
+    let mut stored = crate::settings::load(&root);
+    stored.offline_model = entry.id.clone();
+    crate::settings::save(&root, &stored)
+        .map_err(|e| format!("The model installed, but the choice could not be saved: {e}."))?;
+    Ok(crate::local::status(&root, &stored.offline_model))
 }
 
 #[tauri::command]
-pub fn remove_offline_model(app: tauri::AppHandle) -> Result<crate::local::ModelStatus, String> {
+pub fn remove_offline_model(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<crate::local::ModelList, String> {
     let root = store_for(&app)?.path().to_path_buf();
-    crate::local::remove(&root)?;
-    Ok(crate::local::status(&root))
+    crate::local::remove(&root, &id)?;
+    Ok(crate::local::status(&root, &crate::settings::load(&root).offline_model))
 }

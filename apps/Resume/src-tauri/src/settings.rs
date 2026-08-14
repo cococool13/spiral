@@ -21,6 +21,11 @@ pub struct EngineSettings {
     pub model: String,
     /// Only meaningful for "compatible".
     pub base_url: String,
+    /// Which offline model to run, by catalogue id. Empty means "the one that
+    /// is installed" — which is unambiguous until a second one is, and then
+    /// the app asks rather than guessing.
+    #[serde(default)]
+    pub offline_model: String,
 }
 
 impl Default for EngineSettings {
@@ -29,6 +34,7 @@ impl Default for EngineSettings {
             provider: "anthropic".to_string(),
             model: crate::provider::ANTHROPIC_DEFAULT_MODEL.to_string(),
             base_url: String::new(),
+            offline_model: String::new(),
         }
     }
 }
@@ -65,6 +71,21 @@ mod tests {
         assert!(!settings.model.is_empty());
     }
 
+    /// A settings file written before the offline tier had a choice in it must
+    /// still load — it is the user's engine configuration, not a cache.
+    #[test]
+    fn a_file_written_before_the_choice_existed_still_loads() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            path_in(dir.path()),
+            br#"{"provider":"local","model":"","baseUrl":""}"#,
+        )
+        .unwrap();
+        let loaded = load(dir.path());
+        assert_eq!(loaded.provider, "local");
+        assert_eq!(loaded.offline_model, "");
+    }
+
     #[test]
     fn settings_round_trip() {
         let dir = tempfile::tempdir().unwrap();
@@ -72,6 +93,7 @@ mod tests {
             provider: "compatible".into(),
             model: "llama-3".into(),
             base_url: "http://localhost:11434/v1".into(),
+            offline_model: "qwen3.5-4b".into(),
         };
         save(dir.path(), &settings).unwrap();
         assert_eq!(load(dir.path()), settings);

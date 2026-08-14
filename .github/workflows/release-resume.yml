@@ -24,8 +24,9 @@ name: release-resume
 # `externalBin`; it is kept separate so that a machine without the binary can
 # still compile and test the app with the plain config.
 #
-# The model itself is not in the release. It is a 2.7 GB download the user
-# chooses in Settings, verified against the sha256 pinned in
+# The models themselves are not in the release. The catalogue pins three sizes
+# of Qwen3.5 — 1.3 GB, 2.7 GB and 5.7 GB — and the user picks one in Settings
+# and downloads it, verified against the sha256 pinned in
 # `apps/Resume/assets/model-catalogue.json` before it is installed.
 #
 # The cost is build time: llama.cpp is compiled twice on macOS (arm64 and

@@ -270,6 +270,103 @@ mod live {
             .join(format!("llama-server-{triple}"))
     }
 
+    /// The same bullet through whichever model `SPIRAL_RESUME_MODEL` points at.
+    /// Run it once per catalogue entry to compare them on the actual task —
+    /// which is the only way to say one is better than another without making
+    /// it up.
+    ///
+    /// The bullets a comparison is made on. Each carries something the fact
+    /// gate will check — a number, a proper noun, an acronym — and each is
+    /// written the way people actually write them, which is the way that most
+    /// needs tightening.
+    const BULLETS: [&str; 6] = [
+        "Was responsible for cutting report turnaround from 9 days to 2 days across 6 teams at the Admiralty",
+        "Helped to build and then maintain the CI/CD pipeline that is used by 40 engineers on a daily basis",
+        "I was the person who led the migration of 12 TB of data from Oracle to PostgreSQL over 8 months",
+        "Worked closely with stakeholders in order to deliver a 23% reduction in AWS spend in Q3 2024",
+        "Responsible for mentoring 4 junior analysts and running the weekly review meeting every Thursday",
+        "Took ownership of the ISO 27001 audit and got it over the line with zero non-conformities",
+    ];
+
+    /// What each model actually does with the same six bullets, so that
+    /// "this one is better" is a measurement rather than an opinion. The
+    /// rejection count is the number that matters: a model that invents a fact
+    /// is refused by the gate, and a model that invents them often is one the
+    /// user would have to fight.
+    ///
+    /// ```text
+    /// pnpm pin-model "<url>" --id <id> --keep /tmp/candidate.gguf
+    /// SPIRAL_RESUME_MODEL=/tmp/candidate.gguf \
+    ///   cargo test --lib sidecar::live::compare -- --ignored --nocapture
+    /// ```
+    #[tokio::test]
+    #[ignore]
+    async fn compare() {
+        let model = PathBuf::from(
+            std::env::var("SPIRAL_RESUME_MODEL")
+                .expect("set SPIRAL_RESUME_MODEL to the downloaded .gguf"),
+        );
+        let binary = built_sidecar();
+        assert!(binary.exists(), "run `pnpm build-sidecar` first: {binary:?}");
+
+        let doc = ResumeDoc {
+            experience: vec![Role {
+                id: "exp-0".into(),
+                title: "Analyst".into(),
+                organization: "Admiralty".into(),
+                bullets: BULLETS
+                    .iter()
+                    .enumerate()
+                    .map(|(i, text)| Bullet {
+                        id: format!("exp-0-b-{i}"),
+                        text: (*text).into(),
+                    })
+                    .collect(),
+                ..Role::default()
+            }],
+            ..ResumeDoc::empty()
+        };
+
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let engine = Sidecar::start(&binary, &model, port).expect("the engine did not start");
+        let loading = std::time::Instant::now();
+        wait_until_ready(port, READY_ATTEMPTS)
+            .await
+            .expect("the engine never became ready");
+        let loaded = loading.elapsed();
+
+        let provider = crate::provider::Provider::Local {
+            base_url: engine.url(),
+        };
+        let writing = std::time::Instant::now();
+        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local")
+            .await
+            .expect("the offline rewrite failed");
+        let wrote = writing.elapsed();
+
+        println!("\n=== {} ===", model.display());
+        println!("load {:.1}s · rewrite {:.1}s", loaded.as_secs_f32(), wrote.as_secs_f32());
+        println!("rewritten {} · refused by the gate {}", outcome.rewritten, outcome.rejected);
+        for (before, after) in BULLETS.iter().zip(&out.experience[0].bullets) {
+            let changed = if *before == after.text { "  =" } else { "  →" };
+            println!("{changed} {}", after.text);
+        }
+        // Whatever the model wrote, the facts on the page are the user's.
+        for (before, after) in BULLETS.iter().zip(&out.experience[0].bullets) {
+            for number in crate::gate::digit_runs(before) {
+                assert!(
+                    after.text.contains(&number),
+                    "{number} left the page: {before} -> {}",
+                    after.text
+                );
+            }
+        }
+    }
+
     /// A bullet with numbers and proper nouns in it, rewritten by a model that
     /// is running on this machine, and checked by the same fact gate a paid key
     /// answers to. Anything else — a refusal, a hang, an invented number — is
