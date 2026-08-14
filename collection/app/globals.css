@@ -59,7 +59,6 @@ section[id] {
 a:focus-visible {
   outline: 2px solid var(--spiral-red);
   outline-offset: 3px;
-  border-radius: 2px;
 }
 
 /* The hero mark ships hidden in server HTML so it never flashes fully
@@ -204,14 +203,274 @@ p {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Floating nav pill container — glass, never flush to y=0 */
+/* Block CTA — the hero's one primary action. Square corners, which is the
+   only radius this system allows besides a full pill: a paper field carrying
+   the words, and a red chip carrying the action. Red stays the interaction
+   colour and nothing else on the surface competes with it. */
+.btn-block {
+  display: inline-flex;
+  align-items: stretch;
+  min-height: 52px;
+  border-radius: 0;
+  background: var(--spiral-paper);
+  color: var(--spiral-ink);
+  font-family: var(--spiral-font-mono);
+  font-weight: 500;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  box-shadow: rgba(0, 0, 0, 0.45) 0 18px 40px -18px;
+  transition:
+    transform var(--spiral-dur-fast) var(--spiral-ease),
+    box-shadow var(--spiral-dur-fast) var(--spiral-ease);
+}
+.btn-block__label {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+.btn-block__chip {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  flex: none;
+  background: var(--spiral-red);
+  color: var(--spiral-paper);
+  transition: background var(--spiral-dur-fast) var(--spiral-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-block:hover {
+    transform: translateY(-2px);
+    box-shadow: rgba(0, 0, 0, 0.55) 0 24px 48px -20px;
+  }
+  .btn-block:hover .btn-block__chip {
+    background: var(--spiral-oxblood);
+  }
+}
+.btn-block:active {
+  transform: translateY(0) scale(0.985);
+}
+.btn-block:focus-visible {
+  outline: 2px solid var(--spiral-red);
+  outline-offset: 3px;
+}
+
+/* Rise — the arrival entrance, for things already on screen at load.
+   In CSS rather than in JavaScript for the same reason as `.reveal`, plus one
+   specific to the hero: the headline is the LCP element, and shipping it as
+   `opacity: 0` made the largest paint wait on a framer chunk. A CSS animation
+   runs whether or not script does. */
+.rise {
+  animation: rise-in 640ms var(--spiral-ease) both;
+  animation-delay: calc(var(--rise-step, 0) * 90ms);
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The figure arrives by settling rather than rising; it has no baseline to
+   travel to. */
+.rise--figure {
+  animation-name: rise-figure;
+  animation-duration: 900ms;
+}
+@keyframes rise-figure {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
+
+/* Reveal — the section entrance, on a view timeline rather than in JavaScript.
+   Visible is the default state and the rise is the enhancement, so nothing on
+   the page depends on a script having run. A browser without view timelines
+   shows the content and skips the movement, which is the correct trade for a
+   decorative entrance.
+
+   `--reveal-step` staggers a group. Scroll-driven animations have no time
+   delay, so each item instead starts its rise a little further into the
+   section's entry. */
+.reveal {
+  --reveal-step: 0;
+  /* Scroll distance one rung of the stagger is worth. The default suits a
+     handful of blocks; a dense list sets it far smaller so 54 rungs still fit
+     inside the section's entry. */
+  --reveal-spread: 7%;
+  /* How far the element travels. Small items move a small distance. */
+  --reveal-lift: 32px;
+}
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--reveal-lift));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-rise linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--reveal-step) * var(--reveal-spread)) cover 24%;
+    }
+  }
+}
+
+/* Work card — the cover arrives by disintegrating the panel in front of it.
+   A grid of solid tiles sits over the image and each one fades out on its own
+   delay, so the picture resolves in blocks rather than by crossfading. The
+   image underneath is one lazily-loaded picture; the tiles are flat colour,
+   which is what keeps 7 cards' worth of them cheap.
+
+   `--tile-delay` is set per tile from a fixed shuffle, so the order is
+   scattered but identical on every render and on the server. */
+.work-tile {
+  background: var(--spiral-conc-01);
+  /* Grows each tile 1px in every direction so neighbours overlap. Without it
+     the subpixel gaps between grid cells let the picture underneath show as a
+     grid of hairlines while the card is at rest — the panel has to read as one
+     flat surface until it breaks. The shadow fades with the tile. */
+  box-shadow: 0 0 0 1px var(--spiral-conc-01);
+  opacity: 1;
+  transition: opacity 260ms var(--spiral-ease);
+  transition-delay: 0ms;
+}
+.work-card:hover .work-tile,
+.work-card:focus-visible .work-tile,
+.work-card:focus-within .work-tile {
+  opacity: 0;
+  transition-delay: var(--tile-delay, 0ms);
+}
+/* The description gives way to the picture; the name and kind stay, over a
+   scrim, because an index whose labels vanish when you look at it is not an
+   index. The reference this follows drops its text entirely — this keeps the
+   two lines that say which project you are looking at. */
+.work-blurb {
+  transition: opacity 220ms var(--spiral-ease);
+}
+.work-card:hover .work-blurb,
+.work-card:focus-within .work-blurb {
+  opacity: 0;
+}
+.work-scrim {
+  opacity: 0;
+  transition: opacity 320ms var(--spiral-ease);
+}
+.work-card:hover .work-scrim,
+.work-card:focus-within .work-scrim {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-tile,
+  .work-blurb,
+  .work-scrim {
+    transition-duration: 1ms;
+  }
+  .work-card:hover .work-tile,
+  .work-card:focus-visible .work-tile,
+  .work-card:focus-within .work-tile {
+    transition-delay: 0ms;
+  }
+}
+
+/* Footer room — one-point perspective, and the single source of its geometry.
+   Every wall polygon, the panel and the rim read these four numbers, so the
+   perspective cannot come apart.
+
+   Narrow first. A footer on a phone is tall and thin, and the desktop numbers
+   there produce a vertical shaft whose panel runs straight down the middle of
+   the content. Wide-and-shallow keeps the panel a band the copy sits over
+   rather than a bar the copy is split by. */
+.footer-room {
+  --room-l: 12%;
+  --room-r: 88%;
+  --room-t: 32%;
+  --room-b: 56%;
+}
+@media (min-width: 1024px) {
+  .footer-room {
+    --room-l: 28%;
+    --room-r: 72%;
+    --room-t: 25%;
+    --room-b: 66%;
+  }
+}
+
+/* Hero orbit — the rosette behind the mark. Each ring turns at its own rate
+   about the shared centre, which is what makes the figure read as orbits
+   rather than as a spinning graphic. Transform-only, so it composites. */
+.orbit-ring {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: orbit-turn var(--orbit-dur, 72s) linear infinite;
+}
+.orbit-ring--rev {
+  animation-direction: reverse;
+}
+@keyframes orbit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* A slow lean, so the rosette sits in space instead of flat on the glass */
+.orbit-tilt {
+  animation: orbit-lean 28s ease-in-out infinite alternate;
+}
+@keyframes orbit-lean {
+  from {
+    transform: perspective(1400px) rotateX(20deg) rotateZ(-4deg);
+  }
+  to {
+    transform: perspective(1400px) rotateX(9deg) rotateZ(4deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring,
+  .orbit-tilt {
+    animation: none;
+  }
+  .orbit-tilt {
+    transform: perspective(1400px) rotateX(14deg);
+  }
+  .btn-block,
+  .btn-block:hover,
+  .btn-block__chip {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Floating nav pill container — glass, never flush to y=0.
+
+   The fill is opaque enough to survive the page passing underneath it. At
+   0.55 it composited to rgb(116,116,115) over the light Other Work section and
+   the links landed at 1.40:1 — the site's only persistent navigation, gone,
+   for a whole viewport. It also let card headings print straight through the
+   bar over the app grid. The blur stays; the transparency is what had to go. */
 .nav-pill {
   border-radius: var(--spiral-radius-ctl);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(11, 11, 12, 0.55);
+  background: rgba(11, 11, 12, 0.92);
   backdrop-filter: var(--spiral-glass-blur);
   -webkit-backdrop-filter: var(--spiral-glass-blur);
-  box-shadow: rgba(0, 0, 0, 0.04) 0 4px 24px;
+  box-shadow: rgba(0, 0, 0, 0.28) 0 4px 24px;
 }
 
 /* Other Work rail — a scroll container, so it keeps a visible track. Hiding

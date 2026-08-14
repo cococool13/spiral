@@ -30,12 +30,15 @@ function Sheet({
   index: number;
   progress: ReturnType<typeof useScroll>["scrollYProgress"];
 }) {
-  const { opacity, y, scale } = useCrossfade(progress, index, SHEETS.length);
+  const { opacity, y, scale, off } = useCrossfade(progress, index, SHEETS.length);
 
   return (
     <m.figure
+      // Otherwise every sheet is announced at once, all but one of them
+      // invisible, each with its own alt text.
+      inert={off || undefined}
       className="absolute inset-0 flex items-center justify-center"
-      style={{ opacity, y, scale }}
+      style={{ opacity, y, scale, visibility: off ? "hidden" : "visible" }}
     >
       <Image
         src={`/resume/${sheet.id}.svg`}
@@ -90,7 +93,7 @@ export default function TemplateSequence() {
   // layout is still shown; none of them move.
   if (reduced) {
     return (
-      <section aria-label="The twelve layouts" className="mx-auto max-w-6xl px-6 py-32">
+      <section aria-label="The twelve layouts" className="mx-auto max-w-6xl px-6 py-24">
         <ul className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {SHEETS.map((sheet) => (
             <li key={sheet.id}>

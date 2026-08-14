@@ -1,12 +1,14 @@
 "use client";
 
 import type { SpiralApp } from "@/lib/apps";
+import { offerFor } from "@/lib/downloadOffer";
 import { useOS } from "@/lib/useOS";
 
 interface Props {
-  downloads: NonNullable<SpiralApp["downloads"]>;
-  /** No Windows installer exists. Never show a download verb for it. */
-  noWindowsBinary?: boolean;
+  /** The whole app, not just its downloads: what a visitor may be offered is
+   *  decided from the catalogue entry, so `noWindowsBinary` cannot be left
+   *  behind at a call site. */
+  app: SpiralApp;
   secondary?: boolean;
 }
 
@@ -45,44 +47,28 @@ function WindowsMark() {
 }
 
 /**
- * The one glassmorphism moment on the site. Auto-detects the visitor's OS
- * and routes to the matching release asset; other platforms get the
- * releases page.
+ * The one glassmorphism moment on the site. What it offers is decided by
+ * `offerFor` — see there for why that decision has exactly one home.
  *
- * On a detected platform the OS name is replaced by its mark ("Download for"
- * + glyph). The full label stays on aria-label, so assistive tech still hears
- * "Download for Mac" — the glyph is decoration, never the only signal.
+ * On a platform with a mark, the OS name is replaced by its glyph ("Download
+ * for" + glyph). The full label stays on aria-label, so assistive tech still
+ * hears "Download for Mac" — the glyph is decoration, never the only signal.
  */
-export default function GlassPillCTA({ downloads, noWindowsBinary, secondary }: Props) {
+export default function GlassPillCTA({ app, secondary }: Props) {
   const os = useOS();
-  // With no Windows installer to offer, the pill points at the repository and
-  // says so, rather than dressing a source link up as a download. The Windows
-  // mark is dropped too: a download glyph on a "build it" link is a lie a
-  // person only discovers after clicking.
-  const offMac = noWindowsBinary === true && os !== "mac";
-  const target = offMac
-    ? downloads.windows
-    : os === "mac"
-      ? downloads.mac
-      : os === "windows"
-        ? downloads.windows
-        : { url: downloads.all, label: "Download" };
+  const offer = offerFor(app, os);
+  if (!offer) return null;
 
-  const Mark = offMac
-    ? null
-    : os === "mac"
-      ? AppleMark
-      : os === "windows"
-        ? WindowsMark
-        : null;
+  const Mark =
+    offer.mark === "apple" ? AppleMark : offer.mark === "windows" ? WindowsMark : null;
 
   return (
     <a
-      href={target.url}
-      aria-label={target.label}
+      href={offer.url}
+      aria-label={offer.label}
       className={`glass-pill${secondary ? " glass-pill--secondary" : ""}`}
     >
-      {Mark ? "Download for" : target.label}
+      {Mark ? "Download for" : offer.label}
       {Mark && <Mark />}
     </a>
   );

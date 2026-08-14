@@ -5,7 +5,7 @@
 //! `sys.inputs.resume`, and `prelude.typ` decodes it. That is why this file
 //! contains no escaping: there is no string to escape into.
 
-use crate::docx::DocxStyle;
+use crate::docx::{DocxStyle, Part, SectionSpec};
 use crate::model::ResumeDoc;
 use typst::foundations::{Dict, IntoValue, Str};
 
@@ -16,10 +16,103 @@ pub struct Template {
     /// The same design expressed in Word's terms. Declared here, beside the
     /// Typst source, so the two halves of a template cannot drift apart.
     pub docx: DocxStyle,
+    /// The sections this template prints, in order, under the names it gives
+    /// them. Read by the DOCX half; checked against the Typst half by
+    /// `sections_match_the_typst_source`, so the declaration cannot go stale.
+    pub sections: &'static [SectionSpec],
 }
 
 const SERIF: &str = "Times New Roman";
 const SANS: &str = "Arial";
+
+use Part::{Awards, Education, Experience, Interests, Leadership, Projects, Skills, Summary};
+
+/// The order eight of the twelve templates use. Named so the five that share it
+/// say so, and the seven that do not are visibly different rather than
+/// accidentally so.
+const CLASSIC: &[SectionSpec] = &[
+    SectionSpec { title: "Summary", parts: &[Summary] },
+    SectionSpec { title: "Experience", parts: &[Experience] },
+    SectionSpec { title: "Projects", parts: &[Projects] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Leadership & Activities", parts: &[Leadership] },
+    SectionSpec { title: "Awards", parts: &[Awards] },
+    SectionSpec { title: "Skills", parts: &[Skills] },
+    SectionSpec { title: "Interests", parts: &[Interests] },
+];
+
+const BULLET_SECTIONS: &[SectionSpec] = &[
+    SectionSpec { title: "Summary", parts: &[Summary] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Experience", parts: &[Experience] },
+    SectionSpec { title: "Leadership & Activities", parts: &[Leadership] },
+    SectionSpec { title: "Projects", parts: &[Projects] },
+    SectionSpec { title: "Awards", parts: &[Awards] },
+    SectionSpec { title: "Skills & Interests", parts: &[Skills, Interests] },
+];
+
+const BRIEF_SECTIONS: &[SectionSpec] = &[
+    SectionSpec { title: "", parts: &[Summary] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Work Experience", parts: &[Experience] },
+    SectionSpec { title: "Leadership Activities", parts: &[Leadership] },
+    SectionSpec { title: "Projects", parts: &[Projects] },
+    SectionSpec { title: "Additional", parts: &[Skills, Awards, Interests] },
+];
+
+const CHRONICLE_SECTIONS: &[SectionSpec] = &[
+    SectionSpec { title: "Summary", parts: &[Summary] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Experience", parts: &[Experience] },
+    SectionSpec { title: "Projects", parts: &[Projects] },
+    SectionSpec { title: "Activities & Extracurriculars", parts: &[Leadership] },
+    SectionSpec { title: "Awards & Accomplishments", parts: &[Awards] },
+    SectionSpec { title: "Skills & Interests", parts: &[Skills, Interests] },
+];
+
+const INDEX_SECTIONS: &[SectionSpec] = &[
+    SectionSpec { title: "Summary", parts: &[Summary] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Skills & Proficiencies", parts: &[Skills] },
+    SectionSpec { title: "Professional Experience", parts: &[Experience] },
+    SectionSpec { title: "Projects", parts: &[Projects] },
+    SectionSpec { title: "Leadership Experience", parts: &[Leadership] },
+    SectionSpec { title: "Awards", parts: &[Awards] },
+    SectionSpec { title: "Interests", parts: &[Interests] },
+];
+
+const TIMELINE_SECTIONS: &[SectionSpec] = &[
+    SectionSpec { title: "Summary", parts: &[Summary] },
+    SectionSpec { title: "Top Skills", parts: &[Skills] },
+    SectionSpec { title: "Work Experience", parts: &[Experience] },
+    SectionSpec { title: "Projects", parts: &[Projects] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Leadership & Activities", parts: &[Leadership] },
+    SectionSpec { title: "Awards", parts: &[Awards] },
+    SectionSpec { title: "Interests", parts: &[Interests] },
+];
+
+const BLEND_SECTIONS: &[SectionSpec] = &[
+    SectionSpec { title: "", parts: &[Summary] },
+    SectionSpec { title: "Skills and Accomplishments", parts: &[Skills] },
+    SectionSpec { title: "Work Experience", parts: &[Experience] },
+    SectionSpec { title: "Projects", parts: &[Projects] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Leadership & Activities", parts: &[Leadership] },
+    SectionSpec { title: "Awards", parts: &[Awards] },
+    SectionSpec { title: "Interests", parts: &[Interests] },
+];
+
+const LEAD_SECTIONS: &[SectionSpec] = &[
+    SectionSpec { title: "", parts: &[Summary] },
+    SectionSpec { title: "Core Competencies", parts: &[Skills] },
+    SectionSpec { title: "Professional Experience", parts: &[Experience] },
+    SectionSpec { title: "Selected Projects", parts: &[Projects] },
+    SectionSpec { title: "Board & Leadership", parts: &[Leadership] },
+    SectionSpec { title: "Education", parts: &[Education] },
+    SectionSpec { title: "Awards", parts: &[Awards] },
+    SectionSpec { title: "Interests", parts: &[Interests] },
+];
 
 const PRELUDE: &str = include_str!("prelude.typ");
 
@@ -37,6 +130,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: CLASSIC,
     },
     Template {
         id: "ledger",
@@ -51,6 +145,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: true,
         },
+        sections: CLASSIC,
     },
     Template {
         id: "sheet",
@@ -65,6 +160,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: CLASSIC,
     },
     Template {
         id: "rule",
@@ -79,6 +175,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: CLASSIC,
     },
     Template {
         id: "card",
@@ -93,6 +190,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: Some(crate::accent::SHADING),
             date_rail: false,
         },
+        sections: CLASSIC,
     },
     Template {
         id: "bullet",
@@ -107,6 +205,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: BULLET_SECTIONS,
     },
     Template {
         id: "brief",
@@ -121,6 +220,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: BRIEF_SECTIONS,
     },
     Template {
         id: "chronicle",
@@ -135,6 +235,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: CHRONICLE_SECTIONS,
     },
     Template {
         id: "index",
@@ -149,6 +250,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: INDEX_SECTIONS,
     },
     Template {
         id: "timeline",
@@ -163,6 +265,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: TIMELINE_SECTIONS,
     },
     Template {
         id: "blend",
@@ -177,6 +280,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: BLEND_SECTIONS,
     },
     Template {
         id: "lead",
@@ -191,6 +295,7 @@ const TEMPLATES: &[Template] = &[
             header_shading: None,
             date_rail: false,
         },
+        sections: LEAD_SECTIONS,
     },
 ];
 
@@ -314,6 +419,67 @@ Weaving, Music
     fn find_resolves_a_known_id_and_rejects_an_unknown_one() {
         assert_eq!(find("column").map(|t| t.name), Some("Column"));
         assert!(find("nonesuch").is_none());
+    }
+
+    /// The declaration and the Typst source have to say the same thing, or the
+    /// Word file goes back to being a different document from the PDF.
+    ///
+    /// The `.typ` file is the design; `sections` is the machine-readable copy
+    /// the DOCX half reads. This pulls every `#section("…")` out of the source
+    /// in order and holds the two side by side. Reorder a template, rename one
+    /// of its headings, or add a section, and this fails by name.
+    ///
+    /// Unlabelled parts — the three templates that open on the summary with no
+    /// heading — carry an empty title and are skipped here, because the source
+    /// has no `#section` call to match them against.
+    #[test]
+    fn sections_match_the_typst_source() {
+        for template in TEMPLATES {
+            let in_source: Vec<&str> = template
+                .source
+                .match_indices("#section(\"")
+                .map(|(at, marker)| {
+                    let rest = &template.source[at + marker.len()..];
+                    &rest[..rest.find('"').expect("unterminated #section title")]
+                })
+                .collect();
+            let declared: Vec<&str> = template
+                .sections
+                .iter()
+                .map(|s| s.title)
+                .filter(|title| !title.is_empty())
+                .collect();
+            assert_eq!(
+                declared, in_source,
+                "template `{}`: `sections` and {}.typ disagree",
+                template.id, template.id
+            );
+        }
+    }
+
+    /// Every part of the document reaches Word in some section. A part left out
+    /// of a template's declaration is content silently dropped from the .docx.
+    #[test]
+    fn every_template_carries_every_part() {
+        use crate::docx::Part::*;
+        for template in TEMPLATES {
+            for part in [
+                Summary,
+                Experience,
+                Projects,
+                Education,
+                Leadership,
+                Awards,
+                Skills,
+                Interests,
+            ] {
+                assert!(
+                    template.sections.iter().any(|s| s.parts.contains(&part)),
+                    "template `{}` never prints {part:?}",
+                    template.id
+                );
+            }
+        }
     }
 
     #[test]
@@ -464,7 +630,7 @@ mod dump {
             // one of the three that shows how the pages actually break.
             let pdf = super::to_pdf(template, &doc, "ink").unwrap();
             std::fs::write(out.join(format!("{}.pdf", template.id)), pdf).unwrap();
-            let docx = crate::docx::to_docx(&doc, &template.docx, "ink").unwrap();
+            let docx = crate::docx::to_docx(&doc, &template.docx, template.sections, "ink").unwrap();
             let docx_path = out.join(format!("{}.docx", template.id));
             std::fs::write(&docx_path, docx).unwrap();
             println!("wrote {} and {}", path.display(), docx_path.display());

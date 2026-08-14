@@ -18,7 +18,6 @@ export default function SlimPage() {
       page={page}
       afterHero={
         <HeroProof
-          eyebrow="What it actually changes"
           heading="It prints this list before it writes a thing."
           note="The real policy names from the Brave Maximum Privacy preset, read out of the file the tool ships. You approve a list you have read, not a checkbox that says harden."
         >

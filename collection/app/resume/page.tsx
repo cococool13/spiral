@@ -18,8 +18,7 @@ function FactGate() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-32 sm:py-40">
       <Reveal>
-        <p className="type-eyebrow text-paper">The fact gate</p>
-        <h2 className="type-display mt-4 max-w-2xl text-4xl text-paper sm:text-5xl">
+        <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
           What a rewrite is allowed to change.
         </h2>
         <p className="mt-6 max-w-xl text-gray">
@@ -45,7 +44,7 @@ function FactGate() {
             </p>
           </article>
         </Reveal>
-        <Reveal delay={0.05}>
+        <Reveal step={1}>
           <article className="h-full border border-red/40 p-8">
             <p className="type-eyebrow text-paper">Discarded</p>
             <p className="mt-6 text-sm text-gray">You wrote</p>

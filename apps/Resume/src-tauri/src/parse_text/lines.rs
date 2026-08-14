@@ -136,6 +136,10 @@ pub(super) fn lines_of(input: &str) -> Vec<String> {
         if line.is_empty() {
             continue;
         }
+        // Letter-spacing repair runs first, because the wide gap between words
+        // is the only thing that tells "A D A   L O V E L A C E" from three
+        // separate words — and the collapse on the next line destroys it.
+        let line = untrack(line);
         // Word and PDF alike pad a line out with tabs to push a date to the
         // right margin. Those runs arrive as whitespace, and a line's length is
         // how the parser tells a heading from a sentence — so one space it is.
@@ -168,6 +172,56 @@ pub(super) fn lines_of(input: &str) -> Vec<String> {
     lines
 }
 
+/// "A D A   L O V E L A C E" back into "ADA LOVELACE".
+///
+/// Designers letter-space names and section headings, and both a PDF extractor
+/// and a Word export store the tracking as real space between the glyphs — so
+/// every letter reads as a word. Whole sections disappear this way, because a
+/// heading like "E D U C A T I O N" matches nothing.
+///
+/// This lived in `import/pdf.rs`, which meant the same heading survived a PDF
+/// and was lost from a paste or a `.docx`. It belongs here, where all three
+/// doors reach it, and it must run before the whitespace collapse — the wider
+/// gap is the word boundary, and the collapse is what erases it.
+fn untrack(line: &str) -> String {
+    split_on_wide_gaps(line)
+        .into_iter()
+        .map(|segment| {
+            let letters: Vec<&str> = segment.split_whitespace().collect();
+            // Three or more, all single characters: this was one word, spread.
+            if letters.len() >= 3 && letters.iter().all(|l| l.chars().count() == 1) {
+                letters.concat()
+            } else {
+                segment
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn split_on_wide_gaps(line: &str) -> Vec<String> {
+    let mut segments = Vec::new();
+    let mut current = String::new();
+    let mut spaces = 0usize;
+    for c in line.chars() {
+        if c.is_whitespace() {
+            spaces += 1;
+            continue;
+        }
+        if spaces >= 2 && !current.is_empty() {
+            segments.push(std::mem::take(&mut current));
+        } else if spaces == 1 && !current.is_empty() {
+            current.push(' ');
+        }
+        spaces = 0;
+        current.push(c);
+    }
+    if !current.is_empty() {
+        segments.push(current);
+    }
+    segments
+}
+
 /// Every character a resume uses to mark a bullet. `\u{f0b7}` is the one Word
 /// writes: its bullets are a Symbol-font glyph in the private-use area, and
 /// both Word export and PDF extraction hand it over unchanged.
@@ -194,4 +248,62 @@ pub(super) fn bullet_text(line: &str) -> String {
         return line[1..].trim().to_string();
     }
     line.trim_start_matches(BULLET_MARKS).trim().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn one(input: &str) -> String {
+        lines_of(input).join("\n")
+    }
+
+    /// Letter-spaced headings and names are how a designed resume loses whole
+    /// sections on the way in. These assertions used to sit in `import/pdf`,
+    /// which is exactly why a paste and a `.docx` did not get the repair.
+    #[test]
+    fn tracking_is_read_back_as_words() {
+        assert_eq!(one("A D A   L O V E L A C E"), "ADA LOVELACE");
+        assert_eq!(one("E D U C A T I O N"), "EDUCATION");
+    }
+
+    /// An ordinary line is left exactly as it was. Two initials are not a
+    /// letter-spaced word, and neither is a line with real words in it.
+    #[test]
+    fn ordinary_lines_are_not_squeezed_together() {
+        assert_eq!(one("J. R. R. Tolkien"), "J. R. R. Tolkien");
+        assert_eq!(one("R  C  Python"), "R C Python");
+        assert_eq!(
+            one("ANALYST | Admiralty 2021 — 2023"),
+            "ANALYST | Admiralty 2021 — 2023"
+        );
+    }
+
+    #[test]
+    fn ragged_whitespace_collapses_without_joining_lines() {
+        assert_eq!(one("  Ada   Lovelace \n\n\n  Analyst  "), "Ada Lovelace\nAnalyst");
+    }
+
+    /// Every mark in `BULLET_MARKS` is a bullet, and the mark is stripped from
+    /// the text. The `.docx` importer used to know three of these twelve.
+    #[test]
+    fn every_bullet_mark_is_recognised_and_stripped() {
+        for mark in BULLET_MARKS {
+            let line = format!("{mark} Wrote the parser");
+            assert!(is_bullet(&line), "{mark:?} is not read as a bullet");
+            assert_eq!(bullet_text(&line), "Wrote the parser", "mark {mark:?} survived");
+        }
+    }
+
+    #[test]
+    fn a_lone_mark_is_joined_to_the_line_under_it() {
+        assert_eq!(one("•\nWrote the parser"), "• Wrote the parser");
+    }
+
+    #[test]
+    fn furniture_is_dropped_and_a_bare_year_is_not_furniture() {
+        assert_eq!(one("Page 2 of 3"), "");
+        assert_eq!(one("_______"), "");
+        assert_eq!(one("2019"), "2019");
+    }
 }

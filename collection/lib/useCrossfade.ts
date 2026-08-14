@@ -1,4 +1,5 @@
-import { type MotionValue, useTransform } from "framer-motion";
+import { type MotionValue, useMotionValueEvent, useTransform } from "framer-motion";
+import { useState } from "react";
 
 /**
  * One panel's slice of a sticky scroll sequence.
@@ -17,7 +18,14 @@ export function useCrossfade(
   count: number,
 ) {
   const span = 1 / count;
-  const fade = span * 0.25;
+  // 0.06, not 0.25. At a quarter of a span the ramps at each boundary were
+  // 0.125 of total progress wide — 878px of a 2,340px scroll range, 37.5%, in
+  // which two panels were both legible and printed on top of each other.
+  // Because the panels are `absolute inset-0` with different content heights
+  // they did not stack, they smeared, and anyone stopping mid-scroll landed in
+  // it. At 0.06 the boundary reads as a cut with just enough overlap to avoid
+  // the empty stage this constant exists to prevent.
+  const fade = span * 0.06;
   const from = index * span;
   const to = (index + 1) * span;
   const first = index === 0;
@@ -32,6 +40,17 @@ export function useCrossfade(
     last ? "0%" : "-5%",
   ]);
   const scale = useTransform(progress, stops, [first ? 1 : 0.95, 1, 1, last ? 1 : 0.97]);
+  // `off` comes off the same value as the fade, so a panel leaves the tab
+  // order and the accessibility tree exactly when it stops being visible.
+  // Without it every off-panel sat at `opacity: 0` while still focusable:
+  // three focus stops on nothing, and four links all named "What it does".
+  // It is React state rather than a motion value because `inert` is an
+  // attribute, not a style — and it only changes at boundary crossings, so
+  // this re-renders a handful of times across the whole sequence, not once
+  // per frame.
+  const faded = useTransform(opacity, (o) => o < 0.02);
+  const [off, setOff] = useState(() => faded.get());
+  useMotionValueEvent(faded, "change", setOff);
 
-  return { opacity, y, scale };
+  return { opacity, y, scale, off };
 }
