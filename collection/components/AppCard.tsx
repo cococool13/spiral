@@ -8,10 +8,10 @@ export default function AppCard({ app }: { app: SpiralApp }) {
   // version number — the two things that say "this one is real".
   const shipped = live || source;
   return (
-    <article className="flex flex-1 flex-col gap-6 rounded-[2px] border border-white/10 bg-white/[.02] p-8">
+    <article className="flex flex-1 flex-col gap-6 border border-white/10 bg-white/[.02] p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 rounded-[2px]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/15">
             <svg
               width={24}
               height={24}
@@ -31,9 +31,13 @@ export default function AppCard({ app }: { app: SpiralApp }) {
             <p className="mt-1 text-sm text-gray">{app.tagline}</p>
           </div>
         </div>
+        {/* The status word is paper, not red: at 11px helix red on the card is
+            3.85:1 against a 4.5:1 requirement, and small text gets no
+            large-text exemption. The red still says "this one is real" — it is
+            the icon stroke a few pixels to the left. */}
         {shipped && (
           <span className="font-mono text-[11px] uppercase tracking-widest text-gray whitespace-nowrap">
-            <span className="text-red">{live ? "Live" : "Source"}</span>
+            <span className="text-paper">{live ? "Live" : "Source"}</span>
             {app.version && <span className="ml-2">v{app.version}</span>}
           </span>
         )}
@@ -46,13 +50,10 @@ export default function AppCard({ app }: { app: SpiralApp }) {
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-3">
         {live && app.downloads ? (
           <>
-            <GlassPillCTA
-              downloads={app.downloads}
-              noWindowsBinary={app.noWindowsBinary}
-            />
+            <GlassPillCTA app={app} />
             <a
               href={app.downloads.all}
-              className="font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
+              className="inline-flex min-h-11 items-center font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
             >
               All downloads
             </a>
@@ -75,7 +76,7 @@ export default function AppCard({ app }: { app: SpiralApp }) {
         {shipped && app.page ? (
           <a
             href={app.page}
-            className="font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
+            className="inline-flex min-h-11 items-center font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
           >
             What it does
           </a>

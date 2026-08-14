@@ -3,6 +3,8 @@
 import { m, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
 import { useRef } from "react";
+import { appPage } from "@/lib/appPages";
+import { apps } from "@/lib/apps";
 import { SLIM_POLICIES } from "@/lib/slimPolicies";
 import { useCrossfade } from "@/lib/useCrossfade";
 
@@ -24,47 +26,57 @@ interface Panel {
   artifact: "cost" | "policies" | "sheet" | "verdicts";
 }
 
-const PANELS: Panel[] = [
-  {
-    slug: "wallpaper",
-    name: "Wallpaper",
-    line: "Click a wallpaper. It downloads, it is checked, it is your desktop.",
-    href: "/wallpaper/",
-    status: "Out now · 1.0.3",
-    artifact: "cost",
-  },
-  {
-    slug: "slim",
-    name: "Slim",
-    line: "Turns off the telemetry your browser ships with, after showing you every switch.",
-    href: "/slim/",
-    status: "Out now · 1.0.0",
-    artifact: "policies",
-  },
-  {
-    slug: "resume",
-    name: "Resume",
-    line: "Twelve typeset layouts, and a model that is never allowed to change a fact.",
-    href: "/resume/",
-    status: "Not out yet",
-    artifact: "sheet",
-  },
-  {
-    slug: "clean",
-    name: "Clean",
-    line: "Removes caches and uninstalls apps, and mostly it moves things to the Trash.",
-    href: "/clean/",
-    status: "Not out yet · macOS",
-    artifact: "verdicts",
-  },
-];
+/** The line and the artifact are this section's own; the name, the link and
+ *  the status are read from the catalogue. They used to be retyped here, which
+ *  is how "Out now · 1.0.3" got frozen into the file while `apps.ts` moved on. */
+const PANELS: Panel[] = (
+  [
+    {
+      slug: "wallpaper",
+      line: "Click a wallpaper. It downloads, it is checked, it is your desktop.",
+      artifact: "cost",
+    },
+    {
+      slug: "slim",
+      line: "Turns off the telemetry your browser ships with, after showing you every switch.",
+      artifact: "policies",
+    },
+    {
+      slug: "resume",
+      line: "Twelve typeset layouts, and a model that is never allowed to change a fact.",
+      artifact: "sheet",
+    },
+    {
+      slug: "clean",
+      line: "Removes caches and uninstalls apps, and mostly it moves things to the Trash.",
+      artifact: "verdicts",
+    },
+  ] as const
+).map((panel) => {
+  const app = apps.find((a) => a.slug === panel.slug);
+  if (!app?.page) {
+    throw new Error(`Showcase panel "${panel.slug}" has no catalogue entry with a page.`);
+  }
+  return {
+    slug: panel.slug,
+    name: app.name.replace("Spiral ", ""),
+    line: panel.line,
+    href: app.page,
+    status:
+      app.status === "live" && app.version
+        ? `Out now · ${app.version}`
+        : app.status === "source"
+          ? "Source only"
+          : "Not out yet",
+    artifact: panel.artifact,
+  };
+});
 
-const COST = [
-  { value: "4.6 MB", label: "Binary" },
-  { value: "95 MB", label: "Idle memory" },
-  { value: "< 1s", label: "Window on screen" },
-  { value: "0", label: "Background processes" },
-];
+/** Wallpaper's measured cost, read from its page rather than retyped. The two
+ *  copies had already drifted — "Under a second" here had become "< 1s", and
+ *  "None" had become "0" — so the same four numbers said different things in
+ *  two places on the same site. */
+const COST = appPage("wallpaper").facts ?? [];
 
 const VERDICTS = [
   {
@@ -126,7 +138,12 @@ function Artifact({ kind }: { kind: Panel["artifact"] }) {
     <ol className="grid grid-cols-1 gap-px border border-gray/25">
       {VERDICTS.map((v) => (
         <li key={v.verdict} className="p-6">
-          <p className={`type-heading text-lg ${v.tone}`}>{v.verdict}</p>
+          {/* text-xl, not text-lg. Helix red on near-black is 3.99:1 — it
+              clears AA's 3:1 for large text but not the 4.5:1 small text
+              needs, and WCAG counts bold as large only from 18.66px. At 18px
+              "Deleted for good" was the one verdict that failed; at 20px all
+              three pass, and the ladder keeps one size. */}
+          <p className={`type-heading text-xl ${v.tone}`}>{v.verdict}</p>
           <p className="mt-2 font-mono text-xs uppercase tracking-widest text-gray">
             {v.detail}
           </p>
@@ -145,24 +162,34 @@ function Stage({
   index: number;
   progress: MotionValueProgress;
 }) {
-  const { opacity, y, scale } = useCrossfade(progress, index, PANELS.length);
+  const { opacity, y, scale, off } = useCrossfade(progress, index, PANELS.length);
   return (
     <m.div
+      // `visibility` and `inert` together: the first takes it out of the
+      // accessibility tree, the second out of the tab order, and both flip
+      // with the fade rather than being left behind by it.
+      inert={off || undefined}
       className="absolute inset-0 grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16"
-      style={{ opacity, y, scale }}
+      style={{ opacity, y, scale, visibility: off ? "hidden" : "visible" }}
     >
+      {/* Name first. The status is a fact about the app, so it sits with the
+          action rather than announcing the heading from above it. */}
       <div>
-        <p className="type-eyebrow text-paper">{panel.status}</p>
-        <h3 className="type-display mt-4 text-5xl text-paper sm:text-6xl">
-          {panel.name}
-        </h3>
+        <h3 className="type-display text-5xl text-paper sm:text-6xl">{panel.name}</h3>
         <p className="mt-6 max-w-md text-lg text-gray">{panel.line}</p>
-        <a
-          href={panel.href}
-          className="mt-8 inline-flex items-center font-mono text-xs uppercase tracking-widest text-paper underline-offset-8 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:underline focus-visible:outline-2 focus-visible:outline-red"
-        >
-          What it does
-        </a>
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          {/* The visible words stay short; the accessible name names the app,
+              so a screen reader hears four distinct links rather than four
+              called "What it does". */}
+          <a
+            href={panel.href}
+            aria-label={`What Spiral ${panel.name} does`}
+            className="inline-flex min-h-11 items-center font-mono text-xs uppercase tracking-widest text-paper underline-offset-8 transition-colors duration-300 hover:underline focus-visible:outline-2 focus-visible:outline-red"
+          >
+            What it does
+          </a>
+          <p className="type-eyebrow text-gray">{panel.status}</p>
+        </div>
       </div>
       <div className="hidden lg:block">
         <Artifact kind={panel.artifact} />
@@ -197,7 +224,11 @@ export default function Showcase() {
       <section
         ref={stage}
         aria-label="The apps, one at a time"
-        style={{ height: `${PANELS.length * 90}vh` }}
+        // 70vh a panel, not 90. At 90 the section spent 3,240px of scroll to
+        // deliver four sentences, on a page whose argument is that software
+        // should be small. 70 keeps roughly one trackpad flick per panel and
+        // gives 720px back.
+        style={{ height: `${PANELS.length * 70}vh` }}
         className="relative hidden lg:block"
       >
         <div className="sticky top-0 flex h-screen items-center overflow-hidden pt-24 pb-16">
@@ -222,20 +253,23 @@ export default function Showcase() {
  *  reader has asked for reduced motion. */
 function Stacked() {
   return (
-    <section aria-label="The apps" className="mx-auto max-w-6xl px-6 py-32">
+    <section aria-label="The apps" className="mx-auto max-w-6xl px-6 py-24">
       <ul className="grid grid-cols-1 gap-16">
         {PANELS.map((panel) => (
           <li key={panel.slug} className="grid gap-8 lg:grid-cols-2 lg:gap-16">
             <div>
-              <p className="type-eyebrow text-paper">{panel.status}</p>
-              <h3 className="type-display mt-4 text-4xl text-paper">{panel.name}</h3>
+              <h3 className="type-display text-4xl text-paper">{panel.name}</h3>
               <p className="mt-4 max-w-md text-gray">{panel.line}</p>
-              <a
-                href={panel.href}
-                className="mt-6 inline-block font-mono text-xs uppercase tracking-widest text-paper underline-offset-8 hover:underline"
-              >
-                What it does
-              </a>
+              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <a
+                  href={panel.href}
+                  aria-label={`What Spiral ${panel.name} does`}
+                  className="inline-flex min-h-11 items-center font-mono text-xs uppercase tracking-widest text-paper underline-offset-8 hover:underline"
+                >
+                  What it does
+                </a>
+                <p className="type-eyebrow text-gray">{panel.status}</p>
+              </div>
             </div>
             <Artifact kind={panel.artifact} />
           </li>

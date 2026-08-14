@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { type OtherProject, otherWork } from "@/lib/otherWork";
 import Reveal from "./Reveal";
 
@@ -49,13 +49,12 @@ export default function OtherWork() {
 
   return (
     <section id="other-work" className="bg-paper text-ink">
-      <div className="py-32 sm:py-40">
+      <div className="py-24 sm:py-32">
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
             <div className="flex items-end justify-between gap-6">
               <div>
-                <p className="type-eyebrow text-ink">Other Work</p>
-                <h2 className="type-display mt-4 text-4xl text-ink sm:text-5xl">
+                <h2 className="type-display text-4xl text-ink sm:text-5xl">
                   Outside the Collection
                 </h2>
               </div>
@@ -86,12 +85,12 @@ export default function OtherWork() {
             aria-label="Other work"
             className="work-rail mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-6"
           >
-            {otherWork.map((project) => (
+            {otherWork.map((project, i) => (
               <li
                 key={project.id}
-                className="w-[80vw] max-w-[420px] shrink-0 snap-start sm:w-[420px]"
+                className="w-[74vw] max-w-[340px] shrink-0 snap-start sm:w-[340px]"
               >
-                <WorkCard project={project} />
+                <WorkCard project={project} index={i} />
               </li>
             ))}
           </ul>
@@ -101,39 +100,90 @@ export default function OtherWork() {
   );
 }
 
-function WorkCard({ project }: { project: OtherProject }) {
+/** The tile grid, and the order they clear in.
+ *
+ *  A fixed shuffle rather than `Math.random()`: the order has to be identical
+ *  on the server and the client or React rejects the markup, and it has to be
+ *  the same on every card so the effect reads as one behaviour rather than
+ *  seven. 8 x 6 is the coarsest grid that still reads as dissolving rather
+ *  than as wiping. */
+const TILE_COLS = 8;
+const TILE_ROWS = 6;
+const TILE_COUNT = TILE_COLS * TILE_ROWS;
+
+/** Deterministic shuffle of 0..47, from a fixed seed. */
+const TILE_ORDER = (() => {
+  const order = Array.from({ length: TILE_COUNT }, (_, i) => i);
+  let seed = 20260814;
+  for (let i = order.length - 1; i > 0; i--) {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    const j = seed % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+})();
+
+/** Milliseconds between one tile clearing and the next. 48 tiles at 9ms is a
+ *  ~430ms sweep, which finishes just after the 260ms fade of the last tile. */
+const TILE_STEP = 9;
+
+function WorkCard({ project, index }: { project: OtherProject; index: number }) {
   const body = (
     <>
-      <div className="relative aspect-[16/10] overflow-hidden border-b border-conc3 bg-conc1">
-        <Image
-          src={project.cover}
-          alt={project.coverAlt}
-          width={1200}
-          height={750}
-          sizes="(max-width: 640px) 80vw, 420px"
-          className="h-full w-full object-cover object-top transition-transform duration-500 ease-spiral group-hover:scale-[1.03]"
-        />
+      {/* The picture is always in the DOM and always lazy; what changes on
+          hover is the panel in front of it. */}
+      <Image
+        src={project.cover}
+        alt={project.coverAlt}
+        width={1200}
+        height={750}
+        sizes="(max-width: 640px) 80vw, 420px"
+        className="absolute inset-0 h-full w-full object-cover object-top"
+      />
+
+      <div aria-hidden="true" className="absolute inset-0 grid grid-cols-8 grid-rows-6">
+        {TILE_ORDER.map((position, i) => (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: tiles are a fixed grid; position is the identity
+            key={i}
+            className="work-tile"
+            style={{ "--tile-delay": `${position * TILE_STEP}ms` } as CSSProperties}
+          />
+        ))}
       </div>
-      <div className="flex flex-1 flex-col p-6">
-        <div className="flex items-baseline justify-between gap-4">
-          <h3 className="type-heading text-lg">{project.name}</h3>
-          <span className="shrink-0 font-mono text-[11px] uppercase tracking-widest text-steel">
-            {project.kind}
-          </span>
-        </div>
-        <p className="mt-2 text-sm text-steel">{project.description}</p>
-        {project.href && (
-          <span className="mt-4 inline-block font-mono text-xs font-medium text-oxblood underline-offset-4 group-hover:underline">
-            Visit →
-          </span>
-        )}
+
+      {/* Sits under the name once the picture is out, so two lines of label
+          survive on top of a photograph. */}
+      <div
+        aria-hidden="true"
+        className="work-scrim absolute inset-x-0 bottom-0 h-2/5"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent, color-mix(in oklab, var(--spiral-ink) 78%, transparent))",
+        }}
+      />
+
+      <div className="relative flex h-full flex-col justify-end p-6">
+        <span className="work-blurb absolute left-6 top-6 flex h-10 w-10 items-center justify-center bg-ink font-mono text-xs text-paper">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <h3 className="type-heading text-lg text-ink transition-colors duration-300 group-hover:text-paper">
+          {project.name}
+        </h3>
+        <p className="mt-1 font-mono text-[11px] uppercase tracking-widest text-steel transition-colors duration-300 group-hover:text-concrete">
+          {project.kind}
+        </p>
+        <p className="work-blurb mt-3 text-sm text-steel">{project.description}</p>
       </div>
     </>
   );
 
   const shell =
-    "group flex h-full flex-col overflow-hidden rounded-[2px] border border-conc3 bg-white/40";
+    "work-card group relative flex aspect-[4/5] flex-col overflow-hidden border border-conc3 bg-conc1";
 
+  // No link, so no link affordance: an unlinked card reveals its picture and
+  // does nothing else. It used to keep the hover-lift and the image scale of
+  // the linked version, which promised a destination seven times over.
   if (!project.href) return <article className={shell}>{body}</article>;
 
   return (
@@ -141,7 +191,7 @@ function WorkCard({ project }: { project: OtherProject }) {
       href={project.href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${shell} transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]`}
+      className={`${shell} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red`}
     >
       {body}
     </a>
@@ -165,7 +215,7 @@ function RailButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-[2px] border border-conc3 text-ink transition-colors hover:bg-conc1 disabled:cursor-not-allowed disabled:text-steel disabled:hover:bg-transparent"
+      className="flex h-11 w-11 items-center justify-center border border-conc3 text-ink transition-colors hover:bg-conc1 disabled:cursor-not-allowed disabled:text-steel disabled:hover:bg-transparent"
     >
       <svg
         width={18}

@@ -18,7 +18,6 @@ export default function CleanPage() {
       page={page}
       afterHero={
         <HeroProof
-          eyebrow="What it may do to a file"
           heading="Three verdicts, decided before you run it."
           note="A cleaner's screenshot tells you nothing about whether to trust it. The rule governing permanent deletion tells you everything."
         >

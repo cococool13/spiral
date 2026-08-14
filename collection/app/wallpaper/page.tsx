@@ -18,7 +18,6 @@ export default function WallpaperPage() {
       page={page}
       afterHero={
         <HeroProof
-          eyebrow="What it costs to run"
           heading="Measured, not estimated."
           note="From the app's own README, taken on Apple silicon. The last one is not a measurement but a promise: closing the window ends the process."
         >

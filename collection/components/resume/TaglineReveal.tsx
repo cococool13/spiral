@@ -44,7 +44,7 @@ export default function TaglineReveal({ lines }: { lines: string[] }) {
   }, [words.length]);
 
   return (
-    <section className="mx-auto max-w-[680px] px-6 py-32 sm:py-40">
+    <section className="mx-auto max-w-[680px] px-6 py-24 sm:py-32">
       <p className="type-heading text-4xl sm:text-5xl">
         {lines.map((line, lineIndex) => {
           const before = lines
@@ -66,7 +66,15 @@ export default function TaglineReveal({ lines }: { lines: string[] }) {
                     }}
                     className="transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
                     style={{
-                      color: at <= lit ? "var(--spiral-paper)" : "rgba(140,141,138,0.32)",
+                      // The unlit state was rgba(...,0.32), which composites to
+                      // 1.6:1 against the page — unreadable, and these are the
+                      // only words in the section. Mixed from the token instead,
+                      // and set at the level that clears 3:1 for large text, so
+                      // a word you have not reached yet is still a word.
+                      color:
+                        at <= lit
+                          ? "var(--spiral-paper)"
+                          : "color-mix(in oklab, var(--spiral-gray) 70%, transparent)",
                     }}
                   >
                     {word}{" "}

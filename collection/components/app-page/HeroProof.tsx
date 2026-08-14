@@ -12,12 +12,10 @@ import Reveal from "@/components/Reveal";
  * evidence.
  */
 export default function HeroProof({
-  eyebrow,
   heading,
   note,
   children,
 }: {
-  eyebrow: string;
   heading: string;
   note?: string;
   children: ReactNode;
@@ -25,13 +23,12 @@ export default function HeroProof({
   return (
     <section className="mx-auto max-w-6xl px-6 pb-24 sm:pb-32">
       <Reveal>
-        <p className="type-eyebrow text-paper">{eyebrow}</p>
-        <h2 className="type-display mt-4 max-w-2xl text-3xl text-paper sm:text-4xl">
+        <h2 className="type-display max-w-2xl text-3xl text-paper sm:text-4xl">
           {heading}
         </h2>
         {note ? <p className="mt-4 max-w-xl text-gray">{note}</p> : null}
       </Reveal>
-      <Reveal delay={0.05}>
+      <Reveal step={1}>
         <div className="mt-12">{children}</div>
       </Reveal>
     </section>

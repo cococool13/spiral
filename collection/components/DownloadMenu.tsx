@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apps } from "@/lib/apps";
+import { brewCommandFor, offerFor } from "@/lib/downloadOffer";
 import { useOS } from "@/lib/useOS";
 
-const TAP = "cococool13/spiral";
-
 /**
- * The hero's one control: pick an app, get the file. It stays a single pill
- * until it is opened, so the hero reads the same as it did without it.
+ * The hero's one control: pick an app, get the file. Closed it is a single
+ * block — words on paper, action on red — so the hero reads the same as it
+ * did without it.
  *
  * Every row offers the download the visitor's own machine can actually run.
  * On a Mac each row also offers the one-line Homebrew install, because that is
@@ -19,7 +19,20 @@ export default function DownloadMenu() {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const os = useOS();
+
+  // On a short window the panel opens below the fold even once the hero stops
+  // clipping it. Bring it into view rather than leaving the reader to discover
+  // that the thing they just opened is off-screen.
+  useEffect(() => {
+    if (!open) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    panel.current?.scrollIntoView({
+      block: "nearest",
+      behavior: reduced ? "auto" : "smooth",
+    });
+  }, [open]);
 
   const downloadable = apps.filter((a) => a.downloads);
 
@@ -39,10 +52,10 @@ export default function DownloadMenu() {
     };
   }, [open]);
 
-  async function copy(cask: string) {
+  async function copy(command: string) {
     try {
-      await navigator.clipboard.writeText(`brew install --cask ${TAP}/${cask}`);
-      setCopied(cask);
+      await navigator.clipboard.writeText(command);
+      setCopied(command);
       setTimeout(() => setCopied(null), 2000);
     } catch {
       // Clipboard blocked (no permission, or a non-secure origin). The command
@@ -56,32 +69,44 @@ export default function DownloadMenu() {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="glass-pill"
+        className="btn-block"
       >
-        Get an app
-        <svg
-          viewBox="0 0 24 24"
-          width="14"
-          height="14"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden="true"
-          style={{ transform: open ? "rotate(180deg)" : undefined }}
-        >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
+        <span className="btn-block__label">Get an app</span>
+        <span className="btn-block__chip">
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+            style={{
+              transform: open ? "rotate(180deg)" : undefined,
+              transition: "transform var(--spiral-dur-fast) var(--spiral-ease)",
+            }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </span>
       </button>
 
       {open && (
         <div
-          role="dialog"
-          aria-label="Download a Spiral app"
-          className="absolute left-1/2 top-full z-20 mt-3 w-[min(22rem,calc(100vw-3rem))] -translate-x-1/2 rounded-[2px] border border-white/15 bg-black/95 p-2 text-left shadow-2xl backdrop-blur"
+          ref={panel}
+          // No role. This was `role="dialog"`, which promises focus management
+          // it does not have; a plain disclosure — a button carrying
+          // `aria-expanded` followed by the content it reveals — is the honest
+          // pattern and needs no role at all.
+          className="absolute left-0 top-full z-20 mt-3 max-h-[min(26rem,70svh)] w-[min(22rem,calc(100vw-3rem))] overflow-y-auto border border-white/15 bg-black/95 p-2 text-left shadow-2xl backdrop-blur"
         >
           {downloadable.map((app) => {
-            const mac = os !== "windows";
-            const file = mac ? app.downloads?.mac : app.downloads?.windows;
+            // `offerFor`, not a local `os !== "windows"`. That test treated
+            // Linux as mac and never read `noWindowsBinary`, so a Linux
+            // visitor was offered a universal.dmg labelled "Download for Mac".
+            const offer = offerFor(app, os);
+            const brew = brewCommandFor(app, os);
+            if (!offer) return null;
             return (
               <div key={app.slug} className="border-b border-white/10 p-3 last:border-0">
                 {/* A label, not a second link to the same file: a 20px-tall
@@ -92,18 +117,18 @@ export default function DownloadMenu() {
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <a
-                    href={file?.url}
-                    className="min-h-11 rounded-[2px] border border-white/15 px-3 py-3 font-mono text-xs text-paper transition-colors hover:border-red hover:text-red"
+                    href={offer.url}
+                    className="min-h-11 border border-white/15 px-3 py-3 font-mono text-xs text-paper transition-colors hover:border-red hover:text-red"
                   >
-                    {file?.label}
+                    {offer.label}
                   </a>
-                  {mac && app.brewCask && (
+                  {brew && (
                     <button
                       type="button"
-                      onClick={() => copy(app.brewCask as string)}
+                      onClick={() => copy(brew)}
                       className="min-h-11 px-2 py-3 font-mono text-xs text-gray transition-colors hover:text-paper"
                     >
-                      {copied === app.brewCask ? "Copied" : "Copy brew command"}
+                      {copied === brew ? "Copied" : "Copy brew command"}
                     </button>
                   )}
                 </div>
