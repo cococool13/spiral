@@ -130,6 +130,20 @@ body {
   background: var(--spiral-red);
 }
 
+/* Text for anyone who cannot see the thing it describes — the attention dot in
+   the bar, most of all. Without this rule that text is simply *visible*, which
+   is how a red square with a sentence beside it ends up in the header. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .bar__dot {
   position: absolute;
   top: 12px;

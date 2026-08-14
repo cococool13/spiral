@@ -1,5 +1,24 @@
 # changelog
 
+## 2026-08-13 — Cleaning up after the bar
+
+Three things the shared app bar left behind.
+
+- **`.visually-hidden` was missing from two of the three apps that use it.**
+  The bar renders "— something needs attention" beside its dot for anyone who
+  cannot see the dot, and only Wallpaper had the rule that keeps that sentence
+  off the page. Resume and Clean would have printed it in the header the moment
+  either grew a dot. Both have the rule now, and a test asserts the class rather
+  than the words.
+- **`components/Sidebar.tsx` held no sidebar** — only the `Destination` type,
+  after the rail moved into the menu. The type now lives in
+  `lib/destinations.ts`, with the app's other vocabulary.
+- **Two comments named things that no longer exist**: Wallpaper's "App chrome"
+  and Clean's "not just the rail's".
+
+No dead functions, unused exports or orphaned CSS were found in any of the four
+apps; the searches for them are the reason this entry is short.
+
 ## 2026-08-13 — Three offline models, and a way to choose
 
 The offline tier shipped with one model and no choice. Whether a local model is

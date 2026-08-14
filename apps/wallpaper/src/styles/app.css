@@ -125,7 +125,7 @@
   margin-left: auto;
 }
 
-/* App chrome + Browse screen (empty shell — Milestone 1). */
+/* The Browse screen. The app's chrome is the shared bar above. */
 
 .app {
   display: flex;
