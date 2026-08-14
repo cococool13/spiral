@@ -77,6 +77,20 @@ describe("AppBar", () => {
     expect(screen.getByText(/update available/)).toBeTruthy();
   });
 
+  /// The words next to the dot are for screen readers, and the stylesheet is
+  /// the only thing that keeps them off the page. Without the rule, the header
+  /// reads "— something needs attention" in plain sight.
+  it("hides the dot's words with a class the app actually defines", () => {
+    render(
+      <AppBar
+        app="Resume"
+        items={[{ id: "settings", label: "Settings", dot: true, onSelect: vi.fn() }]}
+      />,
+    );
+    const words = screen.getByText(/something needs attention/);
+    expect(words.className).toBe("visually-hidden");
+  });
+
   it("says nothing about attention when nothing wants it", () => {
     render(<AppBar app="Resume" items={items} />);
     expect(screen.queryByText(/needs attention/)).toBeNull();

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import AppBar from "./components/AppBar";
-import type { Destination } from "./components/Sidebar";
+import type { Destination } from "./lib/destinations";
 import FirstRun from "./screens/FirstRun";
 import Clean from "./screens/Clean";
 import Storage from "./screens/Storage";
