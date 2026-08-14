@@ -1,5 +1,44 @@
 # changelog
 
+## 2026-08-13 — Three offline models, and a way to choose
+
+The offline tier shipped with one model and no choice. Whether a local model is
+good enough depends on the machine it runs on, so the catalogue now holds three
+sizes of Qwen3.5 and Settings lets the person pick.
+
+### Measured, not asserted
+The same six bullets through each model, on an Apple silicon laptop, via a new
+`cargo test --lib sidecar::live::compare -- --ignored --nocapture`:
+
+| Model | Load | Rewrite | Memory | Rewritten | Refused by the gate |
+| --- | --- | --- | --- | --- | --- |
+| Qwen3.5 2B (1.3 GB) | 1.0 s | 2.4 s | 1.5 GB | 6 | 0 |
+| Qwen3.5 4B (2.7 GB) | 2.0 s | 3.7 s | 3.1 GB | 6 | 0 |
+| Qwen3.5 9B (5.7 GB) | 2.0 s | 8.5 s | 5.4 GB | 6 | 0 |
+
+None of them invented a fact — the promise does not depend on picking the big
+one. What differs is register and cost, and the note on each row in Settings
+says which: the 2B writes "utilized" where the 4B writes "used"; the 9B was the
+only one to keep the point of "worked closely with stakeholders" while
+tightening the sentence, and took two and a half times as long to do it.
+
+### Behaviour
+- Downloading a model chooses it. Nobody fetches gigabytes they did not intend
+  to use, and leaving the old choice in place would run the model they replaced.
+- Two installed and neither chosen is not a state the app guesses its way out
+  of: `chosen()` returns nothing and the build says so. `model_ready` calls the
+  same function, so the button and the build cannot disagree.
+- "Use this one" appears only when there is a choice to make. With one model
+  installed there is nothing to choose between.
+- The saved choice survives a provider change, and a settings file written
+  before the field existed still loads.
+
+### Tools
+`pnpm pin-model` takes `--id` (the catalogue is a list now) and `--keep`, which
+writes the bytes out as well as hashing them — so one download both pins a
+candidate and leaves a file that can be run. Judging a model used to mean
+downloading it twice.
+
 ## 2026-08-13 — One bar, four apps
 
 Four apps had four different chromes: Wallpaper a text nav, Resume a title bar

@@ -6,9 +6,11 @@ The offline tier needed two artifacts that are deliberately absent from this
 repository: a pinned model and a built sidecar. Both are now in place, the
 release builds them, and the tier has been run.
 
-- **The model is pinned.** `assets/model-catalogue.json` carries a url, a
-  sha256 and a byte count. Verified 2026-08-13 by downloading the file: its
-  hash is the pinned hash and its length is the pinned length.
+- **Three models are pinned**, one family at three sizes —
+  `assets/model-catalogue.json` carries a url, a sha256 and a byte count for
+  each. Every hash was computed by downloading the file, by the same script
+  that wrote it. The user picks one in Settings; the app states each size
+  before a byte is fetched.
 - **The sidecar is built by the release.** `.github/workflows/release-resume.yml`
   passes `sidecar: true`, so each runner compiles its own `llama-server` before
   Tauri packages the app, and `bundle-config` merges the config that declares
@@ -42,6 +44,54 @@ verification step theatre — the app would appear to check something and would
 in fact be checking nothing. An unpinned catalogue that says "not available in
 this build" is worse for the user and better for the truth.
 
+## What each one does, measured
+
+The same six bullets through each model, on an Apple silicon laptop, via
+`cargo test --lib sidecar::live::compare -- --ignored --nocapture`. The
+rejection count is the number that matters: it is how often the fact gate
+caught the model changing something it had no business changing.
+
+| Model | Load | Rewrite | Memory while running | Rewritten | Refused |
+| --- | --- | --- | --- | --- | --- |
+| Qwen3.5 2B | 1.0 s | 2.4 s | 1.5 GB | 6 | 0 |
+| Qwen3.5 4B | 2.0 s | 3.7 s | 3.1 GB | 6 | 0 |
+| Qwen3.5 9B | 2.0 s | 8.5 s | 5.4 GB | 6 | 0 |
+
+**None of the three invented a fact.** The gate refused nothing, which is the
+result that matters: the promise does not depend on picking the big one.
+
+What differs is register and cost. The 2B writes "Constructed and maintained
+the CI/CD pipeline utilized by 40 engineers daily"; the 4B writes "Built and
+maintained the CI/CD pipeline used by 40 engineers daily". The 9B was the only
+one to keep the point of "worked closely with stakeholders" while tightening
+the sentence around it — and it took two and a half times as long as the 4B to
+do it.
+
+So the 4B is the middle the notes recommend, the 2B is the one that runs on a
+laptop with 8 GB of memory, and the 9B is for someone who would rather wait.
+Memory is resident set size with the model loaded and the context allocated,
+measured with `ps`.
+
+## Why three, and why these
+
+Decision 17 asked for one model. One is the wrong number, because the honest
+answer to "is it good enough?" depends on the machine it runs on: a 1.3 GB
+download that works on an eight-gigabyte laptop beats a 5.7 GB one that
+swaps. So the catalogue offers one axis — size — in one family, and Settings
+lets the person choose.
+
+One family rather than a mix: the app's prompt, its `--reasoning off` flag and
+its batch size are tuned for Qwen3.5's behaviour, and a second family would
+need its own pass through all three. That is a reason to add one deliberately,
+not a reason never to.
+
+The publisher's own repository does not carry GGUF builds for the 3.5 line —
+Qwen publishes GGUF for Qwen3 only — so these come from `unsloth`, which is a
+quantiser rather than a mirror of the weights. That is a deviation from the
+"publisher's own repository" rule below, taken knowingly: the alternative was
+an older model. Every file is still verified against a hash this repository
+computed itself, so a substituted file fails to install.
+
 ## 1. Pin the model
 
 `assets/model-catalogue.json` ships with `url`, `sha256` and `bytes` empty.
@@ -55,9 +105,11 @@ To pin one:
    3 GB of RAM.
 2. Take the URL from the publisher's own repository, never a mirror.
 3. Pin it with one command, which downloads once and writes the url, hash and
-   byte length together:
+   byte length together into that model's entry:
    ```bash
-   pnpm pin-model "<direct-url-to.gguf>"
+   pnpm pin-model "<direct-url-to.gguf>" --id <catalogue-id>
+   # add --keep /tmp/candidate.gguf to also write the file out, so the same
+   # download can be run through `cargo test --lib sidecar::live -- --ignored`
    ```
    Doing this by hand means transcribing a 64-character hash into JSON, and a
    typo there does not fail loudly — the app rejects every download and reports

@@ -34,6 +34,7 @@ pub fn run() {
             commands::engine::save_api_key,
             commands::engine::clear_api_key,
             commands::engine::offline_model_status,
+            commands::engine::choose_offline_model,
             commands::engine::download_offline_model,
             commands::engine::remove_offline_model,
             commands::building::render_thumbnails,

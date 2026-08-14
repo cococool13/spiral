@@ -1,7 +1,31 @@
 {
-  "name": "Qwen3.5 4B (Q4_K_M)",
-  "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
-  "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
-  "bytes": 2740937888,
-  "file": "Qwen3.5-4B-Q4_K_M.gguf"
+  "models": [
+    {
+      "id": "qwen3.5-2b",
+      "name": "Qwen3.5 2B",
+      "note": "Half the size and twice as fast. Uses about 1.5 GB of memory while it runs. Its verbs come out stiffer \u2014 \"utilized\" where the larger ones write \"used\".",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
+      "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+      "bytes": 1280835840,
+      "file": "Qwen3.5-2B-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen3.5-4b",
+      "name": "Qwen3.5 4B",
+      "note": "The one to pick if it fits: about 3 GB of memory, and it tightens a bullet without changing the register you wrote it in.",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
+      "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+      "bytes": 2740937888,
+      "file": "Qwen3.5-4B-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen3.5-9b",
+      "name": "Qwen3.5 9B",
+      "note": "Keeps the most of what you meant, and takes about twice as long as the 4B. Wants roughly 5.5 GB of memory free while it runs.",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
+      "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
+      "bytes": 5680522464,
+      "file": "Qwen3.5-9B-Q4_K_M.gguf"
+    }
+  ]
 }
