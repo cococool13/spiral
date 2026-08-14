@@ -1,7 +1,6 @@
 import AppGrid from "@/components/AppGrid";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
-import Showcase from "@/components/home/Showcase";
 import MotionProvider from "@/components/MotionProvider";
 import Nav from "@/components/Nav";
 import OtherWork from "@/components/OtherWork";
@@ -18,7 +17,6 @@ export default function Home() {
       <ScrollProgress />
       <main>
         <Hero />
-        <Showcase />
         <TaglineReveal
           lines={[
             "Every one of these could have",
