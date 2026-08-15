@@ -12,8 +12,8 @@ apps/wallpaper/src-tauri/gen/
 # Local agent settings
 .claude/settings.local.json
 
-# Netlify CLI link state + local build cache
-.netlify
+# wrangler local state
+.wrangler
 
 # Re-include Tauri icons (global 'Icon?' pattern matches icons/ case-insensitively)
 !apps/wallpaper/src-tauri/icons/

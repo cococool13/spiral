@@ -24,7 +24,7 @@ apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri,
                             all built: import, Check, twelve templates, PDF + DOCX
                             export, and three engine tiers. Note the capital R: the
                             folder is `apps/Resume`, not `apps/resume`)
-collection/    the spiral-collection.netlify.app website (Next.js, static export)
+collection/    the spiral-collection.pages.dev website (Next.js, static export)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```
 
@@ -149,11 +149,11 @@ pnpm dev             # localhost:3000
 pnpm lint            # biome check .
 pnpm typecheck       # tsc --noEmit
 pnpm build           # static export into out/
-pnpm build && netlify deploy --prod --dir=out   # manual publish; CI does this on main
+pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --branch=main   # manual publish; CI does this on main
 ```
 
 Merging to `main` deploys the website. The `website` job lints, typechecks,
-builds, and then deploys that same `out/` to Netlify — so what is live is the
+builds, and then deploys that same `out/` to Cloudflare Pages — so what is live is the
 export CI just checked, not a second build of the same commit. The command
 above still works and is the way to publish from a branch or without CI.
 
@@ -204,7 +204,7 @@ against Wallpaper's 4.6 MB, and the universal release carries both architectures
 the lightweight claim quietly.
 
 The website is Next.js App Router + React 19 + Tailwind v4 + framer-motion, `output: 'export'`,
-deployed to Netlify from CI on every push to `main`.
+deployed to Cloudflare Pages from CI on every push to `main`.
 
 ## Non-Negotiables
 

@@ -1,0 +1,26 @@
+# Spiral Collection site — response headers.
+#
+# Lives in public/ so the static export copies it to out/_headers, which is
+# where Cloudflare Pages looks. This replaced netlify.toml: the rules are the
+# same, the syntax is the host's own.
+#
+# Rules are applied in order and a later one wins for the same header name,
+# which is what the /brand/fonts/* rule below depends on.
+
+# Hashed build assets never change — cache forever.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Brand assets (mark, tokens, future demo media) — one day.
+/brand/*
+  Cache-Control: public, max-age=86400
+
+# Brand fonts are stable subsets — cache forever.
+# Must come AFTER /brand/* or the one-day rule above would win.
+/brand/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin

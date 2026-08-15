@@ -9,7 +9,7 @@
 Every Spiral app, the brand system they share, and the site that houses them.
 One repository — each app is a folder, not a separate project.
 
-[**spiral-collection.netlify.app**](https://spiral-collection.netlify.app)
+[**spiral-collection.pages.dev**](https://spiral-collection.pages.dev)
 
 On a Mac, one line gets you the app:
 
@@ -152,7 +152,7 @@ Three top-level areas, one job each.
 ```
 brand/         the design system — every colour, font, and mark lives here
 apps/          one folder per app — shipped, in progress, or still just docs
-collection/    the spiral-collection.netlify.app website
+collection/    the spiral-collection.pages.dev website
 docs/          product context, visual system, external reference
 ```
 
@@ -167,7 +167,7 @@ started that way, and its ADRs still sit beside the code they became.
 | [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
 | [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall. macOS only, unreleased. M1–M4 shipped: the Tauri shell, the Full Disk Access gate, the safety core (`catalog`, `scan`, `remove`, `exclude`, `history`) under a 183-test Rust suite plus 10 Vitest tests, the Clean screen, and Uninstall — which removes an app, its containers and its bundle. Optimize and Storage are still stubs. See the [design spec](apps/clean/docs/design-spec.md) and fifteen ADRs | working on the maintenance app |
 | [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows, unreleased. The whole flow is built — import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | working on the resume app |
-| [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
+| [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Cloudflare Pages. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
 

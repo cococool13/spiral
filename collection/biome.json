@@ -5,7 +5,7 @@
       "**",
       "!out",
       "!.next",
-      "!.netlify",
+      "!.wrangler",
       "!public/brand",
       "!public/resume",
       "!next-env.d.ts"

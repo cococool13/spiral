@@ -6,5 +6,5 @@ next-env.d.ts
 # synced from /brand at build time — never edit or commit the copy
 public/brand/
 
-# netlify CLI link state + its local build cache
-.netlify/
+# wrangler local state
+.wrangler/
