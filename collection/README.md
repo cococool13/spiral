@@ -220,5 +220,4 @@ the live site.
 
 `public/_headers` carries the cache and security headers; the static export
 copies it to `out/_headers`, which is where Pages reads it. Wrangler uploads a
-directory and never builds, so what ships is the export that already passed —
-which is what `netlify.toml`'s `--no-build` used to be for.
+directory and never builds, so what ships is the export that already passed.
