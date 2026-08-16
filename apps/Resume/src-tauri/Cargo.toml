@@ -1,0 +1,55 @@
+[package]
+name = "spiral-resume"
+version = "0.1.0"
+description = "Spiral Resume"
+authors = ["Cohen Coolidge"]
+edition = "2021"
+
+[lib]
+name = "spiral_resume_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+# No `panic = "abort"`. This app parses files the user downloaded from the
+# internet, and the PDF reader panics on malformed input. `catch_unwind` does
+# nothing under abort, so unwinding is what turns a bad resume into a sentence
+# instead of a dead window. Costs a little binary size; worth it here.
+strip = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+# The shape the Tauri template ships. Without it the CLI falls back to
+# `--features tauri/custom-protocol`, which does not resolve `tauri-macros`.
+custom-protocol = ["tauri/custom-protocol"]
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+dirs = "6"
+typst = "0.15"
+typst-pdf = "0.15"
+typst-svg = "0.15"
+typst-assets = { version = "0.15", features = ["fonts"] }
+typst-layout = "0.15"
+docx-rs = { version = "0.4", default-features = false }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+zip = "8"
+pdf-extract = "0.12"
+keyring = "4"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream"] }
+sha2 = "0.11.0"
+futures-util = "0.3.34"
+tokio = { version = "1.53.1", features = ["time"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
+zip = "8.6.0"

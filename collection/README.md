@@ -2,7 +2,7 @@
 
 The site that houses every Spiral app. Next.js App Router, React 19, strict
 TypeScript, Tailwind v4, framer-motion. `output: 'export'` — a fully static
-build deployed to Netlify at **spiral-collection.netlify.app**.
+build deployed to Cloudflare Pages at **spiral-collection.pages.dev**.
 
 ```bash
 pnpm install
@@ -198,8 +198,8 @@ Tokens reach Tailwind through `@theme` in `app/globals.css`, which maps
 [`.github/workflows/build.yml`](../.github/workflows/build.yml) lints,
 typechecks, builds, and deploys that same `out/` — so the live site is the
 export CI just checked, not a rebuild of the same commit. Pull requests build
-but never deploy; `--prod` from an unreviewed branch is the one thing this
-must not do.
+but never deploy; a production deploy from an unreviewed branch is the one
+thing this must not do.
 
 This replaces the CLI-only rule that used to live here. It was not arbitrary —
 it kept unreviewed work off the live site — but the cost was that `main` could
@@ -211,9 +211,13 @@ To publish from a branch, or when CI is not an option, the manual path is
 unchanged:
 
 ```bash
-pnpm build && netlify deploy --prod --dir=out
+pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --branch=main
 ```
 
-The folder is linked to the `spiral-collection` Netlify project; `netlify.toml`
-carries the cache and security headers, and CI passes `--no-build` so its
-`command` does not re-run over an export that already passed.
+`--branch=main` is what makes it a production deploy. Leave it off and Pages
+files the upload as a preview, which succeeds, prints a URL, and does not move
+the live site.
+
+`public/_headers` carries the cache and security headers; the static export
+copies it to `out/_headers`, which is where Pages reads it. Wrangler uploads a
+directory and never builds, so what ships is the export that already passed.

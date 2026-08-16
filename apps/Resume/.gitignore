@@ -1,0 +1,15 @@
+node_modules
+dist
+src-tauri/target
+src/styles/tokens.css
+src/assets/brand
+src/assets/fonts
+
+# Third-party resume templates the user supplied for structural reference.
+# Decision 20: no third-party file is bundled and no source is named in the
+# app. `docs/template-lineage.md` is the record; the files stay on disk only.
+Resume Template/
+
+# Built by scripts/build-sidecar.mjs. Two self-contained llama-server binaries,
+# ~35 MB, rebuilt from a pinned llama.cpp tag rather than carried in history.
+src-tauri/binaries/

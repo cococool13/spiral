@@ -27,6 +27,8 @@ export interface SpiralApp {
   noWindowsBinary?: true;
   /** Inline SVG path data drawn in a 24x24 viewBox, stroke-based. */
   iconPath: string;
+  /** A page on this site that explains the app. Rendered as the card's link. */
+  page?: string;
   /**
    * Homebrew cask token, for the apps in the cococool13/spiral tap. Present
    * only where a signed macOS build exists — a brew command for an app with no
@@ -51,6 +53,7 @@ export const apps: SpiralApp[] = [
     status: "live",
     version: "1.0.3",
     brewCask: "spiral-wallpaper",
+    page: "/wallpaper/",
     iconPath: "M3 5h18v13H3zM3 18h18M9 21h6M6 8l4 4M14 8l4 4M10 12l-2 3M16 12l-1.5 3",
     downloads: {
       mac: {
@@ -86,6 +89,7 @@ export const apps: SpiralApp[] = [
       all: "https://github.com/cococool13/Spiral-Slim/releases/latest",
     },
     // A shield with two setting lines: policy, under protection.
+    page: "/slim/",
     iconPath: "M12 3l7 3v5.5c0 4.5-3 7.5-7 9.5-4-2-7-5-7-9.5V6zM9 11h6M9 14h4",
   },
   {
@@ -104,13 +108,15 @@ export const apps: SpiralApp[] = [
     name: "Spiral Clean",
     tagline: "Removes caches and uninstalls apps.",
     status: "coming-soon",
+    page: "/clean/",
     iconPath: "M12 3v6M8 9h8l1 12H7zM9 13v4M12 13v4M15 13v4",
   },
   {
     slug: "resume",
     name: "Spiral Resume",
-    tagline: "Writes a resume to a PDF.",
+    tagline: "Twelve typeset layouts. It is never allowed to change a fact.",
     status: "coming-soon",
+    page: "/resume/",
     iconPath: "M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 13h6M9 16h4",
   },
   {

@@ -1,7 +1,15 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   "files": {
-    "includes": ["**", "!out", "!.next", "!.netlify", "!public/brand", "!next-env.d.ts"]
+    "includes": [
+      "**",
+      "!out",
+      "!.next",
+      "!.wrangler",
+      "!public/brand",
+      "!public/resume",
+      "!next-env.d.ts"
+    ]
   },
   "formatter": {
     "enabled": true,

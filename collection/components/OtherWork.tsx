@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useId, useState } from "react";
 import { type OtherProject, otherWork } from "@/lib/otherWork";
 import Reveal from "./Reveal";
 
@@ -9,130 +9,152 @@ import Reveal from "./Reveal";
  * Inverted section — light concrete on dark page — so it reads as outside
  * the Spiral product line.
  *
- * The rail is a plain scroll container with snap points, so it works with a
- * trackpad, a touch drag, and the scrollbar before any JavaScript runs. The
- * arrows are an addition for mouse users, not the mechanism.
+ * The seven projects are a deck. Closed, they sit stacked with each one
+ * peeking out from under the one above; opened, they spread into a list you
+ * can read. It is one control and one piece of state, which is the honest
+ * shape for a section that is a footnote to the collection rather than part
+ * of it: it takes one line of the page until someone wants it.
+ *
+ * The stack is `margin-top`, not `transform`. A transform would slide the
+ * rows over each other and leave the section its full height either way,
+ * which is the opposite of collapsing. Seven rows transitioning one property
+ * on one click is a cost worth paying to have the page actually get shorter.
  */
 export default function OtherWork() {
-  const railRef = useRef<HTMLUListElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
-
-  const sync = useCallback(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-    // 2px slack: fractional scroll positions never land exactly on the end.
-    setAtStart(rail.scrollLeft <= 2);
-    setAtEnd(rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 2);
-  }, []);
-
-  useEffect(() => {
-    sync();
-    const rail = railRef.current;
-    if (!rail) return;
-    const observer = new ResizeObserver(sync);
-    observer.observe(rail);
-    return () => observer.disconnect();
-  }, [sync]);
-
-  const page = (direction: 1 | -1) => {
-    const rail = railRef.current;
-    if (!rail) return;
-    // One card plus its gap, so a click always lands on a snap point.
-    const card = rail.querySelector("li");
-    const step = card ? card.getBoundingClientRect().width + 24 : rail.clientWidth;
-    // Explicit "smooth" would override the reduced-motion rule in globals.css,
-    // so ask the media query directly.
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    rail.scrollBy({ left: step * direction, behavior: reduced ? "auto" : "smooth" });
-  };
+  const [open, setOpen] = useState(false);
+  const listId = useId();
 
   return (
     <section id="other-work" className="bg-paper text-ink">
-      <div className="py-32 sm:py-40">
-        <div className="mx-auto max-w-6xl px-6">
-          <Reveal>
-            <div className="flex items-end justify-between gap-6">
-              <div>
-                <p className="type-eyebrow text-ink">Other Work</p>
-                <h2 className="type-display mt-4 text-4xl text-ink sm:text-5xl">
-                  Outside the Collection
-                </h2>
-              </div>
-              <div className="hidden shrink-0 gap-2 sm:flex">
-                <RailButton
-                  direction={-1}
-                  disabled={atStart}
-                  onClick={() => page(-1)}
-                  label="Previous projects"
-                />
-                <RailButton
-                  direction={1}
-                  disabled={atEnd}
-                  onClick={() => page(1)}
-                  label="Next projects"
-                />
-              </div>
-            </div>
-          </Reveal>
-        </div>
-
-        {/* Full-bleed rail: cards run to the viewport edge so the row reads as
-            continuing past it, with the page gutter restored as padding. */}
+      <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <Reveal>
-          <ul
-            ref={railRef}
-            onScroll={sync}
-            aria-label="Other work"
-            className="work-rail mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-6"
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+            <div>
+              <h2 className="type-display text-4xl text-ink sm:text-5xl">
+                Outside the Collection
+              </h2>
+              <p className="mt-3 text-sm text-steel">
+                {otherWork.length} things built for other people.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls={listId}
+              className="inline-flex min-h-11 items-center gap-2 border border-conc3 px-4 font-mono text-xs uppercase tracking-widest text-ink transition-colors hover:bg-conc1"
+            >
+              {open ? "Collapse" : "Open the stack"}
+              <svg
+                width={14}
+                height={14}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className={`transition-transform duration-500 ease-spiral ${
+                  open ? "rotate-180" : ""
+                }`}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        </Reveal>
+
+        <Reveal>
+          <ol
+            id={listId}
+            className={`work-stack mt-12 ${open ? "is-open" : ""}`}
+            // The peek is what a closed row shows of itself. Read by the CSS
+            // so the two cannot disagree about how tall the stack is.
+            style={{ "--peek": "1.75rem" } as CSSProperties}
           >
-            {otherWork.map((project) => (
+            {otherWork.map((project, i) => (
               <li
                 key={project.id}
-                className="w-[80vw] max-w-[420px] shrink-0 snap-start sm:w-[420px]"
+                // Closed, only the top card is readable — the rest are a peek
+                // of edge. `inert` takes them out of the tab order and the
+                // accessibility tree together, so a keyboard user does not
+                // collect six stops on cards they cannot read. The button's
+                // `aria-expanded` is what says they are there.
+                inert={!open && i > 0 ? true : undefined}
+                style={{ "--i": i, zIndex: otherWork.length - i } as CSSProperties}
               >
-                <WorkCard project={project} />
+                <ProjectRow project={project} index={i} />
               </li>
             ))}
-          </ul>
+          </ol>
         </Reveal>
       </div>
     </section>
   );
 }
 
-function WorkCard({ project }: { project: OtherProject }) {
+function ProjectRow({ project, index }: { project: OtherProject; index: number }) {
   const body = (
     <>
-      <div className="relative aspect-[16/10] overflow-hidden border-b border-conc3 bg-conc1">
+      {/* 16:10, the covers' own ratio, not a square. Cropped square to 80px
+          these landed in the middle of a page of body copy and every one came
+          out a white rectangle. */}
+      <span className="relative aspect-[16/10] w-20 shrink-0 overflow-hidden border border-conc3 bg-conc1 sm:w-32">
         <Image
           src={project.cover}
           alt={project.coverAlt}
           width={1200}
           height={750}
-          sizes="(max-width: 640px) 80vw, 420px"
-          className="h-full w-full object-cover object-top transition-transform duration-500 ease-spiral group-hover:scale-[1.03]"
+          sizes="128px"
+          className="h-full w-full object-cover object-top"
         />
-      </div>
-      <div className="flex flex-1 flex-col p-6">
-        <div className="flex items-baseline justify-between gap-4">
-          <h3 className="type-heading text-lg">{project.name}</h3>
-          <span className="shrink-0 font-mono text-[11px] uppercase tracking-widest text-steel">
-            {project.kind}
-          </span>
-        </div>
-        <p className="mt-2 text-sm text-steel">{project.description}</p>
-        {project.href && (
-          <span className="mt-4 inline-block font-mono text-xs font-medium text-oxblood underline-offset-4 group-hover:underline">
-            Visit →
-          </span>
-        )}
-      </div>
+      </span>
+      {/* The row is a fixed height so the collapse maths hold, so nothing in
+          here may grow past two lines. On a phone that means the number, the
+          kind and the name only — a description truncated to "Marketing sit…"
+          is not worth the line it wraps onto. */}
+      <span className="min-w-0 flex-1">
+        <span className="block font-mono text-[11px] uppercase tracking-widest text-steel">
+          {String(index + 1).padStart(2, "0")} · {project.kind}
+        </span>
+        <span className="type-heading mt-1 line-clamp-2 block text-base text-ink sm:text-lg">
+          {project.name}
+        </span>
+        <span className="mt-1 hidden truncate text-sm text-steel sm:block">
+          {project.description}
+        </span>
+      </span>
+      {/* A chevron only where it leads somewhere. Six of the seven have no
+          link yet, and an arrow on those is a promise the card cannot keep. */}
+      {project.href ? (
+        <svg
+          width={18}
+          height={18}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="shrink-0 text-steel transition-transform duration-300 ease-spiral group-hover:translate-x-1"
+        >
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      ) : (
+        <span className="hidden shrink-0 font-mono text-[11px] uppercase tracking-widest text-steel sm:inline">
+          Not public
+        </span>
+      )}
     </>
   );
 
+  // Opaque, not `bg-white/60`. A stack of translucent cards lets every buried
+  // title print through the one on top, which reads as a rendering fault
+  // rather than as a deck.
   const shell =
-    "group flex h-full flex-col overflow-hidden rounded-[2px] border border-conc3 bg-white/40";
+    "group flex w-full items-center gap-4 border border-conc3 bg-conc1 p-4 text-left sm:gap-6 sm:p-5";
 
   if (!project.href) return <article className={shell}>{body}</article>;
 
@@ -141,45 +163,9 @@ function WorkCard({ project }: { project: OtherProject }) {
       href={project.href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${shell} transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]`}
+      className={`${shell} transition-colors hover:bg-conc2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red`}
     >
       {body}
     </a>
-  );
-}
-
-function RailButton({
-  direction,
-  disabled,
-  onClick,
-  label,
-}: {
-  direction: 1 | -1;
-  disabled: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-[2px] border border-conc3 text-ink transition-colors hover:bg-conc1 disabled:cursor-not-allowed disabled:text-steel disabled:hover:bg-transparent"
-    >
-      <svg
-        width={18}
-        height={18}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d={direction === 1 ? "M5 12h14M13 6l6 6-6 6" : "M19 12H5M11 18l-6-6 6-6"} />
-      </svg>
-    </button>
   );
 }

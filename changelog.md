@@ -1,5 +1,211 @@
 # changelog
 
+## 2026-08-13 — Cleaning up after the bar
+
+Three things the shared app bar left behind.
+
+- **`.visually-hidden` was missing from two of the three apps that use it.**
+  The bar renders "— something needs attention" beside its dot for anyone who
+  cannot see the dot, and only Wallpaper had the rule that keeps that sentence
+  off the page. Resume and Clean would have printed it in the header the moment
+  either grew a dot. Both have the rule now, and a test asserts the class rather
+  than the words.
+- **`components/Sidebar.tsx` held no sidebar** — only the `Destination` type,
+  after the rail moved into the menu. The type now lives in
+  `lib/destinations.ts`, with the app's other vocabulary.
+- **Two comments named things that no longer exist**: Wallpaper's "App chrome"
+  and Clean's "not just the rail's".
+
+No dead functions, unused exports or orphaned CSS were found in any of the four
+apps; the searches for them are the reason this entry is short.
+
+## 2026-08-13 — Three offline models, and a way to choose
+
+The offline tier shipped with one model and no choice. Whether a local model is
+good enough depends on the machine it runs on, so the catalogue now holds three
+sizes of Qwen3.5 and Settings lets the person pick.
+
+### Measured, not asserted
+The same six bullets through each model, on an Apple silicon laptop, via a new
+`cargo test --lib sidecar::live::compare -- --ignored --nocapture`:
+
+| Model | Load | Rewrite | Memory | Rewritten | Refused by the gate |
+| --- | --- | --- | --- | --- | --- |
+| Qwen3.5 2B (1.3 GB) | 1.0 s | 2.4 s | 1.5 GB | 6 | 0 |
+| Qwen3.5 4B (2.7 GB) | 2.0 s | 3.7 s | 3.1 GB | 6 | 0 |
+| Qwen3.5 9B (5.7 GB) | 2.0 s | 8.5 s | 5.4 GB | 6 | 0 |
+
+None of them invented a fact — the promise does not depend on picking the big
+one. What differs is register and cost, and the note on each row in Settings
+says which: the 2B writes "utilized" where the 4B writes "used"; the 9B was the
+only one to keep the point of "worked closely with stakeholders" while
+tightening the sentence, and took two and a half times as long to do it.
+
+### Behaviour
+- Downloading a model chooses it. Nobody fetches gigabytes they did not intend
+  to use, and leaving the old choice in place would run the model they replaced.
+- Two installed and neither chosen is not a state the app guesses its way out
+  of: `chosen()` returns nothing and the build says so. `model_ready` calls the
+  same function, so the button and the build cannot disagree.
+- "Use this one" appears only when there is a choice to make. With one model
+  installed there is nothing to choose between.
+- The saved choice survives a provider change, and a settings file written
+  before the field existed still loads.
+
+### Tools
+`pnpm pin-model` takes `--id` (the catalogue is a list now) and `--keep`, which
+writes the bytes out as well as hashing them — so one download both pins a
+candidate and leaves a file that can be run. Judging a model used to mean
+downloading it twice.
+
+## 2026-08-13 — One bar, four apps
+
+Four apps had four different chromes: Wallpaper a text nav, Resume a title bar
+with a Settings button, Clean a six-item sidebar, Slim a step bar. Nothing
+about them said "same collection". They now wear one bar — the mark, the app's
+name, and a single menu — specified once in `docs/DESIGN.md` and implemented in
+each app.
+
+- **The name is the continuity.** "Spiral" recedes at weight 400 in `--stl-02`,
+  the app's own word carries the heading weight. Every bar differs by one word.
+- **Fewer lines, literally.** No rule under the bar in any app. The page and
+  the bar are the same material, and the space is the separation — which is the
+  system's own first principle about where depth comes from.
+- **Clean lost its sidebar.** Six destinations moved into the menu and the app
+  gained back 13rem of width it was spending on navigation it rarely needed.
+- **Wallpaper's update dot** no longer needs a nav item to live on: it is a
+  badge on the menu icon, and it says "something needs attention" in words for
+  anyone who cannot see it.
+- **Slim keeps its ticks.** It is a wizard with no destinations, and an empty
+  menu would be worse than no menu — so it takes the mark and the two-weight
+  name and shows progress where the menu would be. That exception is written
+  down rather than left as an inconsistency.
+
+Nine tests cover the bar's behaviour — open, choose, current, Escape returning
+focus, outside click, and the dot saying its meaning in words — and they ship in
+both apps that carry a menu.
+
+## 2026-08-13 — The offline tier, running
+
+The third engine tier stopped being a thing the code was ready for and became a
+thing that works. Everything below was verified on this machine, not reasoned
+about.
+
+### Verified
+- **The model pin is real.** `assets/model-catalogue.json` was already pinned —
+  the earlier note that it "ships with its checksum deliberately empty" was
+  wrong, taken from a stale document and repeated without being checked.
+  Downloading the file confirms both the sha256 and the byte count.
+- **The engine runs, and the gate holds.** A new `#[ignore]` test starts the
+  sidecar with the model and rewrites a bullet through it:
+  "Was responsible for cutting report turnaround from 9 days to 2 days across 6
+  teams at the Admiralty" came back as "Cut report turnaround from 9 days to 2
+  days across 6 teams at the Admiralty." — tightened, every number and name
+  intact, accepted by the fact gate. Until now every offline-tier test tested
+  the code *around* an engine nobody had started.
+- **It bundles.** `pnpm build-sidecar && pnpm bundle` puts `llama-server` inside
+  `Spiral Resume.app/Contents/MacOS/`, which is exactly where the app looks, and
+  the bundle still passes `codesign --verify --deep --strict`.
+- **The size, measured with it.** 61 MB installed and a 29 MB DMG, of which the
+  engine is 16 MB. The README carried 45 MB / 23 MB from the build before this.
+
+### Fixed
+- `beside_this_binary` looked for `llama-server` with no extension, so on
+  Windows — the one platform where Tauri writes `llama-server.exe` — a bundled
+  sidecar would never have been found. It now uses the platform's own suffix.
+- `scripts/build-sidecar.mjs` refused every platform but macOS. It now builds
+  the Windows sidecar too, CPU-only and statically linked, for the same reason
+  the macOS one is: `externalBin` copies one file and notarisation is cheap when
+  there is nothing else to sign. **Untested** — no Windows machine here; the
+  release runner is where it first runs.
+- The module comment pointed at `scripts/fetch-sidecar.mjs`, which does not
+  exist. The script is `build-sidecar.mjs`, and it builds rather than fetches.
+
+- `pnpm test` in `apps/Resume` broke the moment anyone built the sidecar:
+  `build-sidecar` clones llama.cpp into `src-tauri/target/`, and Vitest's
+  default discovery found 214 test files there instead of 13. The config now
+  looks only at `src/`. Found by running the two commands in the same session,
+  which is the only way it shows up.
+
+### Added
+- `sidecar` and `bundle-config` inputs on the shared `release-app.yml`, both off
+  by default so no other app changes, and both on for Resume.
+- `apps/wallpaper/CONTEXT.md` and `apps/slim/CONTEXT.md`. All four apps now
+  carry their ubiquitous language beside the code.
+
+## 2026-08-13 — A release path for Resume, and one product document
+
+### Added
+- `.github/workflows/release-resume.yml`. Spiral Resume releases on a
+  `resume-v*` tag through the same shared `release-app.yml` every other app
+  calls — macOS signed and notarised, Windows unsigned, no updater. Its header
+  states what the release contains and, more usefully, what it does not.
+- `scripts/version.mjs` now knows about Resume. It did not, which meant the
+  release workflow's own version check could not have covered the app it was
+  about to publish. All four of Resume's version files agree at 0.1.0.
+
+### Decided
+The first Resume release ships **without** the offline model tier. The app
+already reports that tier as unavailable and says so on screen, which is a
+shippable, honest state; the deterministic and bring-your-own-key tiers are
+complete. Enabling the offline tier has a required order, now written down in
+`apps/Resume/docs/offline-model.md` and repeated in the workflow header: build
+the sidecar on the runner, bundle with `tauri.bundle.conf.json`, then pin a
+model. Pinning first would offer the user a 2.5 GB download the app cannot run.
+The sidecar script also refuses to run anywhere but macOS, and Resume releases
+on both platforms — that gap is named rather than discovered at tag time.
+
+### Measured
+The release path was proven by building one: `pnpm tauri build` on Apple silicon
+produced a signed `Spiral Resume.app` and DMG from the plain config, with no
+sidecar and no failure. It also produced a number the spec had only estimated —
+45 MB installed and a 23 MB download, where decision 19 guessed the binary would
+grow by 15–25 MB. The README, `CLAUDE.md` and the spec now carry the measurement
+instead of the estimate.
+
+### Rewritten
+`docs/PRODUCT.md` was Spiral Wallpaper's brief while being cited as the
+collection's product document. It now states what every app has in common —
+audience, purpose, the privacy position, brand personality, design principles,
+accessibility — with a row per app pointing at that app's own spec, and says in
+its own second paragraph that it is not the authority on any single app.
+Wallpaper's original sentences are preserved as Wallpaper's row.
+
+## 2026-08-13 — Spiral Resume, in the documentation
+
+The app was built through M1–M7 and the repo's own documents never learned it
+existed. `README.md` listed Resume among the apps that are "not yet started",
+`CLAUDE.md` did not mention it once — no layout entry, no commands, no
+Definition of Done — and a reader had no way to know that `apps/Resume` holds a
+finished flow.
+
+### Fixed (conflict)
+`README.md` claimed Resume was an idea. It now has a row in the apps table, an
+entry in the repo map, its commands, its place in the release table, and a
+roadmap paragraph. The lightweight promise is qualified rather than quietly
+dropped: Resume embeds Typst and is the one app measured in tens of megabytes,
+which `apps/Resume/docs/design-spec.md` decision 19 required the README to say.
+
+### Added
+- `apps/Resume/CONTEXT.md` — the app's ubiquitous language, following
+  `apps/clean/CONTEXT.md`. Fact, fact gate, block, entry, detail, prose line,
+  furniture, engine tier: the words the code is written in.
+- `CLAUDE.md` — Resume's layout entry, commands (including the two `#[ignore]`
+  tests that show what the engine does with a real document), the reason it has
+  no release path yet, its product section, and its Definition of Done.
+- `CLAUDE.md` Read First now points at `apps/<app>/CONTEXT.md` and says plainly
+  that `docs/PRODUCT.md` is Spiral Wallpaper's document, not the collection's.
+
+### Corrected
+- `apps/Resume/docs/design-spec.md`: decision 4 records that import now reads a
+  file by its first bytes and accepts plain text; decision 22 extends "every
+  section" to every field; decision 23 records that an undrawable character is
+  reported rather than printed blank.
+- The website said the optional model is 2.7 GB where every other document says
+  2.5 GB, and described the input step as PDF or Word only. Both now match the
+  app. The number stays provisional until a release pins the model —
+  `apps/Resume/docs/offline-model.md`.
+
 ## 2026-08-07 — Documentation audit
 
 Verified the published, signed `v1.0.3` release and updated the root `README.md`

@@ -59,7 +59,6 @@ section[id] {
 a:focus-visible {
   outline: 2px solid var(--spiral-red);
   outline-offset: 3px;
-  border-radius: 2px;
 }
 
 /* The hero mark ships hidden in server HTML so it never flashes fully
@@ -204,37 +203,272 @@ p {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Floating nav pill container — glass, never flush to y=0 */
+/* Block CTA — the hero's one primary action. Square corners, which is the
+   only radius this system allows besides a full pill: a paper field carrying
+   the words, and a red chip carrying the action. Red stays the interaction
+   colour and nothing else on the surface competes with it. */
+.btn-block {
+  display: inline-flex;
+  align-items: stretch;
+  min-height: 52px;
+  border-radius: 0;
+  background: var(--spiral-paper);
+  color: var(--spiral-ink);
+  font-family: var(--spiral-font-mono);
+  font-weight: 500;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  box-shadow: rgba(0, 0, 0, 0.45) 0 18px 40px -18px;
+  transition:
+    transform var(--spiral-dur-fast) var(--spiral-ease),
+    box-shadow var(--spiral-dur-fast) var(--spiral-ease);
+}
+.btn-block__label {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+.btn-block__chip {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  flex: none;
+  background: var(--spiral-red);
+  color: var(--spiral-paper);
+  transition: background var(--spiral-dur-fast) var(--spiral-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-block:hover {
+    transform: translateY(-2px);
+    box-shadow: rgba(0, 0, 0, 0.55) 0 24px 48px -20px;
+  }
+  .btn-block:hover .btn-block__chip {
+    background: var(--spiral-oxblood);
+  }
+}
+.btn-block:active {
+  transform: translateY(0) scale(0.985);
+}
+.btn-block:focus-visible {
+  outline: 2px solid var(--spiral-red);
+  outline-offset: 3px;
+}
+
+/* Rise — the arrival entrance, for things already on screen at load.
+   In CSS rather than in JavaScript for the same reason as `.reveal`, plus one
+   specific to the hero: the headline is the LCP element, and shipping it as
+   `opacity: 0` made the largest paint wait on a framer chunk. A CSS animation
+   runs whether or not script does. */
+.rise {
+  animation: rise-in 640ms var(--spiral-ease) both;
+  animation-delay: calc(var(--rise-step, 0) * 90ms);
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The figure arrives by settling rather than rising; it has no baseline to
+   travel to. */
+.rise--figure {
+  animation-name: rise-figure;
+  animation-duration: 900ms;
+}
+@keyframes rise-figure {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
+
+/* Reveal — the section entrance, on a view timeline rather than in JavaScript.
+   Visible is the default state and the rise is the enhancement, so nothing on
+   the page depends on a script having run. A browser without view timelines
+   shows the content and skips the movement, which is the correct trade for a
+   decorative entrance.
+
+   `--reveal-step` staggers a group. Scroll-driven animations have no time
+   delay, so each item instead starts its rise a little further into the
+   section's entry. */
+.reveal {
+  --reveal-step: 0;
+  /* Scroll distance one rung of the stagger is worth. The default suits a
+     handful of blocks; a dense list sets it far smaller so 54 rungs still fit
+     inside the section's entry. */
+  --reveal-spread: 7%;
+  /* How far the element travels. Small items move a small distance. */
+  --reveal-lift: 32px;
+}
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--reveal-lift));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-rise linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--reveal-step) * var(--reveal-spread)) cover 24%;
+    }
+  }
+}
+
+/* Work stack — seven projects as a deck that opens into a list.
+   Closed, each row is pulled up under the one above it and only `--peek` of
+   itself shows; opened, the pull disappears and they become an ordinary list.
+
+   `margin-top` rather than `transform` on purpose. A transform would slide the
+   rows over one another and leave the section its full height in both states,
+   which is not collapsing — it is hiding. The margin is what makes the page
+   actually shorter, and seven rows moving one property on one click is a cost
+   this surface can afford. */
+.work-stack {
+  --peek: 1.75rem;
+  /* An explicit row height, because the collapse is a negative `margin-top`
+     and a percentage margin resolves against the container's *width*, not the
+     element's height — `calc(var(--peek) - 100%)` subtracted ~700px and folded
+     the whole stack to nothing. The row is the thumbnail plus its padding. */
+  --row: 6rem;
+}
+@media (min-width: 640px) {
+  .work-stack {
+    --row: 7.5rem;
+  }
+}
+.work-stack > li {
+  position: relative;
+  transition:
+    margin-top 520ms var(--spiral-ease),
+    transform 520ms var(--spiral-ease),
+    opacity 360ms var(--spiral-ease);
+}
+.work-stack > li > * {
+  height: var(--row);
+}
+.work-stack:not(.is-open) > li + li {
+  /* Everything below the top card is pulled up to `--peek` of visible edge. */
+  margin-top: calc(var(--peek) - var(--row));
+}
+.work-stack:not(.is-open) > li + li {
+  /* A little narrower the further down the deck, so the stack reads as depth.
+     Scale only — an opacity fade here made every buried card translucent, and
+     a translucent card in a stack prints the title underneath it straight
+     through the one on top. */
+  transform: scale(calc(1 - var(--i) * 0.014));
+}
+.work-stack.is-open > li + li {
+  margin-top: 0.5rem;
+}
+.work-stack > li > * {
+  box-shadow: rgba(16, 24, 27, 0.06) 0 -8px 20px -8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-stack > li {
+    transition-duration: 1ms;
+  }
+}
+
+/* Footer room — one-point perspective, and the single source of its geometry.
+   Every wall polygon, the panel and the rim read these four numbers, so the
+   perspective cannot come apart.
+
+   Narrow first. A footer on a phone is tall and thin, and the desktop numbers
+   there produce a vertical shaft whose panel runs straight down the middle of
+   the content. Wide-and-shallow keeps the panel a band the copy sits over
+   rather than a bar the copy is split by. */
+.footer-room {
+  --room-l: 12%;
+  --room-r: 88%;
+  --room-t: 32%;
+  --room-b: 56%;
+}
+@media (min-width: 1024px) {
+  .footer-room {
+    --room-l: 28%;
+    --room-r: 72%;
+    --room-t: 25%;
+    --room-b: 66%;
+  }
+}
+
+/* Hero orbit — the rosette behind the mark. Each ring turns at its own rate
+   about the shared centre, which is what makes the figure read as orbits
+   rather than as a spinning graphic. Transform-only, so it composites. */
+.orbit-ring {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: orbit-turn var(--orbit-dur, 72s) linear infinite;
+}
+.orbit-ring--rev {
+  animation-direction: reverse;
+}
+@keyframes orbit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* A slow lean, so the rosette sits in space instead of flat on the glass */
+.orbit-tilt {
+  animation: orbit-lean 28s ease-in-out infinite alternate;
+}
+@keyframes orbit-lean {
+  from {
+    transform: perspective(1400px) rotateX(20deg) rotateZ(-4deg);
+  }
+  to {
+    transform: perspective(1400px) rotateX(9deg) rotateZ(4deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring,
+  .orbit-tilt {
+    animation: none;
+  }
+  .orbit-tilt {
+    transform: perspective(1400px) rotateX(14deg);
+  }
+  .btn-block,
+  .btn-block:hover,
+  .btn-block__chip {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Floating nav pill container — glass, never flush to y=0.
+
+   The fill is opaque enough to survive the page passing underneath it. At
+   0.55 it composited to rgb(116,116,115) over the light Other Work section and
+   the links landed at 1.40:1 — the site's only persistent navigation, gone,
+   for a whole viewport. It also let card headings print straight through the
+   bar over the app grid. The blur stays; the transparency is what had to go. */
 .nav-pill {
   border-radius: var(--spiral-radius-ctl);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(11, 11, 12, 0.55);
+  background: rgba(11, 11, 12, 0.92);
   backdrop-filter: var(--spiral-glass-blur);
   -webkit-backdrop-filter: var(--spiral-glass-blur);
-  box-shadow: rgba(0, 0, 0, 0.04) 0 4px 24px;
-}
-
-/* Other Work rail — a scroll container, so it keeps a visible track. Hiding
-   the scrollbar would remove the only affordance a mouse user has before the
-   arrows are noticed. */
-.work-rail {
-  /* Full-bleed row, first card aligned to the page gutter (max-w-6xl = 72rem).
-     Written here, not as a Tailwind arbitrary value — calc() inside one loses
-     the spaces around its operators and the whole declaration is dropped. */
-  padding-inline: max(1.5rem, calc((100vw - 72rem) / 2));
-  scroll-padding-inline-start: max(1.5rem, calc((100vw - 72rem) / 2));
-  scrollbar-width: thin;
-  scrollbar-color: var(--spiral-conc-03) transparent;
-}
-.work-rail::-webkit-scrollbar {
-  height: 6px;
-}
-.work-rail::-webkit-scrollbar-track {
-  background: transparent;
-}
-.work-rail::-webkit-scrollbar-thumb {
-  background: var(--spiral-conc-03);
-  border-radius: 999px;
+  box-shadow: rgba(0, 0, 0, 0.28) 0 4px 24px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -242,8 +476,5 @@ p {
   .glass-pill:hover {
     transition: none;
     transform: none;
-  }
-  .work-rail :is(img) {
-    transition: none;
   }
 }

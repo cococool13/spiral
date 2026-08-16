@@ -32,8 +32,8 @@ jobs:
     # `secrets` context is not usable in a step `if:`, but `env` is. Same
     # reason the Windows job lifts TAURI_KEY.
     env:
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
 
@@ -61,24 +61,27 @@ jobs:
       - name: Build static export
         run: pnpm build
 
-      # Only a push to main, never a pull request: a PR deploying to --prod
+      # Only a push to main, never a pull request: a PR deploying to production
       # would put unreviewed work on the live site, and PR builds already prove
       # the thing compiles. Forks and Dependabot get no token at all, so this
       # cannot fire from them even if the ref check were wrong.
-      # `pnpm --package=... dlx netlify`, not `pnpm dlx netlify-cli`: the
-      # package ships two binaries (netlify and ntl) and plain dlx refuses to
-      # guess between them. --no-build because collection/netlify.toml declares
-      # `command = "pnpm build"`, and the export in out/ is the one this job
-      # already linted and typechecked — rebuilding it there would discard that
-      # and ship a different artifact than the one that passed.
-      # Both secrets, not just the token. The CLI reads NETLIFY_SITE_ID from the
-      # environment to know which project it is talking to, so a token without
-      # a site id gets past a token-only check and then fails mid-deploy asking
-      # to be linked — a red build on main for a configuration mistake the skip
-      # path exists to handle quietly.
-      - name: Deploy to Netlify
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != ''
-        run: pnpm --package=netlify-cli@27 dlx netlify deploy --prod --dir=out --no-build
+      #
+      # `out/` is the export this job already linted, typechecked and built —
+      # wrangler uploads a directory and never builds, so what ships is
+      # byte-for-byte what passed rather than a second build of the same commit.
+      #
+      # `--branch=main` is what marks the deployment as production. Without it
+      # Pages treats every upload as a preview, and the site would go on
+      # building green while the live URL never moved.
+      #
+      # Both secrets, not just the token. Wrangler reads the account id from the
+      # environment to know whose account to talk to, so a token without one
+      # gets past a token-only check and then fails mid-deploy — a red build on
+      # main for a configuration mistake the skip path below exists to handle
+      # quietly.
+      - name: Deploy to Cloudflare Pages
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        run: pnpm --package=wrangler@4 dlx wrangler pages deploy out --project-name=spiral-collection --branch=main
 
       # A push to main that cannot deploy should say so rather than report a
       # green build that shipped nothing. Not a failure: the build itself was
@@ -87,11 +90,11 @@ jobs:
       # Names the one that is missing rather than both. "Add these two secrets"
       # when one is already set sends someone to check a value that is fine.
       - name: Say so when the deploy was skipped
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (env.NETLIFY_AUTH_TOKEN == '' || env.NETLIFY_SITE_ID == '')
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == '')
         run: |
           missing=""
-          [ -z "$NETLIFY_AUTH_TOKEN" ] && missing="$missing NETLIFY_AUTH_TOKEN"
-          [ -z "$NETLIFY_SITE_ID" ] && missing="$missing NETLIFY_SITE_ID"
+          [ -z "$CLOUDFLARE_API_TOKEN" ] && missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && missing="$missing CLOUDFLARE_ACCOUNT_ID"
           echo "::warning::Built but not published — missing repository secret(s):$missing"
           echo "Add them under Settings -> Secrets and variables -> Actions."
           exit 0
@@ -248,6 +251,73 @@ jobs:
       - name: Rust safety suite
         working-directory: apps/clean/src-tauri
         run: cargo test
+
+  # Spiral Resume. The app shipped without a job here, so its 169 Rust tests and
+  # 76 frontend tests only ever ran on the machine that wrote them.
+  #
+  # No `tauri build`: bundling needs the `llama-server` sidecar, which is built
+  # from source by `pnpm build-sidecar` and deliberately not in the repository.
+  # That is why `externalBin` lives in `tauri.bundle.conf.json` rather than the
+  # base config — declared in the base, `tauri-build` refuses to compile at all
+  # on any machine without the binary, which is every runner and every fresh
+  # clone.
+  resume:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/Resume
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/Resume/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/Resume/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      # Typst and its font set dominate this crate's build; without the cache
+      # every run pays several minutes for dependencies that never change.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/Resume/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # src/styles/tokens.css and src/assets/brand come from /brand and are
+      # gitignored, so they must exist before check-hex and tsc read them.
+      - name: Sync brand assets
+        run: pnpm sync-brand
+
+      - name: Quality gates (hex guard + typecheck)
+        run: pnpm check:hex && pnpm tsc --noEmit
+
+      # Before the Rust steps: `tauri::generate_context!` resolves `frontendDist`
+      # at compile time, so the crate does not build until the Vite export exists.
+      - name: Build the frontend
+        run: pnpm build
+
+      - name: Frontend tests
+        run: pnpm test
+
+      - name: Rust tests
+        working-directory: apps/Resume/src-tauri
+        run: cargo test
+
+      # The fact gate, the safety rules and the template lints are all enforced
+      # here. Warnings are errors: this crate has no crate-wide allow.
+      - name: Clippy
+        working-directory: apps/Resume/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
 
   # Everything below a tag is the shared workflow's job. It was extracted from
   # the copy that used to live here, and keeping both meant maintaining two of

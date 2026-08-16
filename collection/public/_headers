@@ -1,0 +1,36 @@
+# Spiral Collection site — response headers.
+#
+# Lives in public/ so the static export copies it to out/_headers, which is
+# where Cloudflare Pages looks. This replaced netlify.toml: the rules are the
+# same, the syntax is the host's own.
+#
+# Cloudflare CONCATENATES every matching rule rather than letting the last one
+# win, which is the opposite of what netlify.toml relied on. A broad /brand/*
+# rule plus a narrower /brand/fonts/* one produced
+#   cache-control: public, max-age=86400, public, max-age=31536000, immutable
+# — a malformed header with two max-ages, where browsers take the first and the
+# fonts quietly lost their year. So the brand paths are enumerated instead:
+# every rule below matches a disjoint set, and nothing needs to override.
+
+# Hashed build assets never change — cache forever.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Brand fonts are stable subsets — cache forever.
+/brand/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The rest of /brand — the mark, the token files — one day.
+/brand/logo/*
+  Cache-Control: public, max-age=86400
+
+/brand/tokens.css
+  Cache-Control: public, max-age=86400
+
+/brand/tokens.json
+  Cache-Control: public, max-age=86400
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
