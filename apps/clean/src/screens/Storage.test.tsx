@@ -57,11 +57,25 @@ function wire({
   backups = [] as DeviceBackup[],
   candidates = [] as LipoCandidate[],
 } = {}) {
-  mockInvoke.mockImplementation((cmd: string) => {
+  mockInvoke.mockImplementation((cmd: string, args?: unknown) => {
     if (cmd === "analyze_root") return Promise.resolve("/Users/x");
     if (cmd === "analyze_children") return Promise.resolve(entries);
     if (cmd === "backups_list") return Promise.resolve(backups);
     if (cmd === "lipo_candidates") return Promise.resolve(candidates);
+    // Storage pushes whatever this resolves to straight into `reports`, and the
+    // list then reads `r.bundle_id` on every entry. Resolving `undefined` here
+    // crashes the render rather than failing an assertion, so a strip has to
+    // answer with a real report shaped like the Rust one.
+    if (cmd === "lipo_strip") {
+      const bundleId = String((args as { bundleId?: string } | undefined)?.bundleId ?? "");
+      const struck = candidates.find((c) => c.bundle_id === bundleId);
+      return Promise.resolve({
+        bundle_id: bundleId,
+        name: struck?.name ?? "",
+        freed: struck?.savings ?? 0,
+        failed: null,
+      });
+    }
     return Promise.resolve(undefined);
   });
 }
