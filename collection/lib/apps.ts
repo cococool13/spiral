@@ -106,7 +106,15 @@ export const apps: SpiralApp[] = [
     // directory and the tag namespace (`clean-v*`) rather than contradicting both.
     slug: "clean",
     name: "Spiral Clean",
-    tagline: "Removes caches and uninstalls apps.",
+    // Four screens now, not one. The old tagline ("Deletes caches. Nothing
+    // else.") described the app before Uninstall, Optimize and Storage
+    // existed, and undersold the thing it is actually built around.
+    tagline:
+      "Cleans, uninstalls, and shows what is using your disk. Proves what it won't touch.",
+    // Feature-complete, and deliberately still not "live" or "source": no
+    // release exists, and nobody has yet opened the app. Inviting people to
+    // build and run it would be offering something this project has not
+    // itself looked at.
     status: "coming-soon",
     page: "/clean/",
     iconPath: "M12 3v6M8 9h8l1 12H7zM9 13v4M12 13v4M15 13v4",

@@ -17,9 +17,10 @@ Current app release **v1.0.3** (Spiral Wallpaper).
 brand/         the design system. Every colour, font, and mark. Single source of truth.
 apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri, shipped)
                apps/slim = Spiral Slim (Python + Tauri wizard, shipped on macOS)
-               apps/clean = Spiral Clean (Tauri, macOS only, unreleased — M1-M4 shipped:
-                            shell, FDA gate, the tested safety core, the Clean screen,
-                            and Uninstall. Optimize/Storage are still stubs)
+               apps/clean = Spiral Clean (Tauri, macOS only, unreleased —
+                            feature-complete, every screen built. Blocked on signing,
+                            notarization, the updater key, and nobody having yet
+                            opened it. See apps/clean/README.md)
                apps/Resume = Spiral Resume (Tauri + embedded Typst, unreleased — M1-M7
                             all built: import, Check, twelve templates, PDF + DOCX
                             export, and three engine tiers. Note the capital R: the
@@ -61,6 +62,7 @@ the website, or website ambition into an app.
 - `README.md` — repo map, current release, downloads, build instructions, roadmap.
 - `brand/README.md` — what is canonical and how each surface consumes it.
 - `collection/README.md` — the website's charter, budgets, and stack.
+- `apps/clean/README.md` — Spiral Clean's safety model, layout, and what blocks its release.
 - `docs/PRODUCT.md` — what every app has in common: audience, purpose, the privacy
   position, brand personality, design principles. It is **not** the authority on
   any single app; each app's scope lives in its own spec, which that file links to.
@@ -120,7 +122,24 @@ SPIRAL_RESUME_SAMPLES="../Resume Template" cargo test --lib import::real_files -
 SPIRAL_RESUME_DUMP_DIR=/tmp/spiral-previews cargo test --lib templates::dump -- --ignored
 ```
 
-Spiral Clean releases on a `clean-v*` tag (`git tag clean-v0.1.0`), independent of
+**Never run `cargo fmt` in `apps/clean`.** The crate is not rustfmt-formatted and
+running it rewrites about 1170 lines across files you did not touch — noise that
+buries the real change and is painful to unpick. There is no `rustfmt.toml` and no
+CI format check, so nothing stops you; match the surrounding style by hand instead.
+
+**Cut every release with `node scripts/release.mjs <app> <x.y.z>`**, never a bare
+`git tag`. It bumps the four version files, commits them, and tags *that* commit,
+so a tag can never point at a tree whose versions disagree with it — the failure
+that discarded two fully signed builds on 2026-08-02. It pushes nothing without
+`--push`. `node scripts/version.mjs tag <tag>` answers the same question about a
+tag that already exists.
+
+**After any release, `collection/lib/apps.ts` goes stale** — it is the only page
+that hands out a binary, and its versions are copies of a git tag.
+`node scripts/downloads.mjs latest` checks it against what is actually
+published; CI runs it on `release: published` and weekly.
+
+Spiral Clean releases on a `clean-v*` tag, independent of
 Wallpaper's bare `v*` and Slim's `slim-v*`. All three call the same reusable
 `.github/workflows/release-app.yml`; Clean passes `macos: true, windows: false,
 updater: false` — there is no updater until M7.
