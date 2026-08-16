@@ -394,7 +394,9 @@ function Header({ step }: { readonly step: (typeof STEPS)[number] }) {
   return (
     <header className="header">
       <img src={mark} alt="" width={20} height={20} />
-      <span className="header__wordmark">Spiral Slim</span>
+      <h1 className="header__wordmark">
+        <span className="header__collection">Spiral</span> Slim
+      </h1>
       {step === "done" ? null : (
         <span
           className="header__progress"

@@ -21,11 +21,13 @@ Spiral Slim uses enterprise managed policies to disable telemetry, bloat, and un
 
 > [!IMPORTANT]
 > **The only official source of Spiral Slim is this repository:**
-> [`github.com/cococool13/spiral-wallpaper`](https://github.com/cococool13/spiral-wallpaper) (`apps/slim`)
+> [`github.com/cococool13/spiral`](https://github.com/cococool13/spiral) (`apps/slim`)
 >
-> This project ships **source code only**. Python and PowerShell scripts you can read before running.
-> **There are no official `.exe`, `.msi`, `.dmg`, `.pkg`, installers, or compiled binaries.**
-> If you find a download claiming to be Spiral Slim elsewhere, it is not from this project. See [`SECURITY.md`](SECURITY.md).
+> The policy tool ships **source code only**. Python and PowerShell scripts you can read before running.
+> The one exception is [`desktop/`](desktop/README.md), the macOS wizard: a single signed, notarized
+> `Spiral.Slim_<version>_universal.dmg`, published on this project's Releases page and nowhere else.
+> **There is no Windows or Linux binary, and there never will be** — no `.exe`, `.msi`, `.deb`, `.rpm`, `.AppImage`.
+> If you find any other download claiming to be Spiral Slim, it is not from this project. See [`SECURITY.md`](SECURITY.md).
 
 > [!NOTE]
 > **Lineage & credit.** Spiral Slim began as a fork of [SlimBrave Neo](https://github.com/ChaoticSi1ence/SlimBrave-Neo) by ChaoticSi1ence and remains GPL-3.0. The multi-browser engine, per-browser catalogs, and preset system were developed upstream and merged in here; the macOS script also carries a `--detect`/`--preview-plan`/`--apply-plan` interface specific to this repo's native GUI wizard (see [`desktop/`](desktop/README.md)). For migration compatibility with SlimBrave installs, some on-disk identifiers deliberately keep their original names (the `slimbrave.json` policy filename and the macOS profile identifiers) — renaming them would leave migrating users with duplicate policy files that Chromium merges, and orphaned Configuration Profiles this tool could no longer remove.
@@ -49,6 +51,17 @@ Spiral Slim uses enterprise managed policies to disable telemetry, bloat, and un
 ---
 
 ## Quick Start
+
+**On a Mac, the easiest way is the app.** One line in Terminal, then open it
+like any other app — it walks you through the whole thing and shows every
+change before making it:
+
+```bash
+brew install --cask cococool13/spiral/spiral-slim
+```
+
+Everything below is the script version: same policies, run from a terminal, on
+any of the three platforms. Pick whichever you prefer — you only need one.
 
 ### Linux
 
@@ -83,7 +96,7 @@ sudo python3 spiral-slim-mac.py
 
 Requires root. Policies are written to `/Library/Managed Preferences/com.brave.Browser.plist` by default; with `--persist on` an Apple Configuration Profile is installed instead.
 
-A native macOS GUI wizard is in progress under [`desktop/`](desktop/README.md); it isn't published yet. It drives this same script through a read-only `--detect`/`--preview-plan`/`--apply-plan` interface (Brave only — see [CLI Reference](#cli-reference)).
+The native macOS wizard under [`desktop/`](desktop/README.md) is v1.0.0 and shipped — install it with `brew install --cask cococool13/spiral/spiral-slim`, or [download the DMG](https://github.com/cococool13/Spiral-Slim/releases/latest). It drives this same script through a read-only `--detect`/`--preview-plan`/`--apply-plan` interface (Brave only — see [CLI Reference](#cli-reference)).
 
 **Persistence on macOS (Apple Silicon / macOS 13+).** On modern macOS, `cfprefsd` and `mdmclient` may clear directly-written `/Library/Managed Preferences/*.plist` files at reboot when no Configuration Profile backs them, so policies don't always survive a restart. Spiral Slim offers two modes:
 
@@ -127,7 +140,7 @@ After applying, restart the browser and verify at `brave://policy`.
 ### Windows
 
 ```powershell
-iwr "https://raw.githubusercontent.com/cococool13/Spiral-Slim/main/SpiralSlim.ps1" -OutFile "SpiralSlim.ps1"; .\SpiralSlim.ps1
+iwr "https://raw.githubusercontent.com/cococool13/spiral/main/apps/slim/SpiralSlim.ps1" -OutFile "SpiralSlim.ps1"; .\SpiralSlim.ps1
 ```
 
 To manage Google Chrome or Microsoft Edge instead of Brave:

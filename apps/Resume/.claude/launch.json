@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "collection",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "../../collection", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "resume",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 1422
+    }
+  ]
+}

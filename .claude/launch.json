@@ -8,6 +8,12 @@
       "port": 3000
     },
     {
+      "name": "collection-static",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "collection/out", "-l", "3100"],
+      "port": 3100
+    },
+    {
       "name": "wallpaper-ui",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--dir", "apps/wallpaper", "dev"],

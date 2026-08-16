@@ -1,6 +1,4 @@
 import type { SpiralApp } from "@/lib/apps";
-import DemoVideo from "./DemoVideo";
-import DownloadConfidence from "./DownloadConfidence";
 import GlassPillCTA, { DisabledPill } from "./GlassPillCTA";
 
 export default function AppCard({ app }: { app: SpiralApp }) {
@@ -10,10 +8,10 @@ export default function AppCard({ app }: { app: SpiralApp }) {
   // version number — the two things that say "this one is real".
   const shipped = live || source;
   return (
-    <article className="flex flex-1 flex-col gap-6 rounded-[2px] border border-white/10 bg-white/[.02] p-8">
+    <article className="flex flex-1 flex-col gap-6 border border-white/10 bg-white/[.02] p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 rounded-[2px]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/15">
             <svg
               width={24}
               height={24}
@@ -33,36 +31,17 @@ export default function AppCard({ app }: { app: SpiralApp }) {
             <p className="mt-1 text-sm text-gray">{app.tagline}</p>
           </div>
         </div>
-        <span className="font-mono text-[11px] uppercase tracking-widest text-gray whitespace-nowrap">
-          {shipped ? (
-            <>
-              <span className="text-red">{live ? "Live" : "Source"}</span>
-              {app.version && <span className="ml-2">v{app.version}</span>}
-            </>
-          ) : (
-            "Coming soon"
-          )}
-        </span>
+        {/* The status word is paper, not red: at 11px helix red on the card is
+            3.85:1 against a 4.5:1 requirement, and small text gets no
+            large-text exemption. The red still says "this one is real" — it is
+            the icon stroke a few pixels to the left. */}
+        {shipped && (
+          <span className="font-mono text-[11px] uppercase tracking-widest text-gray whitespace-nowrap">
+            <span className="text-paper">{live ? "Live" : "Source"}</span>
+            {app.version && <span className="ml-2">v{app.version}</span>}
+          </span>
+        )}
       </div>
-
-      {live && app.video && <DemoVideo video={app.video} name={app.name} />}
-      {live && app.downloads && (
-        <DownloadConfidence
-          downloads={app.downloads}
-          noWindowsBinary={app.noWindowsBinary}
-        />
-      )}
-
-      {source && app.source && (
-        <aside className="border-y border-white/10 py-5" aria-label="How to get it">
-          <p className="type-eyebrow text-paper">How to get it</p>
-          <p className="mt-3 text-sm leading-relaxed text-concrete">{app.source.note}</p>
-          <p className="mt-3 text-sm leading-relaxed text-gray">
-            Clone the repository and build it yourself. No account, no telemetry, no
-            network calls at all.
-          </p>
-        </aside>
-      )}
 
       {/* flex-wrap + min-w-0: at 380px the pill, the downloads link and the
           price label together had a min-content width of ~302px inside a
@@ -71,13 +50,10 @@ export default function AppCard({ app }: { app: SpiralApp }) {
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-3">
         {live && app.downloads ? (
           <>
-            <GlassPillCTA
-              downloads={app.downloads}
-              noWindowsBinary={app.noWindowsBinary}
-            />
+            <GlassPillCTA app={app} />
             <a
               href={app.downloads.all}
-              className="font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
+              className="inline-flex min-h-11 items-center font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
             >
               All downloads
             </a>
@@ -86,9 +62,25 @@ export default function AppCard({ app }: { app: SpiralApp }) {
           <a href={app.source.url} className="glass-pill">
             View the source
           </a>
+        ) : app.page ? (
+          // Not shipped, but there is something to read. A real link beats a
+          // dead pill, and it is the only way anyone reaches the page.
+          <a href={app.page} className="glass-pill">
+            See what it does
+          </a>
         ) : (
           <DisabledPill />
         )}
+        {/* A shipped app still has a page worth reading; it just leads with the
+            download rather than with the reading. */}
+        {shipped && app.page ? (
+          <a
+            href={app.page}
+            className="inline-flex min-h-11 items-center font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
+          >
+            What it does
+          </a>
+        ) : null}
         <span className="ml-auto font-mono text-[11px] uppercase tracking-widest text-gray">
           Free
         </span>

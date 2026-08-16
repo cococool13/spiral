@@ -6,14 +6,107 @@
 
 **Small tools. No bloat. Your data stays yours.**
 
-The Spiral monorepo: the brand system, every app, and the site that houses
-them. The first app is **Spiral Wallpaper** — click a wallpaper, it downloads
-and applies, that's it.
+Every Spiral app, the brand system they share, and the site that houses them.
+One repository — each app is a folder, not a separate project.
 
-[![build](https://github.com/cococool13/spiral-wallpaper/actions/workflows/build.yml/badge.svg)](https://github.com/cococool13/spiral-wallpaper/actions/workflows/build.yml)
+[**spiral-collection.pages.dev**](https://spiral-collection.pages.dev)
+
+On a Mac, one line gets you the app:
+
+```
+brew install --cask cococool13/spiral/spiral-wallpaper
+```
+
+[![build](https://github.com/cococool13/spiral/actions/workflows/build.yml/badge.svg)](https://github.com/cococool13/spiral/actions/workflows/build.yml)
 ![platforms](https://img.shields.io/badge/macOS%2013%2B%20·%20Windows%2010%2B-10181B?label=runs%20on)
-![size](https://img.shields.io/badge/binary-4.6%20MB-D52E2B)
 [![license](https://img.shields.io/badge/license-MIT-666863)](LICENSE)
+
+<img src="docs/screenshot-site.png" alt="The Spiral website: the Spiral wordmark over the line Small tools. No bloat. Your data stays yours." width="820" />
+
+</div>
+
+Three promises, kept the same way in every app:
+
+- **Privacy.** No account. No telemetry. No network request you did not ask
+  for. Where an app talks to the internet at all, it names the host it talks
+  to and talks to nothing else.
+- **Ease.** One window, one job. Everything the app is about to do is on
+  screen before it does it. Close the window and the app is gone — nothing
+  keeps running.
+- **Lightweight.** Native binaries measured in megabytes. Tauri and Rust, not
+  Electron.
+
+## The apps
+
+| App | What it does | Status | Get it |
+| --- | --- | --- | --- |
+| [**Spiral Wallpaper**](apps/wallpaper/) | Click a wallpaper, it downloads and applies. Browses [Wallhaven](https://wallhaven.cc). 4.6 MB binary, ~95 MB idle RAM, window on screen in 0.23 s. | **v1.0.3** — macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/latest) |
+| [**Spiral Slim**](apps/slim/) | Debloats and hardens Brave, Chrome, Edge, and Firefox with enterprise policies the browsers respect natively. Shows every change before it makes it. | **v1.0.0** — macOS app, scripts everywhere | [Download](https://github.com/cococool13/Spiral-Slim/releases/latest) · [Read the scripts](apps/slim/) |
+| [**Spiral Clean**](apps/clean/) | Reclaims disk space and uninstalls apps, macOS only. Every removal is proven safe by a Rust test suite before it ships. | Unreleased — Clean and Uninstall built | [Design spec](apps/clean/docs/design-spec.md) |
+| [**Spiral Resume**](apps/Resume/) | Your resume in twelve typeset layouts, as a PDF or a Word file. It tightens the wording and is never allowed to change a fact. | Unreleased — the whole flow is built | [Design spec](apps/Resume/docs/design-spec.md) |
+
+Spiral Resume is the one app that breaks the megabyte promise, and it says so
+here rather than quietly: it embeds the Typst typesetter so that the preview and
+the exported PDF come from one engine and cannot disagree. Measured on an Apple
+silicon build of 0.1.0, that costs **61 MB installed and a 29 MB download** —
+against Wallpaper's 4.6 MB. 16 MB of that is the offline engine the release
+bundles; without it the same build is 45 MB installed. The published release is
+universal and carries both architectures, so it is larger again. Every other app in the table is measured
+in single-digit megabytes.
+
+Spiral Dashboard, Weather, Transcribe, and Chat are named on the site and not
+yet started. They are ideas, not promises.
+
+## Install
+
+### On a Mac, in one line
+
+If you have [Homebrew](https://brew.sh), paste one of these into Terminal:
+
+```bash
+brew install --cask cococool13/spiral/spiral-wallpaper
+```
+
+```bash
+brew install --cask cococool13/spiral/spiral-slim
+```
+
+That's the whole install. To update later, `brew upgrade --cask spiral-wallpaper`.
+To remove an app and everything it saved, `brew uninstall --zap --cask spiral-wallpaper`.
+
+### On a Mac, without Homebrew
+
+1. Download the `.dmg` from the [latest release](https://github.com/cococool13/spiral/releases/latest).
+2. Open it.
+3. Drag the app into Applications.
+
+Done. Apple has checked these apps (they are signed and notarized), so they
+open normally — no right-click, no security warning to click past.
+
+### On Windows
+
+1. Download the `.exe` from the [latest release](https://github.com/cococool13/spiral/releases/latest).
+2. Run it.
+3. Windows shows a blue **"Windows protected your PC"** box. Click **More
+   info**, then **Run anyway**.
+
+That box appears because the file is not code-signed yet, not because anything
+is wrong with it. Signing costs money and is on the list.
+
+Spiral Slim has no Windows download on purpose — on Windows you run its script
+instead. [Here's how](apps/slim/).
+
+### Want to check the file is the real one?
+
+Every release includes `SHA256SUMS.txt`. Compare it to the file you downloaded:
+
+```bash
+shasum -a 256 ~/Downloads/Spiral.Wallpaper_1.0.3_universal.dmg
+```
+
+If the line matches, the file is byte-for-byte what was published here.
+
+<div align="center">
 
 <img src="docs/screenshot-browse.png" alt="Spiral Wallpaper browse screen: a thumbnail grid with a glass Apply wallpaper button on the hovered tile" width="820" />
 
@@ -21,73 +114,36 @@ and applies, that's it.
 
 </div>
 
-A free desktop wallpaper app for macOS and Windows, built on three things it
-actually does rather than promises:
-
-- **Privacy.** No account. No telemetry. Zero network requests until you
-  search or apply; every request goes to Wallhaven and nowhere else. All
-  networking runs in the Rust core, never the webview.
-- **Ease.** One Browse screen, one Settings page, one first-run sentence.
-  The app quits when you close the window. Nothing runs in the background.
-- **Super lightweight.** 4.6 MB binary, ~95 MB idle RAM, window on screen in
-  0.23 s (measured on Apple Silicon). Tauri 2, not Electron.
-
 Everything the app does is stated on-screen before it happens. Downloaded
 files are verified to actually be images before they touch disk. The
 thumbnail cache is capped at 200 MB and says so in Settings.
 
-## Download
+## Build it yourself
 
-Three apps have been started. Two of them you can download today.
+You need [Node 22+](https://nodejs.org), [pnpm](https://pnpm.io), and
+[Rust](https://rustup.rs). On a Mac, also run `xcode-select --install`. On
+Windows, install Microsoft C++ Build Tools.
 
-### Spiral Wallpaper — v1.0.3
-
-From the [latest release](https://github.com/cococool13/spiral-wallpaper/releases/latest):
-
-- **macOS 13+** — `Spiral.Wallpaper_1.0.3_universal.dmg`. Signed with a Developer ID
-  and notarized by Apple; universal binary, runs native on Apple Silicon and
-  Intel. Open the DMG, drag Spiral into Applications. That's the whole
-  install.
-- **Windows 10+** — `Spiral.Wallpaper_1.0.3_x64-setup.exe` (or the `.msi`). Not yet
-  code-signed, so SmartScreen warns on first run: More info, then Run anyway.
-
-### Spiral Slim — v1.0.0
-
-Lives in its own repository: [cococool13/Spiral-Slim](https://github.com/cococool13/Spiral-Slim/releases/latest).
-
-- **macOS 13+** — `Spiral.Slim_1.0.0_universal.dmg`, signed and notarized.
-- **Windows and Linux** — the Python script, run from source. **There is no
-  Windows binary and there never will be**: Slim's own `SECURITY.md` tells
-  users that any "Spiral Slim" installer or signed binary is a malware
-  indicator, so publishing one would contradict the advice the project gives
-  its own users.
-
-### Spiral Clean — not yet
-
-Feature-complete and unreleased. See [`apps/clean/README.md`](apps/clean/README.md)
-for what it does and the four things standing between it and a first tag.
-
-SHA-256 checksums for every file are attached to each release as
-`SHA256SUMS.txt`.
-
-## Build from source
-
-Needs Node 18+, pnpm, and Rust (rustup). On macOS: `xcode-select --install`.
-On Windows: Microsoft C++ Build Tools.
+Then:
 
 ```bash
-cd apps/wallpaper
+git clone https://github.com/cococool13/spiral.git
+cd spiral/apps/wallpaper
 pnpm install
-pnpm tauri dev      # run the app
-pnpm tauri build    # release bundles (.app/.dmg or .exe/.msi)
+pnpm tauri dev
 ```
 
-`pnpm build` runs the quality gates: a guard that fails the build on any hex
-color outside the design tokens, then typecheck, then Vite.
-`pnpm smoke` runs a full end-to-end smoke test (search, cache, download, set
-wallpaper, verify) and restores your wallpaper after. It exits non-zero when
-the smoke fails, so it can gate a release — `tauri dev` does not forward the
-app's exit code on its own.
+The app opens. `pnpm tauri build` instead of `pnpm tauri dev` makes an
+installer you can keep.
+
+Swap `apps/wallpaper` for `apps/clean`, `apps/Resume` or `apps/slim/desktop` to
+run one of the others the same way.
+
+Two extra commands, if you're changing the code: `pnpm build` refuses to
+finish if any colour is outside the design tokens or TypeScript complains, and
+`pnpm smoke` runs the app end to end — search, download, set the wallpaper —
+then puts your old wallpaper back. It exits non-zero when it fails, so it can
+gate a release.
 
 ## What's in this repo
 
@@ -96,7 +152,7 @@ Three top-level areas, one job each.
 ```
 brand/         the design system — every colour, font, and mark lives here
 apps/          one folder per app — shipped, in progress, or still just docs
-collection/    the spiral-collection.netlify.app website
+collection/    the spiral-collection.pages.dev website
 docs/          product context, visual system, external reference
 ```
 
@@ -110,14 +166,16 @@ started that way, and its ADRs still sit beside the code they became.
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
 | [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
 | [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall, plus History and Settings. macOS only, unreleased. **Feature-complete: every screen is built.** 428 Rust tests, 97 Vitest, a native smoke gate, and nineteen ADRs. See its own [README](apps/clean/README.md) | working on the maintenance app |
-| [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Netlify. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
+| [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows, unreleased. The whole flow is built — import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | working on the resume app |
+| [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Cloudflare Pages. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
 
 **Brand assets are never duplicated.** Each surface copies what it needs out of
 `brand/` at build time into a gitignored folder — `collection/public/brand/`,
-`apps/wallpaper/src/assets/brand/`, and `apps/clean/src/assets/brand/` plus
-`apps/clean/src/styles/tokens.css`. Edit `brand/`, never a synced copy.
+`collection/public/brand/`, and `src/assets/brand/` plus `src/styles/tokens.css`
+inside `apps/wallpaper`, `apps/clean` and `apps/Resume`. Edit `brand/`, never a
+synced copy.
 
 ## Working on it
 
@@ -128,6 +186,7 @@ into the one you want.
 cd apps/wallpaper    && pnpm install && pnpm tauri dev   # the desktop app
 cd apps/slim/desktop && pnpm install && pnpm tauri dev   # the Brave wizard
 cd apps/clean        && pnpm install && pnpm tauri dev   # the maintenance app
+cd apps/Resume       && pnpm install && pnpm tauri dev   # the resume app
 cd collection        && pnpm install && pnpm dev         # the website (localhost:3000)
 ```
 
@@ -139,11 +198,12 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | `pnpm test` | `apps/clean` | the frontend suite (Vitest). `pnpm build` does not run it |
 | `cargo test` | `apps/clean/src-tauri` | the safety-core suite — run it before any change to `remove`, `exclude`, or `paths` |
 | `pnpm smoke` | `apps/clean` | the native gate: runs the app against this Mac and exits non-zero if any data source fails |
+| `pnpm build` | `apps/Resume` | hex-token guard → typecheck → Vite build |
+| `pnpm test` | `apps/Resume` | the frontend suite (Vitest). `pnpm build` does not run it |
+| `cargo test` | `apps/Resume/src-tauri` | the parser, the fact gate, the templates, and both export halves |
 | `pnpm build` | `collection` | static export into `out/` |
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |
 | `pnpm sync-brand` | any app or `collection` | re-copy brand assets from `brand/` |
-| `node scripts/downloads.mjs check` | repo root | the download page agrees with itself (no network) |
-| `node scripts/downloads.mjs latest` | repo root | the download page matches what is actually published |
 
 The design system is eight colors, two fonts, two radii, and one easing
 curve, enforced by the build. When in doubt, open the brand guide at
@@ -162,56 +222,53 @@ Each app owns a tag namespace, so one release never drags the others along:
 | Spiral Wallpaper | `v*` | macOS + Windows, updater manifest |
 | Spiral Slim | `slim-v*` | macOS |
 | Spiral Clean | `clean-v*` | macOS only. No updater yet — the Tauri plugin panics without a signing key, so the key has to exist first |
+| Spiral Resume | `resume-v*` | macOS + Windows, no updater |
 
-All three call the same reusable `.github/workflows/release-app.yml`.
+All four call the same reusable `.github/workflows/release-app.yml`.
 
-### Cut one with the script, not by hand
+A Spiral Resume release carries all three engine tiers. Each runner compiles
+its own `llama-server` before packaging — a sidecar is a native compile, not a
+cross-compile — and the bundle config that declares it is merged at build time,
+so a machine without the binary can still compile and test the app. The model
+itself is not in the release: it is a 2.7 GB download the user chooses in
+Settings, verified against a pinned checksum before it is installed.
+[`apps/Resume/docs/offline-model.md`](apps/Resume/docs/offline-model.md) is the
+record of what had to be true first.
 
 ```bash
+# the tag must match the app's package.json and src-tauri/tauri.conf.json —
+# `node scripts/version.mjs check` proves all four version files agree first
+git tag vX.Y.Z && git push origin vX.Y.Z
+
+# or let the release script do the bump, the commit and the tag for you
 node scripts/release.mjs clean 0.1.0           # bump, commit, tag — nothing pushed
 node scripts/release.mjs clean 0.1.0 --push    # ...and push it
 ```
-
-It bumps the four version files, commits them, and tags **that** commit — so
-the tag can never point at a tree whose versions disagree with it. Before it
-writes anything it refuses a dirty tree, a branch that is not `main`, a `main`
-behind origin, a tag that already exists, and a version that is not newer than
-the current one.
-
-Without `--push` nothing leaves your machine. Pushing the tag is what publishes,
-and there is no undo for a public release.
-
-After a release publishes, `collection/lib/apps.ts` is the one file that goes
-stale — it hands visitors a binary, and its version is a copy of a fact that
-lives in a git tag. `node scripts/downloads.mjs latest` catches that, and CI
-runs it on every `release: published` (plus weekly, as the backstop for Slim,
-which publishes from its own repository and fires no event here).
-
-**Tagging by hand still works and is still guarded**, at three points now: the
-`versions` workflow re-checks the tag against the files within seconds of the
-push, the publish job checks again before creating the release, and
-`node scripts/version.mjs tag <tag>` gives you the same answer locally.
-
-<details>
-<summary>Why the script exists</summary>
-
-On 2026-08-02, `v1.0.3` and `slim-v1.0.1` were both tagged on commits that
-predated their version bumps. macOS and Windows built, signed and notarized
-successfully — and the publish step correctly refused both, because the files
-still said `1.0.2` and `1.0.0`. Roughly an hour of runner time, twice, for a
-mistake that is now unreachable: the script writes the bump and tags the commit
-carrying it, in that order.
-
-`node scripts/version.mjs check` cannot catch this on its own. It proves the
-four files agree **with each other**, never that they agree with the tag.
-
-</details>
 
 The workflow refuses to publish a partial release. It stops before building if
 a signing or notarization secret is missing, and the manifest step throws
 rather than emitting a `latest.json` without signatures — an unsigned macOS
 build is blocked by Gatekeeper, and a bundle with no `.sig` breaks the updater
 for everyone already running the previous version.
+
+### After a macOS release: bump the Homebrew cask
+
+`brew install --cask cococool13/spiral/<app>` is served by
+[`cococool13/homebrew-spiral`](https://github.com/cococool13/homebrew-spiral),
+a separate repo only because Homebrew requires taps to be named `homebrew-*`.
+A release is not finished until its cask points at it — until then `brew`
+installs the previous version.
+
+Edit `Casks/<app>.rb` in that repo: set `version`, and set `sha256` to the
+line for the `.dmg` in the new release's `SHA256SUMS.txt`. Then:
+
+```bash
+brew audit --cask --online cococool13/spiral/<app>
+```
+
+Homebrew verifies the checksum on every install, so a stale `sha256` does not
+install the wrong file — it fails loudly, which is the right failure but still
+a broken install command.
 
 ### One-time setup
 
@@ -238,20 +295,19 @@ things it cannot derive, checks the certificate password actually opens the
 
 ## Roadmap, stated plainly
 
-**Spiral Wallpaper** — current: v1.0.3, signed and notarized universal macOS
-build. Next: Windows signing and the remaining runtime pass on real Windows
-hardware. On hold: additional wallpaper sources (Unsplash and Pexels shipped
-briefly and were removed; the `WallpaperSource` interface is waiting for
-them). Out of scope for v1: animated wallpapers, auto-update, anything that
-phones home.
+**Wallpaper** is at v1.0.3 with a signed and notarized universal macOS build.
+Next: Windows signing and the remaining runtime pass on real Windows hardware.
+On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
+and were removed; the `WallpaperSource` interface is waiting for them). Out
+of scope for v1: animated wallpapers, auto-update, anything that phones home.
 
-**Spiral Clean** — every screen is built and every gate is green. Four things
-stand between it and a `clean-v0.1.0` tag, and none of them is code anyone can
-write today:
+**Clean** has every screen built and every gate green. Four things stand
+between it and a `clean-v0.1.0` tag, and none of them is code anyone can write
+today:
 
-1. **Nobody has seen it rendered.** Ten milestones, and the app has never been
-   opened. The smoke gate proves every data source answers on a real Mac; it
-   draws nothing. This is the gate.
+1. **Nobody has seen it rendered.** The app has never been opened. The smoke
+   gate proves every data source answers on a real Mac; it draws nothing. This
+   is the gate.
 2. **Signing** needs the Developer ID in the build environment.
 3. **Notarization** needs the Apple ID and an app-specific password.
 4. **The updater cannot be written yet.** The Tauri plugin reads
@@ -263,9 +319,18 @@ Out of scope for Clean v1, deliberately: a menu bar HUD or anything resident,
 scheduled cleaning, duplicate and large-file finders, `node_modules`, and any
 network call whatsoever.
 
-**Spiral Slim** — v1.0.0, shipped on macOS. No further work planned.
+**Resume** is feature-complete and unreleased: import, the Check screen, twelve
+templates, PDF and Word export, and three engine tiers all work. What stands
+between it and a release is packaging, not features — a release workflow, the
+llama.cpp sidecar, and a pinned model file.
+
+**Slim** is done for what it set out to do. It stays script-first on every
+platform by design — see [`apps/slim/SECURITY.md`](apps/slim/SECURITY.md).
 
 ---
 
-[MIT licensed](LICENSE). Wallpapers from [Wallhaven](https://wallhaven.cc).
-Spiral is not affiliated.
+[MIT licensed](LICENSE), except [`apps/slim/`](apps/slim/), which is
+[GPL-3.0](apps/slim/LICENSE) — it began as a fork of
+[SlimBrave Neo](https://github.com/ChaoticSi1ence/SlimBrave-Neo).
+Wallpapers from [Wallhaven](https://wallhaven.cc). Spiral is not affiliated
+with either.

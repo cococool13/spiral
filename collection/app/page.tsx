@@ -4,6 +4,7 @@ import Hero from "@/components/Hero";
 import MotionProvider from "@/components/MotionProvider";
 import Nav from "@/components/Nav";
 import OtherWork from "@/components/OtherWork";
+import TaglineReveal from "@/components/resume/TaglineReveal";
 import ScrollProgress from "@/components/ScrollProgress";
 
 export default function Home() {
@@ -16,6 +17,14 @@ export default function Home() {
       <ScrollProgress />
       <main>
         <Hero />
+        <TaglineReveal
+          lines={[
+            "Every one of these could have",
+            "an account, a subscription",
+            "and a process that never stops.",
+            "None of them do.",
+          ]}
+        />
         <AppGrid />
         <OtherWork />
       </main>

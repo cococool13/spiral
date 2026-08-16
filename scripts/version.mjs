@@ -32,6 +32,7 @@ const APPS = {
   wallpaper: { dir: "apps/wallpaper", crate: "spiral-wallpaper" },
   slim: { dir: "apps/slim/desktop", crate: "spiral-slim" },
   clean: { dir: "apps/clean", crate: "spiral-clean" },
+  resume: { dir: "apps/Resume", crate: "spiral-resume" },
 };
 
 const SEMVER = /^\d+\.\d+\.\d+$/;

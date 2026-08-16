@@ -137,9 +137,12 @@ before it is stapled will not match what people download.
    shasum -a 256 "Spiral Slim_<version>_universal.dmg"
    ```
 
-6. Publish it on this repository's Releases page and nowhere else.
-   [`SECURITY.md`](../SECURITY.md) tells users to reject a copy from any other
-   source, so a mirror does not help them — it makes them doubt the real one.
+6. Publish it on this repository's Releases page under a `slim-v*` tag, and
+   nowhere else. [`SECURITY.md`](../SECURITY.md) tells users to reject a copy
+   from any other source, so a mirror does not help them — it makes them doubt
+   the real one. v1.0.0 predates the move and still sits on the archived
+   `cococool13/Spiral-Slim` release; `SECURITY.md` names both, and it must keep
+   naming every location that serves a real build.
 
 ### Not done, and deliberately
 

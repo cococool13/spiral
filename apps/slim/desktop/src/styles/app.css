@@ -117,7 +117,15 @@ body {
   background: var(--hlx-01);
 }
 
+/* The collection's word recedes so the app's own is what you read — the same
+   treatment every Spiral app's bar uses. */
+.header__collection {
+  color: var(--stl-02);
+  font-weight: 400;
+}
+
 .header__wordmark {
+  margin: 0;
   font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
   font-size: 12px;
   letter-spacing: 0.1em;

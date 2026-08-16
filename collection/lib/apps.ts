@@ -1,10 +1,12 @@
 /**
  * `source` is shipped and usable, but distributed as source rather than as a
- * download. Spiral Slim is the case that needed it: its own SECURITY.md tells
- * users that any "Spiral Slim" installer or signed binary is a malware
- * indicator, so offering a DMG here would contradict the project's own advice
- * to its users. Shipped is shipped, so it does not belong under "coming soon"
- * either.
+ * download — no status here may offer a binary that does not exist.
+ *
+ * Spiral Slim is the case that shaped it. Its SECURITY.md draws the line by
+ * platform, not by product: the policy scripts are source-only everywhere, and
+ * the only official binary is the signed, notarized macOS DMG of the wizard in
+ * `apps/slim/desktop`. So the Slim card offers that DMG on macOS and sends
+ * Windows visitors to the source, which is what `noWindowsBinary` is for.
  */
 export type AppStatus = "live" | "source" | "coming-soon";
 
@@ -25,11 +27,14 @@ export interface SpiralApp {
   noWindowsBinary?: true;
   /** Inline SVG path data drawn in a 24x24 viewBox, stroke-based. */
   iconPath: string;
-  video?: {
-    mp4: string;
-    webm: string;
-    poster: string;
-  };
+  /** A page on this site that explains the app. Rendered as the card's link. */
+  page?: string;
+  /**
+   * Homebrew cask token, for the apps in the cococool13/spiral tap. Present
+   * only where a signed macOS build exists — a brew command for an app with no
+   * cask would fail in the terminal after the person had already copied it.
+   */
+  brewCask?: string;
   downloads?: {
     mac: { url: string; label: string };
     windows: { url: string; label: string };
@@ -37,7 +42,7 @@ export interface SpiralApp {
   };
 }
 
-const RELEASE = "https://github.com/cococool13/spiral-wallpaper/releases/download/v1.0.3";
+const RELEASE = "https://github.com/cococool13/spiral/releases/download/v1.0.3";
 const SLIM_RELEASE = "https://github.com/cococool13/Spiral-Slim/releases/download/v1.0.0";
 
 export const apps: SpiralApp[] = [
@@ -47,12 +52,9 @@ export const apps: SpiralApp[] = [
     tagline: "Click a wallpaper. It downloads and applies. That's it.",
     status: "live",
     version: "1.0.3",
+    brewCask: "spiral-wallpaper",
+    page: "/wallpaper/",
     iconPath: "M3 5h18v13H3zM3 18h18M9 21h6M6 8l4 4M14 8l4 4M10 12l-2 3M16 12l-1.5 3",
-    video: {
-      mp4: "/brand/media/wallpaper-demo.mp4",
-      webm: "/brand/media/wallpaper-demo.webm",
-      poster: "/brand/media/wallpaper-demo-poster.avif",
-    },
     downloads: {
       mac: {
         url: `${RELEASE}/Spiral.Wallpaper_1.0.3_universal.dmg`,
@@ -62,7 +64,7 @@ export const apps: SpiralApp[] = [
         url: `${RELEASE}/Spiral.Wallpaper_1.0.3_x64-setup.exe`,
         label: "Download for Windows",
       },
-      all: "https://github.com/cococool13/spiral-wallpaper/releases/latest",
+      all: "https://github.com/cococool13/spiral/releases/latest",
     },
   },
   {
@@ -71,6 +73,7 @@ export const apps: SpiralApp[] = [
     tagline: "Sets Brave's privacy policies. Shows every change first.",
     status: "live",
     version: "1.0.0",
+    brewCask: "spiral-slim",
     noWindowsBinary: true,
     downloads: {
       mac: {
@@ -80,18 +83,19 @@ export const apps: SpiralApp[] = [
       // Windows runs the same app, built from source. This points at the
       // repository rather than at a binary that does not and will not exist.
       windows: {
-        url: "https://github.com/cococool13/Spiral-Slim#the-desktop-app-optional",
+        url: "https://github.com/cococool13/spiral/tree/main/apps/slim",
         label: "Build it for Windows",
       },
       all: "https://github.com/cococool13/Spiral-Slim/releases/latest",
     },
     // A shield with two setting lines: policy, under protection.
+    page: "/slim/",
     iconPath: "M12 3l7 3v5.5c0 4.5-3 7.5-7 9.5-4-2-7-5-7-9.5V6zM9 11h6M9 14h4",
   },
   {
     slug: "dashboard",
     name: "Spiral Dashboard",
-    tagline: "Your day on one quiet screen.",
+    tagline: "One screen for your day.",
     status: "coming-soon",
     iconPath: "M3 4h18v16H3zM3 10h8M11 4v16M11 14h10",
   },
@@ -112,26 +116,28 @@ export const apps: SpiralApp[] = [
     // build and run it would be offering something this project has not
     // itself looked at.
     status: "coming-soon",
+    page: "/clean/",
     iconPath: "M12 3v6M8 9h8l1 12H7zM9 13v4M12 13v4M15 13v4",
   },
   {
     slug: "resume",
     name: "Spiral Resume",
-    tagline: "A resume builder that stays out of the way.",
+    tagline: "Twelve typeset layouts. It is never allowed to change a fact.",
     status: "coming-soon",
+    page: "/resume/",
     iconPath: "M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 13h6M9 16h4",
   },
   {
     slug: "weather",
     name: "Spiral Weather",
-    tagline: "The forecast, without the feed.",
+    tagline: "The forecast where you are.",
     status: "coming-soon",
     iconPath: "M7 15a4 4 0 1 1 .5-7.97A5 5 0 1 1 17 15zM8 19h.01M12 19h.01M16 19h.01",
   },
   {
     slug: "transcribe",
     name: "Spiral Transcribe",
-    tagline: "Audio in, text out. On your machine.",
+    tagline: "Turns audio into text on your machine.",
     status: "coming-soon",
     iconPath:
       "M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v4",
@@ -139,7 +145,7 @@ export const apps: SpiralApp[] = [
   {
     slug: "chat",
     name: "Spiral Chat",
-    tagline: "Local models, plain interface.",
+    tagline: "Runs language models on your machine.",
     status: "coming-soon",
     iconPath: "M4 5h16v11H9l-5 4zM8 9h8M8 12h5",
   },
