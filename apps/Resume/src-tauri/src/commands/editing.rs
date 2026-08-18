@@ -1,4 +1,4 @@
-//! The commands behind the Input and Check screens: what the user brings in,
+//! The commands behind the Import and Check screens: what the user brings in,
 //! and what the app offers back about it. Nothing here builds a file.
 
 use crate::model::ResumeDoc;
@@ -6,9 +6,9 @@ use crate::parse_text;
 use serde::Serialize;
 use tauri_plugin_dialog::DialogExt;
 
-/// The six swatches, served from Rust because the hex values may not live in
-/// the frontend — `check-hex` allows colours only in the brand token file, and
-/// these are the user's document colours, not Spiral's.
+/// The closed set of document accents, served from Rust because the hex values
+/// may not live in the frontend — `check-hex` allows colours only in the brand
+/// token file, and these are the user's document colours, not Spiral's.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Accent {

@@ -20,6 +20,10 @@ pub const ACCENTS: &[(&str, &str)] = &[
     ("forest", "27452f"),
     ("oxblood", "5e1f1f"),
     ("plum", "4a2545"),
+    ("teal", "1f4f4a"),
+    ("copper", "6b3f2a"),
+    ("charcoal", "2b2d31"),
+    ("wine", "4a1c28"),
 ];
 
 /// Body text, in both halves. Also the default accent.

@@ -68,6 +68,23 @@ describe("Style", () => {
     expect(screen.getByRole("radio", { name: /Column/ }).getAttribute("aria-checked")).toBe("false");
   });
 
+  it("offers a pick that fits this resume", async () => {
+    const onChoose = vi.fn();
+    render(
+      <Style
+        doc={emptyDoc()}
+        chosen=""
+        accent="ink"
+        onChoose={onChoose}
+        onChooseAccent={vi.fn()}
+        onContinue={vi.fn()}
+      />,
+    );
+    await waitFor(() => screen.getByRole("radio", { name: /Column/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Pick one that fits this resume" }));
+    expect(onChoose).toHaveBeenCalledWith("bullet");
+  });
+
   it("does not continue before a style is chosen, and says what is missing", async () => {
     const onContinue = vi.fn();
     render(<Style

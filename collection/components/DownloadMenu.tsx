@@ -1,45 +1,55 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { apps } from "@/lib/apps";
 import { brewCommandFor, offerFor } from "@/lib/downloadOffer";
 import { useOS } from "@/lib/useOS";
 
+interface Props {
+  /** Hero is the page's primary action. Nav is the same chooser, quieter, on every page. */
+  variant?: "hero" | "nav";
+}
+
 /**
- * The hero's one control: pick an app, get the file. Closed it is a single
- * block — words on paper, action on red — so the hero reads the same as it
- * did without it.
+ * Pick an app, get the file. Closed it is a single control; open it lists
+ * every published binary this machine can actually run.
  *
  * Every row offers the download the visitor's own machine can actually run.
  * On a Mac each row also offers the one-line Homebrew install, because that is
  * the shortest honest path for anyone who already has brew — but it is never
  * the primary action, since most visitors do not.
  */
-export default function DownloadMenu() {
+export default function DownloadMenu({ variant = "hero" }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const os = useOS();
+  const panelId = useId();
+  const nav = variant === "nav";
 
-  // On a short window the panel opens below the fold even once the hero stops
-  // clipping it. Bring it into view rather than leaving the reader to discover
-  // that the thing they just opened is off-screen.
+  // On a short window the hero panel opens below the fold even once the stage
+  // stops clipping it. Bring it into view rather than leaving the reader to
+  // discover that the thing they just opened is off-screen. The nav is already
+  // on screen, so it does not need this.
   useEffect(() => {
-    if (!open) return;
+    if (!open || nav) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     panel.current?.scrollIntoView({
       block: "nearest",
       behavior: reduced ? "auto" : "smooth",
     });
-  }, [open]);
+  }, [open, nav]);
 
   const downloadable = apps.filter((a) => a.downloads);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
     };
     const onPointer = (e: PointerEvent) => {
       if (!wrap.current?.contains(e.target as Node)) setOpen(false);
@@ -63,42 +73,67 @@ export default function DownloadMenu() {
     }
   }
 
+  const chevron = (size: number) => (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+      style={{
+        transform: open ? "rotate(180deg)" : undefined,
+        transition: "transform var(--spiral-dur-fast) var(--spiral-ease)",
+      }}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+
   return (
     <div ref={wrap} className="relative">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="btn-block"
-      >
-        <span className="btn-block__label">Get an app</span>
-        <span className="btn-block__chip">
-          <svg
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-            style={{
-              transform: open ? "rotate(180deg)" : undefined,
-              transition: "transform var(--spiral-dur-fast) var(--spiral-ease)",
-            }}
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </span>
-      </button>
+      {nav ? (
+        <button
+          type="button"
+          ref={button}
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          aria-haspopup="true"
+          onClick={() => setOpen((v) => !v)}
+          className="glass-pill glass-pill--nav"
+        >
+          Download
+          {chevron(14)}
+        </button>
+      ) : (
+        <button
+          type="button"
+          ref={button}
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          aria-haspopup="true"
+          onClick={() => setOpen((v) => !v)}
+          className="btn-block"
+        >
+          <span className="btn-block__label">Get an app</span>
+          <span className="btn-block__chip">{chevron(16)}</span>
+        </button>
+      )}
 
       {open && (
         <div
+          id={panelId}
           ref={panel}
           // No role. This was `role="dialog"`, which promises focus management
           // it does not have; a plain disclosure — a button carrying
           // `aria-expanded` followed by the content it reveals — is the honest
           // pattern and needs no role at all.
-          className="absolute left-0 top-full z-20 mt-3 max-h-[min(26rem,70svh)] w-[min(22rem,calc(100vw-3rem))] overflow-y-auto border border-white/15 bg-black/95 p-2 text-left shadow-2xl backdrop-blur"
+          className={
+            nav
+              ? "absolute right-0 top-full z-20 mt-2 max-h-[min(26rem,70svh)] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto border border-white/15 bg-black/95 p-2 text-left shadow-2xl backdrop-blur"
+              : "absolute left-0 top-full z-20 mt-3 max-h-[min(26rem,70svh)] w-[min(22rem,calc(100vw-3rem))] overflow-y-auto border border-white/15 bg-black/95 p-2 text-left shadow-2xl backdrop-blur"
+          }
         >
           {downloadable.map((app) => {
             // `offerFor`, not a local `os !== "windows"`. That test treated

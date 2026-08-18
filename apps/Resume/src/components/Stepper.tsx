@@ -1,10 +1,9 @@
-export type Step = "input" | "check" | "style" | "format" | "build";
+export type Step = "input" | "check" | "style" | "build";
 
 const STEPS: { id: Step; label: string }[] = [
-  { id: "input", label: "Input" },
+  { id: "input", label: "Import" },
   { id: "check", label: "Check" },
   { id: "style", label: "Style" },
-  { id: "format", label: "Format" },
   { id: "build", label: "Build" },
 ];
 
@@ -17,6 +16,7 @@ export function Stepper({
   reached: Step[];
   onJump: (step: Step) => void;
 }) {
+  if (current === "input") return null;
   return (
     <nav className="stepper" aria-label="Progress">
       {STEPS.map(({ id, label }, i) => (
@@ -29,7 +29,7 @@ export function Stepper({
           onClick={() => onJump(id)}
         >
           <span className="stepper__index">{i + 1}</span>
-          {label}
+          <span className="stepper__label">{label}</span>
         </button>
       ))}
     </nav>

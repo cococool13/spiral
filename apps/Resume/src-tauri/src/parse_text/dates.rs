@@ -41,6 +41,12 @@ pub(super) fn side_re() -> &'static Regex {
     })
 }
 
+/// ATS and many Word templates write the month as a number: "01/2021".
+pub(super) fn numeric_side_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"\b(\d{1,2})/(\d{4})\b").unwrap())
+}
+
 /// The dash between two dates is written every way there is: spaced, unspaced,
 /// hyphen, en dash, or a word. An unspaced hyphen also appears inside words and
 /// phone numbers, so this regex is deliberately over-eager and
@@ -51,6 +57,19 @@ pub(super) fn separator_re() -> &'static Regex {
 }
 
 pub(super) fn parse_one_date(text: &str) -> Option<DateMark> {
+    if let Some(caps) = numeric_side_re().captures(text) {
+        let month = caps.get(1)?.as_str().parse::<u8>().ok()?;
+        if !(1..=12).contains(&month) {
+            return None;
+        }
+        let year = caps.get(2)?.as_str().parse::<u16>().ok()?;
+        return Some(DateMark {
+            raw: caps.get(0)?.as_str().to_string(),
+            year: Some(year),
+            month: Some(month),
+            present: false,
+        });
+    }
     let caps = side_re().captures(text)?;
     let raw = caps.get(0)?.as_str().trim().to_string();
     if caps.get(1).is_some() {
@@ -151,6 +170,19 @@ mod tests {
         let (start, end) = parse_date_range("2019-2021").unwrap();
         assert_eq!(start.year, Some(2019));
         assert_eq!(end.year, Some(2021));
+    }
+
+    /// ATS templates write months as numbers. "01/2021 - 03/2023" is the same
+    /// range as "Jan 2021 - Mar 2023", and leaving it unread used to hide the
+    /// dates and keep the slashes in the title.
+    #[test]
+    fn a_numeric_month_year_range_is_still_a_range() {
+        let (start, end) = parse_date_range("01/2021 - 03/2023").unwrap();
+        assert_eq!(start.year, Some(2021));
+        assert_eq!(start.month, Some(1));
+        assert_eq!(start.raw, "01/2021");
+        assert_eq!(end.year, Some(2023));
+        assert_eq!(end.month, Some(3));
     }
 
     /// A hyphen inside a word is not a separator; the range beside it is.

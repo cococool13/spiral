@@ -8,14 +8,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --conc-01:#EBE9E4; /* poured concrete — page */
-  --conc-02:#DDDAD3; /* raw panel — surfaces */
-  --conc-03:#CFCCC4; /* formwork line */
-  --ink:#10181B;     /* mill steel — sampled from the mark's source ink */
-  --steel:#666863;   /* galvanized — secondary, 4.65:1 on page */
+  --conc-01:#0B0B0C; /* page */
+  --conc-02:#161618; /* lifted surface */
+  --conc-03:#2C2C2E; /* hairline */
+  --ink:#F4F3F0;     /* paper — body text on the page */
+  --mill:#10181B;    /* mill steel — text on paper islands */
+  --steel:#8C8D8A;   /* secondary on black */
   --helix:#D52E2B;   /* helix red */
   --oxblood:#6F1011; /* pressed / hover red */
-  --paper:#F5F4F0;
+  --paper:#F4F3F0;
   --unit:8px;
   --measure:64ch;
   --ease:cubic-bezier(.2,.7,.2,1);
@@ -127,7 +128,7 @@ blockquote .spec{display:block;margin-top:calc(var(--unit)*1.5)}
   position:relative;overflow:hidden;
 }
 .mark-stage .markbox{height:64%}
-.mark-stage.dark{background:var(--ink)}
+.mark-stage.dark{background:var(--mill)}
 .mark-stage.clearspace::after{
   content:"";position:absolute;inset:13%;
   border:1px dashed var(--helix);pointer-events:none;
@@ -261,15 +262,15 @@ table.contrast td.r{font-family:"IBM Plex Mono",monospace;font-size:13px}
 }
 .menubar{
   display:flex;align-items:center;gap:14px;
-  background:var(--ink);color:var(--conc-01);
-  padding:6px 14px;border:1px solid var(--ink);max-width:520px;
+  background:var(--conc-02);color:var(--ink);
+  padding:6px 14px;border:1px solid var(--conc-03);max-width:520px;
 }
 .menubar .navmark{height:14px;display:flex}
 .menubar span{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em}
 
 /* ---------- tokens ---------- */
 pre{
-  background:var(--ink);color:var(--conc-01);
+  background:var(--conc-02);color:var(--ink);
   font-family:"IBM Plex Mono",monospace;font-size:13px;line-height:1.6;
   padding:calc(var(--unit)*3);overflow-x:auto;
 }
@@ -366,7 +367,7 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       </div>
       <div class="panel">
         <span class="spec"><b>B.</b> Reversed — paper on steel</span>
-        <div class="mark-stage dark"><div class="markbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--conc-01)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--conc-01)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--conc-01)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--conc-01)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></div></div>
+        <div class="mark-stage dark"><div class="markbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--paper)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--paper)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--paper)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--paper)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></div></div>
       </div>
       <div class="panel">
         <span class="spec"><b>C.</b> Clearspace — ¼ mark height, all sides</span>
@@ -440,25 +441,25 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <h2>Material</h2>
       <span class="spec"><b>SPR-03</b> · Color</span>
     </div>
-    <p style="margin-bottom:calc(var(--unit)*5)">The palette is the warehouse with one object in it: poured concrete floors, mill steel beams, and helix red as the only color. Red is for the mark, interaction, and warnings. If a screen is more than a few percent red, something is wrong. One more material exists but has no swatch: glass. Controls — buttons, and only buttons — are frosted glass floating over the concrete; surfaces never are.</p>
+    <p style="margin-bottom:calc(var(--unit)*5)">The palette is a dark room with one object in it: near-black floors, paper type, and helix red as the only color. Red is for the mark, interaction, and warnings. If a screen is more than a few percent red, something is wrong. One more material exists but has no swatch: glass. Controls — buttons, and only buttons — are frosted glass floating over the black; surfaces never are.</p>
     <div class="swatches">
-      <div class="swatch"><div class="chip" style="background:#EBE9E4"></div><div class="meta"><div class="name">Poured Concrete</div><div class="spec"><b>CONC-01</b> · #EBE9E4 · page</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#DDDAD3"></div><div class="meta"><div class="name">Raw Panel</div><div class="spec"><b>CONC-02</b> · #DDDAD3 · surface</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#CFCCC4"></div><div class="meta"><div class="name">Formwork</div><div class="spec"><b>CONC-03</b> · #CFCCC4 · rule / border</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#666863"></div><div class="meta"><div class="name">Galvanized</div><div class="spec"><b>STL-02</b> · #666863 · secondary text</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#10181B"></div><div class="meta"><div class="name">Mill Steel</div><div class="spec"><b>INK-01</b> · #10181B · ink / primary</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0B0B0C;border:1px solid #2C2C2E"></div><div class="meta"><div class="name">Void</div><div class="spec"><b>CONC-01</b> · #0B0B0C · page</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#161618"></div><div class="meta"><div class="name">Lifted</div><div class="spec"><b>CONC-02</b> · #161618 · surface</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#2C2C2E"></div><div class="meta"><div class="name">Hairline</div><div class="spec"><b>CONC-03</b> · #2C2C2E · rule / border</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#8C8D8A"></div><div class="meta"><div class="name">Galvanized</div><div class="spec"><b>GRAY</b> · #8C8D8A · secondary on black</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#F4F3F0"></div><div class="meta"><div class="name">Paper</div><div class="spec"><b>PAPER</b> · #F4F3F0 · type on black</div></div></div>
       <div class="swatch"><div class="chip" style="background:#D52E2B"></div><div class="meta"><div class="name">Helix Red</div><div class="spec"><b>HLX-01</b> · #D52E2B · the mark, accents</div></div></div>
       <div class="swatch"><div class="chip" style="background:#6F1011"></div><div class="meta"><div class="name">Oxblood</div><div class="spec"><b>HLX-02</b> · #6F1011 · pressed / hover state</div></div></div>
     </div>
 
     <table class="contrast">
-      <caption class="spec" style="text-align:left;padding-bottom:calc(var(--unit)*2)"><b>Measured contrast</b> — WCAG 2.1, against Poured Concrete unless noted</caption>
+      <caption class="spec" style="text-align:left;padding-bottom:calc(var(--unit)*2)"><b>Measured contrast</b> — WCAG 2.1, against Void unless noted</caption>
       <tr><th>Pairing</th><th>Ratio</th><th>Use for</th></tr>
-      <tr><td>Mill Steel on Poured Concrete</td><td class="r">14.8 : 1</td><td>All text, any size</td></tr>
-      <tr><td>Galvanized on Poured Concrete</td><td class="r">4.7 : 1</td><td>Secondary text, labels</td></tr>
-      <tr><td>Helix Red on Poured Concrete</td><td class="r">4.1 : 1</td><td>Large text, icons, UI — never body copy</td></tr>
-      <tr><td>Paper on Helix Red</td><td class="r">4.5 : 1</td><td>Button labels, bold ≥ 15px</td></tr>
-      <tr><td>Paper on Mill Steel</td><td class="r">16.3 : 1</td><td>Reversed sections, any size</td></tr>
+      <tr><td>Paper on Void</td><td class="r">17.7 : 1</td><td>All text, any size</td></tr>
+      <tr><td>Galvanized on Void</td><td class="r">5.9 : 1</td><td>Secondary text, labels</td></tr>
+      <tr><td>Helix Red on Void</td><td class="r">4.0 : 1</td><td>Icons, UI — never body copy</td></tr>
+      <tr><td>Paper on red-fill</td><td class="r">4.8 : 1</td><td>Button labels, bold ≥ 15px</td></tr>
+      <tr><td>Mill Steel on Paper</td><td class="r">16.2 : 1</td><td>Document sheets, OtherWork</td></tr>
     </table>
   </div>
 </section>
@@ -553,7 +554,7 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="panel">
         <span class="spec"><b>B.</b> Menu bar — mark stands alone</span>
         <div class="menubar">
-          <span class="navmark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--conc-01)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--conc-01)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--conc-01)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--conc-01)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></span>
+          <span class="navmark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--paper)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--paper)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--paper)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--paper)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></span>
           <span>wallpaper: applied · next rotation 18:00</span>
         </div>
         <p class="spec" style="margin-top:calc(var(--unit)*2);max-width:none">16px paper mark on ink. Status text in mono — it behaves like data.</p>
@@ -622,11 +623,12 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <p style="margin-bottom:calc(var(--unit)*3)">Paste this into every Spiral app. If a value isn't here, it isn't in the brand.</p>
 <pre>:root {
   <span class="c">/* material */</span>
-  --conc-01: #EBE9E4;   <span class="c">/* page */</span>
-  --conc-02: #DDDAD3;   <span class="c">/* surface */</span>
-  --conc-03: #CFCCC4;   <span class="c">/* border */</span>
-  --ink-01:  #10181B;   <span class="c">/* ink — all body text */</span>
-  --stl-02:  #666863;   <span class="c">/* secondary text — 4.7:1 on page */</span>
+  --conc-01: #0B0B0C;   <span class="c">/* page */</span>
+  --conc-02: #161618;   <span class="c">/* surface */</span>
+  --conc-03: #2C2C2E;   <span class="c">/* border */</span>
+  --paper:   #F4F3F0;   <span class="c">/* type on black */</span>
+  --stl-02:  #8C8D8A;   <span class="c">/* secondary — 5.9:1 on page */</span>
+  --ink-01:  #10181B;   <span class="c">/* text on paper islands only */</span>
   --hlx-01:  <span class="a">#D52E2B</span>;   <span class="c">/* helix red — mark, accents, never body copy */</span>
   --hlx-02:  <span class="a">#6F1011</span>;   <span class="c">/* oxblood — pressed / hover */</span>
 

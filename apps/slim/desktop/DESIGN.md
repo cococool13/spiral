@@ -11,10 +11,10 @@ this app allowed to contain a hex value. `pnpm check:hex` enforces it.
 > the brand, and no new colour is declared outside the token mirror.
 
 ## Theme
-Industrial concrete, light-only by design. Flat surfaces and hairline borders
-carry the page; the one card on screen carries the weight. There is no glass
-layer: Spiral Slim has no CTA pills over imagery, so the one place glass is
-permitted never occurs.
+Dark cinematic. Flat black surfaces and hairline borders carry the page; the
+one card on screen carries the weight. There is no glass layer: Spiral Slim
+has no CTA pills over imagery, so the one place glass is permitted never
+occurs.
 
 ## Shape
 
@@ -33,9 +33,9 @@ this value; it lives in the app's token mirror and is flagged there.
 ## Colour
 | Token | Value | Role |
 | --- | --- | --- |
-| `--conc-01` | `#EBE9E4` | Page background, and the focused card's fill |
-| `--conc-02` | `#DDDAD3` | Header, footer, panels, unfocused cards |
-| `--conc-03` | `#CFCCC4` | Hairline border / rule |
+| `--conc-01` | `#0B0B0C` | Page background, and the focused card's fill |
+| `--conc-02` | `#161618` | Header, footer, panels, unfocused cards |
+| `--conc-03` | `#2C2C2E` | Hairline border / rule |
 | `--ink-01` | `#10181B` | All primary text |
 | `--ink-02` | derived | **All secondary text.** See below |
 | `--hlx-01` | `#D52E2B` | **Card names**, card border, aura, primary action, warnings |
@@ -43,19 +43,8 @@ this value; it lives in the app's token mirror and is flagged there.
 | `--paper` | `#F5F4F0` | Button labels on red |
 
 ### The secondary-text rule
-`--stl-02` measures 4.65:1 on `--conc-01` but only **4.04:1 on `--conc-02`**,
-so it fails AA on the surface colour — and almost every secondary string in
-this app sits on a `--conc-02` header, footer, panel or unfocused card. All
-secondary text therefore uses:
-
-```css
---ink-02: color-mix(in srgb, var(--ink-01) 65%, var(--conc-02));
-```
-
-It resolves to `#585C5B`: **5.59:1** on conc-01, **4.86:1** on conc-02, both
-AA. Derived from two brand tokens rather than declared, so the mirror stays
-faithful and `check:hex` still passes. One token for all secondary text
-removes the "which surface am I on" reasoning that produced the original bug.
+`--stl-02` (`#8C8D8A`) measures 5.9:1 on the page and 5.4:1 on `--conc-02`.
+All secondary text uses `--ink-02: var(--stl-02)`.
 
 It measures 4.23:1 on `--conc-03`, used only for the disabled button label.
 WCAG 1.4.3 exempts inactive controls, and the lower contrast is the signal.

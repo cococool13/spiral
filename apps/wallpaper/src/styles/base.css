@@ -40,7 +40,7 @@ body,
 
 body {
   background: var(--conc-01);
-  color: var(--ink-01);
+  color: var(--paper);
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.5;
@@ -48,6 +48,7 @@ body {
   overflow: hidden;
   user-select: none;
   cursor: default;
+  color-scheme: dark;
 }
 
 /* Chrome behaves like a native window; prose does not. Error copy, the

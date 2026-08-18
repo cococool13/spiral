@@ -17,11 +17,12 @@ body,
 body {
   margin: 0;
   background: var(--conc-01);
-  color: var(--ink-01);
+  color: var(--paper);
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
   /* Every number here is a quantity that changes with the selection: policy
      counts, change counts, step indices. Proportional digits make them
      jitter as they update. */
@@ -29,7 +30,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: 2px;
 }
 
@@ -317,7 +318,7 @@ body {
 }
 
 .card:has(.card__input:focus-visible) {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: -6px;
 }
 
@@ -461,7 +462,7 @@ body {
   border: 1px solid var(--conc-03);
   border-radius: var(--radius-ctl);
   background: var(--conc-01);
-  color: var(--ink-01);
+  color: var(--paper);
   font-family: var(--font-mono);
   font-size: 16px;
   transition:
@@ -554,7 +555,7 @@ body {
 }
 
 .review__note strong {
-  color: var(--ink-01);
+  color: var(--paper);
 }
 
 .review__note[data-tone="blocked"] strong,
@@ -691,12 +692,12 @@ legend {
 }
 
 .choice:has(input:checked) {
-  border-color: var(--ink-01);
+  border-color: var(--paper);
   box-shadow: inset 3px 0 0 var(--hlx-01);
 }
 
 .choice:has(input:focus-visible) {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: 2px;
 }
 
@@ -949,7 +950,7 @@ details[open] > summary {
   gap: calc(var(--unit) * 2);
   margin-top: calc(var(--unit) * 3);
   padding: calc(var(--unit) * 2);
-  border: 1px solid var(--ink-01);
+  border: 1px solid var(--conc-03);
   background: var(--conc-02);
   cursor: pointer;
   /* Same vocabulary as .choice: the irreversible control should not be the
@@ -975,7 +976,7 @@ details[open] > summary {
 }
 
 .confirm:has(input:focus-visible) {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: 2px;
 }
 
@@ -1000,10 +1001,10 @@ details[open] > summary {
 button {
   font: inherit;
   padding: 10px calc(var(--unit) * 3);
-  border: 1px solid var(--ink-01);
+  border: 1px solid var(--conc-03);
   border-radius: var(--radius-ctl);
   background: transparent;
-  color: var(--ink-01);
+  color: var(--paper);
   cursor: pointer;
   transition:
     background-color var(--dur-fast) var(--ease),

@@ -66,11 +66,12 @@ export function deleteStoredData(): Promise<void> {
 export function buildDocument(
   draft: Draft,
   onProgress: (progress: Progress) => void,
+  aim = "",
 ): Promise<BuildResult> {
   const channel = new Channel<Progress>();
   channel.onmessage = onProgress;
   return invoke<BuildResult>("build_document", {
-    request: draft,
+    request: { ...draft, aim },
     onProgress: channel,
   });
 }

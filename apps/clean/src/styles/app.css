@@ -20,15 +20,13 @@
   font-display: swap;
 }
 
-/* tokens.css documents --spiral-conc-01/02/03 + --spiral-ink as the
-   "light concrete (app surfaces)" set — this is an app, so the page uses
-   that set rather than the dark-cinematic marketing set (--spiral-black /
-   --spiral-paper). */
+/* tokens.css is the brand file. The page is cinematic black; type is paper. */
 body {
   margin: 0;
   font-family: var(--spiral-font-display);
   background: var(--spiral-conc-01);
-  color: var(--spiral-ink);
+  color: var(--spiral-paper);
+  color-scheme: dark;
 }
 
 .app {
@@ -100,8 +98,8 @@ button {
    by this screen at all — both are the calmer, non-final case. */
 .badge-likely,
 .badge-handoff {
-  border-color: var(--spiral-steel);
-  color: var(--spiral-steel);
+  border-color: var(--spiral-gray);
+  color: var(--spiral-gray);
 }
 
 .badge-warn {
@@ -148,7 +146,7 @@ dialog code {
 /* "Spiral" recedes so the app's own word is what you read. Legal on the page
    background and nowhere else — see the contrast rule in docs/DESIGN.md. */
 .bar__collection {
-  color: var(--spiral-steel);
+  color: var(--spiral-gray);
   font-weight: 400;
 }
 
@@ -173,7 +171,7 @@ dialog code {
   display: block;
   width: 16px;
   height: 1px;
-  background: var(--spiral-ink);
+  background: var(--spiral-paper);
   transition: background var(--spiral-dur-fast) var(--spiral-ease);
 }
 
@@ -244,7 +242,7 @@ dialog code {
   border: 0;
   border-radius: 0;
   background: none;
-  color: var(--spiral-ink);
+  color: var(--spiral-paper);
   font-family: var(--spiral-font-mono);
   font-size: 12px;
   text-align: left;

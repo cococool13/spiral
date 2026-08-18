@@ -8,10 +8,12 @@ import { Notice } from "../components/Notice";
  *  that is the honest result, not something to pad out. */
 export function Build({
   draft,
+  aim = "",
   onDone,
   onBack,
 }: {
   draft: Draft;
+  aim?: string;
   onDone: (result: BuildResult) => void;
   onBack: () => void;
 }) {
@@ -22,7 +24,7 @@ export function Build({
     let current = true;
     buildDocument(draft, (next) => {
       if (current) setProgress(next);
-    })
+    }, aim)
       .then((result) => {
         if (current) onDone(result);
       })
@@ -45,7 +47,7 @@ export function Build({
         <Notice tone="warn">{error}</Notice>
         <div className="panel__actions">
           <button type="button" className="btn" onClick={onBack}>
-            Back to Style
+            Choose a format
           </button>
         </div>
       </section>

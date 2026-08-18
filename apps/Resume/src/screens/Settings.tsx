@@ -52,11 +52,11 @@ export function Settings({
       <div className="panel__actions">
         {confirming ? (
           <>
-            <button type="button" className="btn btn--primary" onClick={remove}>
-              Delete it
-            </button>
-            <button type="button" className="btn" onClick={() => setConfirming(false)}>
+            <button type="button" className="btn btn--primary" onClick={() => setConfirming(false)}>
               Keep it
+            </button>
+            <button type="button" className="btn" onClick={remove}>
+              Delete it
             </button>
           </>
         ) : (

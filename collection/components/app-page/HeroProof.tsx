@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Reveal from "@/components/Reveal";
 
 /**
  * The moment straight after the hero, where a page stops asserting and shows
@@ -22,15 +21,11 @@ export default function HeroProof({
 }) {
   return (
     <section className="mx-auto max-w-6xl px-6 pb-24 sm:pb-32">
-      <Reveal>
-        <h2 className="type-display max-w-2xl text-3xl text-paper sm:text-4xl">
-          {heading}
-        </h2>
-        {note ? <p className="mt-4 max-w-xl text-gray">{note}</p> : null}
-      </Reveal>
-      <Reveal step={1}>
-        <div className="mt-12">{children}</div>
-      </Reveal>
+      <h2 className="type-display max-w-2xl text-3xl text-paper sm:text-4xl">
+        {heading}
+      </h2>
+      {note ? <p className="mt-4 max-w-xl text-gray">{note}</p> : null}
+      <div className="mt-12">{children}</div>
     </section>
   );
 }

@@ -28,6 +28,13 @@ export function SchoolEditor({
           value={school.credential}
           onChange={(credential) => onChange({ ...school, credential })}
         />
+      </div>
+      <Field
+        label="Place"
+        value={school.location}
+        onChange={(location) => onChange({ ...school, location })}
+      />
+      <div className="entry__grid">
         <Field
           label="Started"
           value={school.start.raw}
@@ -41,23 +48,25 @@ export function SchoolEditor({
       </div>
 
       <span className="field__label">Notes</span>
-      {school.notes.map((note) => (
-        <input
-          key={note.id}
-          className="field__input"
-          type="text"
-          aria-label={`Note in ${school.institution || "this school"}`}
-          value={note.text}
-          onChange={(e) =>
-            onChange({
-              ...school,
-              notes: school.notes.map((n) =>
-                n.id === note.id ? { ...n, text: e.target.value } : n,
-              ),
-            })
-          }
-        />
-      ))}
+      <div className="entry__stack">
+        {school.notes.map((note) => (
+          <input
+            key={note.id}
+            className="field__input"
+            type="text"
+            aria-label={`Note in ${school.institution || "this school"}`}
+            value={note.text}
+            onChange={(e) =>
+              onChange({
+                ...school,
+                notes: school.notes.map((n) =>
+                  n.id === note.id ? { ...n, text: e.target.value } : n,
+                ),
+              })
+            }
+          />
+        ))}
+      </div>
 
       <div className="panel__actions">
         <button

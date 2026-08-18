@@ -7,11 +7,9 @@
 #set text(font: "Liberation Sans", size: 9.5pt, fill: ink)
 #set par(justify: false, leading: 0.65em, spacing: 0.85em)
 
-#let section(title) = {
-  v(11pt)
-  text(size: 9.5pt, weight: "bold", tracking: 0.22em, fill: accent)[#upper(title)]
-  v(4pt)
-}
+#let section(title) = block(sticky: true, above: 11pt, below: 4pt)[
+  #text(size: 9.5pt, weight: "bold", tracking: 0.22em, fill: accent)[#upper(title)]
+]
 
 #let role-entry(role) = {
   grid(

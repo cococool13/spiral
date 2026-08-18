@@ -49,6 +49,39 @@ fn first_entry_line(lines: &[String]) -> Option<usize> {
     })
 }
 
+/// Join summary lines into sentences. A bare space glued "analysis" onto
+/// "Led"; a full stop between them is what a reader expects.
+fn join_prose(parts: impl IntoIterator<Item = String>) -> String {
+    let parts: Vec<String> = parts.into_iter().collect();
+    if parts.is_empty() {
+        return String::new();
+    }
+    if parts.len() == 1 {
+        return parts[0].clone();
+    }
+    let mut out = String::new();
+    for part in &parts {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        if out.is_empty() {
+            out.push_str(part);
+            continue;
+        }
+        if out.ends_with(['.', '!', '?']) {
+            out.push(' ');
+        } else {
+            out.push_str(". ");
+        }
+        out.push_str(part.trim_start_matches(|c: char| c == '.' || c.is_whitespace()));
+    }
+    if !out.is_empty() && !out.ends_with(['.', '!', '?']) {
+        out.push('.');
+    }
+    out
+}
+
 pub fn parse_text(input: &str) -> ResumeDoc {
     let lines = lines_of(input);
     if lines.is_empty() {
@@ -77,11 +110,11 @@ pub fn parse_text(input: &str) -> ResumeDoc {
     for (section, body) in &merge_repeats(sections) {
         match section {
             Section::Summary => {
-                doc.summary = body
-                    .iter()
-                    .map(|line| bullet_text(line))
-                    .collect::<Vec<_>>()
-                    .join(" ")
+                doc.summary = join_prose(
+                    body.iter()
+                        .map(|line| bullet_text(line))
+                        .filter(|line| !line.is_empty()),
+                )
             }
             Section::Skills => doc.skills = parse_skills(body),
             Section::Experience => doc.experience = roles_of(body, "exp"),
@@ -760,10 +793,12 @@ Skills: Rust, Analysis, Notation
         assert_eq!(doc.summary, "The real one.");
     }
 
+    /// Summary bullets are sentences. Joining them with a bare space glued the
+    /// last word of one onto the first of the next.
     #[test]
     fn a_summary_written_as_bullets_loses_its_marks() {
         let doc = parse_text("Ada\n\nSUMMARY\n- Ten years in analysis\n- Led three teams\n");
-        assert_eq!(doc.summary, "Ten years in analysis Led three teams");
+        assert_eq!(doc.summary, "Ten years in analysis. Led three teams.");
     }
 
     /// A letter-spaced heading has to survive whichever door the text came
@@ -796,4 +831,76 @@ Skills: Rust, Analysis, Notation
             );
         }
     }
+
+    /// A footer labelled CONTACT is not a job. The email still has to be found;
+    /// the heading itself must not become a phantom role.
+    #[test]
+    fn a_contact_footer_is_not_a_role() {
+        let doc = parse_text(
+            "Ada Lovelace\n\nEXPERIENCE\nAnalyst, Admiralty\n2021 - 2023\n- Wrote it\n\nCONTACT\nada@example.com | (555) 123-4567\n",
+        );
+        assert_eq!(doc.experience.len(), 1);
+        assert_eq!(doc.experience[0].title, "Analyst");
+        assert_eq!(doc.contact.email, "ada@example.com");
+        assert_eq!(doc.contact.phone, "(555) 123-4567");
+    }
+
+    /// Same shape: REFERENCES, or a line of nothing but contact details after
+    /// the last bullet, used to open a nameless extra job.
+    #[test]
+    fn references_and_bare_contact_lines_are_not_roles() {
+        let doc = parse_text(
+            "Ada\n\nEXPERIENCE\nAnalyst, Admiralty\n2021 - 2023\n- Wrote it\n\nREFERENCES\nAvailable upon request\nlinkedin.com/in/ada\n",
+        );
+        assert_eq!(doc.experience.len(), 1);
+        assert_eq!(doc.contact.links, vec!["linkedin.com/in/ada".to_string()]);
+    }
+
+    /// English "Languages" is a skills heading, the way the Spanish and French
+    /// tables already treat it. Left unmatched it became a phantom role.
+    #[test]
+    fn languages_are_skills() {
+        let doc = parse_text("Ada\n\nLANGUAGES\nEnglish, French, Italian\n");
+        assert!(doc.experience.is_empty());
+        assert_eq!(doc.skills[0].items, vec!["English", "French", "Italian"]);
+    }
+
+    /// Certifications are awards, not a fourth job.
+    #[test]
+    fn certifications_are_awards() {
+        let doc = parse_text("Ada\n\nCERTIFICATIONS\nAWS Solutions Architect, 2022\n");
+        assert_eq!(doc.awards, vec!["AWS Solutions Architect, 2022"]);
+    }
+
+    /// Two-column PDFs glue the rail heading onto the first entry with a space:
+    /// "EXPERIENCE Analyst, Admiralty". The all-caps heading is the artifact;
+    /// a job titled "Experience Designer" is title case and must stay one line.
+    #[test]
+    fn an_all_caps_heading_glued_onto_the_entry_beside_it_still_splits() {
+        let doc = parse_text(
+            "Ada\n\nEXPERIENCE Analyst, Admiralty\n2021 - 2023\n- Wrote it\n",
+        );
+        assert_eq!(doc.experience.len(), 1);
+        assert_eq!(doc.experience[0].title, "Analyst");
+        assert_eq!(doc.experience[0].organization, "Admiralty");
+        let designer = parse_text(
+            "Ada\n\nEXPERIENCE\nExperience Designer, Acme\n2021 - 2023\n- Designed it\n",
+        );
+        assert_eq!(designer.experience[0].title, "Experience Designer");
+        assert_eq!(designer.experience[0].organization, "Acme");
+    }
+
+    /// Numeric month-year dates have to leave the title, the way "Jan 2021"
+    /// already does.
+    #[test]
+    fn a_numeric_date_range_is_lifted_off_the_heading() {
+        let doc = parse_text(
+            "Ada\n\nEXPERIENCE\nAnalyst, Admiralty 01/2021 - 03/2023\n- Wrote it\n",
+        );
+        assert_eq!(doc.experience[0].title, "Analyst");
+        assert_eq!(doc.experience[0].organization, "Admiralty");
+        assert_eq!(doc.experience[0].start.raw, "01/2021");
+        assert_eq!(doc.experience[0].start.month, Some(1));
+    }
+
 }

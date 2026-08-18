@@ -11,10 +11,10 @@ Run from apps/wallpaper/:  python3 scripts/make-dmg-background.py
 from PIL import Image, ImageDraw, ImageFont
 
 # Spiral tokens (tokens.css)
-CONC_01 = "#EBE9E4"
-CONC_03 = "#CFCCC4"
-INK_01 = "#10181B"
-STL_02 = "#666863"
+CONC_01 = "#0B0B0C"
+CONC_03 = "#2C2C2E"
+INK_01 = "#F4F3F0"
+STL_02 = "#8C8D8A"
 HLX_01 = "#D52E2B"
 
 S = 2  # retina scale

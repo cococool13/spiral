@@ -7,11 +7,9 @@
 #set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.62em, spacing: 0.85em)
 
-#let section(title) = {
-  v(10pt)
-  align(center)[#text(size: 12pt, weight: "bold", style: "italic", fill: accent)[#title]]
-  v(3pt)
-}
+#let section(title) = block(sticky: true, above: 10pt, below: 3pt)[
+  #align(center)[#text(size: 12pt, weight: "bold", style: "italic", fill: accent)[#title]]
+]
 
 #let role-entry(role) = {
   text(weight: "bold")[#{

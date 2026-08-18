@@ -47,15 +47,12 @@ They share a brand, not a performance charter.
 
 | | `apps/*` | `collection/` |
 | --- | --- | --- |
-| Motion | explains state, never decorates | decorative motion is wanted; motion is the argument |
+| Motion | explains state, never decorates | the catalogue scrolls like a document; no scroll theater |
 | Frames | a handful of glass controls max — "we don't pay frames" | spend them; it's seconds of full attention |
 | Video | out of scope | belongs here |
 | Budgets | binary size, idle RAM, cold start | first-load JS, LCP, reduced-motion coverage |
 
-The website is heading somewhere deliberately ambitious — heavy motion, video,
-scroll-driven sequences. **Before any work in `collection/`, read `collection/README.md`** —
-it carries that charter and the budgets that keep it fast. Do not import app restraint into
-the website, or website ambition into an app.
+The catalogue is a document. **Before any work in `collection/`, read `collection/README.md`** — it carries that split and the budgets that keep it fast. Do not import app restraint into the website, or website ambition into an app.
 
 ## Read First
 
@@ -222,7 +219,7 @@ measures 61 MB installed and a 29 MB DMG — 16 MB of which is the bundled offli
 against Wallpaper's 4.6 MB, and the universal release carries both architectures. The README states that plainly rather than dropping
 the lightweight claim quietly.
 
-The website is Next.js App Router + React 19 + Tailwind v4 + framer-motion, `output: 'export'`,
+The website is Next.js App Router + React 19 + Tailwind v4, `output: 'export'`,
 deployed to Cloudflare Pages from CI on every push to `main`.
 
 ## Non-Negotiables

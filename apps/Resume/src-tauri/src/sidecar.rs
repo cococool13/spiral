@@ -343,7 +343,7 @@ mod live {
             base_url: engine.url(),
         };
         let writing = std::time::Instant::now();
-        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local")
+        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local", "")
             .await
             .expect("the offline rewrite failed");
         let wrote = writing.elapsed();
@@ -409,7 +409,7 @@ mod live {
         let provider = crate::provider::Provider::Local {
             base_url: engine.url(),
         };
-        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local")
+        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local", "")
             .await
             .expect("the offline rewrite failed");
 

@@ -7,11 +7,9 @@
 #set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.6em, spacing: 0.8em)
 
-#let section(title) = {
-  v(9pt)
-  align(center)[#text(size: 10.5pt, weight: "bold", fill: accent)[#title]]
-  v(3pt)
-}
+#let section(title) = block(sticky: true, above: 9pt, below: 3pt)[
+  #align(center)[#text(size: 10.5pt, weight: "bold", fill: accent)[#title]]
+]
 
 // Organisation flush left with the place; the role and dates on the line below.
 #let entry(primary, secondary, right-top, right-bottom, notes) = {

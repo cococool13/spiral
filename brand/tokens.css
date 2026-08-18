@@ -3,42 +3,24 @@
    Do not hardcode these values anywhere else. */
 
 :root {
-  /* material — dark cinematic (marketing surfaces) */
-  --spiral-black: #0b0b0c; /* near-black base */
-  --spiral-paper: #f4f3f0; /* warm off-white */
-  --spiral-gray: #8c8d8a; /* concrete gray — secondary text, dividers */
-  --spiral-concrete: #d8d6d1; /* light concrete — card surfaces on dark */
+  /* material — dark cinematic. One set for the site and the apps. */
+  --spiral-black: #0b0b0c; /* page */
+  --spiral-paper: #f4f3f0; /* type on black; labels on red; document sheets */
+  --spiral-gray: #8c8d8a; /* secondary text on black (5.9:1) */
+  --spiral-concrete: #d8d6d1; /* light island on the site (OtherWork) */
 
-  /* material — light concrete (app surfaces) */
-  --spiral-conc-01: #ebe9e4;
-  --spiral-conc-02: #dddad3;
-  --spiral-conc-03: #cfccc4;
-  --spiral-ink: #10181b;
-  --spiral-steel: #666863;
+  /* app surfaces — aliases so existing CSS keeps working */
+  --spiral-conc-01: #0b0b0c;
+  --spiral-conc-02: #161618;
+  --spiral-conc-03: #2c2c2e;
+  --spiral-ink: #10181b; /* text on paper, never on the page */
+  --spiral-steel: #666863; /* secondary on paper only (5.1:1) */
 
   /* accent — helix red. Interactive elements, the mark, warnings. Never a background fill. */
   --spiral-red: #d52e2b;
   --spiral-oxblood: #6f1011;
-
-  /* light temperatures — the /cool page ONLY.
-     Scoped exception to the palette rule, and the only one. These are not
-     Spiral brand colours and must never appear on a product surface, in an
-     app, or on any other page of the site. Anything outside
-     collection/app/cool/ using a --cool-* value is a bug.
-
-     They are named for real light sources rather than hues on purpose. The
-     page is a night-into-morning ride through real places, and lighting it
-     from a spectrum instead of from actual lamps and sky is what made an
-     earlier version read as science fiction. */
-  --cool-void: #06070a; /* unlit night */
-  --cool-asphalt: #16181c; /* wet road surface */
-  --cool-sodium: #ff9d4a; /* high-pressure sodium street lamp */
-  --cool-tungsten: #ffc98a; /* warm interior lamp */
-  --cool-mercury: #cfe0f5; /* cold fluorescent and LED */
-  --cool-dusk: #26406e; /* sky before sunrise */
-  --cool-horizon: #ff7b52; /* the sunrise band itself */
-  --cool-daylight: #e8eff7; /* open sky, full morning */
-  --cool-moss: #46523c; /* roadside ground */
+  /* Paper on flat helix red is 4.45:1. Filled controls only; 4.83:1. */
+  --spiral-red-fill: color-mix(in srgb, var(--spiral-oxblood) 10%, var(--spiral-red));
 
   /* type */
   --spiral-font-display: "Archivo", sans-serif; /* variable: wdth + wght */

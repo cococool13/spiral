@@ -37,6 +37,13 @@ export function RoleEditor({
           value={role.organization}
           onChange={(organization) => onChange({ ...role, organization })}
         />
+      </div>
+      <Field
+        label="Place"
+        value={role.location}
+        onChange={(location) => onChange({ ...role, location })}
+      />
+      <div className="entry__grid">
         <Field
           label="Started"
           value={role.start.raw}
@@ -49,6 +56,7 @@ export function RoleEditor({
         />
       </div>
       <span className="field__label">Bullets</span>
+      <div className="entry__stack">
       {role.bullets.map((bullet) => {
         const review = reviews.find((r) => r.bulletId === bullet.id);
         return (
@@ -94,6 +102,7 @@ export function RoleEditor({
           </div>
         );
       })}
+      </div>
       <div className="panel__actions">
         <button
           type="button"
