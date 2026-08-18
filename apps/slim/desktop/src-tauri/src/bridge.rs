@@ -32,7 +32,7 @@ const COLLECTION_ENTRYPOINT: &str = "browser_collection.py";
 /// what lets a Mac test the Windows answer.
 pub fn entrypoint_for(os: &str) -> Option<&'static str> {
     match os {
-        "macos" => Some("slimbrave-mac.py"),
+        "macos" => Some("spiral-slim-mac.py"),
         "windows" => Some("slimbrave-windows.py"),
         _ => None,
     }
@@ -841,7 +841,7 @@ mod tests {
 
     #[test]
     fn each_platform_gets_its_own_entrypoint() {
-        assert_eq!(entrypoint_for("macos"), Some("slimbrave-mac.py"));
+        assert_eq!(entrypoint_for("macos"), Some("spiral-slim-mac.py"));
         assert_eq!(entrypoint_for("windows"), Some("slimbrave-windows.py"));
     }
 

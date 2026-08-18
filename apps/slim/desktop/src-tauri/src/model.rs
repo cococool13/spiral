@@ -197,7 +197,7 @@ pub struct RawEnginePreview {
 }
 
 /* ---------------------------------------------------------------- *
- * Preview — entrypoint half (slimbrave-mac.py --preview-plan)
+ * Preview — entrypoint half (spiral-slim-mac.py --preview-plan)
  * ---------------------------------------------------------------- */
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]

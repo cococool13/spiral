@@ -35,7 +35,7 @@ and remove existing policies without applying anything first.
 
 Success = the user understands exactly what changed and can undo it.
 
-The app owns no policy logic. `slimbrave-mac.py` owns every path, privilege
+The app owns no policy logic. `spiral-slim-mac.py` owns every path, privilege
 check, plist, Configuration Profile, and prefs repair.
 
 ## Brand Personality
