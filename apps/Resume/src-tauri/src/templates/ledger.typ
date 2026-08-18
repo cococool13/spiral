@@ -17,7 +17,9 @@
 
 #let section(title) = {
   v(8pt)
-  row(text(size: 9pt, weight: "bold", tracking: 0.06em, fill: accent)[#upper(title)], [])
+  block(sticky: true)[
+    #row(text(size: 9pt, weight: "bold", tracking: 0.06em, fill: accent)[#upper(title)], [])
+  ]
   v(-6pt)
 }
 

@@ -581,6 +581,20 @@ Weaving, Music
         }
     }
 
+    /// A heading that sits alone at the bottom of a page is a spacing failure.
+    /// `sticky` keeps it with the entry under it. Mutation proof: drop
+    /// `sticky: true` from any template's `section` and only this fails.
+    #[test]
+    fn every_section_heading_stays_with_the_entry_under_it() {
+        for template in all() {
+            assert!(
+                template.source.contains("sticky: true"),
+                "{}: section headings can sit alone at the bottom of a page",
+                template.id
+            );
+        }
+    }
+
     /// The accent has to actually reach the page, in every template — a
     /// swatch that changes nothing is worse than no swatch.
     #[test]

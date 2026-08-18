@@ -5,11 +5,9 @@
 #set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.62em, spacing: 0.9em)
 
-#let section(title) = {
-  v(6pt)
-  text(size: 10pt, weight: "bold", tracking: 0.08em, fill: accent, upper(title))
-  v(2pt)
-}
+#let section(title) = block(sticky: true, above: 6pt, below: 2pt)[
+  #text(size: 10pt, weight: "bold", tracking: 0.08em, fill: accent, upper(title))
+]
 
 #let role-entry(role) = {
   grid(

@@ -7,15 +7,13 @@
 #set text(font: "Liberation Serif", size: 10pt, fill: ink)
 #set par(justify: false, leading: 0.65em, spacing: 0.85em)
 
-#let section(title) = {
-  v(12pt)
-  line(length: 100%, stroke: 0.7pt + ink)
-  v(3pt)
-  align(center)[#text(size: 10.5pt, weight: "bold", tracking: 0.06em, fill: accent)[#upper(title)]]
-  v(2pt)
-  line(length: 100%, stroke: 0.7pt + ink)
-  v(6pt)
-}
+#let section(title) = block(sticky: true, above: 12pt, below: 6pt)[
+  #line(length: 100%, stroke: 0.7pt + ink)
+  #v(3pt)
+  #align(center)[#text(size: 10.5pt, weight: "bold", tracking: 0.06em, fill: accent)[#upper(title)]]
+  #v(2pt)
+  #line(length: 100%, stroke: 0.7pt + ink)
+]
 
 #let role-entry(role) = {
   grid(

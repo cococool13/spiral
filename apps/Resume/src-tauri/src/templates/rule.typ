@@ -7,7 +7,7 @@
 
 // The rule belongs to the heading, not to the body — so it sits tight under the
 // words and the air goes below it.
-#let section(title) = block(above: 11pt, below: 6pt)[
+#let section(title) = block(sticky: true, above: 11pt, below: 6pt)[
   #text(size: 9.5pt, weight: "bold", tracking: 0.1em, fill: accent)[#upper(title)]
   #v(2pt, weak: true)
   #line(length: 100%, stroke: 0.5pt + quiet)
