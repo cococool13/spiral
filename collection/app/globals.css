@@ -89,6 +89,29 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.skip-link {
+  position: absolute;
+  z-index: 60;
+  left: var(--spiral-unit);
+  top: var(--spiral-unit);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  background: var(--spiral-paper);
+  color: var(--spiral-ink);
+  font-family: var(--spiral-font-mono);
+  font-size: 0.875rem;
+  text-decoration: none;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skip-link:focus-visible {
+  clip-path: none;
+  outline: 2px solid var(--spiral-red);
+  outline-offset: 3px;
+}
+
 p {
   text-wrap: pretty;
 }
@@ -203,6 +226,14 @@ p {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
+/* Compact enough to sit in the floating nav without becoming a second hero. */
+.glass-pill--nav {
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 0.75rem;
+  gap: 6px;
+}
+
 /* Block CTA — the hero's one primary action. Square corners, which is the
    only radius this system allows besides a full pill: a paper field carrying
    the words, and a red chip carrying the action. Red stays the interaction
@@ -255,10 +286,9 @@ p {
 }
 
 /* Rise — the arrival entrance, for things already on screen at load.
-   In CSS rather than in JavaScript for the same reason as `.reveal`, plus one
-   specific to the hero: the headline is the LCP element, and shipping it as
-   `opacity: 0` made the largest paint wait on a framer chunk. A CSS animation
-   runs whether or not script does. */
+   In CSS rather than in JavaScript: the headline is the LCP element, and
+   shipping it as `opacity: 0` made the largest paint wait on a framer chunk.
+   A CSS animation runs whether or not script does. */
 .rise {
   animation: rise-in 640ms var(--spiral-ease) both;
   animation-delay: calc(var(--rise-step, 0) * 90ms);
@@ -273,63 +303,9 @@ p {
     transform: none;
   }
 }
-/* The figure arrives by settling rather than rising; it has no baseline to
-   travel to. */
-.rise--figure {
-  animation-name: rise-figure;
-  animation-duration: 900ms;
-}
-@keyframes rise-figure {
-  from {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .rise {
     animation: none;
-  }
-}
-
-/* Reveal — the section entrance, on a view timeline rather than in JavaScript.
-   Visible is the default state and the rise is the enhancement, so nothing on
-   the page depends on a script having run. A browser without view timelines
-   shows the content and skips the movement, which is the correct trade for a
-   decorative entrance.
-
-   `--reveal-step` staggers a group. Scroll-driven animations have no time
-   delay, so each item instead starts its rise a little further into the
-   section's entry. */
-.reveal {
-  --reveal-step: 0;
-  /* Scroll distance one rung of the stagger is worth. The default suits a
-     handful of blocks; a dense list sets it far smaller so 54 rungs still fit
-     inside the section's entry. */
-  --reveal-spread: 7%;
-  /* How far the element travels. Small items move a small distance. */
-  --reveal-lift: 32px;
-}
-@keyframes reveal-rise {
-  from {
-    opacity: 0;
-    transform: translateY(var(--reveal-lift));
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .reveal {
-      animation: reveal-rise linear both;
-      animation-timeline: view();
-      animation-range: entry calc(var(--reveal-step) * var(--reveal-spread)) cover 24%;
-    }
   }
 }
 
@@ -411,42 +387,7 @@ p {
   }
 }
 
-/* Hero orbit — the rosette behind the mark. Each ring turns at its own rate
-   about the shared centre, which is what makes the figure read as orbits
-   rather than as a spinning graphic. Transform-only, so it composites. */
-.orbit-ring {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-  animation: orbit-turn var(--orbit-dur, 72s) linear infinite;
-}
-.orbit-ring--rev {
-  animation-direction: reverse;
-}
-@keyframes orbit-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-/* A slow lean, so the rosette sits in space instead of flat on the glass */
-.orbit-tilt {
-  animation: orbit-lean 28s ease-in-out infinite alternate;
-}
-@keyframes orbit-lean {
-  from {
-    transform: perspective(1400px) rotateX(20deg) rotateZ(-4deg);
-  }
-  to {
-    transform: perspective(1400px) rotateX(9deg) rotateZ(4deg);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .orbit-ring,
-  .orbit-tilt {
-    animation: none;
-  }
-  .orbit-tilt {
-    transform: perspective(1400px) rotateX(14deg);
-  }
   .btn-block,
   .btn-block:hover,
   .btn-block__chip {

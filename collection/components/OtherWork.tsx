@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { type CSSProperties, useId, useState } from "react";
 import { type OtherProject, otherWork } from "@/lib/otherWork";
-import Reveal from "./Reveal";
 
 /**
  * Inverted section — light concrete on dark page — so it reads as outside
@@ -27,68 +26,64 @@ export default function OtherWork() {
   return (
     <section id="other-work" className="bg-paper text-ink">
       <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-            <div>
-              <h2 className="type-display text-4xl text-ink sm:text-5xl">
-                Outside the Collection
-              </h2>
-              <p className="mt-3 text-sm text-steel">
-                {otherWork.length} things built for other people.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              aria-controls={listId}
-              className="inline-flex min-h-11 items-center gap-2 border border-conc3 px-4 font-mono text-xs uppercase tracking-widest text-ink transition-colors hover:bg-conc1"
-            >
-              {open ? "Collapse" : "Open the stack"}
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className={`transition-transform duration-500 ease-spiral ${
-                  open ? "rotate-180" : ""
-                }`}
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </button>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+          <div>
+            <h2 className="type-display text-4xl text-ink sm:text-5xl">
+              Outside the Collection
+            </h2>
+            <p className="mt-3 text-sm text-steel">
+              {otherWork.length} things built for other people.
+            </p>
           </div>
-        </Reveal>
-
-        <Reveal>
-          <ol
-            id={listId}
-            className={`work-stack mt-12 ${open ? "is-open" : ""}`}
-            // The peek is what a closed row shows of itself. Read by the CSS
-            // so the two cannot disagree about how tall the stack is.
-            style={{ "--peek": "1.75rem" } as CSSProperties}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls={listId}
+            className="inline-flex min-h-11 items-center gap-2 border border-black/15 px-4 font-mono text-xs uppercase tracking-widest text-ink transition-colors hover:bg-concrete"
           >
-            {otherWork.map((project, i) => (
-              <li
-                key={project.id}
-                // Closed, only the top card is readable — the rest are a peek
-                // of edge. `inert` takes them out of the tab order and the
-                // accessibility tree together, so a keyboard user does not
-                // collect six stops on cards they cannot read. The button's
-                // `aria-expanded` is what says they are there.
-                inert={!open && i > 0 ? true : undefined}
-                style={{ "--i": i, zIndex: otherWork.length - i } as CSSProperties}
-              >
-                <ProjectRow project={project} index={i} />
-              </li>
-            ))}
-          </ol>
-        </Reveal>
+            {open ? "Collapse" : "Open the stack"}
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className={`transition-transform duration-500 ease-spiral ${
+                open ? "rotate-180" : ""
+              }`}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+
+        <ol
+          id={listId}
+          className={`work-stack mt-12 ${open ? "is-open" : ""}`}
+          // The peek is what a closed row shows of itself. Read by the CSS
+          // so the two cannot disagree about how tall the stack is.
+          style={{ "--peek": "1.75rem" } as CSSProperties}
+        >
+          {otherWork.map((project, i) => (
+            <li
+              key={project.id}
+              // Closed, only the top card is readable — the rest are a peek
+              // of edge. `inert` takes them out of the tab order and the
+              // accessibility tree together, so a keyboard user does not
+              // collect six stops on cards they cannot read. The button's
+              // `aria-expanded` is what says they are there.
+              inert={!open && i > 0 ? true : undefined}
+              style={{ "--i": i, zIndex: otherWork.length - i } as CSSProperties}
+            >
+              <ProjectRow project={project} index={i} />
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
@@ -100,7 +95,7 @@ function ProjectRow({ project, index }: { project: OtherProject; index: number }
       {/* 16:10, the covers' own ratio, not a square. Cropped square to 80px
           these landed in the middle of a page of body copy and every one came
           out a white rectangle. */}
-      <span className="relative aspect-[16/10] w-20 shrink-0 overflow-hidden border border-conc3 bg-conc1 sm:w-32">
+      <span className="relative aspect-[16/10] w-20 shrink-0 overflow-hidden border border-black/15 bg-concrete sm:w-32">
         <Image
           src={project.cover}
           alt={project.coverAlt}
@@ -154,7 +149,7 @@ function ProjectRow({ project, index }: { project: OtherProject; index: number }
   // title print through the one on top, which reads as a rendering fault
   // rather than as a deck.
   const shell =
-    "group flex w-full items-center gap-4 border border-conc3 bg-conc1 p-4 text-left sm:gap-6 sm:p-5";
+    "group flex w-full items-center gap-4 border border-black/15 bg-concrete p-4 text-left sm:gap-6 sm:p-5";
 
   if (!project.href) return <article className={shell}>{body}</article>;
 
@@ -163,7 +158,7 @@ function ProjectRow({ project, index }: { project: OtherProject; index: number }
       href={project.href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${shell} transition-colors hover:bg-conc2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red`}
+      className={`${shell} transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red`}
     >
       {body}
     </a>

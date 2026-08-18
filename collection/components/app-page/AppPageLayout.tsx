@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import Footer from "@/components/Footer";
 import GlassPillCTA from "@/components/GlassPillCTA";
-import MotionProvider from "@/components/MotionProvider";
 import Nav from "@/components/Nav";
-import Reveal from "@/components/Reveal";
-import TaglineReveal from "@/components/resume/TaglineReveal";
-import ScrollProgress from "@/components/ScrollProgress";
 import type { AppPage } from "@/lib/appPages";
 import { apps } from "@/lib/apps";
 
@@ -45,7 +41,7 @@ function Actions({ page }: { page: AppPage }) {
 
 /** Shared by every app page. The pages themselves are the content in
  *  `lib/appPages.ts` plus, where an app has something worth showing, whatever
- *  is passed as `afterHero` — Resume's scroll sequence is the first of those. */
+ *  is passed as `afterHero`. */
 export default function AppPageLayout({
   page,
   afterHero,
@@ -57,88 +53,79 @@ export default function AppPageLayout({
   proof?: ReactNode;
 }) {
   return (
-    <MotionProvider>
+    <>
       <Nav />
-      <ScrollProgress />
       <main>
         <section className="mx-auto max-w-6xl px-6 pt-40 pb-24 sm:pt-48">
-          <Reveal>
-            {/* No eyebrow. The nav already names the app you are reading, and
-                the headline is a whole sentence. */}
-            <h1 className="type-display max-w-[680px] text-5xl text-paper sm:text-7xl">
-              {page.headline.map((line) => (
-                <span key={line} className="block">
-                  {line}
-                </span>
-              ))}
-            </h1>
-            <p className="mt-8 max-w-[680px] text-lg text-gray">{page.sub}</p>
-            <Actions page={page} />
-            <p className="mt-6 text-sm text-gray">{page.proofLine}</p>
-          </Reveal>
+          {/* No eyebrow. The nav already names the app you are reading, and
+              the headline is a whole sentence. */}
+          <h1 className="type-display max-w-[680px] text-5xl text-paper sm:text-7xl">
+            {page.headline.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </h1>
+          <p className="mt-8 max-w-[680px] text-lg text-gray">{page.sub}</p>
+          <Actions page={page} />
+          <p className="mt-6 text-sm text-gray">{page.proofLine}</p>
         </section>
 
         {afterHero}
 
-        <TaglineReveal lines={page.tagline} />
+        <section className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
+          <p className="type-display text-4xl text-paper sm:text-5xl">
+            {page.tagline.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </p>
+        </section>
 
         <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
-          <Reveal>
-            <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
-              {page.benefitsHeading}
-            </h2>
-          </Reveal>
+          <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
+            {page.benefitsHeading}
+          </h2>
           <ul className="mt-16 grid grid-cols-1 gap-12 sm:grid-cols-2">
-            {page.benefits.map((benefit, i) => (
-              <Reveal key={benefit.title} step={i}>
-                <li>
-                  <h3 className="type-heading text-xl text-paper">{benefit.title}</h3>
-                  <p className="mt-3 text-gray">{benefit.body}</p>
-                </li>
-              </Reveal>
+            {page.benefits.map((benefit) => (
+              <li key={benefit.title}>
+                <h3 className="type-heading text-xl text-paper">{benefit.title}</h3>
+                <p className="mt-3 text-gray">{benefit.body}</p>
+              </li>
             ))}
           </ul>
         </section>
 
         <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
-          <Reveal>
-            <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
-              {page.stepsHeading}
-            </h2>
-          </Reveal>
+          <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
+            {page.stepsHeading}
+          </h2>
           <ol className="mt-16 grid grid-cols-1 gap-12 sm:grid-cols-3">
-            {page.steps.map((item, i) => (
-              <Reveal key={item.n} step={i}>
-                <li>
-                  <p className="font-mono text-sm text-red">{item.n}</p>
-                  <h3 className="type-heading mt-4 text-xl text-paper">{item.title}</h3>
-                  <p className="mt-3 text-gray">{item.body}</p>
-                </li>
-              </Reveal>
+            {page.steps.map((item) => (
+              <li key={item.n}>
+                <p className="font-mono text-sm text-red">{item.n}</p>
+                <h3 className="type-heading mt-4 text-xl text-paper">{item.title}</h3>
+                <p className="mt-3 text-gray">{item.body}</p>
+              </li>
             ))}
           </ol>
         </section>
 
         {page.facts && page.factsHeading ? (
           <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
-            <Reveal>
-              <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
-                {page.factsHeading}
-              </h2>
-              {page.factsNote ? (
-                <p className="mt-6 max-w-xl text-gray">{page.factsNote}</p>
-              ) : null}
-            </Reveal>
+            <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
+              {page.factsHeading}
+            </h2>
+            {page.factsNote ? (
+              <p className="mt-6 max-w-xl text-gray">{page.factsNote}</p>
+            ) : null}
             <dl className="mt-16 grid grid-cols-1 gap-px border border-gray/25 sm:grid-cols-2">
-              {page.facts.map((fact, i) => (
-                <Reveal key={fact.label} step={i}>
-                  <div className="h-full p-8">
-                    <dt className="type-eyebrow text-gray">{fact.label}</dt>
-                    <dd className="type-heading mt-4 text-2xl text-paper">
-                      {fact.value}
-                    </dd>
-                  </div>
-                </Reveal>
+              {page.facts.map((fact) => (
+                <div key={fact.label} className="h-full p-8">
+                  <dt className="type-eyebrow text-gray">{fact.label}</dt>
+                  <dd className="type-heading mt-4 text-2xl text-paper">{fact.value}</dd>
+                </div>
               ))}
             </dl>
           </section>
@@ -147,38 +134,32 @@ export default function AppPageLayout({
         {proof}
 
         <section id="faq" className="mx-auto max-w-3xl px-6 py-24 sm:py-32">
-          <Reveal>
-            <h2 className="type-display text-4xl text-paper sm:text-5xl">
-              The things people ask.
-            </h2>
-          </Reveal>
+          <h2 className="type-display text-4xl text-paper sm:text-5xl">
+            The things people ask.
+          </h2>
           <dl className="mt-16">
-            {page.faq.map((item, i) => (
-              <Reveal key={item.q} step={i}>
-                <div className="border-b border-gray/25 py-8">
-                  <dt className="type-heading text-lg text-paper">{item.q}</dt>
-                  <dd className="mt-3 text-gray">{item.a}</dd>
-                </div>
-              </Reveal>
+            {page.faq.map((item) => (
+              <div key={item.q} className="border-b border-gray/25 py-8">
+                <dt className="type-heading text-lg text-paper">{item.q}</dt>
+                <dd className="mt-3 text-gray">{item.a}</dd>
+              </div>
             ))}
           </dl>
         </section>
 
         <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
-          <Reveal>
-            <h2 className="type-display max-w-[680px] text-4xl text-paper sm:text-6xl">
-              {page.closing.headline.map((line) => (
-                <span key={line} className="block">
-                  {line}
-                </span>
-              ))}
-            </h2>
-            <p className="mt-8 max-w-xl text-gray">{page.closing.body}</p>
-            <Actions page={page} />
-          </Reveal>
+          <h2 className="type-display max-w-[680px] text-4xl text-paper sm:text-6xl">
+            {page.closing.headline.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </h2>
+          <p className="mt-8 max-w-xl text-gray">{page.closing.body}</p>
+          <Actions page={page} />
         </section>
       </main>
       <Footer />
-    </MotionProvider>
+    </>
   );
 }

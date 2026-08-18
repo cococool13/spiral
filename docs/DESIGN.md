@@ -4,21 +4,28 @@ Visual system of Spiral Wallpaper (`apps/wallpaper/`), and — for the app bar
 below — of every app in the collection. Source of truth: `brand/tokens.css` (mirrored into `apps/wallpaper/src/styles/tokens.css`, the only file in that app allowed to contain hex) and `brand/guide.html`.
 
 ## Theme
-Industrial concrete, light-only by design (the material is poured concrete; there is no "dark concrete" variant in v1). Flat surfaces, hairline borders, no card shadows. Depth comes from material contrast; blur and shadow exist in exactly one place — the glass control layer.
+Dark cinematic, one collection: near-black page, paper type, helix red for the
+mark and the one primary action. The website already sat here; the apps now
+share it. Flat surfaces, hairline borders, no card shadows, no red glow.
+Depth comes from material contrast; blur and shadow exist in exactly one
+place — the glass control layer.
 
 ## Color
 | Token | Value | Role |
 |---|---|---|
-| `--conc-01` | `#EBE9E4` | Page background ("Poured Concrete") |
-| `--conc-02` | `#DDDAD3` | Surface |
-| `--conc-03` | `#CFCCC4` | Hairline border / rule |
-| `--ink-01` | `#10181B` | All body text ("Mill Steel", 14.8:1) |
-| `--stl-02` | `#666863` | Secondary text ("Galvanized", 4.65:1 on page only) |
-| `--hlx-01` | `#D52E2B` | Helix red — accents, focus, warnings; never body copy |
+| `--conc-01` / `--spiral-black` | `#0B0B0C` | Page |
+| `--conc-02` | `#161618` | Lifted surface |
+| `--conc-03` | `#2C2C2E` | Hairline (~white/15) |
+| `--paper` | `#F4F3F0` | Body text on the page (17.7:1); labels on red |
+| `--gray` / `--stl-02` | `#8C8D8A` | Secondary text on the page (5.9:1) |
+| `--ink-01` | `#10181B` | Text on paper islands only (resume preview, OtherWork) |
+| `--steel` | `#666863` | Secondary on paper only (5.1:1) |
+| `--hlx-01` | `#D52E2B` | Helix red — mark, focus, warnings; never body copy, never a page fill |
 | `--hlx-02` | `#6F1011` | Oxblood — hover/pressed deepening |
-| `--paper` | `#F5F4F0` | Button labels on red (4.5:1 at bold ≥15px) |
+| `--red-fill` | mix 10% oxblood into red | Filled controls so paper labels clear 4.5:1 |
 
-Rule: `--stl-02` passes AA only on `--conc-01`; never place it on `--conc-02`.
+Rule: `--gray` is for black; `--steel` is for paper. Do not swap them.
+Helix red is never a background fill and never a halo.
 
 ## Typography
 - `--font-ui`: Archivo variable (wdth + wght axes). Display: wdth 125 / wght 850. Headings: wdth 112 / wght 700.
@@ -63,8 +70,8 @@ menu. It wears the mark and the same two-weight name, and shows its step ticks
 where the menu would be. An empty menu would be worse than no menu.
 
 ## Components
-- **Glass buttons** (`.btn-glass`): pill, `backdrop-filter` blur+saturate, 1px `--glass-edge`, specular sheen `::before`, inset top highlight, atmospheric shadow (`rgba(0,0,0,.08) 0 24px 48px` — the ceiling). Primary: solid helix red, paper label, deepens to oxblood. Secondary: frosted concrete, ink label. Labels bold 15px. Never stack glass on glass; a handful per screen max.
-- **Chips / segmented / nav**: flat concrete, radius 0, mono 12px, stl-02 → ink on hover/active.
+- **Glass buttons** (`.btn-glass`): pill, `backdrop-filter` blur+saturate, 1px `--glass-edge`, specular sheen `::before`, inset top highlight, atmospheric shadow (`rgba(0,0,0,.08) 0 24px 48px` — the ceiling). Primary: `--red-fill`, paper label, deepens to oxblood. Secondary: frosted black, paper label. Labels bold 15px. Never stack glass on glass; a handful per screen max.
+- **Chips / segmented / nav**: flat black, radius 0, mono 12px, gray → paper on hover/active.
 - **Toggle**: pill control, red track when on.
 - **Tiles**: bordered surfaces, resolution badge (ink on paper), overlay on hover/focus-within.
 - **Eyebrow**: 6px red dot + uppercase mono label (used in empty states).

@@ -13,7 +13,6 @@ const appLinks = apps.filter((a) => a.page);
 const elsewhere = [
   { href: GITHUB, label: "GitHub", external: true },
   { href: "/#other-work", label: "Other Work", external: false },
-  { href: "/cool/", label: "Cool", external: false },
 ];
 
 /**
@@ -136,8 +135,8 @@ function FooterLink({
         href={href}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : null)}
         /* `flex`, not `inline-flex`: inline the anchor is only as wide as its
-           word, and "Slim" and "Cool" came out 28px wide against a 44px
-           minimum. Block-level, each one fills its column. */
+           word, and "Slim" came out 28px wide against a 44px minimum.
+           Block-level, each one fills its column. */
         className="flex min-h-11 items-center text-sm text-concrete transition-colors hover:text-red"
       >
         {children}
@@ -255,10 +254,10 @@ function FooterRoom() {
     const box = host.current;
     if (!el || !box) return;
 
-    // Checked live per event rather than snapshotted at mount, for the reason
-    // `InteractiveGrid` spells out: a media query read once is wrong forever
-    // after if the setting changes. The pointer type on the event itself is
-    // the honest signal for touch, so no `(pointer: fine)` query is needed.
+    // Checked live per event rather than snapshotted at mount: a media query
+    // read once is wrong forever after if the setting changes. The pointer
+    // type on the event itself is the honest signal for touch, so no
+    // `(pointer: fine)` query is needed.
     const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     let raf = 0;

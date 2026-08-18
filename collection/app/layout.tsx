@@ -28,7 +28,12 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <a className="skip-link" href="/#apps">
+          Skip to apps
+        </a>
+        {children}
+      </body>
     </html>
   );
 }
