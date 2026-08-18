@@ -5,7 +5,7 @@ SlimBrave Neo source that lives one folder up.
 
 Spiral Slim contains **no policy logic of its own**. It detects, describes,
 previews, and — only after you confirm — asks the existing SlimBrave Neo
-entrypoint for the platform (`slimbrave-mac.py` or `slimbrave-windows.py`) to
+entrypoint for the platform (`spiral-slim-mac.py` or `slimbrave-windows.py`) to
 apply a bundled profile. Runs on macOS and Windows. Every colour and font
 comes from `/brand`.
 
@@ -84,7 +84,7 @@ Verified for 1.0.0: universal (`x86_64 arm64`), 8.2 MB app, 4.2 MB DMG, and
 the bundled entrypoint runs standalone —
 
 ```bash
-/usr/bin/python3 "…/Spiral Slim.app/Contents/Resources/slimbrave/slimbrave-mac.py" --detect
+/usr/bin/python3 "…/Spiral Slim.app/Contents/Resources/slimbrave/spiral-slim-mac.py" --detect
 ```
 
 That last check matters more than it looks. `--detect` is read-only, and
@@ -166,7 +166,7 @@ profiles, same confirmation gate; three things differ underneath.
 
 | | macOS | Windows |
 | --- | --- | --- |
-| Entrypoint | `slimbrave-mac.py` | `slimbrave-windows.py` |
+| Entrypoint | `spiral-slim-mac.py` | `slimbrave-windows.py` |
 | Elevation | `osascript … with administrator privileges` | `Start-Process -Verb RunAs` (UAC) |
 | Policy lands in | `/Library/Managed Preferences` | `HKLM\SOFTWARE\Policies\BraveSoftware\Brave` |
 
@@ -243,13 +243,13 @@ matters because an app launched from Finder has a minimal `PATH`.
 
 | Step | Command | Elevated |
 | --- | --- | --- |
-| Detect | `slimbrave-mac.py --detect --format json` | no |
+| Detect | `spiral-slim-mac.py --detect --format json` | no |
 | Profiles | `browser_collection.py --catalog --format json` | no |
 | Resolve | `browser_collection.py --preview <id> --format json` | no |
 | Resolve (custom) | `browser_collection.py --preview-custom --modules <ids> [--exclude <ids>]` | no |
-| Review | `slimbrave-mac.py --preview-plan <plan> --format json` | no |
-| Apply | `slimbrave-mac.py --apply-plan <plan> --persist on` | **yes** |
-| Undo | `slimbrave-mac.py --reset` | **yes** |
+| Review | `spiral-slim-mac.py --preview-plan <plan> --format json` | no |
+| Apply | `spiral-slim-mac.py --apply-plan <plan> --persist on` | **yes** |
+| Undo | `spiral-slim-mac.py --reset` | **yes** |
 
 A *plan* is the managed-policy map the read-only engine resolved from a
 profile. The entrypoint re-validates every key and every value against

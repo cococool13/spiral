@@ -21,7 +21,7 @@ fn required_scripts() -> [&'static str; 2] {
     let entrypoint = if cfg!(target_os = "windows") {
         "slimbrave-windows.py"
     } else {
-        "slimbrave-mac.py"
+        "spiral-slim-mac.py"
     };
     [entrypoint, REQUIRED_SHARED[0]]
 }
@@ -222,7 +222,7 @@ mod tests {
         let expected = if cfg!(target_os = "windows") {
             "slimbrave-windows.py"
         } else {
-            "slimbrave-mac.py"
+            "spiral-slim-mac.py"
         };
         assert_eq!(required_scripts()[0], expected);
         assert!(required_scripts().contains(&"browser_collection.py"));

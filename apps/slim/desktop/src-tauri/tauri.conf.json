@@ -38,7 +38,7 @@
       "hardenedRuntime": true
     },
     "resources": {
-      "../../slimbrave-mac.py": "slimbrave/slimbrave-mac.py",
+      "../../spiral-slim-mac.py": "slimbrave/spiral-slim-mac.py",
       "../../slimbrave-windows.py": "slimbrave/slimbrave-windows.py",
       "../../slimbrave_catalog.py": "slimbrave/slimbrave_catalog.py",
       "../../browser_collection.py": "slimbrave/browser_collection.py",
