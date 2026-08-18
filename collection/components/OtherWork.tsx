@@ -40,7 +40,7 @@ export default function OtherWork() {
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls={listId}
-            className="inline-flex min-h-11 items-center gap-2 border border-black/15 px-4 font-mono text-xs uppercase tracking-widest text-ink transition-colors hover:bg-concrete"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-black/15 px-5 font-mono text-xs uppercase tracking-widest text-ink transition-colors hover:bg-concrete"
           >
             {open ? "Collapse" : "Open the stack"}
             <svg

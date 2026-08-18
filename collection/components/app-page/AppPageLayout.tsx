@@ -29,10 +29,7 @@ function Actions({ page }: { page: AppPage }) {
           {page.cta.label}
         </a>
       )}
-      <a
-        href={page.secondary.href}
-        className="inline-flex min-h-11 items-center text-base text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
-      >
+      <a href={page.secondary.href} className="glass-pill glass-pill--secondary">
         {page.secondary.label}
       </a>
     </div>

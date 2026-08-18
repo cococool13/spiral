@@ -114,10 +114,10 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
           aria-controls={open ? panelId : undefined}
           aria-haspopup="true"
           onClick={() => setOpen((v) => !v)}
-          className="btn-block"
+          className="glass-pill"
         >
-          <span className="btn-block__label">Get an app</span>
-          <span className="btn-block__chip">{chevron(16)}</span>
+          Get an app
+          {chevron(16)}
         </button>
       )}
 
@@ -151,17 +151,14 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
                   {app.tagline}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <a
-                    href={offer.url}
-                    className="min-h-11 border border-white/15 px-3 py-3 font-mono text-xs text-paper transition-colors hover:border-red hover:text-red"
-                  >
+                  <a href={offer.url} className="glass-pill glass-pill--nav">
                     {offer.label}
                   </a>
                   {brew && (
                     <button
                       type="button"
                       onClick={() => copy(brew)}
-                      className="min-h-11 px-2 py-3 font-mono text-xs text-gray transition-colors hover:text-paper"
+                      className="glass-pill glass-pill--secondary glass-pill--nav"
                     >
                       {copied === brew ? "Copied" : "Copy brew command"}
                     </button>

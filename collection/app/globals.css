@@ -234,57 +234,6 @@ p {
   gap: 6px;
 }
 
-/* Block CTA — the hero's one primary action. Square corners, which is the
-   only radius this system allows besides a full pill: a paper field carrying
-   the words, and a red chip carrying the action. Red stays the interaction
-   colour and nothing else on the surface competes with it. */
-.btn-block {
-  display: inline-flex;
-  align-items: stretch;
-  min-height: 52px;
-  border-radius: 0;
-  background: var(--spiral-paper);
-  color: var(--spiral-ink);
-  font-family: var(--spiral-font-mono);
-  font-weight: 500;
-  font-size: 0.875rem;
-  white-space: nowrap;
-  box-shadow: rgba(0, 0, 0, 0.45) 0 18px 40px -18px;
-  transition:
-    transform var(--spiral-dur-fast) var(--spiral-ease),
-    box-shadow var(--spiral-dur-fast) var(--spiral-ease);
-}
-.btn-block__label {
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-}
-.btn-block__chip {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  flex: none;
-  background: var(--spiral-red);
-  color: var(--spiral-paper);
-  transition: background var(--spiral-dur-fast) var(--spiral-ease);
-}
-@media (hover: hover) and (pointer: fine) {
-  .btn-block:hover {
-    transform: translateY(-2px);
-    box-shadow: rgba(0, 0, 0, 0.55) 0 24px 48px -20px;
-  }
-  .btn-block:hover .btn-block__chip {
-    background: var(--spiral-oxblood);
-  }
-}
-.btn-block:active {
-  transform: translateY(0) scale(0.985);
-}
-.btn-block:focus-visible {
-  outline: 2px solid var(--spiral-red);
-  outline-offset: 3px;
-}
-
 /* Rise — the arrival entrance, for things already on screen at load.
    In CSS rather than in JavaScript: the headline is the LCP element, and
    shipping it as `opacity: 0` made the largest paint wait on a framer chunk.
@@ -297,6 +246,22 @@ p {
   from {
     opacity: 0;
     transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The figure arrives by settling rather than rising; it has no baseline to
+   travel to. */
+.rise--figure {
+  animation-name: rise-figure;
+  animation-duration: 900ms;
+}
+@keyframes rise-figure {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
   }
   to {
     opacity: 1;
@@ -387,12 +352,39 @@ p {
   }
 }
 
+/* Hero orbit — the rosette behind the mark. Each ring turns at its own rate
+   about the shared centre. Transform-only, so it composites. */
+.orbit-ring {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: orbit-turn var(--orbit-dur, 72s) linear infinite;
+}
+.orbit-ring--rev {
+  animation-direction: reverse;
+}
+@keyframes orbit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.orbit-tilt {
+  animation: orbit-lean 28s ease-in-out infinite alternate;
+}
+@keyframes orbit-lean {
+  from {
+    transform: perspective(1400px) rotateX(20deg) rotateZ(-4deg);
+  }
+  to {
+    transform: perspective(1400px) rotateX(9deg) rotateZ(4deg);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .btn-block,
-  .btn-block:hover,
-  .btn-block__chip {
-    transition: none;
-    transform: none;
+  .orbit-ring,
+  .orbit-tilt {
+    animation: none;
+  }
+  .orbit-tilt {
+    transform: perspective(1400px) rotateX(14deg);
   }
 }
 

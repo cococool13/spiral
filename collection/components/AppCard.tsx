@@ -51,10 +51,7 @@ export default function AppCard({ app }: { app: SpiralApp }) {
         {live && app.downloads ? (
           <>
             <GlassPillCTA app={app} />
-            <a
-              href={app.downloads.all}
-              className="inline-flex min-h-11 items-center font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
-            >
+            <a href={app.downloads.all} className="glass-pill glass-pill--secondary">
               All downloads
             </a>
           </>
@@ -74,10 +71,7 @@ export default function AppCard({ app }: { app: SpiralApp }) {
         {/* A shipped app still has a page worth reading; it just leads with the
             download rather than with the reading. */}
         {shipped && app.page ? (
-          <a
-            href={app.page}
-            className="inline-flex min-h-11 items-center font-mono text-xs text-gray underline-offset-4 transition-colors hover:text-paper hover:underline"
-          >
+          <a href={app.page} className="glass-pill glass-pill--secondary">
             What it does
           </a>
         ) : null}
