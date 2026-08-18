@@ -27,7 +27,7 @@ function show(overrides: Partial<Parameters<typeof Result>[0]> = {}) {
       format="pdf"
       canRewrite={false}
       onShow={vi.fn()}
-      onRewrite={vi.fn()}
+      onTweak={vi.fn()}
       onAnotherStyle={vi.fn()}
       {...overrides}
     />,
@@ -61,19 +61,21 @@ describe("Result", () => {
     expect(screen.queryByText(/Saved to/)).toBeNull();
   });
 
-  /** Decision 14: the second action exists only when a model tier is active,
-   *  because on the free path there would be nothing behind it. */
-  it("hides the rewrite button when no key is configured", () => {
+  it("keeps Tweak on the page, and will not run it without a model", () => {
     show({ canRewrite: false });
-    expect(screen.queryByRole("button", { name: "Rewrite the wording again" })).toBeNull();
-    expect(screen.getAllByRole("button")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Tweak" }));
+    fireEvent.change(screen.getByLabelText("Or type it"), { target: { value: "Shorter bullets" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply the tweak" }));
+    expect(screen.getByText(/need a model in Settings/)).toBeTruthy();
   });
 
-  it("offers the rewrite button when a key is configured", () => {
-    const onRewrite = vi.fn();
-    show({ canRewrite: true, onRewrite });
-    fireEvent.click(screen.getByRole("button", { name: "Rewrite the wording again" }));
-    expect(onRewrite).toHaveBeenCalled();
+  it("sends a tweak to the engine when a model is configured", () => {
+    const onTweak = vi.fn();
+    show({ canRewrite: true, onTweak });
+    fireEvent.click(screen.getByRole("button", { name: "Tweak" }));
+    fireEvent.change(screen.getByLabelText("Or type it"), { target: { value: "Shorter bullets" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply the tweak" }));
+    expect(onTweak).toHaveBeenCalledWith("Shorter bullets");
   });
 
   it("shows a version strip once there is more than one build", () => {

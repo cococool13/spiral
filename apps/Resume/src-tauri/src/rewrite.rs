@@ -132,12 +132,25 @@ fn set_bullet(doc: &mut ResumeDoc, id: &str, text: &str) -> bool {
     false
 }
 
+fn system_for(aim: &str) -> String {
+    let aim = aim.trim();
+    if aim.is_empty() {
+        SYSTEM.to_string()
+    } else {
+        let clipped: String = aim.chars().take(200).collect();
+        format!(
+            "{SYSTEM}\n\nAdditional instruction from the person, still bound by rule 1 (never change a fact): {clipped}"
+        )
+    }
+}
+
 /// The whole pass: collect bullets, ask the model, gate every answer.
 pub async fn rewrite_doc(
     doc: &ResumeDoc,
     provider: &crate::provider::Provider,
     key: &str,
     model: &str,
+    aim: &str,
 ) -> Result<(ResumeDoc, Outcome), String> {
     let bullets = bullets_of(doc);
     if bullets.is_empty() {
@@ -156,6 +169,7 @@ pub async fn rewrite_doc(
     // told the service replied with something unreadable. Measured: 64 bullets
     // in one request lost all 64. In batches the cost of a long resume is more
     // requests, not less resume.
+    let system = system_for(aim);
     let mut out = doc.clone();
     let mut outcome = Outcome {
         rewritten: 0,
@@ -163,7 +177,7 @@ pub async fn rewrite_doc(
         notes: Vec::new(),
     };
     for batch in bullets.chunks(BATCH) {
-        let raw = crate::provider::send(provider, key, model, SYSTEM, &prompt_for(batch)).await?;
+        let raw = crate::provider::send(provider, key, model, &system, &prompt_for(batch)).await?;
         let (next, part) = apply(&out, batch, &raw);
         out = next;
         outcome.rewritten += part.rewritten;

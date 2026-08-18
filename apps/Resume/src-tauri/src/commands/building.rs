@@ -141,6 +141,10 @@ pub struct BuildRequest {
     pub format: String,
     pub accent: String,
     pub tighten: bool,
+    /// Optional wording aim for the model pass. Empty is the default rewrite.
+    /// Truncated in `rewrite::system_for`. Never a fact, never a job description.
+    #[serde(default)]
+    pub aim: String,
 }
 
 /// The outcome of the wording pass, whichever tier ran it.
@@ -166,6 +170,7 @@ struct Rewritten {
 async fn rewrite_wording(
     app: &tauri::AppHandle,
     doc: ResumeDoc,
+    aim: &str,
     on_progress: &Channel<Progress>,
 ) -> Result<Rewritten, String> {
     let free = |doc| Rewritten {
@@ -198,7 +203,7 @@ async fn rewrite_wording(
         let local = Provider::Local {
             base_url: engine_process.url(),
         };
-        let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &local, "", &stored.model).await?;
+        let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &local, "", &stored.model, aim).await?;
         // The fact gate has just run inside `rewrite_doc`. Naming it is the one
         // stage that shows the promise doing work.
         let _ = on_progress.send(stage("Checking facts", 12, LOCAL_ENGINE));
@@ -220,7 +225,7 @@ async fn rewrite_wording(
     };
     let named = format!("Rewritten with your key at {}", provider.host());
     let _ = on_progress.send(stage("Rewriting wording", 10, &named));
-    let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, &key, &stored.model).await?;
+    let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, &key, &stored.model, aim).await?;
     let _ = on_progress.send(stage("Checking facts", 12, &named));
     Ok(Rewritten {
         doc,
@@ -243,13 +248,14 @@ pub async fn build_document(
         format,
         accent,
         tighten,
+        aim,
     } = request;
     let template = templates::find(&template).ok_or_else(|| {
         "That style is no longer available. Go back to Style and choose another one.".to_string()
     })?;
     let format = Format::parse(&format)?;
 
-    let rewritten = rewrite_wording(&app, doc, &on_progress).await?;
+    let rewritten = rewrite_wording(&app, doc, &aim, &on_progress).await?;
     let Rewritten {
         doc,
         engine,

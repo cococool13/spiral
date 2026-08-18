@@ -83,6 +83,6 @@ describe("Build", () => {
       <Build draft={DRAFT} onDone={vi.fn()} onBack={onBack} />,
     );
     await waitFor(() => expect(screen.getByText(/failed to typeset/)).toBeTruthy());
-    expect(screen.getByRole("button", { name: "Back to Style" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Choose a format" })).toBeTruthy();
   });
 });

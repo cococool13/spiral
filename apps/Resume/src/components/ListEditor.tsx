@@ -15,33 +15,30 @@ export function ListEditor({
     <div className="list-editor">
       <span className="field__label">{label}</span>
       {items.map((item, index) => (
-        <input
-          // These lines have no identity beyond their position, and the whole
-          // list is replaced on every edit.
-          // biome-ignore lint/suspicious/noArrayIndexKey: lines are ordinal
-          key={index}
-          className="field__input"
-          type="text"
-          aria-label={`${label} ${index + 1}`}
-          value={item}
-          onChange={(e) =>
-            onChange(items.map((existing, i) => (i === index ? e.target.value : existing)))
-          }
-        />
+        <div className="list-editor__row" key={`${label}-${index}`}>
+          <input
+            className="field__input"
+            type="text"
+            aria-label={`${label} ${index + 1}`}
+            value={item}
+            onChange={(e) =>
+              onChange(items.map((existing, i) => (i === index ? e.target.value : existing)))
+            }
+          />
+          <button
+            type="button"
+            className="btn"
+            aria-label={`Remove ${label} ${index + 1}`}
+            onClick={() => onChange(items.filter((_, i) => i !== index))}
+          >
+            Remove
+          </button>
+        </div>
       ))}
       <div className="panel__actions">
         <button type="button" className="btn" onClick={() => onChange([...items, ""])}>
           {addLabel}
         </button>
-        {items.length > 0 ? (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => onChange(items.slice(0, -1))}
-          >
-            Remove the last one
-          </button>
-        ) : null}
       </div>
     </div>
   );

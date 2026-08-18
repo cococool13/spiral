@@ -92,7 +92,7 @@ Jun 2020 - Dec 2020
         };
 
         let started = std::time::Instant::now();
-        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local")
+        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local", "")
             .await
             .expect("the engine did not answer");
         let elapsed = started.elapsed();

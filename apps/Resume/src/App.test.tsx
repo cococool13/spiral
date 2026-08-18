@@ -54,7 +54,7 @@ describe("App", () => {
    *  the user they edited something they did not. */
   it("does not write anything back when the user has changed nothing", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/You have a resume saved/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Saved from/)).toBeTruthy(), { timeout: 2000 });
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(saveDocument).not.toHaveBeenCalled();
   });
@@ -62,8 +62,8 @@ describe("App", () => {
   /** `save_document` is synchronous and writes the whole document. */
   it("writes once after typing stops, not once per keystroke", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/You have a resume saved/)).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Continue where you left off" }));
+    await waitFor(() => expect(screen.getByText(/Saved from/)).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByRole("button", { name: "Open saved resume" }));
 
     const headline = (await screen.findByLabelText("Headline")) as HTMLInputElement;
     for (const value of ["A", "An", "Ana", "Analy", "Analyst"]) {
@@ -76,5 +76,15 @@ describe("App", () => {
       format: "pdf",
       doc: expect.objectContaining({ headline: "Analyst" }),
     });
+  });
+
+  it("lets someone with no resume type into Check", async () => {
+    loadDocument.mockResolvedValueOnce(null);
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Start from scratch" }, { timeout: 2000 }));
+    expect(screen.getByRole("heading", { name: "Fill in the facts" })).toBeTruthy();
+    expect(screen.getByLabelText("Name")).toBeTruthy();
+    expect(screen.getByLabelText("Title")).toBeTruthy();
+    expect(screen.getByLabelText(/Bullet in Title/)).toBeTruthy();
   });
 });

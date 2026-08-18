@@ -53,6 +53,6 @@ the file is given — those two must not drift apart.
 
 | Term | Meaning |
 | --- | --- |
-| **Input** | Where the source arrives: a file, a paste, or the guided form. |
+| **Import** | Where the source arrives: a file, a paste, or the guided form. |
 | **Check** | The editable list of every extracted fact, before any styling. It is the only place a mis-parse can be caught, and it is what makes the fact freeze meaningful rather than decorative. |
-| **Style** · **Format** · **Build** · **Result** | Choose a template and accent · choose PDF or Word · watch real stages with real percent · download, try another style, or rewrite again. |
+| **Style** · **Build** | Choose a template and accent · choose PDF or Word, watch real stages, then save, tweak wording, or try another style. |

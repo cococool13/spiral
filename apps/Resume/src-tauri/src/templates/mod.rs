@@ -314,7 +314,7 @@ pub fn source_for(template: &Template) -> String {
 
 /// The document and the chosen accent, as Typst sees them. The accent is
 /// resolved through the closed set first, so a template can never receive a
-/// value the user did not pick from six swatches.
+/// value the user did not pick from the closed swatch set.
 pub fn inputs_for(doc: &ResumeDoc, accent: &str) -> Result<Dict, String> {
     let json = serde_json::to_string(doc)
         .map_err(|e| format!("Could not prepare the resume for typesetting: {e}."))?;
