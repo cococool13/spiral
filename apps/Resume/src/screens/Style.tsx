@@ -47,7 +47,7 @@ export function Style({
 
   useEffect(() => {
     let current = true;
-    renderThumbnails(doc, accent)
+    renderThumbnails(accent)
       .then((next) => {
         if (current) setThumbnails(next);
       })
@@ -57,7 +57,7 @@ export function Style({
     return () => {
       current = false;
     };
-  }, [doc, accent]);
+  }, [accent]);
 
   if (error) {
     return (
@@ -72,7 +72,7 @@ export function Style({
     <section className="panel panel--wide">
       <h2 className="panel__title">Pick a style</h2>
       {thumbnails === null ? (
-        <Notice>Setting your resume in twelve styles…</Notice>
+        <Notice>Setting twelve styles…</Notice>
       ) : (
         <>
           <div className="panel__actions">

@@ -12,10 +12,11 @@ use tauri::ipc::Channel;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
-/// One card in the style picker: the first page of the user's own resume, set
-/// in that template. `error` is populated instead of `svg` when a template
-/// fails, so one broken template shows one broken card rather than blanking
-/// the whole screen.
+/// One card in the style picker: the first page of a fixed sample resume, set
+/// in that template. The user's own facts are not typeset until Build, so
+/// picking a style does not wait on their document. `error` is populated
+/// instead of `svg` when a template fails, so one broken template shows one
+/// broken card rather than blanking the whole screen.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Thumbnail {
@@ -84,13 +85,41 @@ fn failed_card(template: &templates::Template, message: impl Into<String>) -> Th
     }
 }
 
+/// A full enough sample that every template has sections to show. It is not
+/// the user's resume — that is the point.
+fn thumbnail_sample() -> ResumeDoc {
+    crate::parse_text::parse_text(
+        "Ada Lovelace\nada@example.com · London\n\n\
+         EXPERIENCE\nAnalyst, Admiralty\nPortsmouth\nJan 2021 - Present\n\
+         - Wrote the first algorithm\n- Cut report turnaround from 9 days to 2\n\n\
+         PROJECTS\nDifference Engine\n- Drafted the notes\n\n\
+         EDUCATION\nUniversity of London\nBSc Mathematics\nCambridge\n2016 - 2019\n- GPA 3.9\n\n\
+         LEADERSHIP & ACTIVITIES\nPresident, Mathematical Society\n- Ran a weekly seminar\n\n\
+         AWARDS\nDe Morgan Medal\n\nSKILLS\nRust, Analysis\n\nINTERESTS\nWeaving\n",
+    )
+}
+
 /// `async` so Tauri runs this off the main thread, leaving the webview free to
 /// paint while the twelve compiles run. One shot, no progress bar — a couple of
-/// milliseconds of progress would be theatre.
+/// milliseconds of progress would be theatre. The sample is constant, so a
+/// second visit with the same accent reuses the last draw.
 #[tauri::command]
-pub async fn render_thumbnails(doc: ResumeDoc, accent: String) -> Vec<Thumbnail> {
-    render_all_thumbnails(&doc, &accent)
+pub async fn render_thumbnails(accent: String) -> Vec<Thumbnail> {
+    {
+        let cache = THUMBNAIL_CACHE.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some((cached, thumbs)) = cache.as_ref() {
+            if cached == &accent {
+                return thumbs.clone();
+            }
+        }
+    }
+    let thumbs = render_all_thumbnails(&thumbnail_sample(), &accent);
+    *THUMBNAIL_CACHE.lock().unwrap_or_else(|p| p.into_inner()) =
+        Some((accent, thumbs.clone()));
+    thumbs
 }
+
+static THUMBNAIL_CACHE: Mutex<Option<(String, Vec<Thumbnail>)>> = Mutex::new(None);
 
 /// What the Build screen gets back. The bytes stay in Rust — sending a whole
 /// PDF through IPC and back again to save it would be pure waste, and the file
@@ -349,7 +378,7 @@ mod tests {
     use super::*;
     #[test]
     fn thumbnails_come_back_one_per_template_as_svg() {
-        let thumbs = render_all_thumbnails(&ResumeDoc::empty(), "ink");
+        let thumbs = render_all_thumbnails(&thumbnail_sample(), "ink");
         assert_eq!(thumbs.len(), 12);
         for thumb in &thumbs {
             assert!(thumb.error.is_empty(), "{} errored: {}", thumb.id, thumb.error);
@@ -357,17 +386,13 @@ mod tests {
             assert!(!thumb.name.is_empty());
         }
     }
-    #[test]
-    fn a_thumbnail_is_a_render_of_this_document_not_a_sample() {
-        let mut ada = ResumeDoc::empty();
-        ada.contact.name = "Ada Lovelace".into();
-        let mut grace = ResumeDoc::empty();
-        grace.contact.name = "Grace Hopper".into();
 
-        let first = render_all_thumbnails(&ada, "ink");
-        let second = render_all_thumbnails(&grace, "ink");
-        for (a, b) in first.iter().zip(second.iter()) {
-            assert_ne!(a.svg, b.svg, "{} rendered the same thing for two names", a.id);
+    #[test]
+    fn a_thumbnail_is_the_sample_not_an_empty_page() {
+        let sample = render_all_thumbnails(&thumbnail_sample(), "ink");
+        let blank = render_all_thumbnails(&ResumeDoc::empty(), "ink");
+        for (a, b) in sample.iter().zip(blank.iter()) {
+            assert_ne!(a.svg, b.svg, "{} drew the sample the same as an empty page", a.id);
         }
     }
 }

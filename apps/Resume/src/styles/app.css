@@ -345,8 +345,8 @@ body {
 
 .splash__mark {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
 }
 
 .splash__piece {
@@ -355,30 +355,30 @@ body {
   background: var(--spiral-red);
   mask: url("../assets/brand/mark-red.svg") center / contain no-repeat;
   opacity: 0;
-  animation: splash-in 420ms var(--spiral-ease) forwards;
+  animation: splash-in 900ms var(--spiral-ease) forwards;
 }
 
 .splash__piece--a {
   clip-path: inset(0 50% 50% 0);
-  --from: translate(-8px, -8px);
+  --from: translate(-14px, -14px);
 }
 
 .splash__piece--b {
   clip-path: inset(0 0 50% 50%);
-  --from: translate(8px, -8px);
-  animation-delay: 90ms;
+  --from: translate(14px, -14px);
+  animation-delay: 220ms;
 }
 
 .splash__piece--c {
   clip-path: inset(50% 50% 0 0);
-  --from: translate(-8px, 8px);
-  animation-delay: 180ms;
+  --from: translate(-14px, 14px);
+  animation-delay: 440ms;
 }
 
 .splash__piece--d {
   clip-path: inset(50% 0 0 50%);
-  --from: translate(8px, 8px);
-  animation-delay: 270ms;
+  --from: translate(14px, 14px);
+  animation-delay: 660ms;
 }
 
 @keyframes splash-in {
@@ -392,23 +392,29 @@ body {
   }
 }
 
-.toast {
-  position: fixed;
-  right: calc(var(--spiral-unit) * 3);
-  bottom: calc(var(--spiral-unit) * 3);
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: calc(var(--spiral-unit) * 2);
-  max-width: 360px;
-  padding: calc(var(--spiral-unit) * 2);
-  border: 1px solid var(--spiral-conc-03);
-  background: var(--spiral-conc-02);
+.stage__saved {
+  margin: calc(var(--spiral-unit) * 3) 0 0;
+  color: var(--spiral-gray);
+  font-size: 13px;
+  text-align: center;
 }
 
-.toast__copy {
-  margin: 0;
-  font-size: 13px;
+.btn--quiet {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--spiral-paper);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.btn--quiet:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--spiral-red);
 }
 
 .panel {
@@ -507,13 +513,14 @@ body {
 }
 
 .btn {
-  min-height: 44px;
-  padding: 0 calc(var(--spiral-unit) * 2.5);
+  min-height: 36px;
+  padding: 0 14px;
   border: 1px solid var(--spiral-conc-03);
   border-radius: var(--spiral-radius-ctl);
   background: var(--spiral-conc-02);
   color: var(--spiral-paper);
   font: inherit;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -773,9 +780,9 @@ body {
 }
 
 .btn--inline {
-  min-height: 44px;
-  padding: 0 calc(var(--spiral-unit) * 1.5);
-  font-size: 13px;
+  min-height: 32px;
+  padding: 0 calc(var(--spiral-unit) * 1.25);
+  font-size: 12px;
 }
 
 /* Same pill as Wallpaper: 56×32 track, red when on. The row is the 44px

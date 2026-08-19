@@ -31,7 +31,7 @@ on:
     branches: [main]
     # Every release namespace. A tag that does not match its version files
     # should learn that immediately, not after the build.
-    tags: ["v*", "slim-v*", "clean-v*"]
+    tags: ["v*", "slim-v*", "clean-v*", "resume-v*"]
   pull_request:
   workflow_dispatch:
 

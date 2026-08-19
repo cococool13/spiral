@@ -21,10 +21,11 @@ apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri,
                             feature-complete, every screen built. Blocked on signing,
                             notarization, the updater key, and nobody having yet
                             opened it. See apps/clean/README.md)
-               apps/Resume = Spiral Resume (Tauri + embedded Typst, unreleased — M1-M7
-                            all built: import, Check, twelve templates, PDF + DOCX
-                            export, and three engine tiers. Note the capital R: the
-                            folder is `apps/Resume`, not `apps/resume`)
+               apps/Resume = Spiral Resume (Tauri + embedded Typst, first
+                            release v0.1.0 on `resume-v*`. Import, Check,
+                            twelve templates, PDF + DOCX export, three engine
+                            tiers. Note the capital R: the folder is
+                            `apps/Resume`, not `apps/resume`)
 collection/    the spiral-collection.pages.dev website (Next.js, static export)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```

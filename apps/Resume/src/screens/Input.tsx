@@ -6,8 +6,12 @@ import { Notice } from "../components/Notice";
 
 export function Input({
   onReady,
+  savedAt,
+  onOpenSaved,
 }: {
   onReady: (doc: ResumeDoc, how?: "scratch") => void;
+  savedAt?: string | null;
+  onOpenSaved?: () => void;
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -138,6 +142,14 @@ export function Input({
           <span className="stage-tile__note">A two-column PDF may look jumbled — fix it on Check.</span>
         </button>
       </div>
+      {savedAt && onOpenSaved ? (
+        <p className="stage__saved">
+          Saved from {new Date(savedAt).toLocaleString()}.{" "}
+          <button type="button" className="btn btn--quiet" onClick={onOpenSaved}>
+            Open it
+          </button>
+        </p>
+      ) : null}
       {error ? <Notice tone="warn">{error}</Notice> : null}
     </section>
   );

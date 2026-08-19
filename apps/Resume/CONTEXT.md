@@ -45,7 +45,7 @@ the file is given — those two must not drift apart.
 | --- | --- |
 | **Template** | One of twelve layouts. Each exists **twice** — a Typst source for the PDF and the thumbnails, and a DOCX builder for Word — and the two must carry the same facts. `FACTS` in `docx.rs` is the list that proves it. |
 | **Accent** | The single colour the user chooses. Validated against a closed set in `accent.rs` before it reaches a template; a template never writes a colour of its own. |
-| **Thumbnail** | A style-picker card rendered from the user's own content, at page scale. Never a generic sample image. |
+| **Thumbnail** | A style-picker card. Drawn from a fixed sample resume, at page scale, so choosing a style does not wait on typesetting the user's document. The user's facts land on the page at Build. |
 | **Engine tier** | What rewrites the wording: **deterministic** (default, always available), the **offline model** (an optional local download), or **your key** (the user's own API key). Chosen in Settings only; the flow never asks and never upsells. |
 | **Unprintable character** | A character no bundled face can draw. Typst leaves it blank rather than failing, so the build names it in a note instead of letting a resume go out with a hole where the name was. |
 

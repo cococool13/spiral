@@ -55,7 +55,7 @@ export const appPages: AppPage[] = [
     eyebrow: "Spiral Resume",
     headline: ["Your resume,", "set properly."],
     sub: "Twelve typeset layouts. Your words, your facts, your file — PDF or Word, on your computer in about a second.",
-    cta: { label: "Watch for the first release", href: RELEASE },
+    cta: { label: "Get 0.1.0", href: `${REPO}/releases/tag/resume-v0.1.0` },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/Resume` },
     proofLine: "Free. No account, no upload, no telemetry.",
     tagline: [
@@ -70,8 +70,8 @@ export const appPages: AppPage[] = [
         body: "Every number, employer, date and acronym in a rewrite is checked against what you wrote. One that moved is thrown away and your own wording is kept. The app tells you when that happens.",
       },
       {
-        title: "Twelve layouts, all of them yours",
-        body: "Every card on the style screen is your resume, typeset. Not a sample with someone else's name on it, and not a picture of a template.",
+        title: "Twelve layouts, shown as they set",
+        body: "The style screen draws a sample resume, so picking a layout is instant. Your facts are typeset when you build, in the layout you chose.",
       },
       {
         title: "PDF and Word from one source",
@@ -104,7 +104,7 @@ export const appPages: AppPage[] = [
     factsNote: "Timings from an Apple silicon laptop, taken while building it.",
     facts: [
       { label: "Layouts", value: "12" },
-      { label: "Style screen", value: "About 2 ms" },
+      { label: "Style cards", value: "A sample resume" },
       { label: "Offline model", value: "1.3–5.7 GB, optional" },
       { label: "Accounts required", value: "None" },
     ],
@@ -143,12 +143,12 @@ export const appPages: AppPage[] = [
       },
       {
         q: "Is there a Windows build?",
-        a: "Not yet. The code is cross platform and the macOS build is signed; the Windows installer has not been cut.",
+        a: "Yes. 0.1.0 includes a Windows installer. It is unsigned, the same as Wallpaper, so SmartScreen will warn the first time.",
       },
     ],
     closing: {
-      headline: ["It is not out yet.", "It will be free when it is."],
-      body: "Spiral Resume is finished enough to build your resume and not finished enough to hand you an installer. The source is public today.",
+      headline: ["0.1.0 is the first release.", "It is free."],
+      body: "macOS is signed and notarized. Windows is unsigned, the same as Wallpaper. The installers appear on the GitHub release as the build finishes.",
     },
   },
   {

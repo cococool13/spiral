@@ -3,17 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyDoc } from "../lib/types";
 import { Style } from "./Style";
 
-import type { ResumeDoc, Thumbnail } from "../lib/types";
+import type { Thumbnail } from "../lib/types";
 
 const renderThumbnails = vi.fn(
-  async (_doc: ResumeDoc, _accent: string): Promise<Thumbnail[]> => [
+  async (_accent: string): Promise<Thumbnail[]> => [
     { id: "column", name: "Column", svg: "<svg id='a'></svg>", error: "" },
     { id: "sheet", name: "Sheet", svg: "<svg id='b'></svg>", error: "" },
   ],
 );
 
 vi.mock("../lib/ipc", () => ({
-  renderThumbnails: (doc: ResumeDoc, accent: string) => renderThumbnails(doc, accent),
+  renderThumbnails: (accent: string) => renderThumbnails(accent),
   // Written this way on purpose: check-hex forbids colour literals outside the
   // token file, and a test fixture is no exception. The real values come from
   // Rust; what matters here is only that two swatches arrive.
@@ -37,6 +37,7 @@ describe("Style", () => {
       />);
     await waitFor(() => expect(screen.getByRole("radio", { name: /Column/ })).toBeTruthy());
     expect(screen.getByRole("radio", { name: /Sheet/ })).toBeTruthy();
+    expect(renderThumbnails).toHaveBeenCalledWith("ink");
   });
 
   it("reports the chosen template upward", async () => {

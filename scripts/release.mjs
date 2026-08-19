@@ -32,6 +32,12 @@ const APPS = {
   },
   slim: { tag: (v) => `slim-v${v}`, name: "Spiral Slim", builds: "macOS", workflow: "release-slim.yml" },
   clean: { tag: (v) => `clean-v${v}`, name: "Spiral Clean", builds: "macOS", workflow: "release-clean.yml" },
+  resume: {
+    tag: (v) => `resume-v${v}`,
+    name: "Spiral Resume",
+    builds: "macOS + Windows",
+    workflow: "release-resume.yml",
+  },
 };
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
@@ -193,36 +199,56 @@ if (run("git", ["ls-remote", "--tags", "origin", tag]).out) {
 
 // Going backwards produces an "update" that installs an older build than the
 // one already running — the failure an updater cannot recover from.
+//
+// Equal is the first-release case: the files already carry 0.1.0 because
+// that is the version the app was built at, and no tag exists yet. Bumping
+// to 0.1.1 just to satisfy this check would ship the wrong number. Skip the
+// bump and tag this commit.
 const current = run("node", ["scripts/version.mjs", "check", app]).out.match(/(\d+\.\d+\.\d+)/)?.[1];
+let bump = true;
 if (current) {
   const rank = (v) => v.split(".").map(Number);
   const [a, b, c] = rank(version);
   const [x, y, z] = rank(current);
-  if (a * 1e6 + b * 1e3 + c <= x * 1e6 + y * 1e3 + z) {
+  const wanted = a * 1e6 + b * 1e3 + c;
+  const have = x * 1e6 + y * 1e3 + z;
+  if (wanted < have) {
     die(`${app} is already ${current}. ${version} is not newer, so this would ship a downgrade.`);
   }
-  say(`  ${current}  ->  ${version}`);
+  if (wanted === have) {
+    bump = false;
+    say(`  ${current} already in the files — first tag, no bump`);
+  } else {
+    say(`  ${current}  ->  ${version}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Write, verify, commit, tag. In that order, which is the whole point.
 // ---------------------------------------------------------------------------
 
-say("\nWriting the four version files…");
-run("node", ["scripts/version.mjs", "set", app, version]);
+if (bump) {
+  say("\nWriting the four version files…");
+  run("node", ["scripts/version.mjs", "set", app, version]);
 
-// Belt and braces: `set` just wrote them, and this proves it, so a tag is
-// never created over files that only *should* be right.
-say("Checking they agree…");
-say(`  ${run("node", ["scripts/version.mjs", "check", app]).out}`);
+  // Belt and braces: `set` just wrote them, and this proves it, so a tag is
+  // never created over files that only *should* be right.
+  say("Checking they agree…");
+  say(`  ${run("node", ["scripts/version.mjs", "check", app]).out}`);
 
-const changed = run("git", ["status", "--porcelain"]).out;
-if (!changed) die("nothing changed — the version files already said " + version + ".");
-say(`\nCommitting ${changed.split("\n").length} file(s)…`);
-run("git", ["commit", "-aqm", `chore: release ${name} ${version}`]);
+  const changed = run("git", ["status", "--porcelain"]).out;
+  if (!changed) die("nothing changed — the version files already said " + version + ".");
+  say(`\nCommitting ${changed.split("\n").length} file(s)…`);
+  run("git", ["commit", "-aqm", `chore: release ${name} ${version}`]);
+} else {
+  say("Checking the files already agree…");
+  say(`  ${run("node", ["scripts/version.mjs", "check", app]).out}`);
+}
 
-// The tag lands on the commit that carries the bump. This single ordering is
-// what makes the 2026-08-02 failure unreachable.
+// The tag lands on the commit that carries the version. When there is a bump,
+// that is the bump commit. When there is not, it is HEAD, which already says
+// this version — the 2026-08-02 failure (tag on a pre-bump commit) stays
+// unreachable because the files are checked before the tag is written.
 run("git", ["tag", "-a", tag, "-m", `${name} ${version}`]);
 say(`Tagged ${tag} on ${run("git", ["rev-parse", "--short", "HEAD"]).out}`);
 

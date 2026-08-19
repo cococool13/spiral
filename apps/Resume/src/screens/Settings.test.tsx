@@ -34,6 +34,7 @@ describe("Settings", () => {
   it("shows the exact folder the document is stored in", async () => {
     render(<Settings onClose={vi.fn()} onCleared={vi.fn()} onEngineChanged={vi.fn()} />);
     await waitFor(() => expect(screen.getByText("/tmp/spiral-resume")).toBeTruthy());
+    expect(screen.getByText("Spiral Resume 0.1.0")).toBeTruthy();
   });
 
   it("asks once before deleting, then deletes", async () => {

@@ -63,7 +63,13 @@ export default function App() {
         .then((info) => setUsesModel(info.usesModel))
         .catch(() => setUsesModel(false)),
     ]).finally(() => {
-      const wait = Math.max(0, 600 - (Date.now() - started));
+      // The mark assembles over ~1.5s. Hold the splash past that so a fast
+      // disk does not skip the one moment the load is meant to be.
+      // Reduced motion skips the pieces, so it also skips the wait.
+      const reduced =
+        typeof window.matchMedia !== "function" ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const wait = Math.max(0, (reduced ? 0 : 2800) - (Date.now() - started));
       window.setTimeout(() => setReady(true), wait);
     });
   }, []);
@@ -149,7 +155,16 @@ export default function App() {
             }
           >
             {saveError ? <Notice tone="warn">{saveError}</Notice> : null}
-            {step === "input" ? <Input onReady={onInputReady} /> : null}
+            {step === "input" ? (
+              <Input
+                onReady={onInputReady}
+                savedAt={savedAt}
+                onOpenSaved={() => {
+                  setFromScratch(false);
+                  goTo("check");
+                }}
+              />
+            ) : null}
             {step === "check" ? (
               <Check
                 doc={draft.doc}
@@ -212,23 +227,6 @@ export default function App() {
               )
             ) : null}
           </main>
-          {step === "input" && savedAt ? (
-            <aside className="toast" role="status">
-              <p className="toast__copy">
-                Saved from {new Date(savedAt).toLocaleString()}
-              </p>
-              <button
-                type="button"
-                className="btn btn--primary"
-                onClick={() => {
-                  setFromScratch(false);
-                  goTo("check");
-                }}
-              >
-                Open saved resume
-              </button>
-            </aside>
-          ) : null}
         </>
       )}
     </div>

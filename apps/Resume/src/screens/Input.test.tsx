@@ -84,6 +84,20 @@ describe("Input", () => {
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 
+  it("offers a quiet way back to a saved resume", () => {
+    const onOpenSaved = vi.fn();
+    render(
+      <Input
+        onReady={vi.fn()}
+        savedAt="2026-08-01T10:00:00Z"
+        onOpenSaved={onOpenSaved}
+      />,
+    );
+    expect(screen.getByText(/Saved from/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open it" }));
+    expect(onOpenSaved).toHaveBeenCalled();
+  });
+
   it("names every format it can read", () => {
     render(<Input onReady={vi.fn()} />);
     expect(screen.getByText(/PDF, Word or text/)).toBeTruthy();

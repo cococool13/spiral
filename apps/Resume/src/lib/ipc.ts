@@ -20,8 +20,8 @@ export function parsePastedText(text: string): Promise<ResumeDoc> {
   return invoke<ResumeDoc>("parse_pasted_text", { text });
 }
 
-export function renderThumbnails(doc: ResumeDoc, accent: string): Promise<Thumbnail[]> {
-  return invoke<Thumbnail[]>("render_thumbnails", { doc, accent });
+export function renderThumbnails(accent: string): Promise<Thumbnail[]> {
+  return invoke<Thumbnail[]>("render_thumbnails", { accent });
 }
 
 /** Opens the file picker. Resolves to null when the user dismisses it. */

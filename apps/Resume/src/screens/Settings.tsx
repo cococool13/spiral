@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { version } from "../../package.json";
 import { EngineSettings } from "../components/EngineSettings";
 import { deleteStoredData, storageInfo } from "../lib/ipc";
 import type { EngineInfo } from "../lib/types";
@@ -40,6 +41,7 @@ export function Settings({
       <h2 className="panel__title" tabIndex={-1} ref={(node) => node?.focus()}>
         Settings
       </h2>
+      <p className="panel__lede">Spiral Resume {version}</p>
 
       <EngineSettings onChanged={onEngineChanged} />
 

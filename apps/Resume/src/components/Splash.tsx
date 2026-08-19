@@ -1,6 +1,6 @@
 /** Covers cold start while the stored document and engine info load. The mark
- *  assembles from four corners — that is the wait, not a show. Reduced motion
- *  skips the pieces and shows the whole mark. */
+ *  assembles from four corners, slowly enough to read. Reduced motion skips
+ *  the pieces and shows the whole mark. */
 export function Splash() {
   return (
     <div className="splash" role="status" aria-label="Loading Spiral Resume">

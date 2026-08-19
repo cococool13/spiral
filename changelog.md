@@ -1,5 +1,11 @@
 # changelog
 
+## 2026-08-18 — Spiral Resume 0.1.0
+
+First public release. Tag `resume-v0.1.0`. macOS signed and notarized; Windows unsigned.
+
+The style picker draws a sample resume so picking a layout is instant. The splash holds long enough to see the mark assemble. A saved resume is a quiet line on Import, not a toast. The release scripts now understand `resume-v*` and can tag a first version whose files already say 0.1.0.
+
 ## 2026-08-13 — Cleaning up after the bar
 
 Three things the shared app bar left behind.

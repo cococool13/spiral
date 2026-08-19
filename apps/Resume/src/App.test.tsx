@@ -48,7 +48,15 @@ vi.mock("./lib/ipc", () => ({
 }));
 
 describe("App", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("prefers-reduced-motion: reduce"),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+  });
 
   /** A launch that rewrites the file moves "saved from…" to today, which tells
    *  the user they edited something they did not. */
@@ -63,7 +71,7 @@ describe("App", () => {
   it("writes once after typing stops, not once per keystroke", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText(/Saved from/)).toBeTruthy(), { timeout: 2000 });
-    fireEvent.click(screen.getByRole("button", { name: "Open saved resume" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open it" }));
 
     const headline = (await screen.findByLabelText("Headline")) as HTMLInputElement;
     for (const value of ["A", "An", "Ana", "Analy", "Analyst"]) {

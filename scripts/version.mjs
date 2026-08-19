@@ -42,6 +42,7 @@ const SEMVER = /^\d+\.\d+\.\d+$/;
 const TAG_PREFIXES = [
   { prefix: "slim-v", app: "slim" },
   { prefix: "clean-v", app: "clean" },
+  { prefix: "resume-v", app: "resume" },
   { prefix: "v", app: "wallpaper" },
 ];
 
@@ -208,7 +209,7 @@ function checkTag(tag) {
   if (!parsed) {
     fail(
       `"${tag}" is not a release tag this repo understands. ` +
-        `Expected v<x.y.z>, slim-v<x.y.z>, or clean-v<x.y.z>.`,
+        `Expected v<x.y.z>, slim-v<x.y.z>, clean-v<x.y.z>, or resume-v<x.y.z>.`,
     );
   }
   const { app, version } = parsed;
