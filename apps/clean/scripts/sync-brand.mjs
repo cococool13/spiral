@@ -47,9 +47,11 @@ copyFileSync(tokensFrom, TOKENS);
 
 const FONTS = path.resolve(here, "../src/assets/fonts");
 const FONT_FILES = [
-  "archivo-latin-wdth-normal.woff2",
-  "ibm-plex-mono-latin-400-normal.woff2",
-  "ibm-plex-mono-latin-500-normal.woff2",
+  "instrument-serif-400.woff2",
+  "instrument-serif-400-italic.woff2",
+  "instrument-sans-400.woff2",
+  "instrument-sans-500.woff2",
+  "instrument-sans-600.woff2",
 ];
 
 rmSync(FONTS, { recursive: true, force: true });

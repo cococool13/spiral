@@ -13,16 +13,20 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
-        <section className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
-          <p className="type-display text-4xl text-paper sm:text-5xl">
-            <span className="block">Every one of these could have</span>
-            <span className="block">an account, a subscription</span>
-            <span className="block">and a process that never stops.</span>
-            <span className="block">None of them do.</span>
-          </p>
+        <section className="relative z-10 bg-black">
+          <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
+            <p className="type-display text-4xl text-paper sm:text-5xl">
+              <span className="block">Every one of these could have</span>
+              <span className="block">an account, a subscription</span>
+              <span className="block">and a process that never stops.</span>
+              <span className="block">None of them do.</span>
+            </p>
+          </div>
         </section>
-        <AppGrid />
-        <OtherWork />
+        <div className="relative z-10 bg-black">
+          <AppGrid />
+          <OtherWork />
+        </div>
       </main>
       <Footer />
     </>

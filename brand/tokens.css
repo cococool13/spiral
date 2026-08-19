@@ -1,43 +1,45 @@
-/* Spiral brand tokens — single source of truth for all Spiral surfaces.
+/* Spiral Identity 02 — single source of truth for all Spiral surfaces.
    Consumed by collection/ and apps/* via each surface's scripts/sync-brand.mjs.
    Do not hardcode these values anywhere else. */
 
 :root {
-  /* material — dark cinematic. One set for the site and the apps. */
-  --spiral-black: #0b0b0c; /* page */
-  --spiral-paper: #f4f3f0; /* type on black; labels on red; document sheets */
-  --spiral-gray: #8c8d8a; /* secondary text on black (5.9:1) */
-  --spiral-concrete: #d8d6d1; /* light island on the site (OtherWork) */
+  /* Identity 02 materials */
+  --spiral-void: #080809; /* page */
+  --spiral-paper: #f1efe8; /* type on void; labels on red; sheets */
+  --spiral-helix: #d52e2b; /* mark, the one action, warnings. Never a page fill. */
+  --spiral-mute: #8a8880; /* secondary on void (5.7:1) */
+  --spiral-lift: #131315; /* one step up from void */
 
-  /* app surfaces — aliases so existing CSS keeps working */
-  --spiral-conc-01: #0b0b0c;
-  --spiral-conc-02: #161618;
-  --spiral-conc-03: #2c2c2e;
-  --spiral-ink: #10181b; /* text on paper, never on the page */
-  --spiral-steel: #666863; /* secondary on paper only (5.1:1) */
-
-  /* accent — helix red. Interactive elements, the mark, warnings. Never a background fill. */
-  --spiral-red: #d52e2b;
-  --spiral-oxblood: #6f1011;
-  /* Paper on flat helix red is 4.45:1. Filled controls only; 4.83:1. */
+  /* Aliases so existing CSS keeps compiling. Prefer the names above on new work. */
+  --spiral-black: var(--spiral-void);
+  --spiral-gray: var(--spiral-mute);
+  --spiral-concrete: #d8d4c8;
+  --spiral-conc-01: var(--spiral-void);
+  --spiral-conc-02: var(--spiral-lift);
+  --spiral-conc-03: #1c1c1f;
+  --spiral-ink: #121214; /* text on paper, never on the page */
+  --spiral-steel: #66645e; /* secondary on paper only */
+  --spiral-red: var(--spiral-helix);
+  --spiral-oxblood: #6f1011; /* legacy dawn. Do not use on the Identity 02 hero. */
   --spiral-red-fill: color-mix(in srgb, var(--spiral-oxblood) 10%, var(--spiral-red));
 
-  /* type */
-  --spiral-font-display: "Archivo", sans-serif; /* variable: wdth + wght */
-  --spiral-font-mono: "IBM Plex Mono", monospace;
-  --spiral-wdth-display: 125;
-  --spiral-wght-display: 850;
-  --spiral-wdth-heading: 112;
-  --spiral-wght-heading: 700;
+  /* type — Instrument is static, not a wdth axis. Ignore leftover variation settings. */
+  --spiral-font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --spiral-font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --spiral-wdth-display: 100;
+  --spiral-wght-display: 400;
+  --spiral-wdth-heading: 100;
+  --spiral-wght-heading: 400;
 
   /* rhythm */
   --spiral-unit: 8px;
-  --spiral-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --spiral-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spiral-dur-fast: 150ms;
   --spiral-dur-slow: 400ms;
 
-  /* glass — CTA pills only, never surfaces */
-  --spiral-radius-ctl: 999px;
+  /* chrome — instruments have edges. 01 pills (999px) are retired on new work. */
+  --spiral-radius-ctl: 12px;
   --spiral-glass-blur: blur(16px) saturate(1.7);
   --spiral-glass-edge: rgba(255, 255, 255, 0.45);
   --spiral-glass-sheen: linear-gradient(

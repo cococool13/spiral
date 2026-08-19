@@ -1,44 +1,56 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { apps } from "@/lib/apps";
 import DownloadMenu from "./DownloadMenu";
 
 /**
  * Floating glass pill nav — sits 24px below the top, never flush at y=0.
  *
- * Download is a disclosure, not a direct file. It used to be a pill reading
- * "Download for" plus a platform glyph, wired to Spiral Wallpaper on every
- * page: it named no app, no version and no size, and it competed with the
- * hero chooser by being the higher primary. The control is back because a
- * visitor who has left the hero still needs a way to get a binary — but it
- * opens the same published-app list the hero does, so the file they get is
- * one they picked.
- *
- * Section links are written absolute (`/#apps`, not `#apps`) because the nav
- * renders on the app pages too, where a bare hash would resolve against that
- * route and go nowhere.
+ * On the home hero it stays off-screen until the visitor scrolls a little,
+ * so the photograph is the first thing they see. App pages show it at once.
+ * Keyboard focus reveals it immediately so it cannot trap a tab stop.
  */
 export default function Nav() {
   const pathname = usePathname();
   // `trailingSlash: true`, so `/wallpaper/` is the real path — compare without
   // the slash so a missing or extra one cannot silently un-match.
   const trimmed = pathname?.replace(/\/$/, "") ?? "";
+  const home = trimmed === "";
   const current = apps.find((app) => app.page && app.page.replace(/\/$/, "") === trimmed);
+  const [revealed, setRevealed] = useState(!home);
+
+  useEffect(() => {
+    if (!home) {
+      setRevealed(true);
+      return;
+    }
+    const onScroll = () => setRevealed(window.scrollY > 48);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [home]);
+
   return (
-    <header className="fixed inset-x-0 top-[calc(1.5rem+env(safe-area-inset-top,0px))] z-50 flex justify-center px-4">
+    <header
+      className={`nav-bar fixed inset-x-0 top-[calc(1.5rem+env(safe-area-inset-top,0px))] z-50 flex justify-center px-4 ${
+        revealed ? "nav-bar--in" : ""
+      }`}
+      onFocusCapture={() => setRevealed(true)}
+    >
       <nav className="nav-pill flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-2 sm:px-5">
-        {/* min-h-11 = 44px: the mark and wordmark are only 20px tall, so the
-            link needs its own hit area. */}
+        {/* min-h-11 = 44px: the helix sits at 40×24, so the link still needs
+            its own hit area. */}
         <div className="flex min-w-0 items-center gap-3">
           <a
             href="/"
             className="flex min-h-11 items-center gap-3 focus-visible:outline-2 focus-visible:outline-red"
           >
-            {/* Small filled mark from /brand, recolored paper via CSS mask */}
+            {/* Original filled helix from /brand, recoloured via CSS mask */}
             <span
               aria-hidden="true"
-              className="block h-5 w-5 bg-red"
+              className="block h-10 w-6 bg-red"
               style={{
                 maskImage: "url(/brand/logo/mark.svg)",
                 WebkitMaskImage: "url(/brand/logo/mark.svg)",
