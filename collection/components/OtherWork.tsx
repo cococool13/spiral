@@ -1,166 +1,264 @@
 "use client";
 
 import Image from "next/image";
-import { type CSSProperties, useId, useState } from "react";
-import { type OtherProject, otherWork } from "@/lib/otherWork";
+import { useEffect, useId, useMemo, useState } from "react";
+import { countLine, KIND_FILTERS, type OtherProject, otherWork } from "@/lib/otherWork";
+
+type KindFilter = (typeof KIND_FILTERS)[number];
+
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function cx(...parts: Array<string | false | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
 
 /**
  * Inverted section — light concrete on dark page — so it reads as outside
  * the Spiral product line.
  *
- * The seven projects are a deck. Closed, they sit stacked with each one
- * peeking out from under the one above; opened, they spread into a list you
- * can read. It is one control and one piece of state, which is the honest
- * shape for a section that is a footnote to the collection rather than part
- * of it: it takes one line of the page until someone wants it.
- *
- * The stack is `margin-top`, not `transform`. A transform would slide the
- * rows over each other and leave the section its full height either way,
- * which is the opposite of collapsing. Seven rows transitioning one property
- * on one click is a cost worth paying to have the page actually get shorter.
+ * The seven projects are an editorial index, not a stack. Closed stacks hid
+ * six of seven; this list is always on the page. Desktop is a numbered index
+ * with a large 16:10 cover that follows hover and keyboard. Mobile is stacked
+ * plates. Kind filters cut the list; they do not hide that the work exists.
  */
 export default function OtherWork() {
-  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<KindFilter>("All");
+  const filtered = useMemo(
+    () => (kind === "All" ? otherWork : otherWork.filter((p) => p.kind === kind)),
+    [kind],
+  );
+  const [activeId, setActiveId] = useState(filtered[0]?.id ?? otherWork[0].id);
   const listId = useId();
+  const coverId = useId();
+
+  useEffect(() => {
+    if (!filtered.some((p) => p.id === activeId)) {
+      setActiveId(filtered[0]?.id ?? otherWork[0].id);
+    }
+  }, [filtered, activeId]);
+
+  const active = filtered.find((p) => p.id === activeId) ?? filtered[0];
+  const activeIndex = otherWork.findIndex((p) => p.id === active?.id);
+
+  function move(delta: number) {
+    if (!filtered.length) return;
+    const i = filtered.findIndex((p) => p.id === activeId);
+    const next = filtered[Math.max(0, Math.min(filtered.length - 1, i + delta))];
+    if (next) setActiveId(next.id);
+  }
 
   return (
     <section id="other-work" className="bg-paper text-ink">
-      <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-          <div>
+      <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-xl">
             <h2 className="type-display text-4xl text-ink sm:text-5xl">
               Outside the Collection
             </h2>
-            <p className="mt-3 text-sm text-steel">
-              {otherWork.length} things built for other people.
+            <p className="mt-4 text-sm text-steel" aria-live="polite">
+              {countLine(kind, filtered.length)}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            aria-controls={listId}
-            className="work-stack-toggle inline-flex min-h-11 items-center gap-2 rounded-full border border-black/15 px-5 font-mono text-xs uppercase tracking-widest text-ink hover:bg-concrete"
-          >
-            {open ? "Collapse" : "Open the stack"}
-            <svg
-              width={14}
-              height={14}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              className={`transition-transform duration-500 ease-spiral ${
-                open ? "rotate-180" : ""
-              }`}
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
+          <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
+            <legend className="sr-only">Filter by kind</legend>
+            {KIND_FILTERS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                onClick={() => setKind(k)}
+                className={cx("kind-chip", kind === k && "is-on")}
+              >
+                {k}
+              </button>
+            ))}
+          </fieldset>
         </div>
 
-        <ol
-          id={listId}
-          className={`work-stack mt-12 ${open ? "is-open" : ""}`}
-          // The peek is what a closed row shows of itself. Read by the CSS
-          // so the two cannot disagree about how tall the stack is.
-          style={{ "--peek": "1.75rem" } as CSSProperties}
-        >
-          {otherWork.map((project, i) => (
-            <li
-              key={project.id}
-              // Closed, only the top card is readable — the rest are a peek
-              // of edge. `inert` takes them out of the tab order and the
-              // accessibility tree together, so a keyboard user does not
-              // collect six stops on cards they cannot read. The button's
-              // `aria-expanded` is what says they are there.
-              inert={!open && i > 0 ? true : undefined}
-              style={{ "--i": i, zIndex: otherWork.length - i } as CSSProperties}
-            >
-              <ProjectRow project={project} index={i} />
-            </li>
-          ))}
+        <div className="mt-16 hidden lg:grid lg:grid-cols-2 lg:items-start lg:gap-16">
+          <ol
+            id={listId}
+            aria-label="Other work"
+            className="border-t border-ink/10"
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+                e.preventDefault();
+                move(1);
+              } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                move(-1);
+              }
+            }}
+          >
+            {filtered.map((project) => {
+              const index = otherWork.findIndex((p) => p.id === project.id);
+              return (
+                <li key={project.id}>
+                  <IndexRow
+                    project={project}
+                    index={index}
+                    active={project.id === active?.id}
+                    onActivate={() => setActiveId(project.id)}
+                  />
+                </li>
+              );
+            })}
+          </ol>
+
+          {active ? (
+            <div id={coverId} className="sticky top-32">
+              <CoverStage project={active} index={activeIndex} />
+            </div>
+          ) : null}
+        </div>
+
+        <ol className="mt-12 grid gap-6 lg:hidden" aria-label="Other work">
+          {filtered.map((project) => {
+            const index = otherWork.findIndex((p) => p.id === project.id);
+            return (
+              <li key={project.id}>
+                <Plate project={project} index={index} />
+              </li>
+            );
+          })}
         </ol>
       </div>
     </section>
   );
 }
 
-function ProjectRow({ project, index }: { project: OtherProject; index: number }) {
+function Meta({ project, index }: { project: OtherProject; index: number }) {
+  return (
+    <span className="font-mono text-micro uppercase tracking-widest text-steel">
+      {pad(index + 1)} · {project.kind}
+      {project.where ? ` · ${project.where}` : ""}
+    </span>
+  );
+}
+
+function IndexRow({
+  project,
+  index,
+  active,
+  onActivate,
+}: {
+  project: OtherProject;
+  index: number;
+  active: boolean;
+  onActivate: () => void;
+}) {
+  const className = cx("work-row", active && "is-on");
   const body = (
     <>
-      {/* 16:10, the covers' own ratio, not a square. Cropped square to 80px
-          these landed in the middle of a page of body copy and every one came
-          out a white rectangle. */}
-      <span className="relative aspect-[16/10] w-20 shrink-0 overflow-hidden border border-black/15 bg-concrete sm:w-32">
-        <Image
-          src={project.cover}
-          alt={project.coverAlt}
-          width={1200}
-          height={750}
-          sizes="128px"
-          className="h-full w-full object-cover object-top"
-        />
+      <span className="w-8 shrink-0 pt-0.5 font-mono text-micro tabular-nums text-steel">
+        {pad(index + 1)}
       </span>
-      {/* The row is a fixed height so the collapse maths hold, so nothing in
-          here may grow past two lines. On a phone that means the number, the
-          kind and the name only — a description truncated to "Marketing sit…"
-          is not worth the line it wraps onto. */}
-      <span className="min-w-0 flex-1">
-        <span className="block font-mono text-[11px] uppercase tracking-widest text-steel">
-          {String(index + 1).padStart(2, "0")} · {project.kind}
+      <span className="min-w-0">
+        <span className="block font-mono text-micro uppercase tracking-widest text-steel">
+          {project.kind}
+          {project.where ? ` · ${project.where}` : ""}
         </span>
-        <span className="type-heading mt-1 line-clamp-2 block text-base text-ink sm:text-lg">
-          {project.name}
-        </span>
-        <span className="mt-1 hidden truncate text-sm text-steel sm:block">
+        <span className="type-heading mt-1 block text-xl text-ink">{project.name}</span>
+        <span className="mt-1 block text-sm leading-relaxed text-steel">
           {project.description}
         </span>
       </span>
-      {/* A chevron only where it leads somewhere. Six of the seven have no
-          link yet, and an arrow on those is a promise the card cannot keep. */}
-      {project.href ? (
-        <svg
-          width={18}
-          height={18}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="shrink-0 text-steel transition-transform duration-300 ease-spiral group-hover:translate-x-1"
-        >
-          <path d="M9 6l6 6-6 6" />
-        </svg>
-      ) : (
-        <span className="hidden shrink-0 font-mono text-[11px] uppercase tracking-widest text-steel sm:inline">
-          Not public
-        </span>
-      )}
+      <span className="shrink-0 pt-1 font-mono text-micro uppercase tracking-widest text-steel">
+        {project.href ? "Open" : "Not public"}
+      </span>
     </>
   );
 
-  // Opaque, not `bg-white/60`. A stack of translucent cards lets every buried
-  // title print through the one on top, which reads as a rendering fault
-  // rather than as a deck.
-  const shell =
-    "group flex w-full items-center gap-4 border border-black/15 bg-concrete p-4 text-left sm:gap-6 sm:p-5";
-
-  if (!project.href) return <article className={shell}>{body}</article>;
+  if (project.href) {
+    return (
+      <a
+        href={project.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        onMouseEnter={onActivate}
+        onFocus={onActivate}
+      >
+        {body}
+      </a>
+    );
+  }
 
   return (
-    <a
-      href={project.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`${shell} transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red`}
+    <button
+      type="button"
+      className={className}
+      aria-pressed={active}
+      onMouseEnter={onActivate}
+      onFocus={onActivate}
+      onClick={onActivate}
     >
       {body}
-    </a>
+    </button>
   );
+}
+
+function CoverStage({ project, index }: { project: OtherProject; index: number }) {
+  return (
+    <figure>
+      <div className="cover-frame relative aspect-work overflow-hidden bg-concrete">
+        <Image
+          key={project.id}
+          src={project.cover}
+          alt={project.coverAlt}
+          fill
+          sizes="(min-width: 1024px) 40vw, 100vw"
+          className="work-cover object-cover object-top"
+        />
+      </div>
+      <figcaption className="mt-5">
+        <Meta project={project} index={index} />
+        <p className="type-heading mt-2 text-2xl text-ink">{project.name}</p>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-steel">
+          {project.description}
+        </p>
+      </figcaption>
+    </figure>
+  );
+}
+
+function Plate({ project, index }: { project: OtherProject; index: number }) {
+  const inner = (
+    <>
+      <div className="cover-frame relative aspect-work overflow-hidden bg-concrete">
+        <Image
+          src={project.cover}
+          alt={project.coverAlt}
+          fill
+          sizes="100vw"
+          className="object-cover object-top"
+        />
+      </div>
+      <div className="px-5 py-5">
+        <Meta project={project} index={index} />
+        <h3 className="type-heading mt-2 text-2xl text-ink">{project.name}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-steel">{project.description}</p>
+        <p className="mt-4 font-mono text-micro uppercase tracking-widest text-steel">
+          {project.href ? "Open" : "Not public"}
+        </p>
+      </div>
+    </>
+  );
+
+  if (project.href) {
+    return (
+      <a
+        href={project.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="work-plate"
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return <article className="work-plate">{inner}</article>;
 }

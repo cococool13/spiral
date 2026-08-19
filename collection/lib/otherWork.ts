@@ -1,3 +1,5 @@
+export type WorkKind = "Website" | "Print" | "Tool" | "Report";
+
 export interface OtherProject {
   /** Stable id — also the cover filename in /public/work. */
   id: string;
@@ -5,14 +7,24 @@ export interface OtherProject {
   /** One line. State what it is; never sell it. */
   description: string;
   /** Short kind label — the only metadata a card carries. */
-  kind: string;
+  kind: WorkKind;
   /** Cover image under /public/work. 16:10, 1440×900 source. */
   cover: string;
   /** Alt text for the cover. Describes the screen, not the project. */
   coverAlt: string;
   /** Leave null to render the card without a link until the project is public. */
   href: string | null;
+  /** Place, when it is a fact. Never invented. */
+  where?: string;
 }
+
+export const KIND_FILTERS: Array<"All" | WorkKind> = [
+  "All",
+  "Website",
+  "Print",
+  "Tool",
+  "Report",
+];
 
 export const otherWork: OtherProject[] = [
   {
@@ -23,6 +35,7 @@ export const otherWork: OtherProject[] = [
     cover: "/work/coastal-hardware.webp",
     coverAlt: "Coastal Hardware home page with a storefront hero and product categories.",
     href: null,
+    where: "Brunswick, Georgia",
   },
   {
     id: "coastal-pharmacare",
@@ -42,6 +55,7 @@ export const otherWork: OtherProject[] = [
     coverAlt:
       "The “Share the Shore” sign: the Glynn County seal above a photograph of sea turtle hatchlings.",
     href: null,
+    where: "Glynn County, Georgia",
   },
   {
     id: "retirement-plan-evaluator",
@@ -51,6 +65,7 @@ export const otherWork: OtherProject[] = [
     cover: "/work/retirement-plan-evaluator.webp",
     coverAlt: "Step one of the evaluator, a company information form under a stepper.",
     href: null,
+    where: "JCC",
   },
   {
     id: "jcc-secure",
@@ -60,6 +75,7 @@ export const otherWork: OtherProject[] = [
     cover: "/work/jcc-secure.webp",
     coverAlt: "The case study landing page with a headline and summary figures.",
     href: null,
+    where: "JCC",
   },
   {
     id: "glynn-strategic-plan",
@@ -70,6 +86,7 @@ export const otherWork: OtherProject[] = [
     coverAlt:
       "The strategic plan cover: the Sidney Lanier Bridge at sunset under the title.",
     href: null,
+    where: "Glynn County, Georgia",
   },
   {
     id: "propscanner",
@@ -81,3 +98,11 @@ export const otherWork: OtherProject[] = [
     href: null,
   },
 ];
+
+export function countLine(kind: "All" | WorkKind, n: number): string {
+  if (kind === "All") return `${n} things built for other people.`;
+  if (kind === "Website") return n === 1 ? "1 website." : `${n} websites.`;
+  if (kind === "Print") return n === 1 ? "1 print piece." : `${n} print pieces.`;
+  if (kind === "Tool") return n === 1 ? "1 tool." : `${n} tools.`;
+  return n === 1 ? "1 report." : `${n} reports.`;
+}
