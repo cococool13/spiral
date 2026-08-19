@@ -114,8 +114,31 @@ function check() {
 // Online: the file agrees with what actually shipped
 // ---------------------------------------------------------------------------
 
+/** Which releases on a repo belong to the same product as this tag. */
+function sameFamily(tag) {
+  if (tag.startsWith("resume-v")) return (other) => other.startsWith("resume-v");
+  if (tag.startsWith("slim-v")) return (other) => other.startsWith("slim-v");
+  if (tag.startsWith("clean-v")) return (other) => other.startsWith("clean-v");
+  // Wallpaper's bare `v1.0.3`. Must not match `resume-v0.1.0`.
+  return (other) => /^v\d/.test(other);
+}
+
 async function latest() {
   const apps = parse();
+  const cache = new Map();
+
+  async function listReleases(owner, repo) {
+    const key = `${owner}/${repo}`;
+    if (cache.has(key)) return cache.get(key);
+    const api = `https://api.github.com/repos/${owner}/${repo}/releases?per_page=100`;
+    const headers = { accept: "application/vnd.github+json" };
+    if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    const response = await fetch(api, { headers });
+    if (!response.ok) throw new Error(`GitHub said ${response.status} for ${key}`);
+    const body = await response.json();
+    cache.set(key, body);
+    return body;
+  }
 
   for (const { slug, status, version, urls } of apps) {
     if (status === "coming-soon") {
@@ -131,32 +154,26 @@ async function latest() {
       continue;
     }
 
-    const api = `https://api.github.com/repos/${parts.owner}/${parts.repo}/releases/latest`;
-    const headers = { accept: "application/vnd.github+json" };
-    if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-
     let published;
     try {
-      const response = await fetch(api, { headers });
-      if (!response.ok) {
-        bad(`${slug}: GitHub said ${response.status} for ${parts.owner}/${parts.repo}`);
-        continue;
-      }
-      published = versionOf((await response.json()).tag_name ?? "");
+      const releases = (await listReleases(parts.owner, parts.repo)).filter(
+        (release) => !release.draft && !release.prerelease && sameFamily(parts.tag)(release.tag_name),
+      );
+      published = versionOf(releases[0]?.tag_name ?? "");
     } catch (error) {
       bad(`${slug}: could not reach GitHub: ${error.message}`);
       continue;
     }
 
     if (!published) {
-      bad(`${slug}: could not read a version from the latest release of ${parts.owner}/${parts.repo}`);
+      bad(`${slug}: no published ${parts.tag} family release on ${parts.owner}/${parts.repo}`);
     } else if (published !== version) {
       bad(
         `${slug}: the site offers ${version}, but ${parts.owner}/${parts.repo} has published ${published}.\n` +
           `    Update ${SOURCE} — visitors are being handed the older build.`,
       );
     } else {
-      say(`  ${slug}: ${version} — matches the latest release of ${parts.owner}/${parts.repo}`);
+      say(`  ${slug}: ${version} — matches the latest ${parts.tag} family release of ${parts.owner}/${parts.repo}`);
     }
   }
 }
