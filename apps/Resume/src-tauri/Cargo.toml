@@ -1,6 +1,6 @@
 [package]
 name = "spiral-resume"
-version = "0.1.0"
+version = "0.1.1"
 description = "Spiral Resume"
 authors = ["Cohen Coolidge"]
 edition = "2021"
