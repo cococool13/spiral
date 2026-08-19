@@ -13,3 +13,6 @@ Resume Template/
 # Built by scripts/build-sidecar.mjs. Two self-contained llama-server binaries,
 # ~35 MB, rebuilt from a pinned llama.cpp tag rather than carried in history.
 src-tauri/binaries/
+
+# Local captures, not product assets.
+.tmp-shots/

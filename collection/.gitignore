@@ -8,3 +8,7 @@ public/brand/
 
 # wrangler local state
 .wrangler/
+
+# Written by `next dev`. Not project instructions.
+AGENTS.md
+CLAUDE.md
