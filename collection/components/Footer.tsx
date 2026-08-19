@@ -1,58 +1,95 @@
+import type { ReactNode } from "react";
 import { apps } from "@/lib/apps";
 
 const EMAIL = "cohencool@icloud.com";
 const GITHUB = "https://github.com/cococool13";
+const PLACE = "Athens, Georgia";
 
 const appLinks = apps.filter((a) => a.page);
+const year = new Date().getFullYear();
+
+const elsewhere = [
+  { href: "/#apps", label: "Collection", external: false },
+  { href: "/#other-work", label: "Other Work", external: false },
+  { href: GITHUB, label: "GitHub", external: true },
+];
 
 export default function Footer() {
   return (
-    <footer className="relative z-10 border-t border-white/10 bg-black">
-      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-12 sm:py-16">
-        <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="type-heading text-lg text-paper">Spiral</p>
-            <p className="mt-2 max-w-xs text-sm leading-relaxed text-gray">
-              Small tools. No bloat. Your data stays yours.
-            </p>
-            <a
-              href={`mailto:${EMAIL}`}
-              className="mt-4 inline-flex min-h-11 items-center text-sm text-paper underline decoration-white/25 underline-offset-4 transition-colors hover:text-red hover:decoration-red"
-            >
-              {EMAIL}
-            </a>
-          </div>
+    <footer className="relative z-10 border-t border-paper/10 bg-black">
+      <div className="mx-auto max-w-6xl px-6 pt-20 pb-10 sm:pt-28 sm:pb-14">
+        <p className="type-display footer-wordmark text-paper">
+          Spiral<span className="text-red">.</span>
+        </p>
 
-          <nav aria-label="Footer">
-            <ul className="flex flex-col sm:items-end">
-              {appLinks.map((app) => (
-                <li key={app.slug}>
+        <div className="mt-16 grid gap-10 border-t border-paper/10 pt-12 sm:grid-cols-3">
+          <FooterCol title="Apps">
+            {appLinks.map((app) => (
+              <li key={app.slug}>
+                {app.page ? (
                   <a
-                    href={app.page as string}
-                    className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper sm:justify-end"
+                    href={app.page}
+                    className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper"
                   >
                     {app.name.replace("Spiral ", "")}
                   </a>
-                </li>
-              ))}
-              <li>
+                ) : null}
+              </li>
+            ))}
+          </FooterCol>
+
+          <FooterCol title="Elsewhere">
+            {elsewhere.map((link) => (
+              <li key={link.label}>
                 <a
-                  href={GITHUB}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper sm:justify-end"
+                  href={link.href}
+                  target={link.external ? "_blank" : undefined}
+                  rel={link.external ? "noopener noreferrer" : undefined}
+                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper"
                 >
-                  GitHub
+                  {link.label}
                 </a>
               </li>
-            </ul>
-          </nav>
+            ))}
+          </FooterCol>
+
+          <FooterCol title="Contact">
+            <li>
+              <a
+                href={`mailto:${EMAIL}`}
+                className="flex min-h-11 items-center text-sm text-gray underline decoration-paper/20 underline-offset-4 transition-colors hover:text-paper hover:decoration-red"
+              >
+                {EMAIL}
+              </a>
+            </li>
+            <li>
+              <span className="flex min-h-11 items-center text-sm text-gray">
+                {PLACE}
+              </span>
+            </li>
+          </FooterCol>
         </div>
 
-        <p className="text-sm text-gray">
-          © {new Date().getFullYear()} Spiral. Built by Cohen Coolidge.
+        <p className="type-heading mt-20 max-w-xl text-2xl text-paper italic sm:text-3xl">
+          Close the window and nothing keeps running.
+        </p>
+
+        <p className="mt-12 flex flex-wrap gap-x-6 gap-y-2 font-mono text-micro uppercase tracking-widest text-gray">
+          <span>© {year}</span>
+          <span>Cohen Coolidge</span>
+          <span>MIT</span>
+          <span>Georgia</span>
         </p>
       </div>
     </footer>
+  );
+}
+
+function FooterCol({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="font-mono text-micro uppercase tracking-widest text-paper">{title}</p>
+      <ul className="mt-3">{children}</ul>
+    </div>
   );
 }
