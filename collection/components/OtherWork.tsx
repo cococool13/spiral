@@ -18,9 +18,9 @@ function cx(...parts: Array<string | false | undefined>) {
  * Inverted section — light concrete on dark page — so it reads as outside
  * the Spiral product line.
  *
- * The seven projects are an editorial index, not a stack. Closed stacks hid
- * six of seven; this list is always on the page. Desktop is a numbered index
- * with a large 16:10 cover that follows hover and keyboard. Mobile is stacked
+ * The projects are an editorial index, not a stack. Closed stacks hid most of
+ * the work; this list is always on the page. Desktop is a numbered index with
+ * a large 16:10 cover that follows hover and keyboard. Mobile is stacked
  * plates. Kind filters cut the list; they do not hide that the work exists.
  */
 export default function OtherWork() {
