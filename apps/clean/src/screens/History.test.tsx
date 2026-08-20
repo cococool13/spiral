@@ -17,7 +17,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 const mockInvoke = vi.mocked(invoke);
 
-// jsdom omits dialog.showModal/close (jsdom/jsdom#3294). History now uses the
+// jsdom omits dialog.showModal/close (jsdom issue 3294). History now uses the
 // same showModal path as ConfirmSheet.
 beforeAll(() => {
   if (!HTMLDialogElement.prototype.showModal) {
