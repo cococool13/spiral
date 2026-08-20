@@ -26,7 +26,7 @@ apps/          one folder per app  ·  apps/wallpaper = Spiral Wallpaper (Tauri,
                             twelve templates, PDF + DOCX export, three engine
                             tiers. Note the capital R: the folder is
                             `apps/Resume`, not `apps/resume`)
-collection/    the spiral-collection.pages.dev website (Next.js, static export)
+collection/    the spiralcc.tech website (Next.js, static export; Pages project spiral-collection)
 docs/          PRODUCT.md, DESIGN.md, reference/, build specs
 ```
 

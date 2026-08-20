@@ -9,7 +9,7 @@
 Every Spiral app, the brand system they share, and the site that houses them.
 One repository — each app is a folder, not a separate project.
 
-[**spiral-collection.pages.dev**](https://spiral-collection.pages.dev)
+[**spiralcc.tech**](https://spiralcc.tech)
 
 On a Mac, one line gets you the app:
 
@@ -152,7 +152,7 @@ Three top-level areas, one job each.
 ```
 brand/         the design system — every colour, font, and mark lives here
 apps/          one folder per app — shipped, in progress, or still just docs
-collection/    the spiral-collection.pages.dev website
+collection/    the spiralcc.tech website
 docs/          product context, visual system, external reference
 ```
 

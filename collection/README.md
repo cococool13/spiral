@@ -2,7 +2,8 @@
 
 The site that houses every Spiral app. Next.js App Router, React 19, strict
 TypeScript, Tailwind v4. `output: 'export'` — a fully static build deployed
-to Cloudflare Pages at **spiral-collection.pages.dev**.
+to Cloudflare Pages at **spiralcc.tech**
+(`spiral-collection.pages.dev` remains the project hostname).
 
 ```bash
 pnpm install
