@@ -1,9 +1,7 @@
-# Agent Instructions
+# AGENTS.md
 
-Read `CLAUDE.md` in this directory before changing the project. It is the
-maintained source of truth for the repo layout, commands, architecture, product
-constraints, release state, and native verification. Keep this file as a
-pointer; do not duplicate the project brief here.
+Read `CLAUDE.md` in this directory — it is the maintained source of truth for
+commands, architecture, stack, and gotchas. Keep this file as a pointer; do not
+duplicate project content here.
 
-Before any work in `collection/`, also read `collection/README.md` — the website
-plays by different rules than the apps.
+Before any work in `collection/`, also read `collection/README.md`.

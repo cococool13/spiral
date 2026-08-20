@@ -11,34 +11,13 @@
 //! in someone's mouth on a document they are judged by.
 
 use crate::model::ResumeDoc;
+use crate::openers::{FILLER_OPENERS, PRONOUN_OPENERS};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tightened {
     pub text: String,
     pub notes: Vec<String>,
 }
-
-/// Leading phrases that say nothing. Removed, and the sentence restarts at the
-/// next word. Longest first, so "Was responsible for" wins over "Responsible".
-const FILLER_OPENERS: &[&str] = &[
-    "was responsible for",
-    "were responsible for",
-    "responsible for",
-    "duties included",
-    "duties included:",
-    "tasked with",
-    "was tasked with",
-    "helped to",
-    "assisted with",
-    "assisted in",
-    "worked on",
-    "worked with",
-    "involved in",
-    "in charge of",
-];
-
-/// Leading pronouns. A resume bullet is not a sentence about "I".
-const PRONOUN_OPENERS: &[&str] = &["i ", "i've ", "i have ", "my ", "we ", "we've "];
 
 /// Weak opener → the verb a reader expects, in (as written, past, present) form.
 /// Closed on purpose: an unknown verb is left exactly as the person wrote it.

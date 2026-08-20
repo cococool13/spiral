@@ -18,27 +18,10 @@
 import { spawnSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { APPS } from "./apps.manifest.mjs";
+import { updateCatalogue } from "./update-catalogue.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-
-const APPS = {
-  wallpaper: {
-    tag: (v) => `v${v}`,
-    name: "Spiral Wallpaper",
-    builds: "macOS + Windows",
-    // Wallpaper has no release-*.yml of its own: `build.yml` carries the
-    // `v*` trigger and calls the reusable workflow.
-    workflow: "build.yml",
-  },
-  slim: { tag: (v) => `slim-v${v}`, name: "Spiral Slim", builds: "macOS", workflow: "release-slim.yml" },
-  clean: { tag: (v) => `clean-v${v}`, name: "Spiral Clean", builds: "macOS", workflow: "release-clean.yml" },
-  resume: {
-    tag: (v) => `resume-v${v}`,
-    name: "Spiral Resume",
-    builds: "macOS + Windows",
-    workflow: "release-resume.yml",
-  },
-};
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
@@ -236,6 +219,10 @@ if (bump) {
   say("Checking they agree…");
   say(`  ${run("node", ["scripts/version.mjs", "check", app]).out}`);
 
+  say("Updating the site catalogue…");
+  updateCatalogue(app, version);
+  say(`  ${run("node", ["scripts/downloads.mjs", "check"]).out.split("\n").filter(Boolean).join("\n  ")}`);
+
   const changed = run("git", ["status", "--porcelain"]).out;
   if (!changed) die("nothing changed — the version files already said " + version + ".");
   say(`\nCommitting ${changed.split("\n").length} file(s)…`);
@@ -243,6 +230,16 @@ if (bump) {
 } else {
   say("Checking the files already agree…");
   say(`  ${run("node", ["scripts/version.mjs", "check", app]).out}`);
+  // First-tag path: files already carry this version, but the site may still
+  // be on an older number — rewrite the catalogue into this same commit tree
+  // only if it actually changes (otherwise leave HEAD alone).
+  updateCatalogue(app, version);
+  const siteChanged = run("git", ["status", "--porcelain", "--", "collection/lib"]).out;
+  if (siteChanged) {
+    say("Committing the site catalogue to match…");
+    run("git", ["add", "collection/lib/apps.ts", "collection/lib/appPages.ts"]);
+    run("git", ["commit", "-aqm", `chore: point the catalogue at ${name} ${version}`]);
+  }
 }
 
 // The tag lands on the commit that carries the version. When there is a bump,

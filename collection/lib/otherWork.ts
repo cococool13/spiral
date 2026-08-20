@@ -30,57 +30,64 @@ export const otherWork: OtherProject[] = [
   {
     id: "coastal-hardware",
     name: "Coastal Hardware",
-    description: "Marketing site for a family hardware store in Brunswick, Georgia.",
+    description:
+      "Static marketing site for Coastal Hardware & Building Supply in Brunswick. Live on Cloudflare Workers.",
     kind: "Website",
     cover: "/work/coastal-hardware.webp",
     coverAlt: "Coastal Hardware home page with a storefront hero and product categories.",
-    href: null,
+    href: "https://coastal-hardware.cohencool.workers.dev",
     where: "Brunswick, Georgia",
   },
   {
     id: "coastal-pharmacare",
     name: "Coastal PharmaCare",
-    description: "Site for a closed-door pharmacy, with one contact form behind it.",
+    description:
+      "Marketing site for a closed-door pharmacy, with a contact form on Cloudflare Pages.",
     kind: "Website",
     cover: "/work/coastal-pharmacare.webp",
     coverAlt: "Coastal PharmaCare home page over a coastal marsh photograph.",
-    href: null,
+    href: "https://coastal-pharmacare.pages.dev",
+    where: "Brunswick, Georgia",
   },
   {
     id: "coast-guard-beach",
     name: "Coast Guard Beach Signage",
-    description: "Wildlife signage, spotting guide, and bingo card for a public beach.",
+    description:
+      "Print package for Coast Guard Beach: 12×18 wildlife sign, spotting guide, and kids’ bingo card.",
     kind: "Print",
     cover: "/work/coast-guard-beach.webp",
     coverAlt:
       "The “Share the Shore” sign: the Glynn County seal above a photograph of sea turtle hatchlings.",
     href: null,
-    where: "Glynn County, Georgia",
+    where: "St. Simons Island, Georgia",
   },
   {
     id: "retirement-plan-evaluator",
     name: "Retirement Plan Evaluator",
-    description: "A four-step form that emails a plan summary back as a PDF.",
+    description:
+      "Four-step intake that emails a plan summary PDF. Live on Cloudflare Workers for JCC.",
     kind: "Tool",
     cover: "/work/retirement-plan-evaluator.webp",
     coverAlt: "Step one of the evaluator, a company information form under a stepper.",
-    href: null,
+    href: "https://jcc-retirement-plan-evaluator.cohencool.workers.dev",
     where: "JCC",
   },
   {
     id: "jcc-secure",
     name: "SECURE Case Study",
-    description: "A 401(k) case study page for a multi-specialty medical group.",
+    description:
+      "Static 401(k) case study for a multi-specialty group — participation up 60%, fees down 26%.",
     kind: "Website",
     cover: "/work/jcc-secure.webp",
     coverAlt: "The case study landing page with a headline and summary figures.",
-    href: null,
+    href: "https://jcc--case-study.web.app",
     where: "JCC",
   },
   {
     id: "glynn-strategic-plan",
     name: "Glynn County Strategic Plan",
-    description: "The report, deck, and companion pieces for a county strategic plan.",
+    description:
+      "Fixed-page strategic plan report, deck, and companion pieces. Local deliverable — not hosted.",
     kind: "Report",
     cover: "/work/glynn-strategic-plan.webp",
     coverAlt:
@@ -91,11 +98,12 @@ export const otherWork: OtherProject[] = [
   {
     id: "propscanner",
     name: "PropScanner",
-    description: "A player-prop scanner that de-vigs sportsbook lines. Signal only.",
+    description:
+      "Signal-only +EV player-prop scanner. De-vigs sharp books; dashboard on Cloudflare Workers.",
     kind: "Tool",
     cover: "/work/propscanner.webp",
     coverAlt: "The scanner's top single picks, each card showing a line and its edge.",
-    href: null,
+    href: "https://propscanner.cohencool.workers.dev",
   },
 ];
 

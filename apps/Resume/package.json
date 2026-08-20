@@ -5,18 +5,19 @@
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "sync-brand": "node scripts/sync-brand.mjs",
-    "predev": "node scripts/sync-brand.mjs",
-    "prebuild": "node scripts/sync-brand.mjs",
+    "sync-brand": "node ../../scripts/sync-brand.mjs resume",
+    "predev": "node ../../scripts/sync-brand.mjs resume",
+    "prebuild": "node ../../scripts/sync-brand.mjs resume",
     "dev": "vite",
-    "build": "node scripts/check-hex.mjs && tsc && vite build",
-    "check:hex": "node scripts/check-hex.mjs",
+    "build": "node ../../scripts/check-hex.mjs resume && node scripts/check-model-mirror.mjs && tsc && vite build",
+    "check:hex": "node ../../scripts/check-hex.mjs resume",
+    "check:model": "node scripts/check-model-mirror.mjs",
     "pin-model": "node scripts/pin-model.mjs",
     "build-sidecar": "node scripts/build-sidecar.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "bundle": "tauri build --config src-tauri/tauri.bundle.conf.json",
-    "test": "vitest run"
+    "test": "node scripts/check-model-mirror.mjs && vitest run"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

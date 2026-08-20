@@ -57,6 +57,9 @@ jobs:
       - name: The download page agrees with itself
         run: node scripts/downloads.mjs check
 
+      - name: Wallpaper and Clean AppBar stay identical
+        run: node scripts/check-app-bar.mjs
+
   # Only on a tag. Deliberately a separate job so its failure names the real
   # problem — "this tag does not match" — rather than being one red step inside
   # a job called "check".

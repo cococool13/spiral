@@ -68,7 +68,8 @@ src-tauri/src/
   remove/      the removal boundary. The only code that deletes
   commands/    the only code that talks to the webview, split by screen
   catalog.rs   what may ever be permanently deleted. Static, reviewable
-  exclude.rs   the user's veto, enforced inside remove/
+  catalog_clean.rs  catalog deletion runs (Clean + Optimize icon cache)
+  exclude.rs   the user's veto, enforced inside remove/ and lipo
   scan.rs      finds and sizes. Never deletes
   apps.rs      what is installed · associate.rs  what an app owns
   orphans.rs   what nothing owns any more

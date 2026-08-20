@@ -9,7 +9,7 @@ use crate::remove::Evidence;
 use crate::{apps, associate, exclude, history, remove, volume};
 use std::path::{Path, PathBuf};
 use super::{canonical_home, now_iso8601, tally, Tally};
-use super::clean::FailedItem;
+use crate::catalog_clean::FailedItem;
 
 #[derive(Debug, serde::Serialize)]
 pub struct AppSummary {
@@ -62,28 +62,12 @@ pub(crate) fn handoff_label(handoff: &apps::Handoff) -> String {
     }
 }
 
-/// Logical size of an app bundle: the sum of every file beneath it, symlinks
-/// never followed. Mirrors `associate::size_of`'s policy exactly; duplicated
-/// rather than exported because that function is private to `associate.rs`
-/// and this task's brief bars editing that module beyond its dead-code
-/// allows.
-pub(crate) fn bundle_bytes(path: &Path) -> u64 {
-    walkdir::WalkDir::new(path)
-        .min_depth(1)
-        .follow_links(false)
-        .follow_root_links(false)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .filter_map(|entry| entry.metadata().ok().map(|m| m.len()))
-        .sum()
-}
 
 pub(crate) fn app_summary(app: &apps::InstalledApp) -> AppSummary {
     AppSummary {
         name: app.name.clone(),
         bundle_id: app.bundle_id.clone(),
-        bytes: bundle_bytes(&app.path),
+        bytes: crate::sizing::size_of(&app.path),
         handoff: app.handoff.as_ref().map(handoff_label),
         running: apps::is_running(&app.bundle_id),
         path: app.path.display().to_string(),
@@ -153,7 +137,7 @@ pub(crate) fn inspect_within(bundle_id: &str, home: &Path) -> Result<InspectResu
     if app.handoff.is_none() {
         items.push(InspectItem {
             path: app.path.display().to_string(),
-            bytes: bundle_bytes(&app.path),
+            bytes: crate::sizing::size_of(&app.path),
             evidence: Evidence::Verified,
         });
     }
@@ -210,7 +194,7 @@ pub struct UninstallReport {
 
 /// Build the removal candidates for one uninstall. Every candidate carries
 /// the `Evidence` the association actually found for that item — never a
-/// caller's bare word for it, the same discipline `commands::catalog_candidates_for`
+/// caller's bare word for it, the same discipline `catalog_clean::catalog_candidates_for`
 /// applies to the Clean screen's own candidates.
 ///
 /// **The `.app` bundle is one of those items** (see `inspect_within`), so it

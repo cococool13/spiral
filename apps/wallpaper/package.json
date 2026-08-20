@@ -5,12 +5,12 @@
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "sync-brand": "node scripts/sync-brand.mjs",
-    "predev": "node scripts/sync-brand.mjs",
-    "prebuild": "node scripts/sync-brand.mjs",
+    "sync-brand": "node ../../scripts/sync-brand.mjs wallpaper",
+    "predev": "node ../../scripts/sync-brand.mjs wallpaper",
+    "prebuild": "node ../../scripts/sync-brand.mjs wallpaper",
     "dev": "vite",
-    "build": "node scripts/check-hex.mjs && tsc && vite build",
-    "check:hex": "node scripts/check-hex.mjs",
+    "build": "node ../../scripts/check-hex.mjs wallpaper && tsc && vite build",
+    "check:hex": "node ../../scripts/check-hex.mjs wallpaper",
     "smoke": "node scripts/smoke.mjs",
     "preview": "vite preview",
     "tauri": "tauri"

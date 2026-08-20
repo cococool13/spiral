@@ -184,7 +184,8 @@ pub fn run() {
         });
     }
 
-    let universal = crate::lipo::candidates(&home, &crate::lipo::real_effects());
+    let excl = crate::exclude::load(&config_dir());
+    let universal = crate::lipo::candidates(&home, &crate::lipo::real_effects(), &excl);
     if universal.is_empty() {
         v.note("universal apps", "none on this Mac — the listing path was not exercised");
     } else {

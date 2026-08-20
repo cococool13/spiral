@@ -2,6 +2,9 @@
 //! that file passed 2,200 lines.
 
 use super::*;
+use crate::catalog_clean::{
+    catalog_candidates_for, dedup_by_id, run_clean, snapshot_note,
+};
 use crate::remove::Evidence;
 use crate::{apps, catalog, exclude, history, orphans, remove, scan};
 use std::path::PathBuf;

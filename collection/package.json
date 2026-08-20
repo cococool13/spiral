@@ -7,9 +7,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "sync-brand": "node scripts/sync-brand.mjs",
-    "predev": "node scripts/sync-brand.mjs",
-    "prebuild": "node scripts/sync-brand.mjs",
+    "sync-brand": "node ../scripts/sync-brand.mjs collection",
+    "predev": "node ../scripts/sync-brand.mjs collection",
+    "prebuild": "node ../scripts/sync-brand.mjs collection",
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit",

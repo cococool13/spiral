@@ -2,8 +2,13 @@
 
 Spiral Clean has two destructive boundaries. `remove.rs` guards what may be **deleted**. `escalate.rs` guards what root may **run**. App Lipo is neither: it rewrites the contents of a file that stays exactly where it was, with the same name, in the same place.
 
-No care taken in either existing module helps. `remove.rs` never sees the path. The exclusion list, the catalog, the user-content bar, the disposition split — none of them are consulted, because nothing is being removed. That is worth stating plainly, because "Spiral Clean only destroys things through `remove.rs`" has been true for six milestones and stops being true here.
+No care taken in either existing module helps the *rewrite* itself. `remove.rs` never sees the path. The catalog, the user-content bar, the disposition split — none of them are consulted, because nothing is being removed. That is worth stating plainly, because "Spiral Clean only destroys things through `remove.rs`" has been true for six milestones and stops being true here.
 
+## Exclusion still binds
+
+The exclusion list is the user's veto over every destructive flow (ADR-0009). Lipo does **not** go through `remove::execute` — rewriting a binary is a different kind of destruction from deleting a path — but it loads `exclude` itself and refuses any app or binary `ExclusionList::covering` matches. An unreadable list fails closed: every candidate is blocked and `lipo_strip` refuses before any rewrite.
+
+So: Lipo is outside the removal boundary, and the exclusion veto still holds.
 ## What it actually costs
 
 Rewriting a Mach-O **invalidates its code signature.**
@@ -37,6 +42,7 @@ A test asserts the four texts differ and that every risky one says the app may n
 
 Being permitted to do it is not a reason to do it anywhere:
 
+- **The exclusion list binds**, loaded immediately before listing or stripping. An excluded app or binary is blocked with the same plain-language reason `Coverage::reason` gives elsewhere; an unreadable list stops every strip.
 - **Apple's own software is never modified**, the same refusal `associate`, `orphans` and `startup` already make.
 - **A running app is refused** until it is quit — rewriting a running binary can crash it outright.
 - **A single-architecture binary is not a candidate.** Stripping the only slice leaves an app that cannot run at all, which is a different act from the one the label promises.

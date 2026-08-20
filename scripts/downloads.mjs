@@ -20,6 +20,7 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sameFamily } from "./apps.manifest.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE = "collection/lib/apps.ts";
@@ -113,15 +114,6 @@ function check() {
 // ---------------------------------------------------------------------------
 // Online: the file agrees with what actually shipped
 // ---------------------------------------------------------------------------
-
-/** Which releases on a repo belong to the same product as this tag. */
-function sameFamily(tag) {
-  if (tag.startsWith("resume-v")) return (other) => other.startsWith("resume-v");
-  if (tag.startsWith("slim-v")) return (other) => other.startsWith("slim-v");
-  if (tag.startsWith("clean-v")) return (other) => other.startsWith("clean-v");
-  // Wallpaper's bare `v1.0.3`. Must not match `resume-v0.1.0`.
-  return (other) => /^v\d/.test(other);
-}
 
 async function latest() {
   const apps = parse();

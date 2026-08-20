@@ -24,15 +24,25 @@ Type, colour, and mark are Identity 02: two φ strokes sharing a centre.
 ## How surfaces consume it
 
 Nothing here is imported across folder boundaries at runtime. Each surface
-copies what it needs at build time, into a **gitignored** destination:
+copies what it needs at build time, into a **gitignored** destination, via the
+**one** root script:
 
-| Surface | Script | Copies into |
-| --- | --- | --- |
-| `collection/` | `collection/scripts/sync-brand.mjs` | `collection/public/brand/` (served at `/brand/…`) |
-| `apps/wallpaper/` | `apps/wallpaper/scripts/sync-brand.mjs` | `apps/wallpaper/src/assets/brand/` |
-| `apps/slim/desktop/` | `apps/slim/desktop/scripts/sync-brand.mjs` | app assets |
-| `apps/clean/` | `apps/clean/scripts/sync-brand.mjs` | app assets |
-| `apps/Resume/` | `apps/Resume/scripts/sync-brand.mjs` | app assets |
+```bash
+node scripts/sync-brand.mjs <collection|wallpaper|clean|resume|slim>
+node scripts/sync-brand.mjs --all
+node scripts/check-hex.mjs <wallpaper|clean|resume|slim>
+```
+
+Allowlists live in `scripts/brand-manifest.mjs`. Package scripts call those
+with a surface id — do not reintroduce per-app copies of the sync logic.
+
+| Surface | Destinations |
+| --- | --- |
+| `collection/` | `collection/public/brand/` (served at `/brand/…`) |
+| `apps/wallpaper/` | `src/assets/brand/` (marks only until Instrument adopt) |
+| `apps/slim/desktop/` | `src/assets/brand/` (soft-fail without `/brand` if marks committed) |
+| `apps/clean/` | brand marks + `src/styles/tokens.css` + Instrument fonts |
+| `apps/Resume/` | same as Clean, plus `mark-compact-red` |
 
 All run on `predev` and `prebuild`.
 

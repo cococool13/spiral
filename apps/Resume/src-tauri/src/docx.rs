@@ -12,6 +12,7 @@
 
 use crate::accent::{INK, QUIET};
 use crate::model::{ResumeDoc, Role, School};
+use crate::present::{contact_line, date_range, role_heading, when_and_where};
 use docx_rs::*;
 use std::io::Cursor;
 
@@ -120,57 +121,6 @@ fn section(title: &str, style: &DocxStyle, accent: &str) -> Vec<DocumentChild> {
         )])])
     .width(9350, WidthType::Dxa);
     vec![DocumentChild::Table(Box::new(ruled))]
-}
-
-/// "Jan 2021 — Present", matching `prelude.typ`'s `date-range` exactly. The two
-/// must agree or the PDF and the DOCX would describe the same job differently.
-fn date_range(role_start: &str, role_end: &str, present: bool) -> String {
-    let end = if present && role_end.is_empty() {
-        "Present"
-    } else {
-        role_end
-    };
-    match (role_start.is_empty(), end.is_empty()) {
-        (true, true) => String::new(),
-        (true, false) => end.to_string(),
-        (false, true) => role_start.to_string(),
-        (false, false) => format!("{role_start} — {end}"),
-    }
-}
-
-fn role_heading(role: &Role) -> String {
-    [role.title.as_str(), role.organization.as_str()]
-        .iter()
-        .filter(|part| !part.is_empty())
-        .copied()
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn contact_line(doc: &ResumeDoc) -> String {
-    let mut parts = vec![
-        doc.contact.email.clone(),
-        doc.contact.phone.clone(),
-        doc.contact.location.clone(),
-    ];
-    parts.extend(doc.contact.links.iter().cloned());
-    parts
-        .into_iter()
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>()
-        .join(" · ")
-}
-
-/// The twin of the prelude's `when-and-where`. The two halves have to agree,
-/// and a location shown in the PDF and absent from the .docx is the same bug as
-/// a template that never rendered it at all.
-fn when_and_where(dates: &str, location: &str) -> String {
-    [dates, location]
-        .iter()
-        .filter(|part| !part.is_empty())
-        .copied()
-        .collect::<Vec<_>>()
-        .join(" · ")
 }
 
 fn role_block(role: &Role, style: &DocxStyle) -> Vec<Paragraph> {
@@ -330,6 +280,7 @@ pub fn to_docx(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::{sample_resume, FACTS};
     use crate::templates;
 
     const SERIF: DocxStyle = DocxStyle {
@@ -356,9 +307,7 @@ mod tests {
     ];
 
     fn sample() -> ResumeDoc {
-        crate::parse_text::parse_text(
-            "Ada Lovelace\nada@example.com · London\n\nEXPERIENCE\nAnalyst, Admiralty\nPortsmouth\nJan 2021 - Present\n- Wrote the first algorithm\n\nPROJECTS\nDifference Engine\n- Drafted the notes\n\nEDUCATION\nUniversity of London\nBSc Mathematics\nCambridge\n2016 - 2019\n- GPA 3.9\n\nLEADERSHIP & ACTIVITIES\nPresident, Mathematical Society\n- Ran a weekly seminar\n\nAWARDS\nDe Morgan Medal\n\nSKILLS\nRust, Analysis\n\nINTERESTS\nWeaving\n",
-        )
+        sample_resume()
     }
 
     /// A .docx is a zip, and every zip starts "PK".
@@ -374,33 +323,6 @@ mod tests {
         let bytes = to_docx(&ResumeDoc::empty(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap();
         assert_eq!(&bytes[..2], b"PK");
     }
-
-    /// One fact from every section, in one list, so the Word check and the
-    /// PDF/Word twin check below cannot test different things. A section
-    /// missing from here is a section a template may silently stop rendering.
-    const FACTS: [&str; 21] = [
-        "Ada Lovelace",
-        "ada@example.com",
-        "London",
-        "Analyst",
-        "Admiralty",
-        "Portsmouth",
-        "Jan 2021",
-        "Present",
-        "Wrote the first algorithm",
-        "Difference Engine",
-        "Drafted the notes",
-        "University of London",
-        "BSc Mathematics",
-        "Cambridge",
-        "GPA 3.9",
-        "President",
-        "Mathematical Society",
-        "Ran a weekly seminar",
-        "De Morgan Medal",
-        "Rust",
-        "Weaving",
-    ];
 
     /// Line breaks and capitals are layout decisions, not content ones — a
     /// narrow template may split "Wrote the first algorithm" across two lines,
@@ -430,7 +352,7 @@ mod tests {
     /// The headings, in the order the template puts them, actually reach the
     /// Word file.
     ///
-    /// `FACTS` above asserts membership after squashing case and whitespace, so
+    /// `FACTS` asserts membership after squashing case and whitespace, so
     /// it could never see order — which is how seven templates came to write a
     /// Word file whose sections ran in a different order, under different
     /// names, from their own PDF. This reads the headings back out of the .docx
@@ -563,16 +485,6 @@ mod tests {
     fn the_declared_font_is_the_one_written_into_the_file() {
         let bytes = to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap();
         assert!(document_xml(&bytes).contains("Times New Roman"));
-    }
-
-    /// Dates must read identically to `prelude.typ`, or the PDF and the DOCX
-    /// would describe the same job differently.
-    #[test]
-    fn dates_read_the_same_as_the_typst_prelude() {
-        assert_eq!(date_range("Jan 2021", "", true), "Jan 2021 — Present");
-        assert_eq!(date_range("2016", "2019", false), "2016 — 2019");
-        assert_eq!(date_range("", "", false), "");
-        assert_eq!(date_range("2019", "", false), "2019");
     }
 
     fn document_xml(bytes: &[u8]) -> String {

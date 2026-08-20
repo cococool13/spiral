@@ -1,10 +1,10 @@
 //! Thumbnails, the build itself, and saving what it produced.
 
-use super::{engine::{engine_of, model_ready}, store_for};
+use super::{engine::engine_of, store_for};
 use crate::build::{self, Format, Progress};
-use crate::keys;
+use crate::engine_run::{self, Rewritten};
+use crate::fixtures;
 use crate::model::ResumeDoc;
-use crate::provider::Provider;
 use crate::templates;
 use serde::Serialize;
 use std::sync::Mutex;
@@ -86,17 +86,9 @@ fn failed_card(template: &templates::Template, message: impl Into<String>) -> Th
 }
 
 /// A full enough sample that every template has sections to show. It is not
-/// the user's resume — that is the point.
+/// the user's resume — that is the point. Shared with FACTS via `fixtures`.
 fn thumbnail_sample() -> ResumeDoc {
-    crate::parse_text::parse_text(
-        "Ada Lovelace\nada@example.com · London\n\n\
-         EXPERIENCE\nAnalyst, Admiralty\nPortsmouth\nJan 2021 - Present\n\
-         - Wrote the first algorithm\n- Cut report turnaround from 9 days to 2\n\n\
-         PROJECTS\nDifference Engine\n- Drafted the notes\n\n\
-         EDUCATION\nUniversity of London\nBSc Mathematics\nCambridge\n2016 - 2019\n- GPA 3.9\n\n\
-         LEADERSHIP & ACTIVITIES\nPresident, Mathematical Society\n- Ran a weekly seminar\n\n\
-         AWARDS\nDe Morgan Medal\n\nSKILLS\nRust, Analysis\n\nINTERESTS\nWeaving\n",
-    )
+    fixtures::sample_resume()
 }
 
 /// `async` so Tauri runs this off the main thread, leaving the webview free to
@@ -135,19 +127,6 @@ pub struct BuildResult {
     pub notes: Vec<String>,
 }
 
-/// The two engine names that are not built from a hostname. Stated once, so
-/// the build screen and the result screen cannot say different things.
-const OFFLINE_ENGINE: &str = "Built offline, no network used";
-const LOCAL_ENGINE: &str = "Rewritten on this computer — nothing left it";
-
-fn stage(name: &str, percent: u8, engine: &str) -> Progress {
-    Progress {
-        stage: name.to_string(),
-        percent,
-        engine: engine.to_string(),
-    }
-}
-
 /// What the Save button needs, and nothing else — in particular not the page
 /// SVGs, which the Result screen already holds.
 pub struct Saveable {
@@ -176,94 +155,6 @@ pub struct BuildRequest {
     pub aim: String,
 }
 
-/// The outcome of the wording pass, whichever tier ran it.
-struct Rewritten {
-    doc: ResumeDoc,
-    /// What ran, in the words shown on the build screen and the result.
-    engine: String,
-    /// One line per rewrite the fact gate refused. Never an error.
-    notes: Vec<String>,
-    used_model: bool,
-}
-
-/// Choose a tier and run it. Extracted from `build_document` because tier
-/// selection, sidecar lifetime and the engine's own name are one concern and
-/// laying out a page is another — a fifth tier belongs here and nowhere else.
-///
-/// The model pass runs whenever a tier is ready — a saved key, or the offline
-/// model installed. It is deliberately *not* gated on `tighten`: that toggle is
-/// the free rule-based pass, and letting it switch off a configured engine meant
-/// a user with a key silently got no rewrite at all. It replaces the
-/// deterministic tightening rather than stacking on top of it — two passes over
-/// the same sentence is how wording gets mangled.
-async fn rewrite_wording(
-    app: &tauri::AppHandle,
-    doc: ResumeDoc,
-    aim: &str,
-    on_progress: &Channel<Progress>,
-) -> Result<Rewritten, String> {
-    let free = |doc| Rewritten {
-        doc,
-        engine: OFFLINE_ENGINE.to_string(),
-        notes: Vec::new(),
-        used_model: false,
-    };
-
-    let root = store_for(app)?.path().to_path_buf();
-    let (stored, provider) = engine_of(app)?;
-    if !model_ready(&root, &provider) {
-        return Ok(free(doc));
-    }
-
-    if stored.provider == "local" {
-        // The offline engine: a process on this machine, reachable only on
-        // loopback, speaking the same shape as any other endpoint.
-        let entry = crate::local::chosen(&root, &stored.offline_model).ok_or_else(|| {
-            "No offline model is chosen. Pick one in Settings, or use your own API key or the free rule-based pass."
-                .to_string()
-        })?;
-        let binary = crate::sidecar::beside_this_binary("llama-server")?;
-        let port = crate::sidecar::free_port()?;
-        let engine_process =
-            crate::sidecar::Sidecar::start(&binary, &crate::local::model_path(&root, &entry), port)?;
-        let _ = on_progress.send(stage("Starting the offline engine", 5, LOCAL_ENGINE));
-        crate::sidecar::wait_until_ready(port, crate::sidecar::READY_ATTEMPTS).await?;
-        let _ = on_progress.send(stage("Rewriting wording", 10, LOCAL_ENGINE));
-        let local = Provider::Local {
-            base_url: engine_process.url(),
-        };
-        let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &local, "", &stored.model, aim).await?;
-        // The fact gate has just run inside `rewrite_doc`. Naming it is the one
-        // stage that shows the promise doing work.
-        let _ = on_progress.send(stage("Checking facts", 12, LOCAL_ENGINE));
-        // The sidecar is dropped here, which kills it. Nothing keeps running
-        // after a build.
-        drop(engine_process);
-        return Ok(Rewritten {
-            doc,
-            engine: LOCAL_ENGINE.to_string(),
-            notes: outcome.notes,
-            used_model: true,
-        });
-    }
-
-    // `model_ready` said a key is there; if it vanished between the two calls,
-    // the free pass is a working answer, not an error.
-    let Some(key) = keys::read(provider.id()) else {
-        return Ok(free(doc));
-    };
-    let named = format!("Rewritten with your key at {}", provider.host());
-    let _ = on_progress.send(stage("Rewriting wording", 10, &named));
-    let (doc, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, &key, &stored.model, aim).await?;
-    let _ = on_progress.send(stage("Checking facts", 12, &named));
-    Ok(Rewritten {
-        doc,
-        engine: named,
-        notes: outcome.notes,
-        used_model: true,
-    })
-}
-
 #[tauri::command]
 pub async fn build_document(
     app: tauri::AppHandle,
@@ -284,7 +175,10 @@ pub async fn build_document(
     })?;
     let format = Format::parse(&format)?;
 
-    let rewritten = rewrite_wording(&app, doc, &aim, &on_progress).await?;
+    let root = store_for(&app)?.path().to_path_buf();
+    let (stored, provider) = engine_of(&app)?;
+    let rewritten =
+        engine_run::rewrite_wording(&root, &stored, &provider, doc, &aim, &on_progress).await?;
     let Rewritten {
         doc,
         engine,

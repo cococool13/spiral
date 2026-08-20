@@ -12,9 +12,13 @@
 
 use crate::gate::{self, Verdict};
 use crate::model::ResumeDoc;
+use crate::openers;
 use serde::{Deserialize, Serialize};
 
-const SYSTEM: &str = "\
+/// Fixed preamble and trailing rules. Rule 5 is injected from
+/// `openers::opener_rule_text()` so the closed filler list cannot drift from
+/// what `tighten` strips.
+const SYSTEM_HEAD: &str = "\
 You are a resume copy editor for achievement bullets only. You receive \
 numbered bullets and return the same number of bullets. You never write a \
 resume from scratch and you never invent work the person did not describe.
@@ -45,10 +49,9 @@ Led). Do not swap in a synonym that breaks the grammar (Helped the team ship \
 must not become Supported the team ship). If a synonym would need extra words \
 to stay grammatical, keep the original verb.
 
-5. Remove only empty openers: \"responsible for\", \"helped to\", \"worked \
-on\", \"duties included\", \"tasked with\". Then capitalise the next word. \
-Do not rewrite the rest of the sentence just because you removed the opener.
+";
 
+const SYSTEM_TAIL: &str = "\
 6. Keep it the same length or shorter. Never pad. Never add \"successfully\", \
 \"utilized\", \"leveraged\", \"spearheaded\", \"passion\", or a metric that \
 was not in the original.
@@ -104,8 +107,12 @@ pub fn prompt_for(bullets: &[(String, String)]) -> String {
         .join("\n")
 }
 
-pub fn system_prompt() -> &'static str {
-    SYSTEM
+/// Full system prompt, with rule 5 built from `openers::FILLER_OPENERS`.
+pub fn system_prompt() -> String {
+    format!(
+        "{SYSTEM_HEAD}{}\n{SYSTEM_TAIL}",
+        openers::opener_rule_text()
+    )
 }
 
 /// Apply a model reply to a document. Pure — no network — so the gate's
@@ -166,13 +173,14 @@ fn set_bullet(doc: &mut ResumeDoc, id: &str, text: &str) -> bool {
 }
 
 fn system_for(aim: &str) -> String {
+    let system = system_prompt();
     let aim = aim.trim();
     if aim.is_empty() {
-        SYSTEM.to_string()
+        system
     } else {
         let clipped: String = aim.chars().take(200).collect();
         format!(
-            "{SYSTEM}\n\nAdditional instruction from the person, still bound by rule 1 (never change a fact): {clipped}"
+            "{system}\n\nAdditional instruction from the person, still bound by rule 1 (never change a fact): {clipped}"
         )
     }
 }
@@ -332,5 +340,20 @@ mod tests {
     fn the_system_prompt_forbids_inventing_facts_in_its_first_rule() {
         assert!(system_prompt().contains("Never change a fact"));
         assert!(system_prompt().contains("Do not add a number"));
+    }
+
+    /// FILLER_OPENERS lives in `openers` and is shared with `tighten`. The
+    /// prompt must name that closed list — otherwise the model tier and the
+    /// free tier would strip different phrases.
+    #[test]
+    fn the_system_prompt_names_every_shared_filler_opener() {
+        let prompt = system_prompt();
+        assert!(prompt.contains("closed list"));
+        for opener in openers::FILLER_OPENERS {
+            assert!(
+                prompt.contains(opener),
+                "system prompt missing shared opener {opener:?}"
+            );
+        }
     }
 }

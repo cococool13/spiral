@@ -82,7 +82,7 @@ These exist so it stays fast.
 | `app/` | App Router entry — `layout.tsx`, `page.tsx`, `globals.css` (the `@theme` token bridge) |
 | `components/` | Flat, one file per component. Not shadcn — no `ui/` subfolder. |
 | `lib/` | `apps.ts` (the app catalogue — edit this to add an app), `otherWork.ts`, `useOS.ts` |
-| `scripts/sync-brand.mjs` | Copies `/brand` → `public/brand/` (gitignored) |
+| Root `scripts/sync-brand.mjs collection` | Copies `/brand` → `public/brand/` (gitignored); allowlist in `scripts/brand-manifest.mjs` |
 | `public/brand/` | **Generated. Never edit** — deleted and rewritten on every build. |
 
 Tokens reach Tailwind through `@theme` in `app/globals.css`, which maps
