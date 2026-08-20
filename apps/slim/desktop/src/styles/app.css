@@ -155,7 +155,7 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  animation: stage-in var(--dur-slow) var(--ease);
+  animation: stage-in 280ms var(--ease);
 }
 
 @keyframes stage-in {
@@ -475,7 +475,7 @@ body {
 }
 
 .deck__edge:active span {
-  transform: scale(0.94);
+  transform: scale(0.97);
 }
 
 .deck__dots {
@@ -1013,10 +1013,6 @@ button {
     transform var(--dur-fast) var(--ease);
 }
 
-button:hover:not(:disabled) {
-  background: var(--conc-03);
-}
-
 /* Press feedback. Apply is the most consequential control in the app and
    had none. 0.97 rather than 0.96 because these are wide pill buttons and
    a wider element reads a given scale as a larger movement. */
@@ -1034,9 +1030,15 @@ button[data-variant="primary"] {
   font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
 }
 
-button[data-variant="primary"]:hover:not(:disabled) {
-  background: var(--hlx-02);
-  border-color: var(--hlx-02);
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) {
+    background: var(--conc-03);
+  }
+
+  button[data-variant="primary"]:hover:not(:disabled) {
+    background: var(--hlx-02);
+    border-color: var(--hlx-02);
+  }
 }
 
 button:disabled {

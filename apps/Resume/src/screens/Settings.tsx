@@ -36,11 +36,14 @@ export function Settings({
 
   return (
     <section className="panel">
-      {/* Opening Settings swaps the whole main region, so focus has to follow
-          it — otherwise a keyboard user is still standing in the flow behind. */}
-      <h2 className="panel__title" tabIndex={-1} ref={(node) => node?.focus()}>
-        Settings
-      </h2>
+      <div className="panel__head">
+        <h2 className="panel__title" tabIndex={-1} ref={(node) => node?.focus()}>
+          Settings
+        </h2>
+        <button type="button" className="panel__close" aria-label="Close settings" onClick={onClose}>
+          ×
+        </button>
+      </div>
       <p className="panel__lede">Spiral Resume {version}</p>
 
       <EngineSettings onChanged={onEngineChanged} />
@@ -66,9 +69,6 @@ export function Settings({
             Delete everything Spiral Resume has stored
           </button>
         )}
-        <button type="button" className="btn" onClick={onClose}>
-          Close
-        </button>
       </div>
     </section>
   );

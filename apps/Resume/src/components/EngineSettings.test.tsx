@@ -11,6 +11,7 @@ const base: EngineInfo = {
   usesModel: false,
   host: "api.anthropic.com",
   keyUrl: "https://console.anthropic.com/settings/keys",
+  needsSetup: false,
 };
 
 const engineInfo = vi.fn(async (): Promise<EngineInfo> => base);
@@ -23,10 +24,7 @@ vi.mock("../lib/ipc", () => ({
   // The offline panel has its own tests; here it only needs to render.
   offlineModelStatus: async () => ({
     available: false,
-    name: "",
-    size: "",
-    installed: false,
-    path: "",
+    models: [],
   }),
   downloadOfflineModel: vi.fn(),
   removeOfflineModel: vi.fn(),

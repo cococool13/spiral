@@ -121,6 +121,10 @@ export function clearApiKey(): Promise<EngineInfo> {
   return invoke<EngineInfo>("clear_api_key");
 }
 
+export function completeSetup(): Promise<EngineInfo> {
+  return invoke<EngineInfo>("complete_setup");
+}
+
 /** Resolves to the path written, or null when the user closed the dialog. */
 export function saveBuiltDocument(): Promise<string | null> {
   return invoke<string | null>("save_built_document");

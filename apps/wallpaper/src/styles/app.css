@@ -248,7 +248,7 @@
   flex: 1;
   overflow-y: auto;
   padding-bottom: calc(var(--unit) * 4);
-  animation: rise var(--dur-slow) var(--ease);
+  animation: rise 280ms var(--ease);
 }
 
 .browse__grid {
@@ -408,8 +408,18 @@
   pointer-events: none;
 }
 
-.btn-glass:hover {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-glass:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-glass--primary:hover {
+    background: color-mix(in srgb, var(--hlx-02) 72%, var(--hlx-01));
+  }
+
+  .btn-glass--secondary:hover {
+    background: color-mix(in srgb, var(--paper) 20%, transparent);
+  }
 }
 
 /* Busy, but still focusable — see WallpaperTile. Styled explicitly because
@@ -438,10 +448,6 @@
   color: var(--paper);
 }
 
-.btn-glass--primary:hover {
-  background: color-mix(in srgb, var(--hlx-02) 72%, var(--hlx-01));
-}
-
 .btn-glass--primary:active {
   background: color-mix(in srgb, var(--hlx-02) 86%, var(--hlx-01));
 }
@@ -449,10 +455,6 @@
 .btn-glass--secondary {
   background: color-mix(in srgb, var(--paper) 12%, transparent);
   color: var(--paper);
-}
-
-.btn-glass--secondary:hover {
-  background: color-mix(in srgb, var(--paper) 20%, transparent);
 }
 
 /* Screen switching — Browse stays mounted to keep its state. */
@@ -622,4 +624,17 @@
   font-family: var(--font-ui);
   font-size: 18px;
   color: var(--paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .firstrun {
+    animation: none;
+  }
+
+  .btn-glass,
+  .btn-glass:hover,
+  .btn-glass:active {
+    transition: none;
+    transform: none;
+  }
 }

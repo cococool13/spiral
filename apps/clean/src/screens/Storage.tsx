@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { formatBytes } from "../lib/format";
 
@@ -175,6 +175,7 @@ export default function Storage() {
   const [reports, setReports] = useState<StripReport[]>([]);
   const [confirming, setConfirming] = useState<LipoCandidate | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirmRef = useRef<HTMLDialogElement>(null);
 
   const open = useCallback((path?: string) => {
     setEntries(null);
@@ -203,6 +204,13 @@ export default function Storage() {
   }, [open]);
 
   useEffect(load, [load]);
+
+  useEffect(() => {
+    const dialog = confirmRef.current;
+    if (!dialog || !confirming) return;
+    dialog.showModal();
+    return () => dialog.close();
+  }, [confirming]);
 
   const removeBackup = (backup: DeviceBackup) => {
     setError(null);
@@ -247,7 +255,11 @@ export default function Storage() {
       <Lipo candidates={candidates} reports={reports} onStrip={setConfirming} />
 
       {confirming && (
-        <div role="dialog" aria-label={`Strip ${confirming.name}`}>
+        <dialog
+          ref={confirmRef}
+          aria-label={`Strip ${confirming.name}`}
+          onCancel={() => setConfirming(null)}
+        >
           <p>{confirming.warning}</p>
           <p>
             This cannot be undone. If {confirming.name} stops opening, the only fix is to
@@ -256,10 +268,10 @@ export default function Storage() {
           <button type="button" onClick={() => strip(confirming)}>
             Strip {confirming.name} anyway
           </button>
-          <button type="button" onClick={() => setConfirming(null)}>
+          <button type="button" autoFocus onClick={() => setConfirming(null)}>
             Cancel
           </button>
-        </div>
+        </dialog>
       )}
     </section>
   );

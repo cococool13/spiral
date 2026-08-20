@@ -6,30 +6,22 @@ import { useRadioGroup } from "../lib/useRadioGroup";
 
 const FORMAT_NAME: Record<ExportFormat, string> = { pdf: "PDF", docx: "Word file" };
 
-const COMMON = new Set(["Shorter bullets", "Stronger verbs", "More formal"]);
-
 export function Result({
   versions,
   showing,
   format,
-  canRewrite,
   onShow,
-  onTweak,
   onAnotherStyle,
 }: {
   versions: BuildResult[];
   showing: number;
   format: ExportFormat;
-  canRewrite: boolean;
   onShow: (index: number) => void;
-  onTweak: (aim: string) => void;
   onAnotherStyle: () => void;
 }) {
   const [savedTo, setSavedTo] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [tweakOpen, setTweakOpen] = useState(false);
-  const [aim, setAim] = useState("");
   const result = versions[showing];
   const labels = versions.map((_, index) => (index === 0 ? "First" : `Version ${index + 1}`));
   const versionProps = useRadioGroup(labels, labels[showing] ?? "", (label) =>
@@ -97,68 +89,10 @@ export function Result({
         <button type="button" className="btn btn--primary" disabled={busy} onClick={save}>
           Save the {FORMAT_NAME[format]} to your computer
         </button>
-        <button type="button" className="btn" disabled={busy} onClick={() => setTweakOpen((open) => !open)}>
-          Tweak
-        </button>
         <button type="button" className="btn" onClick={onAnotherStyle}>
           Try another style
         </button>
       </div>
-
-      {tweakOpen ? (
-        <form
-          className="tweak"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const next = aim.trim();
-            if (!next) return;
-            if (!canRewrite) {
-              setError("Tweaks that rewrite wording need a model in Settings. The free pass only shortens by rule.");
-              return;
-            }
-            setError("");
-            setTweakOpen(false);
-            onTweak(next);
-          }}
-        >
-          <label className="field">
-            <span className="field__label">What should change</span>
-            <select
-              className="field__input"
-              value={COMMON.has(aim) ? aim : ""}
-              onChange={(e) => setAim(e.target.value)}
-            >
-              <option value="">A common tweak…</option>
-              {[...COMMON].map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span className="field__label">Or type it</span>
-            <input
-              className="field__input"
-              type="text"
-              value={aim}
-              onChange={(e) => setAim(e.target.value)}
-              maxLength={200}
-            />
-          </label>
-          <p className="tweak__note">
-            Wording only. Titles, employers, dates and numbers stay as they are.
-          </p>
-          {canRewrite ? null : (
-            <Notice>A model in Settings is what rewrites. Without one, Tweak has nothing to run.</Notice>
-          )}
-          <div className="panel__actions">
-            <button type="submit" className="btn btn--primary" disabled={busy || !aim.trim()}>
-              Apply the tweak
-            </button>
-          </div>
-        </form>
-      ) : null}
     </section>
   );
 }

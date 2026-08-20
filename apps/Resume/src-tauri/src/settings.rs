@@ -26,6 +26,10 @@ pub struct EngineSettings {
     /// the app asks rather than guessing.
     #[serde(default)]
     pub offline_model: String,
+    /// The first-run engine screen has been dismissed — a model is installed,
+    /// a key is saved, or the person chose the rule-based pass.
+    #[serde(default)]
+    pub setup_done: bool,
 }
 
 impl Default for EngineSettings {
@@ -35,6 +39,7 @@ impl Default for EngineSettings {
             model: crate::provider::ANTHROPIC_DEFAULT_MODEL.to_string(),
             base_url: String::new(),
             offline_model: String::new(),
+            setup_done: false,
         }
     }
 }
@@ -94,6 +99,7 @@ mod tests {
             model: "llama-3".into(),
             base_url: "http://localhost:11434/v1".into(),
             offline_model: "qwen3.5-4b".into(),
+            setup_done: true,
         };
         save(dir.path(), &settings).unwrap();
         assert_eq!(load(dir.path()), settings);

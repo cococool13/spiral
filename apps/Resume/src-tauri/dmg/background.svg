@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400">
+  <rect width="660" height="400" fill="#080809"/>
+  <line x1="250" y1="170" x2="410" y2="170" stroke="#D52E2B" stroke-width="2"/>
+  <polygon points="410,164 422,170 410,176" fill="#D52E2B"/>
+  <text x="330" y="320" text-anchor="middle" fill="#F1EFE8" font-family="Helvetica, Arial, sans-serif" font-size="15">Drag Spiral Resume into Applications</text>
+  <text x="330" y="342" text-anchor="middle" fill="#8A8880" font-family="Helvetica, Arial, sans-serif" font-size="12">Then open it from there.</text>
+</svg>

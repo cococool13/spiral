@@ -224,8 +224,10 @@ p {
   background: rgba(244, 243, 240, 0.08);
   color: var(--spiral-paper);
 }
-.glass-pill--secondary:hover {
-  background: rgba(244, 243, 240, 0.14);
+@media (hover: hover) and (pointer: fine) {
+  .glass-pill--secondary:hover {
+    background: rgba(244, 243, 240, 0.14);
+  }
 }
 .glass-pill--disabled {
   background: rgba(140, 141, 138, 0.12);
@@ -251,28 +253,20 @@ p {
   gap: 6px;
 }
 
-/* Download disclosure — stays mounted so close can reverse the same path. */
+/* Download disclosure — exit only. Instant open; ease-in fade on close. */
 .download-panel {
   opacity: 0;
-  transform: translateY(-6px) scale(0.97);
-  transform-origin: top center;
   pointer-events: none;
-  transition:
-    opacity 200ms var(--spiral-ease),
-    transform 200ms var(--spiral-ease);
-}
-.download-panel--nav {
-  transform-origin: top right;
+  transition: opacity 200ms ease-in;
 }
 .download-panel--open {
   opacity: 1;
-  transform: none;
   pointer-events: auto;
+  transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .download-panel {
-    transform: none;
-    transition: opacity var(--spiral-dur-fast) var(--spiral-ease);
+    transition: opacity var(--spiral-dur-fast) ease-in;
   }
 }
 
@@ -281,8 +275,8 @@ p {
    shipping it as `opacity: 0` made the largest paint wait on a framer chunk.
    A CSS animation runs whether or not script does. */
 .rise {
-  animation: rise-in 640ms var(--spiral-ease) both;
-  animation-delay: calc(var(--rise-step, 0) * 90ms);
+  animation: rise-in 420ms var(--spiral-ease) both;
+  animation-delay: calc(var(--rise-step, 0) * 50ms);
 }
 @keyframes rise-in {
   from {
@@ -298,12 +292,12 @@ p {
    travel to. */
 .rise--figure {
   animation-name: rise-figure;
-  animation-duration: 900ms;
+  animation-duration: 520ms;
 }
 @keyframes rise-figure {
   from {
     opacity: 0;
-    transform: scale(0.94);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -360,11 +354,14 @@ p {
   transition:
     background-color var(--spiral-dur-fast) var(--spiral-ease),
     color var(--spiral-dur-fast) var(--spiral-ease),
-    border-color var(--spiral-dur-fast) var(--spiral-ease);
+    border-color var(--spiral-dur-fast) var(--spiral-ease),
+    transform var(--spiral-dur-fast) var(--spiral-ease);
 }
-.kind-chip:hover {
-  color: var(--spiral-ink);
-  border-color: color-mix(in oklab, var(--spiral-ink) 35%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .kind-chip:hover {
+    color: var(--spiral-ink);
+    border-color: color-mix(in oklab, var(--spiral-ink) 35%, transparent);
+  }
 }
 .kind-chip.is-on {
   background: var(--spiral-ink);
@@ -372,7 +369,7 @@ p {
   color: var(--spiral-paper);
 }
 .kind-chip:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 @media (prefers-reduced-motion: reduce) {
   .kind-chip:active {
@@ -393,7 +390,12 @@ p {
   background: transparent;
   color: inherit;
   cursor: pointer;
-  transition: background-color var(--spiral-dur-fast) var(--spiral-ease);
+  transition:
+    background-color var(--spiral-dur-fast) var(--spiral-ease),
+    transform var(--spiral-dur-fast) var(--spiral-ease);
+}
+.work-row:active {
+  transform: scale(0.98);
 }
 .work-row::before {
   content: "";
@@ -447,7 +449,7 @@ p {
 .nav-bar {
   transform: translateY(calc(-100% - 2rem));
   pointer-events: none;
-  transition: transform 420ms var(--spiral-ease);
+  transition: transform 280ms var(--spiral-ease);
 }
 .nav-bar--in {
   transform: none;

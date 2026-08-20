@@ -124,7 +124,7 @@ that explains state) live in [`DESIGN.md`](DESIGN.md), not here.
 - Slim: shipped on macOS.
 - Clean: feature-complete, unreleased — blocked on signing, notarization, the
   updater key, and nobody having yet opened it.
-- Resume: v0.1.0 (`resume-v0.1.0`). macOS signed and notarized; Windows unsigned.
+- Resume: v0.1.1 (`resume-v0.1.1`). macOS signed and notarized; Windows unsigned.
 
 Do not fabricate testimonials, download counts, employer placements, ATS pass
 rates, or "users say" copy. The apps have no telemetry, so those numbers do not

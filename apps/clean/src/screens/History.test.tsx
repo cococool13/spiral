@@ -7,7 +7,7 @@
 //  - An unreadable log is not an empty log. Decision 12 makes this the file a
 //    user consults to answer "what did this thing do", and "nothing yet" in
 //    place of "could not read it" is the one wrong answer.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import History, { formatWhen, reclaimedByDay, screenLabel } from "./History";
@@ -16,6 +16,21 @@ import type { RunRecord } from "./History";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 const mockInvoke = vi.mocked(invoke);
+
+// jsdom omits dialog.showModal/close (jsdom/jsdom#3294). History now uses the
+// same showModal path as ConfirmSheet.
+beforeAll(() => {
+  if (!HTMLDialogElement.prototype.showModal) {
+    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    };
+  }
+  if (!HTMLDialogElement.prototype.close) {
+    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+      this.removeAttribute("open");
+    };
+  }
+});
 
 function run(over: Partial<RunRecord> = {}): RunRecord {
   return {

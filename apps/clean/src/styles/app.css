@@ -66,6 +66,11 @@ button {
   cursor: pointer;
   font: inherit;
   min-height: 44px;
+  transition: transform var(--spiral-dur-fast) var(--spiral-ease);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 /* A checkbox's clickable area is its wrapping <label> — give the label
@@ -122,6 +127,10 @@ button {
 }
 
 /* The uninstall review dialog's handoff command (Uninstall.tsx). */
+dialog::backdrop {
+  background: color-mix(in srgb, var(--spiral-conc-01) 72%, transparent);
+}
+
 dialog pre {
   background: var(--spiral-conc-02);
   overflow-x: auto;

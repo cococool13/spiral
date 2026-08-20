@@ -1,5 +1,15 @@
 # changelog
 
+## 2026-08-19 — Resume polish, motion pass, site live
+
+Post-0.1.1 product polish on the working tree (not a new tag yet): first-run Setup, splash assemble, DMG background, Settings/X flow, wording/tighten fixes, bigger import and style tiles, motion press feedback across apps, collection download panel exit-only, Resume listed live on the site at 0.1.1.
+
+## 2026-08-19 — Spiral Resume 0.1.1
+
+First downloadable release. Tag `resume-v0.1.1`. macOS signed and notarized; Windows unsigned.
+
+`resume-v0.1.0` never produced a DMG: Tauri's universal bundle looks for `llama-server-universal-apple-darwin`, and the sidecar script only wrote the two architecture slices. Those are now lipo'd. GitHub's latest release stays Wallpaper — this tag is published with `--latest=false`.
+
 ## 2026-08-18 — Spiral Resume 0.1.0
 
 First public release. Tag `resume-v0.1.0`. macOS signed and notarized; Windows unsigned.

@@ -11,6 +11,7 @@ import { Format } from "./screens/Format";
 import { Input } from "./screens/Input";
 import { Result } from "./screens/Result";
 import { Settings } from "./screens/Settings";
+import { Setup } from "./screens/Setup";
 import { useDebounced } from "./lib/useDebounced";
 import { Style } from "./screens/Style";
 
@@ -28,12 +29,11 @@ export default function App() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [versions, setVersions] = useState<BuildResult[]>([]);
   const [showing, setShowing] = useState(0);
-  const [usesModel, setUsesModel] = useState(false);
-  const [rebuilding, setRebuilding] = useState(0);
-  const [aim, setAim] = useState("");
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [generate, setGenerate] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [fromScratch, setFromScratch] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [splash, setSplash] = useState<"in" | "out" | "off">("in");
   const settingsButton = useRef<HTMLButtonElement | null>(null);
 
   function closeSettings() {
@@ -60,19 +60,30 @@ export default function App() {
         })
         .catch(() => setSavedAt(null)),
       engineInfo()
-        .then((info) => setUsesModel(info.usesModel))
-        .catch(() => setUsesModel(false)),
+        .then((info) => {
+          setNeedsSetup(info.needsSetup);
+        })
+        .catch(() => undefined),
     ]).finally(() => {
-      // The mark assembles over ~1.5s. Hold the splash past that so a fast
-      // disk does not skip the one moment the load is meant to be.
-      // Reduced motion skips the pieces, so it also skips the wait.
       const reduced =
         typeof window.matchMedia !== "function" ||
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const wait = Math.max(0, (reduced ? 0 : 2800) - (Date.now() - started));
-      window.setTimeout(() => setReady(true), wait);
+      const wait = Math.max(0, (reduced ? 0 : 1800) - (Date.now() - started));
+      window.setTimeout(() => {
+        setSplash("out");
+        window.setTimeout(() => setSplash("off"), reduced ? 0 : 280);
+      }, wait);
     });
   }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") closeSettings();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [settingsOpen]);
 
   const edited = useRef(false);
 
@@ -108,10 +119,10 @@ export default function App() {
   function choose(changed: Partial<Draft>) {
     edit(changed);
     setVersions([]);
-    setAim("");
+    setGenerate(false);
   }
 
-  if (!ready) return <Splash />;
+  if (splash !== "off") return <Splash leaving={splash === "out"} />;
 
   return (
     <div className="app">
@@ -122,7 +133,7 @@ export default function App() {
         items={[
           {
             id: "settings",
-            label: settingsOpen ? "Close settings" : "Settings",
+            label: "Settings",
             onSelect: () => setSettingsOpen((open) => !open),
           },
         ]}
@@ -132,7 +143,9 @@ export default function App() {
         <main className="app__main">
           <Settings
             onClose={closeSettings}
-            onEngineChanged={(info) => setUsesModel(info.usesModel)}
+            onEngineChanged={(info) => {
+              setNeedsSetup(info.needsSetup);
+            }}
             onCleared={() => {
               edit({ doc: emptyDoc() });
               setSavedAt(null);
@@ -143,13 +156,21 @@ export default function App() {
             }}
           />
         </main>
+      ) : needsSetup ? (
+        <main className="app__main app__main--stage">
+          <Setup
+            onDone={() => {
+              setNeedsSetup(false);
+            }}
+          />
+        </main>
       ) : (
         <>
           <Stepper current={step} reached={reached} onJump={goTo} />
           <main
             className={
               step === "input" ||
-              (step === "build" && (draft.format === "" || (versions.length > 0 && rebuilding === 0)))
+              (step === "build" && (!generate || versions.length > 0))
                 ? "app__main app__main--stage"
                 : "app__main"
             }
@@ -186,40 +207,34 @@ export default function App() {
               />
             ) : null}
             {step === "build" ? (
-              !draft.format ? (
-                <Format chosen="" onChoose={(format) => choose({ format })} />
-              ) : versions.length > 0 && rebuilding === 0 ? (
+              !generate || !draft.format ? (
+                <Format
+                  chosen={draft.format}
+                  onChoose={(format) => choose({ format })}
+                  onGenerate={() => setGenerate(true)}
+                />
+              ) : versions.length > 0 ? (
                 <Result
                   versions={versions}
                   showing={showing}
-                  format={draft.format}
-                  canRewrite={usesModel}
+                  format={draft.format === "docx" ? "docx" : "pdf"}
                   onShow={setShowing}
-                  onTweak={(next) => {
-                    setAim(next);
-                    setRebuilding((n) => n + 1);
-                  }}
                   onAnotherStyle={() => {
                     setVersions([]);
                     setShowing(0);
-                    setAim("");
+                    setGenerate(false);
                     goTo("style");
                   }}
                 />
               ) : (
                 <Build
-                  key={`${versions.length}-${rebuilding}-${aim}`}
+                  key={String(versions.length)}
                   draft={draft}
-                  aim={aim}
                   onDone={(result) => {
                     setVersions((all) => [...all, result]);
                     setShowing(versions.length);
-                    setRebuilding(0);
-                    setAim("");
                   }}
                   onBack={() => {
-                    setRebuilding(0);
-                    setAim("");
                     choose({ format: "" });
                     goTo("build");
                   }}

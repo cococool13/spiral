@@ -235,4 +235,6 @@ export interface EngineInfo {
   host: string;
   /** Where this provider issues keys, or empty when there is nowhere to go. */
   keyUrl: string;
+  /** First launch has not yet chosen a wording path. */
+  needsSetup: boolean;
 }

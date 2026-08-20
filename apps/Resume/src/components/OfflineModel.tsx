@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   chooseOfflineModel,
   downloadOfflineModel,
@@ -17,11 +17,19 @@ import { Notice } from "./Notice";
  * downloading a model chooses it — nobody fetches gigabytes they did not mean
  * to use.
  */
-export function OfflineModel() {
+export function OfflineModel({
+  autoDownloadId,
+  onInstalled,
+}: {
+  autoDownloadId?: string;
+  onInstalled?: () => void;
+} = {}) {
   const [list, setList] = useState<ModelList | null>(null);
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [error, setError] = useState("");
+
+  const started = useRef(false);
 
   useEffect(() => {
     offlineModelStatus()
@@ -29,13 +37,34 @@ export function OfflineModel() {
       .catch((e) => setError(`${e}`));
   }, []);
 
+  useEffect(() => {
+    if (!autoDownloadId || !list || started.current) return;
+    const model = list.models.find((entry) => entry.id === autoDownloadId);
+    if (!model) return;
+    if (model.installed) {
+      started.current = true;
+      onInstalled?.();
+      return;
+    }
+    started.current = true;
+    void run(model.id, () => {
+      setProgress({ received: 0, total: 0, percent: 0 });
+      return downloadOfflineModel(model.id, setProgress);
+    }).then((next) => {
+      if (next?.models.some((entry) => entry.installed && entry.inUse)) onInstalled?.();
+    });
+  }, [autoDownloadId, list, onInstalled]);
+
   async function run(id: string, work: () => Promise<ModelList>) {
     setError("");
     setBusy(id);
     try {
-      setList(await work());
+      const next = await work();
+      setList(next);
+      return next;
     } catch (e) {
       setError(`${e}`);
+      return null;
     } finally {
       setBusy("");
       setProgress(null);

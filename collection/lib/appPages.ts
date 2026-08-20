@@ -55,7 +55,7 @@ export const appPages: AppPage[] = [
     eyebrow: "Spiral Resume",
     headline: ["Your resume,", "set properly."],
     sub: "Twelve typeset layouts. Your words, your facts, your file — PDF or Word, on your computer in about a second.",
-    cta: { label: "Get 0.1.0", href: `${REPO}/releases/tag/resume-v0.1.0` },
+    cta: { label: "Get 0.1.1", href: `${REPO}/releases/tag/resume-v0.1.1` },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/Resume` },
     proofLine: "Free. No account, no upload, no telemetry.",
     tagline: [
@@ -143,12 +143,12 @@ export const appPages: AppPage[] = [
       },
       {
         q: "Is there a Windows build?",
-        a: "Yes. 0.1.0 includes a Windows installer. It is unsigned, the same as Wallpaper, so SmartScreen will warn the first time.",
+        a: "Yes. 0.1.1 includes a Windows installer. It is unsigned, the same as Wallpaper, so SmartScreen will warn the first time.",
       },
     ],
     closing: {
-      headline: ["0.1.0 is the first release.", "It is free."],
-      body: "macOS is signed and notarized. Windows is unsigned, the same as Wallpaper. The installers appear on the GitHub release as the build finishes.",
+      headline: ["0.1.1 is the first downloadable release.", "It is free."],
+      body: "macOS is signed and notarized. Windows is unsigned, the same as Wallpaper.",
     },
   },
   {

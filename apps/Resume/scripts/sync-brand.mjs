@@ -16,6 +16,7 @@ const dest = path.resolve(here, "../src/assets/brand");
 /** [source relative to /brand, filename written into src/assets/brand] */
 const SHIP = [
   ["logo/mark-red.svg", "mark-red.svg"],
+  ["logo/mark-compact-red.svg", "mark-compact-red.svg"],
   ["logo/lockup-red.svg", "lockup-red.svg"],
 ];
 

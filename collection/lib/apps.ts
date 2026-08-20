@@ -44,6 +44,8 @@ export interface SpiralApp {
 
 const RELEASE = "https://github.com/cococool13/spiral/releases/download/v1.0.3";
 const SLIM_RELEASE = "https://github.com/cococool13/Spiral-Slim/releases/download/v1.0.0";
+const RESUME_RELEASE =
+  "https://github.com/cococool13/spiral/releases/download/resume-v0.1.1";
 
 export const apps: SpiralApp[] = [
   {
@@ -123,9 +125,21 @@ export const apps: SpiralApp[] = [
     slug: "resume",
     name: "Spiral Resume",
     tagline: "Twelve typeset layouts. It is never allowed to change a fact.",
-    status: "coming-soon",
+    status: "live",
+    version: "0.1.1",
     page: "/resume/",
     iconPath: "M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 13h6M9 16h4",
+    downloads: {
+      mac: {
+        url: `${RESUME_RELEASE}/Spiral.Resume_0.1.1_universal.dmg`,
+        label: "Download for Mac",
+      },
+      windows: {
+        url: `${RESUME_RELEASE}/Spiral.Resume_0.1.1_x64-setup.exe`,
+        label: "Download for Windows",
+      },
+      all: "https://github.com/cococool13/spiral/releases/tag/resume-v0.1.1",
+    },
   },
   {
     slug: "weather",

@@ -36,6 +36,7 @@ vi.mock("./lib/ipc", () => ({
     usesModel: false,
     host: "api.anthropic.com",
     keyUrl: "",
+    needsSetup: false,
   }),
   reviewWording: async () => [],
   // The Style screen never mounts in these tests, so it needs no swatches —

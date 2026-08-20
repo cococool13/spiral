@@ -31,6 +31,7 @@ pub fn run() {
             commands::editing::list_accents,
             commands::engine::engine_info,
             commands::engine::save_engine,
+            commands::engine::complete_setup,
             commands::engine::save_api_key,
             commands::engine::clear_api_key,
             commands::engine::offline_model_status,

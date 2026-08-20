@@ -7,10 +7,10 @@ import { OfflineModel } from "./OfflineModel";
 import { Notice } from "./Notice";
 
 const PROVIDERS = [
-  { id: "anthropic", name: "Anthropic" },
-  { id: "openai", name: "OpenAI" },
+  { id: "anthropic", name: "Claude" },
+  { id: "openai", name: "ChatGPT" },
   { id: "compatible", name: "Another service" },
-  { id: "local", name: "The offline model on this computer" },
+  { id: "local", name: "On this computer" },
 ];
 
 /** The engine lives here and nowhere else. The main flow never asks and never
@@ -51,9 +51,8 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
     <>
       <h3 className="panel__heading">Wording engine</h3>
       <p className="panel__lede">
-        Spiral Resume works with no key at all — it lays your resume out and tightens the wording
-        by rule. Adding your own API key rewrites the phrasing instead. Either way, your names,
-        dates and numbers are never changed.
+        Spiral Resume works with no key at all — layout and a light wording pass. A Claude or
+        ChatGPT key rewrites the phrasing instead. Names, dates and numbers never change.
       </p>
 
       <div className="entry__grid">
@@ -78,11 +77,13 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
           </select>
         </label>
 
-        <Field
-          label="Model (blank uses the recommended one)"
-          value={info.model}
-          onChange={(model) => setInfo({ ...info, model })}
-        />
+        {info.provider === "compatible" ? (
+          <Field
+            label="Model (blank uses the recommended one)"
+            value={info.model}
+            onChange={(model) => setInfo({ ...info, model })}
+          />
+        ) : null}
       </div>
 
       {info.provider === "compatible" ? (
@@ -103,77 +104,83 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
         </button>
       </div>
 
-      <OfflineModel />
+      {info.provider === "local" ? <OfflineModel /> : null}
 
       {info.provider === "local" ? null : (
         <>
-      <h3 className="panel__heading">Your API key</h3>
-      <p className="panel__lede">
-        This is an API key, not your Claude or ChatGPT subscription — they are different things,
-        and API usage is billed separately. Your key is stored in this computer's keychain, never
-        in a file, and is sent only to {info.host}.
-      </p>
+          <h3 className="panel__heading">Your API key</h3>
+          <p className="panel__lede">
+            This is an API key, not your Claude or ChatGPT subscription — they are different things,
+            and API usage is billed separately. Your key is stored in this computer&apos;s keychain,
+            never in a file, and is sent only to {info.host}.
+          </p>
 
-      {info.hasKey ? (
-        <Notice>A key is saved for {PROVIDERS.find((p) => p.id === info.provider)?.name}.</Notice>
-      ) : null}
+          {info.hasKey ? (
+            <Notice>
+              A key is saved for {PROVIDERS.find((p) => p.id === info.provider)?.name}.
+            </Notice>
+          ) : null}
 
-      <label className="field">
-        <span className="field__label">{info.hasKey ? "Replace the key" : "Paste your key"}</span>
-        <input
-          className="field__input"
-          type="password"
-          autoComplete="off"
-          spellCheck={false}
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-        />
-      </label>
+          <label className="field">
+            <span className="field__label">{info.hasKey ? "Replace the key" : "Paste your key"}</span>
+            <input
+              className="field__input"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+            />
+          </label>
 
-      {saved ? <Notice>{saved}</Notice> : null}
-      {error ? <Notice tone="warn">{error}</Notice> : null}
+          {saved ? <Notice>{saved}</Notice> : null}
+          {error ? <Notice tone="warn">{error}</Notice> : null}
 
-      <div className="panel__actions">
-        <button
-          type="button"
-          className="btn"
-          disabled={key.trim().length === 0}
-          onClick={() =>
-            run(async () => {
-              const next = await saveApiKey(key);
-              setKey("");
-              return next;
-            }, "Key saved to your keychain.")
-          }
-        >
-          Save the key
-        </button>
-        {info.hasKey ? (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => run(clearApiKey, "Key removed from your keychain.")}
-          >
-            Remove the key
-          </button>
-        ) : null}
-        {/* The URL comes from Rust with the rest of the provider's identity —
-            the frontend opens it, it never guesses it. Empty for a custom
-            endpoint, which is the user's own service. */}
-        {info.keyUrl ? (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              void openUrl(info.keyUrl).catch((e) => setError(`${e}`));
-            }}
-          >
-            Get your key
-          </button>
-        ) : null}
-      </div>
+          <div className="panel__actions">
+            <button
+              type="button"
+              className="btn"
+              disabled={key.trim().length === 0}
+              onClick={() =>
+                run(async () => {
+                  const next = await saveApiKey(key);
+                  setKey("");
+                  return next;
+                }, "Key saved to your keychain.")
+              }
+            >
+              Save the key
+            </button>
+            {info.hasKey ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => run(clearApiKey, "Key removed from your keychain.")}
+              >
+                Remove the key
+              </button>
+            ) : null}
+            {info.keyUrl ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  void openUrl(info.keyUrl).catch((e) => setError(`${e}`));
+                }}
+              >
+                Get your key
+              </button>
+            ) : null}
+          </div>
         </>
       )}
+
+      {info.provider === "local" ? (
+        <>
+          {saved ? <Notice>{saved}</Notice> : null}
+          {error ? <Notice tone="warn">{error}</Notice> : null}
+        </>
+      ) : null}
     </>
   );
 }

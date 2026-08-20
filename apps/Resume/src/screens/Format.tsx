@@ -17,9 +17,11 @@ const FORMATS: { id: ExportFormat; name: string; note: string }[] = [
 export function Format({
   chosen,
   onChoose,
+  onGenerate,
 }: {
   chosen: ExportFormat | "";
   onChoose: (format: ExportFormat) => void;
+  onGenerate?: () => void;
 }) {
   const formatProps = useRadioGroup(
     FORMATS.map((f) => f.id),
@@ -30,12 +32,12 @@ export function Format({
   return (
     <section className="stage">
       <h2 className="visually-hidden">Choose a format</h2>
-      <div className="stage-tiles" role="radiogroup" aria-label="Export format">
+      <div className="stage-tiles stage-tiles--formats" role="radiogroup" aria-label="Export format">
         {FORMATS.map((format) => (
           <button
             key={format.id}
             type="button"
-            className="stage-tile"
+            className="stage-tile stage-tile--compact"
             {...formatProps(format.id)}
           >
             <span className="stage-tile__name">{format.name}</span>
@@ -43,6 +45,18 @@ export function Format({
           </button>
         ))}
       </div>
+      {onGenerate ? (
+        <div className="panel__actions panel__actions--generate">
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={!chosen}
+            onClick={onGenerate}
+          >
+            Generate
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

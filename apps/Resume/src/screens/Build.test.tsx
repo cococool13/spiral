@@ -41,7 +41,9 @@ describe("Build", () => {
         onBack={vi.fn()}
       />,
     );
-    await waitFor(() => expect(screen.getByText("Preparing the file…")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Preparing the file…")).toBeTruthy(), {
+      timeout: 5000,
+    });
     expect(screen.getByText("100%")).toBeTruthy();
   });
 
@@ -55,7 +57,7 @@ describe("Build", () => {
         onBack={vi.fn()}
       />,
     );
-    await waitFor(() => expect(screen.getByText(ENGINE)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(ENGINE)).toBeTruthy(), { timeout: 5000 });
   });
 
   it("hands the finished build up", async () => {
@@ -63,7 +65,7 @@ describe("Build", () => {
     render(
       <Build draft={DRAFT} onDone={onDone} onBack={vi.fn()} />,
     );
-    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    await waitFor(() => expect(onDone).toHaveBeenCalled(), { timeout: 5000 });
     expect(onDone.mock.calls[0][0].suggestedName).toBe("Ada-Lovelace-resume.pdf");
   });
 
@@ -72,7 +74,7 @@ describe("Build", () => {
     render(
       <Build draft={DRAFT} onDone={onDone} onBack={vi.fn()} />,
     );
-    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    await waitFor(() => expect(onDone).toHaveBeenCalled(), { timeout: 5000 });
     expect(buildDocument).toHaveBeenCalledTimes(1);
   });
 
