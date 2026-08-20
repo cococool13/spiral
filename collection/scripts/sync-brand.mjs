@@ -14,7 +14,14 @@ const src = path.resolve(here, "../../brand");
 const dest = path.resolve(here, "../public/brand");
 
 /** Paths relative to /brand that the website actually serves. */
-const SHIP = ["tokens.css", "tokens.json", "fonts", "logo/mark.svg", "logo/stroke.svg"];
+const SHIP = [
+  "tokens.css",
+  "tokens.json",
+  "fonts",
+  "logo/mark.svg",
+  "logo/mark-compact.svg",
+  "logo/stroke.svg",
+];
 
 if (!existsSync(src)) {
   console.error(`sync-brand: ${src} not found. /brand must exist at the repo root.`);

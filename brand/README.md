@@ -3,7 +3,7 @@
 Every colour, font, and mark used anywhere in this repo originates here.
 Nothing in `apps/` or `collection/` may define its own brand values.
 
-Type and colour are Identity 02. The mark is the original filled helix.
+Type, colour, and mark are Identity 02: two φ strokes sharing a centre.
 
 ## What's here
 
@@ -12,8 +12,9 @@ Type and colour are Identity 02. The mark is the original filled helix.
 | `tokens.css` | Design tokens as CSS custom properties. **The only file allowed to contain hex values.** | `collection/` imports it; apps copy it via sync-brand |
 | `tokens.json` | The same tokens for non-CSS consumers | icon-generation scripts |
 | `fonts/` | Self-hosted Instrument Serif + Instrument Sans woff2 | both surfaces — no CDN at runtime |
-| `logo/mark.svg` | Filled helix, single-colour, recoloured via CSS mask | `collection/` nav |
-| `logo/mark-red.svg` | Helix in helix red | apps |
+| `logo/mark.svg` | Dual-arm stroke mark, viewBox `0 0 64 64` | apps + reference |
+| `logo/mark-compact.svg` | Same mark, heavier stroke for small sizes | `collection/` nav |
+| `logo/mark-red.svg` | Mark in helix red | apps |
 | `logo/lockup-red.svg` | Mark + wordmark. First-run screens only | `apps/wallpaper` |
 | `logo/stroke.svg` | Archimedean spiral stroke | collection scroll indicator |
 | `logo/png/mark-{16..1024}.png` | Icon-pipeline sources | Tauri icon generation |
@@ -43,5 +44,5 @@ Edit the file here instead.
 - Five colours. Two fonts (serif + sans). System mono for data. Radii are concentric, not zero or pill.
 - All spacing is a multiple of 8px.
 - Red (`--spiral-red` / `--spiral-helix`) is for the mark, the one action, and warnings. Never a page fill. Never body text.
-- The mark is the filled helix, one colour at a time — helix, paper, or void. Never gradients, shadows, rotation, or other hues.
+- The mark is two strokes, one colour at a time — helix, paper, or void. Never gradients, shadows, rotation, fill, or other hues. Do not CSS-mask it; draw the stroke.
 - The collection hero does not carry the mark. The header does.

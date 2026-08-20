@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apps } from "@/lib/apps";
 import DownloadMenu from "./DownloadMenu";
+import Mark from "./Mark";
 
 /**
  * Floating glass pill nav — sits 24px below the top, never flush at y=0.
@@ -40,28 +41,14 @@ export default function Nav() {
       onFocusCapture={() => setRevealed(true)}
     >
       <nav className="nav-pill flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-2 sm:px-5">
-        {/* min-h-11 = 44px: the helix sits at 40×24, so the link still needs
-            its own hit area. */}
+        {/* min-h-11 = 44px: the mark is 24×24, so the link still needs its
+            own hit area. Stroke mark — never a CSS mask (masks drop strokes). */}
         <div className="flex min-w-0 items-center gap-3">
           <a
             href="/"
             className="flex min-h-11 items-center gap-3 focus-visible:outline-2 focus-visible:outline-red"
           >
-            {/* Original filled helix from /brand, recoloured via CSS mask */}
-            <span
-              aria-hidden="true"
-              className="block h-10 w-6 bg-red"
-              style={{
-                maskImage: "url(/brand/logo/mark.svg)",
-                WebkitMaskImage: "url(/brand/logo/mark.svg)",
-                maskSize: "contain",
-                WebkitMaskSize: "contain",
-                maskRepeat: "no-repeat",
-                WebkitMaskRepeat: "no-repeat",
-                maskPosition: "center",
-                WebkitMaskPosition: "center",
-              }}
-            />
+            <Mark size={24} className="text-red" />
             <span className="type-heading text-sm tracking-wide">Spiral</span>
           </a>
           {/* Which page this is. The wordmark beside it is the way back. */}
