@@ -163,7 +163,7 @@ p {
   display: inline-block;
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--spiral-red);
   margin-right: 10px;
   vertical-align: 2px;
@@ -221,12 +221,12 @@ p {
   outline-offset: 3px;
 }
 .glass-pill--secondary {
-  background: rgba(244, 243, 240, 0.08);
+  background: color-mix(in oklab, var(--spiral-paper) 8%, transparent);
   color: var(--spiral-paper);
 }
 @media (hover: hover) and (pointer: fine) {
   .glass-pill--secondary:hover {
-    background: rgba(244, 243, 240, 0.14);
+    background: color-mix(in oklab, var(--spiral-paper) 14%, transparent);
   }
 }
 .glass-pill--disabled {
@@ -433,19 +433,6 @@ p {
   outline-offset: -1px;
 }
 
-/* Night plate. Desktop shows the whole still; phones crop to the stair. */
-.hero-photo {
-  object-fit: cover;
-  object-position: left center;
-}
-@media (min-width: 1024px) {
-  .hero-photo {
-    object-fit: contain;
-    object-position: center;
-  }
-}
-
-/* Home nav sits off-screen until the visitor scrolls. */
 .nav-bar {
   transform: translateY(calc(-100% - 2rem));
   pointer-events: none;
@@ -455,18 +442,31 @@ p {
   transform: none;
   pointer-events: auto;
 }
-.hero-pin {
-  height: 160svh;
+
+.hero-photo {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Keep the photograph, put a hole of darkness under the type so paper still reads. */
+.hero-copy {
+  position: relative;
+}
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  inset: -12% -20%;
+  background: radial-gradient(
+    ellipse 70% 65% at 50% 50%,
+    color-mix(in oklab, var(--spiral-void) 62%, transparent) 0%,
+    transparent 72%
+  );
+  pointer-events: none;
+  z-index: -1;
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-bar {
     transition: none;
-  }
-  .hero-pin {
-    height: 100svh;
-  }
-  .hero-pin > .sticky {
-    position: relative;
   }
 }
 
@@ -480,7 +480,7 @@ p {
 .nav-pill {
   border-radius: var(--spiral-radius-ctl);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(11, 11, 12, 0.92);
+  background: color-mix(in oklab, var(--spiral-void) 92%, transparent);
   backdrop-filter: var(--spiral-glass-blur);
   -webkit-backdrop-filter: var(--spiral-glass-blur);
   box-shadow: rgba(0, 0, 0, 0.28) 0 4px 24px;

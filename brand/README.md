@@ -39,7 +39,7 @@ with a surface id — do not reintroduce per-app copies of the sync logic.
 | Surface | Destinations |
 | --- | --- |
 | `collection/` | `collection/public/brand/` (served at `/brand/…`) |
-| `apps/wallpaper/` | `src/assets/brand/` (marks only until Instrument adopt) |
+| `apps/wallpaper/` | brand marks + `src/styles/tokens.css` + Instrument fonts |
 | `apps/slim/desktop/` | `src/assets/brand/` (soft-fail without `/brand` if marks committed) |
 | `apps/clean/` | brand marks + `src/styles/tokens.css` + Instrument fonts |
 | `apps/Resume/` | same as Clean, plus `mark-compact-red` |
@@ -55,4 +55,4 @@ Edit the file here instead.
 - All spacing is a multiple of 8px.
 - Red (`--spiral-red` / `--spiral-helix`) is for the mark, the one action, and warnings. Never a page fill. Never body text.
 - The mark is two strokes, one colour at a time — helix, paper, or void. Never gradients, shadows, rotation, fill, or other hues. Do not CSS-mask it; draw the stroke.
-- The collection hero does not carry the mark. The header does.
+- The collection hero carries the mark with the headline. The header does too.

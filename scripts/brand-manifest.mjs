@@ -40,12 +40,11 @@ export const SURFACES = {
     ],
   },
 
-  // Marks only until Wallpaper adopts Instrument (product change, not sync).
   wallpaper: {
     root: "apps/wallpaper",
     softFailStandalone: false,
-    wipeDirs: ["src/assets/brand"],
-    entries: [...APP_MARKS],
+    wipeDirs: ["src/assets/brand", "src/assets/fonts"],
+    entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
     hex: {
       scan: ["src", "index.html"],
       allow: ["src/styles/tokens.css"],
@@ -87,8 +86,8 @@ export const SURFACES = {
     root: "apps/slim/desktop",
     softFailStandalone: true,
     standaloneProbe: ["src/assets/brand/mark-red.svg", "src/assets/brand/lockup-red.svg"],
-    wipeDirs: ["src/assets/brand"],
-    entries: [...APP_MARKS],
+    wipeDirs: ["src/assets/brand", "src/assets/fonts"],
+    entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
     hex: {
       scan: ["src", "index.html", "tests"],
       allow: ["src/styles/tokens.css"],

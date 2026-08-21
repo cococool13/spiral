@@ -37,7 +37,7 @@ would be a mistake.
 
 - **Tokens.** Every colour, font, radius, and easing curve comes from `/brand`.
   No hex outside the token file, no second display face, no in-between radius.
-  Two radii only: `0` and full pill.
+  Two radii only: `0` and `--spiral-radius-ctl` (12px). Identity 01 pills are retired.
 - **The mark.** One colour at a time — red, ink, or paper. Never gradients,
   shadows, rotation, or other hues.
 - **Red discipline.** Red is the mark, interaction, and warnings. If a screen is

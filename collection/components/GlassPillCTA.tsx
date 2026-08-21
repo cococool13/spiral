@@ -55,7 +55,23 @@ function WindowsMark() {
  * hears "Download for Mac" — the glyph is decoration, never the only signal.
  */
 export default function GlassPillCTA({ app, secondary }: Props) {
-  const os = useOS();
+  const { os, ready } = useOS();
+  if (!app.downloads) return null;
+
+  // Before we know the OS, do not claim a platform and do not use the same
+  // words as the "All downloads" sibling on the card.
+  if (!ready) {
+    return (
+      <a
+        href={app.downloads.all}
+        aria-label={`Download ${app.name}`}
+        className={`glass-pill${secondary ? " glass-pill--secondary" : ""}`}
+      >
+        Download
+      </a>
+    );
+  }
+
   const offer = offerFor(app, os);
   if (!offer) return null;
 

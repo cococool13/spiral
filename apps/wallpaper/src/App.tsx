@@ -10,23 +10,33 @@ type Screen = "browse" | "settings";
 
 function App() {
   const [screen, setScreen] = useState<Screen>("browse");
-  const [boot, setBoot] = useState<AppSettings>();
+  const [boot, setBoot] = useState<AppSettings | "error">();
   const [update, setUpdate] = useState<Update | null>(null);
 
   useEffect(() => {
-    getSettings().then(setBoot).catch(() => {});
+    getSettings()
+      .then(setBoot)
+      .catch(() => setBoot("error"));
   }, []);
 
   // The one automatic network request Spiral makes, and only when the
   // Settings toggle says so: a version check against GitHub on open.
   useEffect(() => {
-    if (!boot?.firstRunCompleted || !boot.autoUpdateCheck) return;
+    if (boot === "error" || !boot?.firstRunCompleted || !boot.autoUpdateCheck) return;
     checkForUpdate()
       .then((found) => found && setUpdate(found))
       .catch(() => {}); // offline is fine — Settings has a manual check
-  }, [boot?.firstRunCompleted, boot?.autoUpdateCheck]);
+  }, [boot]);
 
-  if (!boot) return <div className="app" />;
+  if (boot === "error") {
+    return (
+      <main>
+        <h1>Spiral Wallpaper could not start</h1>
+        <p>Settings would not load. Close the window and open it again.</p>
+      </main>
+    );
+  }
+  if (!boot) return <div className="app" aria-busy="true" />;
 
   if (!boot.firstRunCompleted) {
     return (

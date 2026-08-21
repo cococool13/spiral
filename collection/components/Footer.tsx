@@ -79,6 +79,14 @@ export default function Footer() {
           <span>Cohen Coolidge</span>
           <span>MIT</span>
           <span>Georgia</span>
+          <a
+            href="https://unsplash.com/photos/7s0-Sjs97sk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-paper"
+          >
+            Hero photograph
+          </a>
         </p>
       </div>
     </footer>

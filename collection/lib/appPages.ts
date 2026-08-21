@@ -7,9 +7,8 @@
  * vocabulary is the one its own `CONTEXT.md` defines. A page about tools that
  * promise not to invent things cannot invent its own figures.
  *
- * Four apps in `apps.ts` have no page here — Dashboard, Weather, Transcribe and
- * Chat have no code yet, and a page for them would be a description of an
- * intention. They stay cards until there is something true to write.
+ * An app without a page here has no code yet. Do not add a page for an
+ * intention.
  */
 
 export interface Fact {
@@ -250,10 +249,10 @@ export const appPages: AppPage[] = [
     name: "Spiral Slim",
     title: "Spiral Slim — debloat your browser, see every change first",
     description:
-      "Sets enterprise privacy policies on Brave, Chrome, Edge and Firefox. Nineteen presets, every change shown before it is written, and one command to undo it.",
+      "The macOS wizard sets Brave's enterprise privacy policies and shows every change first. Scripts on macOS, Windows and Linux cover Brave, Chrome, Edge and Firefox.",
     eyebrow: "Spiral Slim",
     headline: ["Debloat your", "browser."],
-    sub: "Nineteen presets across four browsers, applied through the policy system the browsers already respect. No extension, no patch, nothing injected.",
+    sub: "The signed macOS app configures Brave. The same policies, as scripts, cover Brave, Chrome, Edge and Firefox. No extension, no patch, nothing injected.",
     cta: { label: "Download for macOS", href: RELEASE },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/slim` },
     proofLine: "Free. Python standard library only, no dependencies.",
@@ -302,8 +301,8 @@ export const appPages: AppPage[] = [
     factsHeading: "What is actually in the presets.",
     factsNote: "Counted out of the preset files in the repository.",
     facts: [
-      { label: "Browsers", value: "Brave, Chrome, Edge, Firefox" },
-      { label: "Presets", value: "19" },
+      { label: "macOS wizard", value: "Brave" },
+      { label: "Scripts", value: "Brave, Chrome, Edge, Firefox" },
       { label: "Policies in Brave Maximum Privacy", value: "54" },
       { label: "Runtime dependencies", value: "None" },
     ],
@@ -322,7 +321,7 @@ export const appPages: AppPage[] = [
       },
       {
         q: "Which browsers?",
-        a: "Brave is the default and has the most coverage at 54 policies in its strictest preset. Chrome, Edge and Firefox are supported with a flag.",
+        a: "The macOS wizard detects and configures Brave. The scripts, which is how Slim exists on Windows and Linux, cover Brave, Chrome, Edge and Firefox.",
       },
       {
         q: "Does it work on Linux and Windows?",
@@ -348,9 +347,12 @@ export const appPages: AppPage[] = [
     eyebrow: "Spiral Clean",
     headline: ["A cleaner", "you can trust."],
     sub: "It removes caches and uninstalls apps on macOS. What it may permanently delete is a fixed list decided before the release, not a judgement it makes about your files.",
-    cta: { label: "Watch for the first release", href: RELEASE },
-    secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/clean` },
-    proofLine: "Free. macOS only, and not released yet.",
+    cta: { label: "Read the source", href: `${REPO}/tree/main/apps/clean` },
+    secondary: {
+      label: "How it decides",
+      href: `${REPO}/blob/main/apps/clean/docs/design-spec.md`,
+    },
+    proofLine: "Free. macOS only, feature-complete, not released yet.",
     tagline: [
       "Every other cleaner asks you",
       "to trust its judgement.",
@@ -395,11 +397,11 @@ export const appPages: AppPage[] = [
     ],
     factsHeading: "Where it has got to.",
     factsNote:
-      "Milestones one to four are built and tested. The rest is honestly still a stub.",
+      "Every screen is built. It has not been signed, notarized, or opened as a product yet.",
     facts: [
       { label: "Platform", value: "macOS only" },
-      { label: "Built", value: "Shell, access gate, safety core, Clean, Uninstall" },
-      { label: "Still stubs", value: "Optimize and Storage" },
+      { label: "Built", value: "Clean, Uninstall, Optimize, Storage, History, Settings" },
+      { label: "Opened", value: "Not yet" },
       { label: "Released", value: "Not yet" },
     ],
     faq: [
@@ -425,12 +427,12 @@ export const appPages: AppPage[] = [
       },
       {
         q: "When can I have it?",
-        a: "There is no date. The removal core and its tests are done; Optimize and Storage are not. It ships when they are.",
+        a: "There is no date. Every screen is built. It ships when it is signed, notarized, and actually opened.",
       },
     ],
     closing: {
-      headline: ["Not finished.", "The risky half is."],
-      body: "The removal core, its safety rules and its tests are built. The source is public while the rest catches up.",
+      headline: ["Not released.", "The risky half is built."],
+      body: "The removal core, its safety rules and its tests are built. The source is public. A download comes after someone has sat in the app.",
     },
   },
 ];

@@ -11,31 +11,34 @@ Depth comes from material contrast; blur and shadow exist in exactly one
 place — the glass control layer.
 
 ## Color
+Identity 02. Source values live in `brand/tokens.css`.
+
 | Token | Value | Role |
 |---|---|---|
-| `--conc-01` / `--spiral-black` | `#0B0B0C` | Page |
-| `--conc-02` | `#161618` | Lifted surface |
-| `--conc-03` | `#2C2C2E` | Hairline (~white/15) |
-| `--paper` | `#F4F3F0` | Body text on the page (17.7:1); labels on red |
-| `--gray` / `--stl-02` | `#8C8D8A` | Secondary text on the page (5.9:1) |
-| `--ink-01` | `#10181B` | Text on paper islands only (resume preview, OtherWork) |
-| `--steel` | `#666863` | Secondary on paper only (5.1:1) |
-| `--hlx-01` | `#D52E2B` | Helix red — mark, focus, warnings; never body copy, never a page fill |
-| `--hlx-02` | `#6F1011` | Oxblood — hover/pressed deepening |
-| `--red-fill` | mix 10% oxblood into red | Filled controls so paper labels clear 4.5:1 |
+| `--spiral-void` | `#080809` | Page |
+| `--spiral-lift` | `#131315` | Lifted surface |
+| `--spiral-conc-03` | `#1c1c1f` | Hairline |
+| `--spiral-paper` | `#f1efe8` | Body text on the page; labels on red |
+| `--spiral-mute` | `#8a8880` | Secondary text on the page |
+| `--spiral-ink` | `#121214` | Text on paper islands only |
+| `--spiral-steel` | `#66645e` | Secondary on paper only |
+| `--spiral-helix` | `#d52e2b` | Mark, focus, warnings; never body copy, never a page fill |
+| `--spiral-oxblood` | `#6f1011` | Hover/pressed deepening |
+| `--spiral-red-fill` | mix 10% oxblood into helix | Filled controls so paper labels clear 4.5:1 |
 
-Rule: `--gray` is for black; `--steel` is for paper. Do not swap them.
+Older app CSS still uses `--conc-01`, `--hlx-01`, `--paper` as aliases of these.
 Helix red is never a background fill and never a halo.
 
 ## Typography
-- `--font-ui`: Archivo variable (wdth + wght axes). Display: wdth 125 / wght 850. Headings: wdth 112 / wght 700.
-- `--font-mono`: IBM Plex Mono 400/500 — anything data-like: search input, chips, nav items, status badges, attribution.
-- Both self-hosted woff2; no runtime font network calls.
+- `--spiral-font-display`: Instrument Serif 400 (italic for emphasis only).
+- `--spiral-font-sans`: Instrument Sans 400/500/600. UI body and headings.
+- `--spiral-font-mono`: system ui-monospace. Data, chips, version strings.
+- Self-hosted woff2; no runtime font network calls.
 
 ## Rhythm & Shape
-- `--unit: 8px`; all spacing is a multiple.
-- Exactly two radii: `0` (every surface) and `--radius-ctl: 999px` (glass controls + toggle). No in-between radius, ever.
-- One easing curve: `--ease: cubic-bezier(.2,.7,.2,1)`. Durations `--dur-fast: 150ms`, `--dur-slow: 400ms`.
+- `--spiral-unit: 8px`; all spacing is a multiple.
+- Two radii: `0` (surfaces) and `--spiral-radius-ctl: 12px` (controls). Identity 01 pills (`999px`) are retired.
+- One easing curve: `--spiral-ease: cubic-bezier(0.22, 1, 0.36, 1)`. Durations `--spiral-dur-fast: 150ms`, `--spiral-dur-slow: 400ms`.
 
 ## The app bar
 

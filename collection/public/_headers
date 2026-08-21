@@ -30,6 +30,7 @@
 /brand/tokens.json
   Cache-Control: public, max-age=86400
 
+# Catch-all. In this file `/*` is a path matcher, not a comment.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

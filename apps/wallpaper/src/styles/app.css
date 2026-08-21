@@ -19,8 +19,7 @@
 .bar__name {
   margin: 0;
   font-size: 15px;
-  font-weight: var(--wght-heading);
-  font-variation-settings: "wdth" var(--wdth-heading);
+  font-weight: 600;
 }
 
 /* "Spiral" recedes so the app's own word is what you read. Legal on the page
@@ -229,7 +228,7 @@
 .browse__empty-title {
   font-family: var(--font-ui);
   font-size: 24px;
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
   color: var(--paper);
 }
 
@@ -380,7 +379,7 @@
   overflow: hidden;
   font-family: var(--font-ui);
   font-size: 15px;
-  font-variation-settings: "wdth" 100, "wght" 700;
+  font-weight: 600;
   transition:
     transform var(--dur-fast) var(--ease),
     background-color var(--dur-fast) var(--ease);
@@ -500,7 +499,7 @@
 .settings__label {
   font-family: var(--font-ui);
   font-size: 16px;
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
 }
 
 .settings__desc {

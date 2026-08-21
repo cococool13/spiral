@@ -4,17 +4,23 @@ import Image from "next/image";
  *  the PDF, run over one sample resume. Nothing here is a mockup, which is the
  *  only honest way to show a page whose product *is* typesetting. */
 const SHEETS = [
-  { id: "column", name: "Column", note: "Centred, serif, quiet." },
-  { id: "blend", name: "Blend", note: "Sans, wide tracking, room to breathe." },
-  { id: "ledger", name: "Ledger", note: "Dates in a left rail." },
-  { id: "card", name: "Card", note: "A shaded block behind the name." },
-  { id: "rule", name: "Rule", note: "A hairline under every section." },
-  { id: "timeline", name: "Timeline", note: "Roles read as a run of years." },
-];
+  { id: "column", name: "Column", note: "Two columns. Skills sit beside the work." },
+  { id: "ledger", name: "Ledger", note: "A large name, then quiet rules." },
+  { id: "sheet", name: "Sheet", note: "Single column. Nothing shouts." },
+  { id: "rule", name: "Rule", note: "A hairline under every heading." },
+  { id: "card", name: "Card", note: "The name in a block at the top." },
+  { id: "bullet", name: "Bullet", note: "Education first, name centred." },
+  { id: "brief", name: "Brief", note: "A labelled summary up top." },
+  { id: "chronicle", name: "Chronicle", note: "School and activities first." },
+  { id: "index", name: "Index", note: "Skills under education, then roles." },
+  { id: "timeline", name: "Timeline", note: "The jobs are the document." },
+  { id: "blend", name: "Blend", note: "Skills and wins above the jobs." },
+  { id: "lead", name: "Lead", note: "Name between rules. Outcomes, not duties." },
+] as const;
 
 export default function TemplateSequence() {
   return (
-    <section aria-label="The layouts" className="mx-auto max-w-6xl px-6 py-24">
+    <section aria-label="The layouts" className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
       <ul className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {SHEETS.map((sheet) => (
           <li key={sheet.id}>

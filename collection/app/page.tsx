@@ -11,10 +11,10 @@ export default function Home() {
   return (
     <>
       <Nav />
-      <main>
+      <main id="content">
         <Hero />
         <section className="relative z-10 bg-black">
-          <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
+          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-24">
             <p className="type-display text-4xl text-paper sm:text-5xl">
               <span className="block">Every one of these could have</span>
               <span className="block">an account, a subscription</span>

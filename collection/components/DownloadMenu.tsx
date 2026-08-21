@@ -25,7 +25,7 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
-  const os = useOS();
+  const { os, ready } = useOS();
   const panelId = useId();
   const nav = variant === "nav";
 
@@ -114,9 +114,9 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
           aria-controls={panelId}
           aria-haspopup="true"
           onClick={() => setOpen((v) => !v)}
-          className="glass-pill"
+          className="glass-pill glass-pill--secondary"
         >
-          Get an app
+          Other apps
           {chevron(16)}
         </button>
       )}
@@ -142,8 +142,12 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
           // `offerFor`, not a local `os !== "windows"`. That test treated
           // Linux as mac and never read `noWindowsBinary`, so a Linux
           // visitor was offered a universal.dmg labelled "Download for Mac".
-          const offer = offerFor(app, os);
-          const brew = brewCommandFor(app, os);
+          const offer = ready
+            ? offerFor(app, os)
+            : app.downloads
+              ? { url: app.downloads.all, label: "Download", mark: null, source: false }
+              : null;
+          const brew = ready ? brewCommandFor(app, os) : null;
           if (!offer) return null;
           return (
             <div key={app.slug} className="border-b border-white/10 p-3 last:border-0">

@@ -20,7 +20,7 @@ export default function HeroProof({
   children: ReactNode;
 }) {
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-24 sm:pb-32">
+    <section className="mx-auto max-w-6xl px-6 pb-16 sm:pb-24">
       <h2 className="type-display max-w-2xl text-3xl text-paper sm:text-4xl">
         {heading}
       </h2>

@@ -68,7 +68,7 @@ export default function App() {
       const reduced =
         typeof window.matchMedia !== "function" ||
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const wait = Math.max(0, (reduced ? 0 : 1800) - (Date.now() - started));
+      const wait = Math.max(0, (reduced ? 0 : 200) - (Date.now() - started));
       window.setTimeout(() => {
         setSplash("out");
         window.setTimeout(() => setSplash("off"), reduced ? 0 : 280);

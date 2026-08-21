@@ -52,8 +52,8 @@ export default function AppPageLayout({
   return (
     <>
       <Nav />
-      <main>
-        <section className="mx-auto max-w-6xl px-6 pt-40 pb-24 sm:pt-48">
+      <main id="content">
+        <section className="mx-auto max-w-6xl px-6 pt-36 pb-16 sm:pt-44 sm:pb-20">
           {/* No eyebrow. The nav already names the app you are reading, and
               the headline is a whole sentence. */}
           <h1 className="type-display max-w-[680px] text-5xl text-paper sm:text-7xl">
@@ -70,7 +70,7 @@ export default function AppPageLayout({
 
         {afterHero}
 
-        <section className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
+        <section className="mx-auto max-w-4xl px-6 py-16 sm:py-24">
           <p className="type-display text-4xl text-paper sm:text-5xl">
             {page.tagline.map((line) => (
               <span key={line} className="block">
@@ -80,37 +80,42 @@ export default function AppPageLayout({
           </p>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+        <section className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
           <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
             {page.benefitsHeading}
           </h2>
-          <ul className="mt-16 grid grid-cols-1 gap-12 sm:grid-cols-2">
+          <ul className="mt-12">
             {page.benefits.map((benefit) => (
-              <li key={benefit.title}>
+              <li key={benefit.title} className="border-t border-gray/25 py-8">
                 <h3 className="type-heading text-xl text-paper">{benefit.title}</h3>
-                <p className="mt-3 text-gray">{benefit.body}</p>
+                <p className="mt-3 max-w-xl text-gray">{benefit.body}</p>
               </li>
             ))}
           </ul>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+        <section className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
           <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
             {page.stepsHeading}
           </h2>
-          <ol className="mt-16 grid grid-cols-1 gap-12 sm:grid-cols-3">
+          <ol className="mt-12">
             {page.steps.map((item) => (
-              <li key={item.n}>
-                <p className="font-mono text-sm text-red">{item.n}</p>
-                <h3 className="type-heading mt-4 text-xl text-paper">{item.title}</h3>
-                <p className="mt-3 text-gray">{item.body}</p>
+              <li
+                key={item.n}
+                className="grid grid-cols-[3rem_1fr] gap-6 border-t border-gray/25 py-8"
+              >
+                <p className="font-mono text-sm text-gray">{item.n}</p>
+                <div>
+                  <h3 className="type-heading text-xl text-paper">{item.title}</h3>
+                  <p className="mt-3 text-gray">{item.body}</p>
+                </div>
               </li>
             ))}
           </ol>
         </section>
 
         {page.facts && page.factsHeading ? (
-          <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+          <section className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
             <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
               {page.factsHeading}
             </h2>
@@ -130,7 +135,7 @@ export default function AppPageLayout({
 
         {proof}
 
-        <section id="faq" className="mx-auto max-w-3xl px-6 py-24 sm:py-32">
+        <section id="faq" className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
           <h2 className="type-display text-4xl text-paper sm:text-5xl">
             The things people ask.
           </h2>
@@ -144,7 +149,7 @@ export default function AppPageLayout({
           </dl>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+        <section className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
           <h2 className="type-display max-w-[680px] text-4xl text-paper sm:text-6xl">
             {page.closing.headline.map((line) => (
               <span key={line} className="block">

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description:
     "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
   alternates: { canonical: "/" },
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png", sizes: "32x32" }],
+    apple: [{ url: "/apple-icon.png", sizes: "256x256" }],
+  },
   openGraph: {
     type: "website",
     url: "https://spiralcc.tech",
@@ -14,7 +18,26 @@ export const metadata: Metadata = {
     title: "Spiral — Small tools. No bloat. Your data stays yours.",
     description:
       "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
+    images: [
+      {
+        url: "/images/hero-red.webp",
+        width: 2400,
+        height: 1601,
+        alt: "Looking down a red spiral staircase in a dark interior.",
+      },
+    ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Spiral — Small tools. No bloat. Your data stays yours.",
+    description:
+      "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
+    images: ["/images/hero-red.webp"],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#080809",
 };
 
 export default function RootLayout({
@@ -39,8 +62,8 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <a className="skip-link" href="/#apps">
-          Skip to apps
+        <a className="skip-link" href="#content">
+          Skip to content
         </a>
         {children}
       </body>

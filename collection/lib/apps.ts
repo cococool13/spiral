@@ -95,13 +95,6 @@ export const apps: SpiralApp[] = [
     iconPath: "M12 3l7 3v5.5c0 4.5-3 7.5-7 9.5-4-2-7-5-7-9.5V6zM9 11h6M9 14h4",
   },
   {
-    slug: "dashboard",
-    name: "Spiral Dashboard",
-    tagline: "One screen for your day.",
-    status: "coming-soon",
-    iconPath: "M3 4h18v16H3zM3 10h8M11 4v16M11 14h10",
-  },
-  {
     // "Spiral Clean", never "Spiral Cleaner" — apps/clean/CONTEXT.md names the
     // latter as the term to avoid, and this file is what the live site renders.
     // The slug moves with it, so the eventual /apps/clean route matches the
@@ -140,27 +133,5 @@ export const apps: SpiralApp[] = [
       },
       all: "https://github.com/cococool13/spiral/releases/tag/resume-v0.1.1",
     },
-  },
-  {
-    slug: "weather",
-    name: "Spiral Weather",
-    tagline: "The forecast where you are.",
-    status: "coming-soon",
-    iconPath: "M7 15a4 4 0 1 1 .5-7.97A5 5 0 1 1 17 15zM8 19h.01M12 19h.01M16 19h.01",
-  },
-  {
-    slug: "transcribe",
-    name: "Spiral Transcribe",
-    tagline: "Turns audio into text on your machine.",
-    status: "coming-soon",
-    iconPath:
-      "M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM6 11a6 6 0 0 0 12 0M12 17v4",
-  },
-  {
-    slug: "chat",
-    name: "Spiral Chat",
-    tagline: "Runs language models on your machine.",
-    status: "coming-soon",
-    iconPath: "M4 5h16v11H9l-5 4zM8 9h8M8 12h5",
   },
 ];
