@@ -41,8 +41,7 @@ export default function Nav() {
       onFocusCapture={() => setRevealed(true)}
     >
       <nav className="nav-pill flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-2 sm:px-5">
-        {/* min-h-11 = 44px: the mark is 24×24, so the link still needs its
-            own hit area. Stroke mark — never a CSS mask (masks drop strokes). */}
+        {/* min-h-11 = 44px: the mark is shorter than the hit area. */}
         <div className="flex min-w-0 items-center gap-3">
           <a
             href="/"

@@ -53,8 +53,9 @@ would be a mistake.
 | "Static only, no video" | That is the wallpaper app's product scope, not a brand rule. Video belongs here. |
 | Binary-size and idle-RAM budgets | Meaningless for a static site. The budgets that matter here are the ones below. |
 
-The catalogue scrolls like a document: one-screen hero, then sections. Do not
-add sticky pins, word-by-word lighting, view-timeline rises, or WebGL rides.
+The catalogue scrolls like a document. The home hero is the exception: a sticky
+plate that zooms out on scroll. Do not add word-by-word lighting, view-timeline
+rises, or WebGL rides.
 
 ### The budgets that do apply
 
