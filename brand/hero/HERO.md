@@ -1,17 +1,15 @@
-# Collection hero stills
+# Collection hero still
 
 Copy into `collection/public/images/`:
 
-- `hero-night.jpg` — lamp on, helix-red shade, iron spiral stair in the left third
-- `hero-day.jpg` — same room, daylight, lamp off, same stair
-
-CSS that must travel with them:
+- `hero-exit.webp` — Unsplash, Arvin Yuan. Dark corridor, daylight at the far door.
+  https://unsplash.com/photos/E_kMaBHrw0k
 
 ```css
 .hero-photo {
   object-fit: cover;
-  object-position: left center; /* the stair is in the left third */
+  object-position: center;
 }
 ```
 
-Do not generate new stills. Do not put type in the photograph.
+Do not generate a still. Do not put type in the photograph.

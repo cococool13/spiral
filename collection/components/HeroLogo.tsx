@@ -1,6 +1,6 @@
 /**
- * Identity 01 helix — three filled bands. Static: the hero no longer
- * assembles it. Path data matches Mark.tsx.
+ * Original helix — three filled bands. Static: the hero no longer
+ * assembles it. Path data matches brand/logo/mark.svg.
  */
 const VIEWBOX = "337 154 352 566";
 

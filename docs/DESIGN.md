@@ -30,8 +30,8 @@ Older app CSS still uses `--conc-01`, `--hlx-01`, `--paper` as aliases of these.
 Helix red is never a background fill and never a halo.
 
 ## Typography
-- `--spiral-font-display`: Instrument Serif 400 (italic for emphasis only).
-- `--spiral-font-sans`: Instrument Sans 400/500/600. UI body and headings.
+- `--spiral-font-display`: Host Grotesk 400 (italic for emphasis only).
+- `--spiral-font-sans`: Host Grotesk 400/500/600. UI body and headings.
 - `--spiral-font-mono`: system ui-monospace. Data, chips, version strings.
 - Self-hosted woff2; no runtime font network calls.
 
@@ -49,7 +49,7 @@ one collection, so it is described here rather than in any single app.
 ▲  Spiral Wallpaper                                              ☰
 ```
 
-- **The mark**, 20px, helix red, masked from `mark-red.svg`.
+- **The mark**, 20px, helix red, the original three-band helix from `mark-red.svg`.
 - **The name**, one `<h1>`: "Spiral" in `--stl-02` at weight 400, then the app's
   own word in the heading weight. The collection recedes and the app is what
   you read — and every bar differs by exactly one word.

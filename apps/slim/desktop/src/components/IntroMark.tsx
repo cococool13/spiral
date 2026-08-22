@@ -1,7 +1,7 @@
 /**
  * The Spiral mark, assembled from its parts.
  *
- * Path data mirrors /brand/logo/mark-red.svg and the website's HeroLogo, and
+ * Path data mirrors /brand/logo/mark-red.svg (original filled helix) and the website's Mark, and
  * the entrance is the same one: three machined segments arrive separately —
  * the core first, then the upper and lower bands sliding in to lock against
  * it — followed by one specular sweep across the finished mark.

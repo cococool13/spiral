@@ -1,7 +1,6 @@
 /**
- * Identity 01 helix — three filled bands (core, upper, lower). Not the
- * Identity 02 stroke. Path data matches Slim's IntroMark and the original
- * collection hero mark.
+ * Original helix — three filled bands (core, upper, lower).
+ * Path data matches brand/logo/mark.svg and Slim's IntroMark.
  */
 const VIEWBOX = "337 154 352 566";
 const RATIO = 352 / 566;

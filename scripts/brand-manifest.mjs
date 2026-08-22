@@ -1,12 +1,11 @@
 // Per-surface allowlists for brand sync and hex checks.
 // Surfaces call: node scripts/sync-brand.mjs <surface>
 //                 node scripts/check-hex.mjs <surface>
-export const INSTRUMENT_FONTS = [
-  "instrument-serif-400.woff2",
-  "instrument-serif-400-italic.woff2",
-  "instrument-sans-400.woff2",
-  "instrument-sans-500.woff2",
-  "instrument-sans-600.woff2",
+export const BRAND_FONTS = [
+  "host-grotesk-400.woff2",
+  "host-grotesk-400-italic.woff2",
+  "host-grotesk-500.woff2",
+  "host-grotesk-600.woff2",
 ];
 
 const APP_MARKS = [
@@ -16,7 +15,7 @@ const APP_MARKS = [
 
 const APP_TOKENS_FONTS = [
   { from: "tokens.css", to: "src/styles/tokens.css", mode: "file" },
-  ...INSTRUMENT_FONTS.map((name) => ({
+  ...BRAND_FONTS.map((name) => ({
     from: `fonts/${name}`,
     to: `src/assets/fonts/${name}`,
     mode: "file",
@@ -36,7 +35,7 @@ export const SURFACES = {
       { from: "fonts", to: "fonts", mode: "tree" },
       { from: "logo/mark.svg", to: "logo/mark.svg", mode: "tree" },
       { from: "logo/mark-compact.svg", to: "logo/mark-compact.svg", mode: "tree" },
-      { from: "logo/stroke.svg", to: "logo/stroke.svg", mode: "tree" },
+      { from: "logo/mark-red.svg", to: "logo/mark-red.svg", mode: "tree" },
     ],
   },
 

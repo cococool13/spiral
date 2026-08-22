@@ -5,39 +5,32 @@
 @import "../public/brand/tokens.css";
 
 @font-face {
-  font-family: "Instrument Serif";
+  font-family: "Host Grotesk";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/brand/fonts/instrument-serif-400.woff2") format("woff2");
+  src: url("/brand/fonts/host-grotesk-400.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Instrument Serif";
+  font-family: "Host Grotesk";
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url("/brand/fonts/instrument-serif-400-italic.woff2") format("woff2");
+  src: url("/brand/fonts/host-grotesk-400-italic.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Instrument Sans";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/brand/fonts/instrument-sans-400.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Instrument Sans";
+  font-family: "Host Grotesk";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url("/brand/fonts/instrument-sans-500.woff2") format("woff2");
+  src: url("/brand/fonts/host-grotesk-500.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Instrument Sans";
+  font-family: "Host Grotesk";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url("/brand/fonts/instrument-sans-600.woff2") format("woff2");
+  src: url("/brand/fonts/host-grotesk-600.woff2") format("woff2");
 }
 
 @theme {
@@ -138,16 +131,16 @@ p {
 .type-display {
   font-family: var(--spiral-font-display);
   font-weight: 400;
-  letter-spacing: -0.02em;
-  line-height: 0.95;
+  letter-spacing: 0;
+  line-height: 0.96;
   text-wrap: balance;
 }
 
 .type-heading {
   font-family: var(--spiral-font-display);
   font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  letter-spacing: 0;
+  line-height: 1.12;
   text-wrap: balance;
 }
 

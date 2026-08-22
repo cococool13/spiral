@@ -205,7 +205,7 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |
 | `pnpm sync-brand` | any app or `collection` | re-copy brand assets from `brand/` |
 
-The design system is eight colors, two fonts, two radii, and one easing
+The design system is eight colors, one grotesque, two radii, and one easing
 curve, enforced by the build. When in doubt, open the brand guide at
 [`brand/guide.html`](brand/guide.html).
 

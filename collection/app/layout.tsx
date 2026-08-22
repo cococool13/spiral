@@ -48,14 +48,14 @@ export default function RootLayout({
       <head>
         <link
           rel="preload"
-          href="/brand/fonts/instrument-serif-400.woff2"
+          href="/brand/fonts/host-grotesk-400.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/brand/fonts/instrument-sans-400.woff2"
+          href="/brand/fonts/host-grotesk-400-italic.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

@@ -3,7 +3,8 @@
 Every colour, font, and mark used anywhere in this repo originates here.
 Nothing in `apps/` or `collection/` may define its own brand values.
 
-Type, colour, and mark are Identity 02: two φ strokes sharing a centre.
+Materials are Identity 02: void, paper, helix red, Host Grotesk, 12px controls.
+The mark is the original filled helix — three bands, not the Identity 02 stroke.
 
 ## What's here
 
@@ -11,15 +12,14 @@ Type, colour, and mark are Identity 02: two φ strokes sharing a centre.
 | --- | --- | --- |
 | `tokens.css` | Design tokens as CSS custom properties. **The only file allowed to contain hex values.** | `collection/` imports it; apps copy it via sync-brand |
 | `tokens.json` | The same tokens for non-CSS consumers | icon-generation scripts |
-| `fonts/` | Self-hosted Instrument Serif + Instrument Sans woff2 | both surfaces — no CDN at runtime |
-| `logo/mark.svg` | Dual-arm stroke mark, viewBox `0 0 64 64` | apps + reference |
-| `logo/mark-compact.svg` | Same mark, heavier stroke for small sizes | `collection/` nav |
+| `fonts/` | Self-hosted Host Grotesk woff2 | both surfaces — no CDN at runtime |
+| `logo/mark.svg` | Original helix, three filled bands, `currentColor`, viewBox `337 154 352 566` | apps + reference |
+| `logo/mark-compact.svg` | Same mark (filled helix reads at small sizes) | `collection/` nav |
 | `logo/mark-red.svg` | Mark in helix red | apps |
-| `logo/lockup-red.svg` | Mark + wordmark. First-run screens only | `apps/wallpaper` |
-| `logo/stroke.svg` | Archimedean spiral stroke | collection scroll indicator |
-| `logo/png/mark-{16..1024}.png` | Icon-pipeline sources | Tauri icon generation |
-| `hero/hero-night.jpg` | Atelier, lamp on, iron stair in the left third | collection hero |
-| `hero/hero-day.jpg` | Same room, daylight, lamp off | collection hero |
+| `logo/lockup-red.svg` | Helix + drawn SPIRAL. First-run screens only | `apps/wallpaper` |
+| `logo/png/mark-{16..1024}.png` | Icon-pipeline sources (tall helix) | Tauri icon generation |
+| `hero/hero-exit.webp` | Dark corridor, daylight at the far door | collection hero |
+| `guide.html` | Full brand reference | humans |
 
 ## How surfaces consume it
 
@@ -39,9 +39,9 @@ with a surface id — do not reintroduce per-app copies of the sync logic.
 | Surface | Destinations |
 | --- | --- |
 | `collection/` | `collection/public/brand/` (served at `/brand/…`) |
-| `apps/wallpaper/` | brand marks + `src/styles/tokens.css` + Instrument fonts |
+| `apps/wallpaper/` | brand marks + `src/styles/tokens.css` + Host Grotesk |
 | `apps/slim/desktop/` | `src/assets/brand/` (soft-fail without `/brand` if marks committed) |
-| `apps/clean/` | brand marks + `src/styles/tokens.css` + Instrument fonts |
+| `apps/clean/` | brand marks + `src/styles/tokens.css` + Host Grotesk |
 | `apps/Resume/` | same as Clean, plus `mark-compact-red` |
 
 All run on `predev` and `prebuild`.
@@ -51,8 +51,8 @@ Edit the file here instead.
 
 ## The rules that outlive any one file
 
-- Five colours. Two fonts (serif + sans). System mono for data. Radii are concentric, not zero or pill.
+- Five colours. One grotesque (display and UI). System mono for data. Two radii: `0` and `--spiral-radius-ctl` (12px).
 - All spacing is a multiple of 8px.
 - Red (`--spiral-red` / `--spiral-helix`) is for the mark, the one action, and warnings. Never a page fill. Never body text.
-- The mark is two strokes, one colour at a time — helix, paper, or void. Never gradients, shadows, rotation, fill, or other hues. Do not CSS-mask it; draw the stroke.
-- The collection hero carries the mark with the headline. The header does too.
+- The mark is three filled bands, one colour at a time — helix, paper, or void. Never gradients, shadows, rotation, or other hues. Do not redraw it as a stroke.
+- The collection hero is the photograph. The header mark arrives after scroll. The hero itself does not carry the mark.

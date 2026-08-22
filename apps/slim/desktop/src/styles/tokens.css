@@ -23,9 +23,9 @@
   --spiral-oxblood: #6f1011; /* legacy dawn. Do not use on the Identity 02 hero. */
   --spiral-red-fill: color-mix(in srgb, var(--spiral-oxblood) 10%, var(--spiral-red));
 
-  /* type — Instrument is static, not a wdth axis. Ignore leftover variation settings. */
-  --spiral-font-display: "Instrument Serif", ui-serif, Georgia, serif;
-  --spiral-font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  /* type — Host Grotesk, static files. Ignore leftover variation settings. */
+  --spiral-font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
   --spiral-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --spiral-wdth-display: 100;
   --spiral-wght-display: 400;
@@ -38,7 +38,7 @@
   --spiral-dur-fast: 150ms;
   --spiral-dur-slow: 400ms;
 
-  /* chrome — instruments have edges. 01 pills (999px) are retired on new work. */
+  /* chrome — surfaces are square; controls are 12px. Pills (999px) are retired. */
   --spiral-radius-ctl: 12px;
   --spiral-glass-blur: blur(16px) saturate(1.7);
   --spiral-glass-edge: rgba(255, 255, 255, 0.45);

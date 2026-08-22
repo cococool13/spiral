@@ -74,9 +74,8 @@ unfinished. It is confined to the single focused card, so no screen is more
 than a few percent red.
 
 ## Typography
-- `--font-ui`: Archivo variable. Card names 30px display (wdth 125 / wght
-  850) in `--hlx-01`; stage titles 22px; card lede 14px; body 15px.
-- `--font-mono`: IBM Plex Mono — anything data-like: file paths, policy keys,
+- `--font-ui`: Host Grotesk. Card names 30px in `--hlx-01`; stage titles 22px; card lede 14px; body 15px.
+- `--font-mono`: system ui-monospace — anything data-like: file paths, policy keys,
   change counts, plan hashes, the step indicator, card meta.
 - Self-hosted woff2; no runtime font network calls.
 - **Fixed px scale, not fluid.** Product UI at consistent DPI in a window the
