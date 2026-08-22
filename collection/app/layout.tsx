@@ -20,10 +20,10 @@ export const metadata: Metadata = {
       "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
     images: [
       {
-        url: "/images/hero-red.webp",
+        url: "/images/hero-exit.webp",
         width: 2400,
-        height: 1601,
-        alt: "Looking down a red spiral staircase in a dark interior.",
+        height: 1350,
+        alt: "A dark corridor with daylight at the far door.",
       },
     ],
   },
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: "Spiral — Small tools. No bloat. Your data stays yours.",
     description:
       "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
-    images: ["/images/hero-red.webp"],
+    images: ["/images/hero-exit.webp"],
   },
 };
 

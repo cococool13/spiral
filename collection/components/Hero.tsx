@@ -13,8 +13,8 @@ const rise = (step: number) => ({ "--rise-step": step }) as CSSProperties;
  * Full-viewport still, type in the middle, no mark on this screen.
  * The plate zooms out on scroll — Superwhisper's move.
  *
- * Photograph: Unsplash, red spiral staircase
- * https://unsplash.com/photos/7s0-Sjs97sk
+ * Photograph: Unsplash, dark corridor with the exit lit at the far end
+ * https://unsplash.com/photos/E_kMaBHrw0k
  */
 export default function Hero() {
   return (
@@ -23,10 +23,10 @@ export default function Hero() {
         <div className="hero-frame">
           {/* biome-ignore lint/performance/noImgElement: still is the LCP image */}
           <img
-            src="/images/hero-red.webp"
-            alt="Looking down a red spiral staircase in a dark interior."
+            src="/images/hero-exit.webp"
+            alt="A dark corridor with daylight at the far door."
             width={2400}
-            height={1601}
+            height={1350}
             fetchPriority="high"
             className="hero-photo"
           />
@@ -34,7 +34,7 @@ export default function Hero() {
             aria-hidden="true"
             className="hero-wash"
             style={{
-              background: "color-mix(in oklab, var(--spiral-void) 18%, transparent)",
+              background: "color-mix(in oklab, var(--spiral-void) 8%, transparent)",
             }}
           />
         </div>

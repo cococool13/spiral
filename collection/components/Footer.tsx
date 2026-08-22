@@ -80,7 +80,7 @@ export default function Footer() {
           <span>MIT</span>
           <span>Georgia</span>
           <a
-            href="https://unsplash.com/photos/7s0-Sjs97sk"
+            href="https://unsplash.com/photos/E_kMaBHrw0k"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-paper"
