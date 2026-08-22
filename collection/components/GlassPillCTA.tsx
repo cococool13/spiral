@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** Apple mark. Nominative use on a download control — no endorsement implied. */
-function AppleMark() {
+export function AppleMark() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -31,7 +31,7 @@ function AppleMark() {
 }
 
 /** Windows mark. Solid panes read heavier than the Apple glyph, so it runs smaller. */
-function WindowsMark() {
+export function WindowsMark() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -88,13 +88,4 @@ export default function GlassPillCTA({ app, secondary }: Props) {
       {Mark && <Mark />}
     </a>
   );
-}
-
-/**
- * Not a control: there is nothing to activate yet, so this is a status label.
- * It previously carried aria-disabled on a role-less span, which exposes
- * nothing — the words already say it.
- */
-export function DisabledPill({ label = "Coming soon" }: { label?: string }) {
-  return <span className="glass-pill glass-pill--disabled">{label}</span>;
 }

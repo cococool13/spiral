@@ -2,47 +2,40 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { apps } from "@/lib/apps";
-import { brewCommandFor, offerFor } from "@/lib/downloadOffer";
+import { offerFor } from "@/lib/downloadOffer";
 import { useOS } from "@/lib/useOS";
+import { AppleMark, WindowsMark } from "./GlassPillCTA";
 
 interface Props {
-  /** Hero is the page's primary action. Nav is the same chooser, quieter, on every page. */
+  /** Hero is the page's one first-screen download. Nav is the same list, compact. */
   variant?: "hero" | "nav";
 }
 
 /**
- * Pick an app, get the file. Closed it is a single control; open it lists
- * every published binary this machine can actually run.
- *
- * Every row offers the download the visitor's own machine can actually run.
- * On a Mac each row also offers the one-line Homebrew install, because that is
- * the shortest honest path for anyone who already has brew — but it is never
- * the primary action, since most visitors do not.
+ * Closed: one control for this machine. Open: every published binary it can run.
+ * Names only — no taglines in the list.
  */
-export default function DownloadMenu({ variant = "hero" }: Props) {
+export default function DownloadMenu({ variant = "nav" }: Props) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const { os, ready } = useOS();
   const panelId = useId();
-  const nav = variant === "nav";
+  const hero = variant === "hero";
 
-  // On a short window the hero panel opens below the fold even once the stage
-  // stops clipping it. Bring it into view rather than leaving the reader to
-  // discover that the thing they just opened is off-screen. The nav is already
-  // on screen, so it does not need this.
+  const downloadable = apps.filter((a) => a.downloads);
+  const wallpaper = apps.find((a) => a.slug === "wallpaper");
+  const closedOffer = ready && wallpaper ? offerFor(wallpaper, os) : null;
+
   useEffect(() => {
-    if (!open || nav) return;
+    if (!open || !hero) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     panel.current?.scrollIntoView({
       block: "nearest",
       behavior: reduced ? "auto" : "smooth",
     });
-  }, [open, nav]);
-
-  const downloadable = apps.filter((a) => a.downloads);
+  }, [open, hero]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,125 +55,72 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
     };
   }, [open]);
 
-  async function copy(command: string) {
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(command);
-      setTimeout(() => setCopied(null), 2000);
-    } catch {
-      setCopied("!");
-      setTimeout(() => setCopied(null), 2000);
-    }
-  }
-
-  const chevron = (size: number) => (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-      style={{
-        transform: open ? "rotate(180deg)" : undefined,
-        transition: "transform var(--spiral-dur-fast) var(--spiral-ease)",
-      }}
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
+  const Mark =
+    closedOffer?.mark === "apple"
+      ? AppleMark
+      : closedOffer?.mark === "windows"
+        ? WindowsMark
+        : null;
 
   return (
     <div ref={wrap} className="relative">
-      {nav ? (
-        <button
-          type="button"
-          ref={button}
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-haspopup="true"
-          onClick={() => setOpen((v) => !v)}
-          className="glass-pill glass-pill--nav"
-        >
-          Download
-          {chevron(14)}
-        </button>
-      ) : (
-        <button
-          type="button"
-          ref={button}
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-haspopup="true"
-          onClick={() => setOpen((v) => !v)}
-          className="glass-pill glass-pill--secondary"
-        >
-          All apps
-          {chevron(16)}
-        </button>
-      )}
+      <button
+        type="button"
+        ref={button}
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-haspopup="true"
+        aria-label={closedOffer?.label ?? "Download Spiral apps"}
+        onClick={() => setOpen((v) => !v)}
+        className={hero ? "glass-pill" : "glass-pill glass-pill--nav"}
+      >
+        {Mark ? "Download for" : "Download"}
+        {Mark ? <Mark /> : null}
+      </button>
 
       <div
         id={panelId}
         ref={panel}
-        // No role. This was `role="dialog"`, which promises focus management
-        // it does not have; a plain disclosure — a button carrying
-        // `aria-expanded` followed by the content it reveals — is the honest
-        // pattern and needs no role at all.
         aria-hidden={!open}
         inert={!open ? true : undefined}
         className={[
-          "download-panel absolute top-full z-20 max-h-[min(26rem,70svh)] overflow-y-auto border border-white/15 bg-black/95 p-2 text-left shadow-2xl backdrop-blur",
-          nav
-            ? "download-panel--nav right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))]"
-            : "bottom-full left-1/2 mb-3 w-[min(22rem,calc(100vw-3rem))] -translate-x-1/2",
+          "download-panel absolute z-20 w-[min(16rem,calc(100vw-2rem))] overflow-hidden border border-white/15 bg-black/95 text-left shadow-2xl backdrop-blur",
+          hero
+            ? "bottom-full left-1/2 mb-3 -translate-x-1/2"
+            : "top-full left-1/2 mt-2 -translate-x-1/2",
           open ? "download-panel--open" : "",
         ].join(" ")}
       >
-        {downloadable.map((app) => {
-          // `offerFor`, not a local `os !== "windows"`. That test treated
-          // Linux as mac and never read `noWindowsBinary`, so a Linux
-          // visitor was offered a universal.dmg labelled "Download for Mac".
-          const offer = ready
-            ? offerFor(app, os)
-            : app.downloads
-              ? { url: app.downloads.all, label: "Download", mark: null, source: false }
-              : null;
-          const brew = ready ? brewCommandFor(app, os) : null;
-          if (!offer) return null;
-          return (
-            <div key={app.slug} className="border-b border-white/10 p-3 last:border-0">
-              {/* A label, not a second link to the same file: a 20px-tall
-                    duplicate target next to the real button helps nobody. */}
-              <p className="type-heading text-sm text-paper">{app.name}</p>
-              <p className="mt-1 font-mono text-xs leading-relaxed text-gray">
-                {app.tagline}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <a href={offer.url} className="glass-pill glass-pill--nav">
-                  {offer.label}
+        <ul>
+          {downloadable.map((app) => {
+            const offer = ready
+              ? offerFor(app, os)
+              : app.downloads
+                ? {
+                    url: app.downloads.all,
+                    label: "Download",
+                    mark: null,
+                    source: false,
+                  }
+                : null;
+            if (!offer) return null;
+            return (
+              <li key={app.slug} className="border-b border-white/10 last:border-0">
+                <a
+                  href={offer.url}
+                  className="flex min-h-11 items-center px-4 text-sm text-paper transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-red"
+                >
+                  {app.name.replace("Spiral ", "")}
                 </a>
-                {brew && (
-                  <button
-                    type="button"
-                    onClick={() => copy(brew)}
-                    className="glass-pill glass-pill--secondary glass-pill--nav"
-                  >
-                    {copied === "!"
-                      ? "Couldn't copy"
-                      : copied === brew
-                        ? "Copied"
-                        : "Copy brew command"}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        <p className="px-3 pb-2 pt-2 text-sm leading-relaxed text-paper">
-          Windows builds are not code-signed yet. Windows warns on first run.
-        </p>
+              </li>
+            );
+          })}
+        </ul>
+        {os === "windows" || os === "other" ? (
+          <p className="px-4 py-3 text-sm leading-relaxed text-paper">
+            Windows builds are not code-signed yet. Windows warns on first run.
+          </p>
+        ) : null}
       </div>
     </div>
   );

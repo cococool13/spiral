@@ -1,10 +1,6 @@
 import type { CSSProperties } from "react";
-import { apps } from "@/lib/apps";
 import DownloadMenu from "./DownloadMenu";
-import GlassPillCTA from "./GlassPillCTA";
 import HeroPin from "./HeroPin";
-
-const wallpaper = apps.find((app) => app.slug === "wallpaper");
 
 /** Entrance: one curve, staggered by a rung. `.rise` lives in globals.css. */
 const rise = (step: number) => ({ "--rise-step": step }) as CSSProperties;
@@ -53,15 +49,14 @@ export default function Hero() {
             className="rise mt-6 max-w-xl text-base leading-relaxed text-paper sm:text-lg"
             style={rise(1)}
           >
-            Spiral Wallpaper. No account. No bloat. No tracking.
+            No account. No bloat. No tracking.
           </p>
 
           <div
             className="rise mt-10 flex w-full flex-wrap items-center justify-center gap-3"
             style={rise(2)}
           >
-            {wallpaper ? <GlassPillCTA app={wallpaper} /> : null}
-            <DownloadMenu />
+            <DownloadMenu variant="hero" />
           </div>
         </div>
       </div>

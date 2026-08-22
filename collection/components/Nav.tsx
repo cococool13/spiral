@@ -19,6 +19,7 @@ export default function Nav() {
   // the slash so a missing or extra one cannot silently un-match.
   const trimmed = pathname?.replace(/\/$/, "") ?? "";
   const home = trimmed === "";
+  const work = trimmed === "/work";
   const current = apps.find((app) => app.page && app.page.replace(/\/$/, "") === trimmed);
   const [revealed, setRevealed] = useState(!home);
 
@@ -41,9 +42,8 @@ export default function Nav() {
       onFocusCapture={() => setRevealed(true)}
     >
       <div className={`nav-bar ${revealed ? "nav-bar--in" : ""}`}>
-        <nav className="nav-pill mx-auto flex w-full min-w-0 max-w-4xl items-center justify-between gap-3 px-4 py-2 sm:px-5">
-          {/* min-h-11 = 44px: the mark is shorter than the hit area. */}
-          <div className="flex min-w-0 items-center gap-3">
+        <nav className="nav-pill mx-auto grid w-full min-w-0 max-w-4xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-2 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3 justify-self-start">
             <a
               href="/"
               className="flex min-h-11 items-center gap-3 focus-visible:outline-2 focus-visible:outline-red"
@@ -53,7 +53,6 @@ export default function Nav() {
                 Spiral
               </span>
             </a>
-            {/* Which page this is. The wordmark beside it is the way back. */}
             {current ? (
               <span
                 aria-current="page"
@@ -63,15 +62,19 @@ export default function Nav() {
               </span>
             ) : null}
           </div>
-          <div className="flex min-w-0 items-center gap-1 font-mono text-xs text-gray sm:gap-2">
-            <a
-              href="/#apps"
-              className="inline-flex min-h-11 items-center px-2 transition-colors hover:text-paper"
-            >
-              Apps
-            </a>
-            <DownloadMenu variant="nav" />
+
+          <div className="justify-self-center">
+            <DownloadMenu />
           </div>
+
+          <a
+            href="/work/"
+            aria-current={work ? "page" : undefined}
+            className="glass-pill glass-pill--secondary glass-pill--nav justify-self-end"
+          >
+            <span className="sm:hidden">Work</span>
+            <span className="hidden sm:inline">Other Work</span>
+          </a>
         </nav>
       </div>
     </header>
