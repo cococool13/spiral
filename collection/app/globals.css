@@ -74,18 +74,6 @@ a:focus-visible {
   outline-offset: 3px;
 }
 
-/* The hero mark ships hidden in server HTML so it never flashes fully
-   assembled before hydration; the component unhides itself on mount.
-   (Must live on the svg, not the pieces — framer writes piece opacity as an
-   SVG attribute, which any CSS rule would override.) */
-.pre-hydration-hidden {
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pre-hydration-hidden {
-    opacity: 1;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -162,94 +150,85 @@ p {
   vertical-align: 2px;
 }
 
-/* Glass pill — the ONE glassmorphism treatment on the site. CTAs only. */
+/* Stadium capsules — long, low, one fill. CTAs only. */
 .glass-pill {
   position: relative;
   isolation: isolate;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
   min-height: 44px;
-  padding: 10px 24px;
-  border-radius: var(--spiral-radius-ctl);
-  border: 1px solid var(--spiral-glass-edge);
-  background: rgba(213, 46, 43, 0.28);
-  backdrop-filter: var(--spiral-glass-blur);
-  -webkit-backdrop-filter: var(--spiral-glass-blur);
-  box-shadow:
-    rgba(0, 0, 0, 0.08) 0 24px 48px,
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  min-width: min(14rem, 100%);
+  max-width: 100%;
+  padding: 0 2.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--spiral-red-fill);
   color: var(--spiral-paper);
-  font-family: var(--spiral-font-mono);
+  font-family: var(--spiral-font-sans);
   font-weight: 500;
   font-size: 0.875rem;
+  letter-spacing: 0;
   white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
   transition:
-    transform var(--spiral-dur-fast) var(--spiral-ease),
     background var(--spiral-dur-fast) var(--spiral-ease),
-    border-color var(--spiral-dur-fast) var(--spiral-ease);
-}
-.glass-pill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--spiral-glass-sheen);
-  opacity: 0.35;
-  pointer-events: none;
+    border-color var(--spiral-dur-fast) var(--spiral-ease),
+    color var(--spiral-dur-fast) var(--spiral-ease);
 }
 @media (hover: hover) and (pointer: fine) {
   .glass-pill:hover {
-    transform: translateY(-1px);
-    background: rgba(111, 16, 17, 0.45);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: var(--spiral-oxblood);
   }
 }
 .glass-pill:active {
-  transform: scale(0.97);
-  background: rgba(111, 16, 17, 0.6);
+  background: var(--spiral-oxblood);
 }
 .glass-pill:focus-visible {
   outline: 2px solid var(--spiral-red);
   outline-offset: 3px;
 }
 .glass-pill--secondary {
-  background: color-mix(in oklab, var(--spiral-paper) 8%, transparent);
+  min-width: min(14rem, 100%);
+  background: transparent;
+  border-color: color-mix(in oklab, var(--spiral-paper) 28%, transparent);
   color: var(--spiral-paper);
 }
 @media (hover: hover) and (pointer: fine) {
   .glass-pill--secondary:hover {
-    background: color-mix(in oklab, var(--spiral-paper) 14%, transparent);
+    background: color-mix(in oklab, var(--spiral-paper) 10%, transparent);
+    border-color: color-mix(in oklab, var(--spiral-paper) 45%, transparent);
   }
 }
 .glass-pill--disabled {
-  background: rgba(140, 141, 138, 0.12);
-  border-color: rgba(255, 255, 255, 0.15);
+  min-width: min(14rem, 100%);
+  background: color-mix(in oklab, var(--spiral-mute) 16%, transparent);
+  border-color: transparent;
   color: var(--spiral-gray);
   cursor: not-allowed;
-  box-shadow: none;
-}
-.glass-pill--disabled::after {
-  opacity: 0.1;
 }
 .glass-pill--disabled:hover {
-  transform: none;
-  background: rgba(140, 141, 138, 0.12);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: color-mix(in oklab, var(--spiral-mute) 16%, transparent);
 }
 
 /* Compact enough to sit in the floating nav without becoming a second hero. */
 .glass-pill--nav {
-  min-height: 44px;
-  padding: 0 16px;
-  font-size: 0.75rem;
-  gap: 6px;
+  min-width: 0;
+  padding: 0 1.25rem;
+  font-size: 0.8125rem;
+  gap: 8px;
 }
 
 /* Download disclosure — exit only. Instant open; ease-in fade on close. */
 .download-panel {
   opacity: 0;
   pointer-events: none;
+  border-radius: var(--spiral-radius-ctl);
   transition: opacity 200ms ease-in;
 }
 .download-panel--open {
@@ -301,12 +280,6 @@ p {
   .rise {
     animation: none;
   }
-}
-
-.footer-wordmark {
-  font-size: clamp(4.25rem, 16vw, 10.5rem);
-  line-height: 0.82;
-  letter-spacing: -0.04em;
 }
 
 /* Other work — editorial index. Always on the page; the cover follows
@@ -426,6 +399,10 @@ p {
   outline-offset: -1px;
 }
 
+.nav-shell {
+  width: 100%;
+  max-width: 100%;
+}
 .nav-bar {
   transform: translateY(calc(-100% - 2rem));
   pointer-events: none;
@@ -440,6 +417,11 @@ p {
 .hero-pin {
   height: 180svh;
   --hero-p: 0;
+}
+@media (max-width: 768px) {
+  .hero-pin {
+    height: 130svh;
+  }
 }
 .hero-sticky {
   position: sticky;
@@ -527,6 +509,5 @@ p {
   .glass-pill,
   .glass-pill:hover {
     transition: none;
-    transform: none;
   }
 }

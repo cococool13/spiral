@@ -70,8 +70,8 @@ export default function AppPageLayout({
 
         {afterHero}
 
-        <section className="mx-auto max-w-4xl px-6 py-16 sm:py-24">
-          <p className="type-display text-4xl text-paper sm:text-5xl">
+        <section className="mx-auto max-w-4xl px-6 py-12 sm:py-16">
+          <p className="type-heading max-w-2xl text-2xl text-paper sm:text-3xl">
             {page.tagline.map((line) => (
               <span key={line} className="block">
                 {line}
@@ -107,7 +107,7 @@ export default function AppPageLayout({
                 <p className="font-mono text-sm text-gray">{item.n}</p>
                 <div>
                   <h3 className="type-heading text-xl text-paper">{item.title}</h3>
-                  <p className="mt-3 text-gray">{item.body}</p>
+                  <p className="mt-3 max-w-xl text-gray">{item.body}</p>
                 </div>
               </li>
             ))}
@@ -143,7 +143,7 @@ export default function AppPageLayout({
             {page.faq.map((item) => (
               <div key={item.q} className="border-b border-gray/25 py-8">
                 <dt className="type-heading text-lg text-paper">{item.q}</dt>
-                <dd className="mt-3 text-gray">{item.a}</dd>
+                <dd className="mt-3 max-w-xl text-gray">{item.a}</dd>
               </div>
             ))}
           </dl>

@@ -68,8 +68,8 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
       setCopied(command);
       setTimeout(() => setCopied(null), 2000);
     } catch {
-      // Clipboard blocked (no permission, or a non-secure origin). The command
-      // is on screen either way, so say nothing rather than throw a dialog.
+      setCopied("!");
+      setTimeout(() => setCopied(null), 2000);
     }
   }
 
@@ -116,7 +116,7 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
           onClick={() => setOpen((v) => !v)}
           className="glass-pill glass-pill--secondary"
         >
-          Other apps
+          All apps
           {chevron(16)}
         </button>
       )}
@@ -133,8 +133,8 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
         className={[
           "download-panel absolute top-full z-20 max-h-[min(26rem,70svh)] overflow-y-auto border border-white/15 bg-black/95 p-2 text-left shadow-2xl backdrop-blur",
           nav
-            ? "download-panel--nav right-0 mt-2 w-[min(22rem,calc(100vw-2rem))]"
-            : "left-0 mt-3 w-[min(22rem,calc(100vw-3rem))]",
+            ? "download-panel--nav right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))]"
+            : "bottom-full left-1/2 mb-3 w-[min(22rem,calc(100vw-3rem))] -translate-x-1/2",
           open ? "download-panel--open" : "",
         ].join(" ")}
       >
@@ -167,16 +167,19 @@ export default function DownloadMenu({ variant = "hero" }: Props) {
                     onClick={() => copy(brew)}
                     className="glass-pill glass-pill--secondary glass-pill--nav"
                   >
-                    {copied === brew ? "Copied" : "Copy brew command"}
+                    {copied === "!"
+                      ? "Couldn't copy"
+                      : copied === brew
+                        ? "Copied"
+                        : "Copy brew command"}
                   </button>
                 )}
               </div>
             </div>
           );
         })}
-        <p className="px-3 pb-2 pt-1 font-mono text-[11px] leading-relaxed text-gray">
-          Free, and free of accounts. Windows builds are not code-signed yet, so Windows
-          warns on first run.
+        <p className="px-3 pb-2 pt-2 text-sm leading-relaxed text-paper">
+          Windows builds are not code-signed yet. Windows warns on first run.
         </p>
       </div>
     </div>

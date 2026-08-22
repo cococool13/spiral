@@ -41,12 +41,8 @@ export default function Hero() {
 
         <div className="hero-copy">
           <h1
-            className="rise type-display text-paper"
-            style={{
-              ...rise(0),
-              fontSize: "clamp(2.6rem, 7vw, 5.5rem)",
-              lineHeight: 0.92,
-            }}
+            className="rise type-display text-[2.75rem] text-paper sm:text-6xl lg:text-7xl"
+            style={rise(0)}
           >
             Software that
             <br />
@@ -54,14 +50,14 @@ export default function Hero() {
           </h1>
 
           <p
-            className="rise mt-6 max-w-xl text-base leading-relaxed text-gray sm:text-lg"
+            className="rise mt-6 max-w-xl text-base leading-relaxed text-paper sm:text-lg"
             style={rise(1)}
           >
-            No account. No bloat. No tracking.
+            Spiral Wallpaper. No account. No bloat. No tracking.
           </p>
 
           <div
-            className="rise mt-10 flex flex-wrap items-center justify-center gap-3"
+            className="rise mt-10 flex w-full flex-wrap items-center justify-center gap-3"
             style={rise(2)}
           >
             {wallpaper ? <GlassPillCTA app={wallpaper} /> : null}

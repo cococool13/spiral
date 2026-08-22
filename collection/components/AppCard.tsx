@@ -23,23 +23,21 @@ export default function AppCard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
-          {featured ? null : (
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/15">
-              <svg
-                width={24}
-                height={24}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={shipped ? "var(--spiral-red)" : "var(--spiral-gray)"}
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d={app.iconPath} />
-              </svg>
-            </span>
-          )}
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/15">
+            <svg
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={shipped ? "var(--spiral-red)" : "var(--spiral-gray)"}
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d={app.iconPath} />
+            </svg>
+          </span>
           <div>
             <h3
               className={`type-heading text-paper ${featured ? "text-2xl sm:text-3xl" : "text-lg"}`}
@@ -80,7 +78,7 @@ export default function AppCard({
           // Not shipped, but there is something to read. A real link beats a
           // dead pill, and it is the only way anyone reaches the page.
           <a href={app.page} className="glass-pill">
-            See what it does
+            What it does
           </a>
         ) : (
           <DisabledPill />

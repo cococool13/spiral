@@ -2,7 +2,6 @@ import AppGrid from "@/components/AppGrid";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
 import Nav from "@/components/Nav";
-import OtherWork from "@/components/OtherWork";
 
 export default function Home() {
   // Nav and Footer sit outside <main>. Nested inside it they were generic
@@ -25,7 +24,6 @@ export default function Home() {
         </section>
         <div className="relative z-10 bg-black">
           <AppGrid />
-          <OtherWork />
         </div>
       </main>
       <Footer />

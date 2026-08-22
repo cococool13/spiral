@@ -34,14 +34,13 @@ export default function RemovalRules() {
       {RULES.map((rule) => (
         <li key={rule.verdict} className="p-8">
           <p
-            className={`type-heading text-xl ${
-              rule.tone === "red"
-                ? "text-red"
-                : rule.tone === "paper"
-                  ? "text-paper"
-                  : "text-gray"
+            className={`type-heading flex items-center gap-3 text-xl ${
+              rule.tone === "gray" ? "text-gray" : "text-paper"
             }`}
           >
+            {rule.tone === "red" ? (
+              <span className="size-1.5 shrink-0 bg-red" aria-hidden="true" />
+            ) : null}
             {rule.verdict}
           </p>
           <p className="mt-4 font-mono text-xs uppercase tracking-widest text-gray">
