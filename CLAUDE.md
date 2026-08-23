@@ -40,6 +40,18 @@ Current app release **v1.0.3** (Spiral Wallpaper).
 Apps and the website share a brand, not a performance charter — details live in
 `collection/README.md`.
 
+## Cursor Cloud
+
+Cloud agents run **Linux**. `collection` works there (`pnpm dev` on localhost:3000).
+The four apps are Tauri; `pnpm tauri dev` / `build` / `pnpm smoke` only prove
+native behavior on macOS/Windows. On the VM, JS/TS frontends and `cargo test` /
+`clippy` still run. Clean has macOS-only tests (login items, firmlinks, `.app`
+plists) that fail on Linux by design — CI covers those on macOS.
+
+The snapshot already has Rust stable via rustup (≥1.85 / edition2024), Tauri
+GTK/WebKit libs, and pytest (`python3 -m pytest`; `~/.local/bin` is not on
+`PATH`). There is no root workspace: `cd` into a project first.
+
 ## Commands
 
 ```bash

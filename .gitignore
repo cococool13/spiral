@@ -25,6 +25,10 @@ apps/wallpaper/src-tauri/gen/
 # Agent planning scratch. Working notes, not project documentation.
 docs/superpowers/
 
+# Uizze live session output
+.uizze/live/
+**/.uizze/live/
+
 # Spiral Slim's app icons, for the same reason as the wallpaper ones above:
 # the global 'Icon?' pattern matches the icons/ directory case-insensitively,
 # and without this a fresh clone cannot bundle the app.
