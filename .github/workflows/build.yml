@@ -162,12 +162,16 @@ jobs:
       # Dependabot pull requests run without repository secrets by design, so
       # TAURI_SIGNING_PRIVATE_KEY is empty there. Passing an empty string is
       # worse than passing nothing: Tauri treats it as a key and dies with
-      # "failed to decode secret key", which failed every Dependabot PR.
+      # "failed to decode secret key". Omitting the key is still not enough:
+      # tauri.conf.json has createUpdaterArtifacts: true and a pubkey, so after
+      # MSI/NSIS are written Tauri tries to sign updater artifacts and dies
+      # with "A public key has been found, but no private key".
       #
-      # The fix is to build unsigned in that case, not to copy the key into
-      # Dependabot secrets — PR bundles are throwaway artifacts that are never
-      # published, and exposing an app signing key to automated dependency PRs
-      # is a real risk for no benefit. Pushes to main still sign as before.
+      # Unsigned builds therefore merge tauri.unsigned.conf.json to turn
+      # createUpdaterArtifacts off. That is the official v2 override; do not
+      # copy the key into Dependabot secrets. PR bundles are throwaway and
+      # never published. Signed main builds keep the default config and the
+      # key, so updater artifacts stay as they are today.
       - name: Build Tauri app (signed)
         if: env.TAURI_KEY != ''
         run: pnpm tauri build
@@ -177,7 +181,7 @@ jobs:
 
       - name: Build Tauri app (unsigned — no signing key in this context)
         if: env.TAURI_KEY == ''
-        run: pnpm tauri build
+        run: pnpm tauri build --config src-tauri/tauri.unsigned.conf.json
 
       - name: Upload Windows bundles
         uses: actions/upload-artifact@v7
