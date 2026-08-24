@@ -4,7 +4,7 @@
 //! says: markdown markers, bullet glyphs stranded on their own line, headings
 //! welded to the entry beside them, and the furniture a page prints.
 
-use super::headings::heading_of;
+use super::headings::{all_caps_needles, heading_key, heading_of};
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -72,6 +72,120 @@ pub(super) fn split_glued_heading(line: &str) -> Option<(String, String)> {
     None
 }
 
+/// "EXPERIENCE Analyst, Admiralty" — a section rail extracted onto the same
+/// line as the entry, with a space at the join. The heading is all caps; a job
+/// titled "Experience Designer" is title case and must not split.
+pub(super) fn split_caps_heading(line: &str) -> Option<(String, String)> {
+    let mut last = None;
+    for (index, c) in line.char_indices() {
+        if c != ' ' {
+            continue;
+        }
+        let prefix = &line[..index];
+        if prefix.chars().any(|ch| ch.is_lowercase()) {
+            break;
+        }
+        if heading_of(prefix).is_none() {
+            continue;
+        }
+        let rest = line[index..].trim();
+        if rest.is_empty() {
+            continue;
+        }
+        let starts_like_an_entry = rest
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_uppercase() || ch.is_numeric());
+        if starts_like_an_entry {
+            last = Some((prefix.to_string(), rest.to_string()));
+        }
+    }
+    last
+}
+
+/// "programmer.EXPERIENCE" — PDF extraction often concatenates the last
+/// sentence of a section with the next heading, with no space at the join.
+/// The heading is the suffix; a job titled "Experience Designer" is not.
+pub(super) fn split_glued_heading_tail(line: &str) -> Option<Vec<String>> {
+    let mut previous = '\0';
+    for (index, c) in line.char_indices() {
+        if index > 0 {
+            let glued = (previous.is_lowercase() || matches!(previous, '.' | '!' | '?'))
+                && c.is_uppercase();
+            if glued {
+                let tail = &line[index..];
+                let body = line[..index].trim();
+                if !body.is_empty() {
+                    if heading_of(tail).is_some() {
+                        return Some(vec![body.to_string(), tail.to_string()]);
+                    }
+                    if let Some((heading, rest)) = split_caps_heading(tail) {
+                        return Some(vec![body.to_string(), heading, rest]);
+                    }
+                }
+            }
+        }
+        previous = c;
+    }
+    None
+}
+
+/// "LondonSUMMARYAnalytical" — a PDF whose extractor dropped every line
+/// break. All-caps heading names are the only reliable cuts; title-case
+/// "Experience Designer" is not all caps and stays one line.
+pub(super) fn split_embedded_headings(line: &str) -> Vec<String> {
+    let mut spans: Vec<(usize, usize)> = Vec::new();
+    for needle in all_caps_needles() {
+        let mut from = 0;
+        while let Some(rel) = line[from..].find(needle.as_str()) {
+            let start = from + rel;
+            let end = start + needle.len();
+            if heading_cut_ok(line, start, end)
+                && !spans.iter().any(|&(s, e)| start < e && end > s)
+            {
+                spans.push((start, end));
+            }
+            from = start + 1;
+        }
+    }
+    if spans.is_empty() {
+        return vec![line.to_string()];
+    }
+    spans.sort_by_key(|span| span.0);
+    let mut out = Vec::new();
+    let mut at = 0;
+    for (start, end) in spans {
+        if start < at {
+            continue;
+        }
+        let before = line[at..start].trim();
+        if !before.is_empty() {
+            out.push(before.to_string());
+        }
+        out.push(line[start..end].to_string());
+        at = end;
+    }
+    let tail = line[at..].trim();
+    if !tail.is_empty() {
+        out.push(tail.to_string());
+    }
+    out
+}
+
+fn heading_cut_ok(line: &str, start: usize, end: usize) -> bool {
+    let before_ok = start == 0
+        || line[..start]
+            .chars()
+            .next_back()
+            .is_some_and(|c| !c.is_uppercase());
+    let after_ok = end == line.len()
+        || line[end..]
+            .chars()
+            .next()
+            .is_some_and(|c| !c.is_lowercase());
+    before_ok && after_ok
+}
+
 /// A resume kept in a text editor is kept in markdown. The emphasis markers
 /// are formatting, not content — and `*` is also a bullet, so "**Analyst**,
 /// Admiralty" was read as a bullet and the role heading disappeared.
@@ -125,7 +239,22 @@ pub(super) fn furniture_re() -> &'static Regex {
 
 pub(super) fn is_furniture(line: &str) -> bool {
     // A line with no letter and no digit in it draws something; it says nothing.
-    !line.chars().any(char::is_alphanumeric) || furniture_re().is_match(line)
+    !line.chars().any(char::is_alphanumeric) || furniture_re().is_match(line) || is_skip_heading(line)
+}
+
+/// Headings that name the page, not a section of work. Left in the body they
+/// become phantom roles; dropped here they still reach `fill_missing_contact`.
+pub(super) fn is_skip_heading(line: &str) -> bool {
+    matches!(
+        heading_key(line).as_str(),
+        "contact"
+            | "contact information"
+            | "personal details"
+            | "personal information"
+            | "references"
+            | "references available upon request"
+            | "available upon request"
+    )
 }
 
 pub(super) fn lines_of(input: &str) -> Vec<String> {
@@ -157,12 +286,17 @@ pub(super) fn lines_of(input: &str) -> Vec<String> {
         if is_furniture(&line) {
             continue;
         }
-        match split_glued_heading(&line) {
-            Some((heading, rest)) => {
+        for piece in split_embedded_headings(&line) {
+            if let Some((heading, rest)) =
+                split_glued_heading(&piece).or_else(|| split_caps_heading(&piece))
+            {
                 lines.push(heading);
                 lines.push(rest.trim().to_string());
+            } else if let Some(parts) = split_glued_heading_tail(&piece) {
+                lines.extend(parts);
+            } else {
+                lines.push(piece);
             }
-            None => lines.push(line),
         }
     }
     // A glyph with nothing under it is still text the user had on the page.
@@ -305,5 +439,29 @@ mod tests {
         assert_eq!(one("Page 2 of 3"), "");
         assert_eq!(one("_______"), "");
         assert_eq!(one("2019"), "2019");
+    }
+
+    /// PDF extractors glue the last sentence onto the next heading. The
+    /// heading has to come off; a role titled "Experience Designer" must not.
+    #[test]
+    fn a_heading_glued_onto_the_sentence_before_it_still_splits() {
+        assert_eq!(
+            one("Analytical engine programmer.EXPERIENCE"),
+            "Analytical engine programmer.\nEXPERIENCE"
+        );
+        assert_eq!(
+            one("Experience Designer, Acme"),
+            "Experience Designer, Acme"
+        );
+    }
+
+    /// A PDF extractor that drops every line break still has the all-caps
+    /// headings, and those are enough to put the sections back.
+    #[test]
+    fn all_caps_headings_are_cut_out_of_a_run_on_line() {
+        assert_eq!(
+            one("LondonSUMMARYAnalytical engine programmer.EXPERIENCEAnalyst, Admiralty"),
+            "London\nSUMMARY\nAnalytical engine programmer.\nEXPERIENCE\nAnalyst, Admiralty"
+        );
     }
 }

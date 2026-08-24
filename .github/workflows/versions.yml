@@ -31,7 +31,7 @@ on:
     branches: [main]
     # Every release namespace. A tag that does not match its version files
     # should learn that immediately, not after the build.
-    tags: ["v*", "slim-v*", "clean-v*"]
+    tags: ["v*", "slim-v*", "clean-v*", "resume-v*"]
   pull_request:
   workflow_dispatch:
 
@@ -56,6 +56,9 @@ jobs:
       # right on their own.
       - name: The download page agrees with itself
         run: node scripts/downloads.mjs check
+
+      - name: Wallpaper and Clean AppBar stay identical
+        run: node scripts/check-app-bar.mjs
 
   # Only on a tag. Deliberately a separate job so its failure names the real
   # problem — "this tag does not match" — rather than being one red step inside

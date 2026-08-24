@@ -1,63 +1,50 @@
-/* Spiral design tokens — the only file allowed to contain hex values.
-   Mirrors /brand/tokens.css. Edit /brand/tokens.css, then mirror here. */
-:root {
-  /* material */
-  --conc-01: #EBE9E4;   /* page background */
-  --conc-02: #DDDAD3;   /* surface */
-  --conc-03: #CFCCC4;   /* border / hairline rule */
-  --ink-01:  #10181B;   /* all body text */
-  --stl-02:  #666863;   /* secondary text — page background ONLY (4.65:1) */
-  --hlx-01:  #D52E2B;   /* helix red — accents, never body copy */
-  --hlx-02:  #6F1011;   /* oxblood — pressed / hover */
-  --paper:   #F4F3F0;   /* paper — mirrors --spiral-paper in /brand/tokens.css */
+/* Spiral Identity 02 — single source of truth for all Spiral surfaces.
+   Consumed by collection/ and apps/* via each surface's scripts/sync-brand.mjs.
+   Do not hardcode these values anywhere else. */
 
-  /* type */
-  --font-ui:   "Archivo", sans-serif;      /* variable: wdth + wght */
-  --font-mono: "IBM Plex Mono", monospace; /* anything data-like */
-  --wdth-display: 125;  --wght-display: 850;   /* caps */
-  --wdth-heading: 112;  --wght-heading: 700;
+:root {
+  /* Identity 02 materials */
+  --spiral-void: #080809; /* page */
+  --spiral-paper: #f1efe8; /* type on void; labels on red; sheets */
+  --spiral-helix: #d52e2b; /* mark, the one action, warnings. Never a page fill. */
+  --spiral-mute: #8a8880; /* secondary on void (5.7:1) */
+  --spiral-lift: #131315; /* one step up from void */
+
+  /* Aliases so existing CSS keeps compiling. Prefer the names above on new work. */
+  --spiral-black: var(--spiral-void);
+  --spiral-gray: var(--spiral-mute);
+  --spiral-concrete: #d8d4c8;
+  --spiral-conc-01: var(--spiral-void);
+  --spiral-conc-02: var(--spiral-lift);
+  --spiral-conc-03: #1c1c1f;
+  --spiral-ink: #121214; /* text on paper, never on the page */
+  --spiral-steel: #66645e; /* secondary on paper only */
+  --spiral-red: var(--spiral-helix);
+  --spiral-oxblood: #6f1011; /* legacy dawn. Do not use on the Identity 02 hero. */
+  --spiral-red-fill: color-mix(in srgb, var(--spiral-oxblood) 10%, var(--spiral-red));
+
+  /* type — Host Grotesk, static files. Ignore leftover variation settings. */
+  --spiral-font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --spiral-wdth-display: 100;
+  --spiral-wght-display: 400;
+  --spiral-wdth-heading: 100;
+  --spiral-wght-heading: 400;
 
   /* rhythm */
-  --unit: 8px;                              /* all spacing = multiples */
-  --ease: cubic-bezier(.2, .7, .2, 1);      /* the ONLY easing curve */
-  --dur-fast: 150ms;  --dur-slow: 400ms;
+  --spiral-unit: 8px;
+  --spiral-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spiral-dur-fast: 150ms;
+  --spiral-dur-slow: 400ms;
 
-  /* Secondary text on --conc-02 surfaces. --stl-02 measures 4.65:1 on the
-     page but only 4.04:1 on the surface, so it fails AA everywhere Spiral
-     Slim actually puts secondary text (rail, panels, choices, footer).
-     Derived from two brand tokens rather than declared, so this file stays
-     a faithful mirror of /brand/tokens.css. 4.86:1 on conc-02. */
-  --ink-02: color-mix(in srgb, var(--ink-01) 65%, var(--conc-02));
-
-  /* Helix red darkened just enough for a --paper label to clear AA.
-     Measured: paper on --hlx-01 is 4.45:1, which fails the 4.5:1 body
-     threshold — the Apply button's label is 15px bold, and WCAG only counts
-     bold as large text at 18.66px and up. This mix measures 4.83:1.
-     Filled controls only; --hlx-01 still owns the mark, card borders, the
-     aura and warnings. Derived from two brand tokens, like --ink-02 below,
-     so this file stays a faithful mirror. Long-term home: brand/tokens.css. */
-  --hlx-01-ink: color-mix(in srgb, var(--hlx-02) 10%, var(--hlx-01));
-
-  /* Card geometry. A third radius, added deliberately for Spiral Slim's
-     full-window cards: the brand's 0 read as unfinished at that scale.
-     brand/tokens.css does not carry this yet. */
-  --radius-card: 16px;
-
-  /* Helix red at low alpha, for the card aura. Derived from the brand token
-     rather than declared, so this stays a faithful mirror. */
-  --aura-near: color-mix(in srgb, var(--hlx-01) 55%, transparent);
-  --aura-far: color-mix(in srgb, var(--hlx-01) 22%, transparent);
-
-  /* Intro scene, matching collection/components/Hero.tsx. Kept as tokens so
-     the two surfaces can be compared rather than drifting. */
-  --scene-base: #0B0B0C;
-  --scene-mid:  #141416;
-  --scene-warm: #161311;
-
-  /* glass — controls only, never surfaces */
-  --radius-ctl: 999px;
-  --glass-blur: blur(16px) saturate(1.7);
-  --glass-edge: rgba(255, 255, 255, .45);
-  --glass-sheen: linear-gradient(115deg,
-      rgba(255,255,255,.55), rgba(255,255,255,0) 55%);
+  /* chrome — surfaces are square; controls are 12px. Pills (999px) are retired. */
+  --spiral-radius-ctl: 12px;
+  --spiral-glass-blur: blur(16px) saturate(1.7);
+  --spiral-glass-edge: rgba(255, 255, 255, 0.45);
+  --spiral-glass-sheen: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0) 55%
+  );
 }

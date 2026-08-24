@@ -4,31 +4,41 @@ Visual system of Spiral Wallpaper (`apps/wallpaper/`), and — for the app bar
 below — of every app in the collection. Source of truth: `brand/tokens.css` (mirrored into `apps/wallpaper/src/styles/tokens.css`, the only file in that app allowed to contain hex) and `brand/guide.html`.
 
 ## Theme
-Industrial concrete, light-only by design (the material is poured concrete; there is no "dark concrete" variant in v1). Flat surfaces, hairline borders, no card shadows. Depth comes from material contrast; blur and shadow exist in exactly one place — the glass control layer.
+Dark cinematic, one collection: near-black page, paper type, helix red for the
+mark and the one primary action. The website already sat here; the apps now
+share it. Flat surfaces, hairline borders, no card shadows, no red glow.
+Depth comes from material contrast; blur and shadow exist in exactly one
+place — the glass control layer.
 
 ## Color
+Identity 02. Source values live in `brand/tokens.css`.
+
 | Token | Value | Role |
 |---|---|---|
-| `--conc-01` | `#EBE9E4` | Page background ("Poured Concrete") |
-| `--conc-02` | `#DDDAD3` | Surface |
-| `--conc-03` | `#CFCCC4` | Hairline border / rule |
-| `--ink-01` | `#10181B` | All body text ("Mill Steel", 14.8:1) |
-| `--stl-02` | `#666863` | Secondary text ("Galvanized", 4.65:1 on page only) |
-| `--hlx-01` | `#D52E2B` | Helix red — accents, focus, warnings; never body copy |
-| `--hlx-02` | `#6F1011` | Oxblood — hover/pressed deepening |
-| `--paper` | `#F5F4F0` | Button labels on red (4.5:1 at bold ≥15px) |
+| `--spiral-void` | `#080809` | Page |
+| `--spiral-lift` | `#131315` | Lifted surface |
+| `--spiral-conc-03` | `#1c1c1f` | Hairline |
+| `--spiral-paper` | `#f1efe8` | Body text on the page; labels on red |
+| `--spiral-mute` | `#8a8880` | Secondary text on the page |
+| `--spiral-ink` | `#121214` | Text on paper islands only |
+| `--spiral-steel` | `#66645e` | Secondary on paper only |
+| `--spiral-helix` | `#d52e2b` | Mark, focus, warnings; never body copy, never a page fill |
+| `--spiral-oxblood` | `#6f1011` | Hover/pressed deepening |
+| `--spiral-red-fill` | mix 10% oxblood into helix | Filled controls so paper labels clear 4.5:1 |
 
-Rule: `--stl-02` passes AA only on `--conc-01`; never place it on `--conc-02`.
+Older app CSS still uses `--conc-01`, `--hlx-01`, `--paper` as aliases of these.
+Helix red is never a background fill and never a halo.
 
 ## Typography
-- `--font-ui`: Archivo variable (wdth + wght axes). Display: wdth 125 / wght 850. Headings: wdth 112 / wght 700.
-- `--font-mono`: IBM Plex Mono 400/500 — anything data-like: search input, chips, nav items, status badges, attribution.
-- Both self-hosted woff2; no runtime font network calls.
+- `--spiral-font-display`: Host Grotesk 400 (italic for emphasis only).
+- `--spiral-font-sans`: Host Grotesk 400/500/600. UI body and headings.
+- `--spiral-font-mono`: system ui-monospace. Data, chips, version strings.
+- Self-hosted woff2; no runtime font network calls.
 
 ## Rhythm & Shape
-- `--unit: 8px`; all spacing is a multiple.
-- Exactly two radii: `0` (every surface) and `--radius-ctl: 999px` (glass controls + toggle). No in-between radius, ever.
-- One easing curve: `--ease: cubic-bezier(.2,.7,.2,1)`. Durations `--dur-fast: 150ms`, `--dur-slow: 400ms`.
+- `--spiral-unit: 8px`; all spacing is a multiple.
+- Two radii: `0` (surfaces) and `--spiral-radius-ctl: 12px` (controls). Identity 01 pills (`999px`) are retired.
+- One easing curve: `--spiral-ease: cubic-bezier(0.22, 1, 0.36, 1)`. Durations `--spiral-dur-fast: 150ms`, `--spiral-dur-slow: 400ms`.
 
 ## The app bar
 
@@ -39,7 +49,7 @@ one collection, so it is described here rather than in any single app.
 ▲  Spiral Wallpaper                                              ☰
 ```
 
-- **The mark**, 20px, helix red, masked from `mark-red.svg`.
+- **The mark**, 20px, helix red, the original three-band helix from `mark-red.svg`.
 - **The name**, one `<h1>`: "Spiral" in `--stl-02` at weight 400, then the app's
   own word in the heading weight. The collection recedes and the app is what
   you read — and every bar differs by exactly one word.
@@ -63,8 +73,8 @@ menu. It wears the mark and the same two-weight name, and shows its step ticks
 where the menu would be. An empty menu would be worse than no menu.
 
 ## Components
-- **Glass buttons** (`.btn-glass`): pill, `backdrop-filter` blur+saturate, 1px `--glass-edge`, specular sheen `::before`, inset top highlight, atmospheric shadow (`rgba(0,0,0,.08) 0 24px 48px` — the ceiling). Primary: solid helix red, paper label, deepens to oxblood. Secondary: frosted concrete, ink label. Labels bold 15px. Never stack glass on glass; a handful per screen max.
-- **Chips / segmented / nav**: flat concrete, radius 0, mono 12px, stl-02 → ink on hover/active.
+- **Glass buttons** (`.btn-glass`): pill, `backdrop-filter` blur+saturate, 1px `--glass-edge`, specular sheen `::before`, inset top highlight, atmospheric shadow (`rgba(0,0,0,.08) 0 24px 48px` — the ceiling). Primary: `--red-fill`, paper label, deepens to oxblood. Secondary: frosted black, paper label. Labels bold 15px. Never stack glass on glass; a handful per screen max.
+- **Chips / segmented / nav**: flat black, radius 0, mono 12px, gray → paper on hover/active.
 - **Toggle**: pill control, red track when on.
 - **Tiles**: bordered surfaces, resolution badge (ink on paper), overlay on hover/focus-within.
 - **Eyebrow**: 6px red dot + uppercase mono label (used in empty states).

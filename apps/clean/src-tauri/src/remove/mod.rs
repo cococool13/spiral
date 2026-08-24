@@ -20,6 +20,7 @@ mod types;
 
 pub(crate) use delete::*;
 pub(crate) use disposition::*;
+pub(crate) use identity::verified_name_matches;
 pub(crate) use roots::*;
 pub use types::*;
 

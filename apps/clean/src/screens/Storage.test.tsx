@@ -10,7 +10,7 @@
 //    differs per app and a generic sentence is false in both directions.
 //  - An undercounted folder size must say so. A folder shown as 2 GB when it
 //    is 40 GB sends someone looking in the wrong place.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import Storage, { crumbsOf } from "./Storage";
@@ -19,6 +19,19 @@ import type { AnalyzeEntry, DeviceBackup, LipoCandidate } from "./Storage";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 const mockInvoke = vi.mocked(invoke);
+
+beforeAll(() => {
+  if (!HTMLDialogElement.prototype.showModal) {
+    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    };
+  }
+  if (!HTMLDialogElement.prototype.close) {
+    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+      this.removeAttribute("open");
+    };
+  }
+});
 
 function entry(over: Partial<AnalyzeEntry> = {}): AnalyzeEntry {
   return { name: "Movies", path: "/Users/x/Movies", bytes: 4_000_000, is_dir: true, partial: false, ...over };

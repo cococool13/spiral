@@ -20,8 +20,8 @@ export function parsePastedText(text: string): Promise<ResumeDoc> {
   return invoke<ResumeDoc>("parse_pasted_text", { text });
 }
 
-export function renderThumbnails(doc: ResumeDoc, accent: string): Promise<Thumbnail[]> {
-  return invoke<Thumbnail[]>("render_thumbnails", { doc, accent });
+export function renderThumbnails(accent: string): Promise<Thumbnail[]> {
+  return invoke<Thumbnail[]>("render_thumbnails", { accent });
 }
 
 /** Opens the file picker. Resolves to null when the user dismisses it. */
@@ -66,11 +66,12 @@ export function deleteStoredData(): Promise<void> {
 export function buildDocument(
   draft: Draft,
   onProgress: (progress: Progress) => void,
+  aim = "",
 ): Promise<BuildResult> {
   const channel = new Channel<Progress>();
   channel.onmessage = onProgress;
   return invoke<BuildResult>("build_document", {
-    request: draft,
+    request: { ...draft, aim },
     onProgress: channel,
   });
 }
@@ -118,6 +119,10 @@ export function saveApiKey(key: string): Promise<EngineInfo> {
 
 export function clearApiKey(): Promise<EngineInfo> {
   return invoke<EngineInfo>("clear_api_key");
+}
+
+export function completeSetup(): Promise<EngineInfo> {
+  return invoke<EngineInfo>("complete_setup");
 }
 
 /** Resolves to the path written, or null when the user closed the dialog. */

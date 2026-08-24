@@ -6,7 +6,7 @@
 #set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.6em, spacing: 0.8em)
 
-#let section(title) = block(above: 13pt, below: 4pt)[
+#let section(title) = block(sticky: true, above: 13pt, below: 4pt)[
   #text(size: 13pt, weight: "bold", fill: accent)[#title]
   #v(1pt, weak: true)
   #line(length: 100%, stroke: 0.5pt + ink)

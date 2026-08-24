@@ -1,8 +1,11 @@
 //! Blocks of lines into roles, schools, skills and lists.
 
+use super::contact::{email_re, find_phone, link_re};
 use super::dates::{parse_date_range, without_dates};
-use super::lines::{is_bullet, bullet_text, BULLET_MARKS};
+use super::lines::{bullet_text, is_bullet, is_skip_heading, BULLET_MARKS};
 use crate::model::{bullet_id, entry_id, Bullet, Role, School, SkillGroup};
+use regex::Regex;
+use std::sync::OnceLock;
 
 pub(super) fn split_items(line: &str) -> Vec<String> {
     line.split([',', '·', '|', ';'])
@@ -55,14 +58,46 @@ pub(super) fn parse_skills(body: &[String]) -> Vec<SkillGroup> {
 ///
 /// The comma only divides when the whole section is that one line. A list
 /// written one item per line is already divided, and "Dean's List, Fall 2021"
-/// is one award with a comma in it, not two awards.
+/// is one award with a comma in it, not two awards. A trailing "2022" is the
+/// date on a certification, not a second award.
+fn is_year_token(s: &str) -> bool {
+    let t = s
+        .trim()
+        .trim_matches(|c: char| c == '(' || c == ')')
+        .trim();
+    let t = t.strip_prefix("in ").unwrap_or(t).trim();
+    year_token_re().is_match(t)
+}
+
+fn year_token_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"(?i)^(19|20)\d{2}(\s*[-–—]\s*((19|20)\d{2}|present))?$").unwrap()
+    })
+}
+
+fn reattach_years(mut items: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for item in items.drain(..) {
+        if is_year_token(&item) {
+            if let Some(previous) = out.last_mut() {
+                previous.push_str(", ");
+                previous.push_str(&item);
+                continue;
+            }
+        }
+        out.push(item);
+    }
+    out
+}
+
 pub(super) fn parse_lines(body: &[String]) -> Vec<String> {
     let one_line = body.len() == 1;
     body.iter()
         .flat_map(|line| {
             let stripped = line.trim_start_matches(BULLET_MARKS).trim();
             if one_line && stripped.contains(',') && stripped.len() < 120 {
-                split_items(stripped)
+                reattach_years(split_items(stripped))
             } else {
                 vec![stripped.to_string()]
             }
@@ -116,6 +151,9 @@ pub(super) fn blocks_of(body: &[String]) -> Vec<Vec<String>> {
     let mut seen_date = false;
     let mut date_closed_the_heading = false;
     for line in body {
+        if is_skippable_entry(line) {
+            continue;
+        }
         let dates = parse_date_range(line);
         let bare_date = dates
             .as_ref()
@@ -142,6 +180,28 @@ pub(super) fn blocks_of(body: &[String]) -> Vec<Vec<String>> {
         blocks.last_mut().expect("just pushed").push(line.clone());
     }
     blocks
+}
+
+/// A leftover contact line after the last job is not a new role. The details
+/// are still lifted by `fill_missing_contact`; this only stops them becoming
+/// an extra job titled "ada@example.com".
+pub(super) fn is_skippable_entry(line: &str) -> bool {
+    if is_skip_heading(line) {
+        return true;
+    }
+    let mut leftover = line.to_string();
+    if let Some(found) = email_re().find(line) {
+        leftover = leftover.replace(found.as_str(), "");
+    }
+    if let Some(found) = find_phone(line) {
+        leftover = leftover.replace(found, "");
+    }
+    for found in link_re().find_iter(line) {
+        leftover = leftover.replace(found.as_str(), "");
+    }
+    leftover
+        .chars()
+        .all(|c| !c.is_alphanumeric())
 }
 
 /// An employer and a city are a few words with no full stop after them. This is

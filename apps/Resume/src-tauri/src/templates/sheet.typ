@@ -5,11 +5,9 @@
 #set text(font: "Liberation Sans", size: 10pt, fill: ink)
 #set par(justify: false, leading: 0.58em, spacing: 0.72em)
 
-#let section(title) = {
-  v(7pt)
-  text(size: 10pt, weight: "bold", fill: accent)[#upper(title)]
-  v(1pt)
-}
+#let section(title) = block(sticky: true, above: 7pt, below: 1pt)[
+  #text(size: 10pt, weight: "bold", fill: accent)[#upper(title)]
+]
 
 #let role-entry(role) = {
   text(weight: "bold")[#role-heading(role)]

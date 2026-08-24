@@ -8,11 +8,9 @@
 
 #let body-margin = 52pt
 
-#let section(title) = {
-  v(8pt)
-  text(size: 9.5pt, weight: "bold", tracking: 0.08em, fill: accent)[#upper(title)]
-  v(2pt)
-}
+#let section(title) = block(sticky: true, above: 8pt, below: 2pt)[
+  #text(size: 9.5pt, weight: "bold", tracking: 0.08em, fill: accent)[#upper(title)]
+]
 
 #let role-entry(role) = {
   grid(

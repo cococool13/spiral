@@ -48,7 +48,7 @@ pub struct CategoryResult {
 /// labeled estimate and the reported result is the measured free-space delta.
 ///
 /// **Directories are not yielded at all** — see the note in
-/// `commands::catalog_candidates_for`. Only files are ever removed, so an emptied
+/// `catalog_clean::catalog_candidates_for`. Only files are ever removed, so an emptied
 /// category leaves its folder skeleton behind.
 fn walk_files(root: &Path) -> Vec<(PathBuf, u64)> {
     if !root.exists() {

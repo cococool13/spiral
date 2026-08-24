@@ -3,15 +3,18 @@ import { buildDocument } from "../lib/ipc";
 import type { BuildResult, Draft, Progress } from "../lib/types";
 import { Notice } from "../components/Notice";
 
-/** Every percent shown here was reported by Rust after the work that earned it.
- *  On the deterministic path the whole thing crosses in well under a second —
- *  that is the honest result, not something to pad out. */
+const STAGE_FLOOR_MS = 400;
+
+/** Each named stage stays on screen long enough to be read. The percentages
+ *  still come from Rust after the work that earned them. */
 export function Build({
   draft,
+  aim = "",
   onDone,
   onBack,
 }: {
   draft: Draft;
+  aim?: string;
   onDone: (result: BuildResult) => void;
   onBack: () => void;
 }) {
@@ -20,10 +23,30 @@ export function Build({
 
   useEffect(() => {
     let current = true;
-    buildDocument(draft, (next) => {
-      if (current) setProgress(next);
-    })
-      .then((result) => {
+    let chain = Promise.resolve();
+
+    function hold(next: Progress) {
+      chain = chain.then(
+        () =>
+          new Promise<void>((resolve) => {
+            window.setTimeout(() => {
+              if (current) setProgress(next);
+              resolve();
+            }, STAGE_FLOOR_MS);
+          }),
+      );
+    }
+
+    buildDocument(
+      draft,
+      (next) => {
+        hold(next);
+      },
+      aim,
+    )
+      .then(async (result) => {
+        await chain;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, STAGE_FLOOR_MS));
         if (current) onDone(result);
       })
       .catch((e) => {
@@ -45,7 +68,7 @@ export function Build({
         <Notice tone="warn">{error}</Notice>
         <div className="panel__actions">
           <button type="button" className="btn" onClick={onBack}>
-            Back to Style
+            Choose a format
           </button>
         </div>
       </section>

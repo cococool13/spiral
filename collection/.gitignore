@@ -8,3 +8,10 @@ public/brand/
 
 # wrangler local state
 .wrangler/
+
+# Uizze live session output
+.uizze/live/
+
+# Written by `next dev`. Not project instructions.
+AGENTS.md
+CLAUDE.md

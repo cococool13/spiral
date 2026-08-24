@@ -1,7 +1,7 @@
 # Resume faces — not brand faces
 
 These are **not** Spiral brand fonts and must never be used in the app chrome.
-The app chrome uses Archivo and IBM Plex Mono, synced from `/brand`. These eight
+The app chrome uses Host Grotesk, synced from `/brand`. These eight
 files are the opposite: they are what the *user's document* is set in, and the
 whole point of decision 6 in the design spec is that a resume must not look like
 a Spiral product.

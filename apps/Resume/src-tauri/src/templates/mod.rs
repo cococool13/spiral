@@ -314,7 +314,7 @@ pub fn source_for(template: &Template) -> String {
 
 /// The document and the chosen accent, as Typst sees them. The accent is
 /// resolved through the closed set first, so a template can never receive a
-/// value the user did not pick from six swatches.
+/// value the user did not pick from the closed swatch set.
 pub fn inputs_for(doc: &ResumeDoc, accent: &str) -> Result<Dict, String> {
     let json = serde_json::to_string(doc)
         .map_err(|e| format!("Could not prepare the resume for typesetting: {e}."))?;
@@ -578,6 +578,20 @@ Weaving, Music
                     template.id
                 );
             }
+        }
+    }
+
+    /// A heading that sits alone at the bottom of a page is a spacing failure.
+    /// `sticky` keeps it with the entry under it. Mutation proof: drop
+    /// `sticky: true` from any template's `section` and only this fails.
+    #[test]
+    fn every_section_heading_stays_with_the_entry_under_it() {
+        for template in all() {
+            assert!(
+                template.source.contains("sticky: true"),
+                "{}: section headings can sit alone at the bottom of a page",
+                template.id
+            );
         }
     }
 

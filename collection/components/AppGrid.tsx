@@ -1,47 +1,39 @@
 import { apps } from "@/lib/apps";
-import AppCard from "./AppCard";
-import Reveal from "./Reveal";
 
-/** A card is for an app you can do something with — download it, build it, or
- *  read a page about it. The rest are named in one line underneath.
- *
- *  This used to be all eight, which made the grid a single decision point with
- *  eight options where six could not be acted on: four dead "Coming soon"
- *  pills and two more with nowhere to go. Naming them in a sentence is the
- *  same information, honestly weighted, and it costs a line instead of a row. */
-const reachable = apps.filter((app) => app.downloads || app.source || app.page);
-const rest = apps.filter((app) => !reachable.includes(app));
+/** One measured fact per app — not a slogan. */
+const PROOF: Record<string, string> = {
+  wallpaper: "4.6 MB. Click, it applies.",
+  slim: "54 policies. Every change shown first.",
+  clean: "Not released. Delete, Trash, or never touch.",
+  resume: "Twelve layouts. A moved fact is discarded.",
+};
 
 export default function AppGrid() {
+  const listed = apps.filter((app) => app.page);
+
   return (
-    <section id="apps" className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
-      <Reveal>
-        <h2 className="type-display max-w-2xl text-4xl text-paper sm:text-5xl">
-          One job each. Free, always.
-        </h2>
-        <p className="mt-6 max-w-xl text-gray">
-          Every Spiral app is a small native tool that does one thing, states everything
-          it does, and quits when you close it.
-        </p>
-      </Reveal>
-      <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {reachable.map((app, i) => (
-          <Reveal key={app.slug} step={i} className="flex">
-            <AppCard app={app} />
-          </Reveal>
-        ))}
-      </div>
-      {rest.length > 0 && (
-        <Reveal step={reachable.length}>
-          <p className="mt-10 max-w-2xl border-t border-white/10 pt-8 text-sm text-gray">
-            {rest.length} more are being built —{" "}
-            <span className="text-concrete">
-              {rest.map((app) => app.name.replace("Spiral ", "")).join(", ")}
-            </span>
-            . None of them have a date, and there is nothing to sign up to.
-          </p>
-        </Reveal>
-      )}
+    <section id="apps" className="mx-auto max-w-3xl px-6 py-20 sm:py-28">
+      <h2 className="type-display text-4xl text-paper sm:text-5xl">One job each.</h2>
+      <ul className="mt-12">
+        {listed.map((app) => {
+          const short = app.name.replace("Spiral ", "");
+          return (
+            <li key={app.slug} className="border-t border-paper/10 last:border-b">
+              <a
+                href={app.page}
+                className="group flex min-h-11 flex-col gap-1 py-6 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red sm:flex-row sm:items-baseline sm:justify-between sm:gap-8"
+              >
+                <span className="type-heading text-xl text-paper transition-colors group-hover:text-red">
+                  {short}
+                </span>
+                <span className="max-w-md text-sm text-gray sm:text-right">
+                  {PROOF[app.slug] ?? app.tagline}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

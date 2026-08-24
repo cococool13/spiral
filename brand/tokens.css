@@ -1,61 +1,45 @@
-/* Spiral brand tokens — single source of truth for all Spiral surfaces.
+/* Spiral Identity 02 — single source of truth for all Spiral surfaces.
    Consumed by collection/ and apps/* via each surface's scripts/sync-brand.mjs.
    Do not hardcode these values anywhere else. */
 
 :root {
-  /* material — dark cinematic (marketing surfaces) */
-  --spiral-black: #0b0b0c; /* near-black base */
-  --spiral-paper: #f4f3f0; /* warm off-white */
-  --spiral-gray: #8c8d8a; /* concrete gray — secondary text, dividers */
-  --spiral-concrete: #d8d6d1; /* light concrete — card surfaces on dark */
+  /* Identity 02 materials */
+  --spiral-void: #080809; /* page */
+  --spiral-paper: #f1efe8; /* type on void; labels on red; sheets */
+  --spiral-helix: #d52e2b; /* mark, the one action, warnings. Never a page fill. */
+  --spiral-mute: #8a8880; /* secondary on void (5.7:1) */
+  --spiral-lift: #131315; /* one step up from void */
 
-  /* material — light concrete (app surfaces) */
-  --spiral-conc-01: #ebe9e4;
-  --spiral-conc-02: #dddad3;
-  --spiral-conc-03: #cfccc4;
-  --spiral-ink: #10181b;
-  --spiral-steel: #666863;
+  /* Aliases so existing CSS keeps compiling. Prefer the names above on new work. */
+  --spiral-black: var(--spiral-void);
+  --spiral-gray: var(--spiral-mute);
+  --spiral-concrete: #d8d4c8;
+  --spiral-conc-01: var(--spiral-void);
+  --spiral-conc-02: var(--spiral-lift);
+  --spiral-conc-03: #1c1c1f;
+  --spiral-ink: #121214; /* text on paper, never on the page */
+  --spiral-steel: #66645e; /* secondary on paper only */
+  --spiral-red: var(--spiral-helix);
+  --spiral-oxblood: #6f1011; /* legacy dawn. Do not use on the Identity 02 hero. */
+  --spiral-red-fill: color-mix(in srgb, var(--spiral-oxblood) 10%, var(--spiral-red));
 
-  /* accent — helix red. Interactive elements, the mark, warnings. Never a background fill. */
-  --spiral-red: #d52e2b;
-  --spiral-oxblood: #6f1011;
-
-  /* light temperatures — the /cool page ONLY.
-     Scoped exception to the palette rule, and the only one. These are not
-     Spiral brand colours and must never appear on a product surface, in an
-     app, or on any other page of the site. Anything outside
-     collection/app/cool/ using a --cool-* value is a bug.
-
-     They are named for real light sources rather than hues on purpose. The
-     page is a night-into-morning ride through real places, and lighting it
-     from a spectrum instead of from actual lamps and sky is what made an
-     earlier version read as science fiction. */
-  --cool-void: #06070a; /* unlit night */
-  --cool-asphalt: #16181c; /* wet road surface */
-  --cool-sodium: #ff9d4a; /* high-pressure sodium street lamp */
-  --cool-tungsten: #ffc98a; /* warm interior lamp */
-  --cool-mercury: #cfe0f5; /* cold fluorescent and LED */
-  --cool-dusk: #26406e; /* sky before sunrise */
-  --cool-horizon: #ff7b52; /* the sunrise band itself */
-  --cool-daylight: #e8eff7; /* open sky, full morning */
-  --cool-moss: #46523c; /* roadside ground */
-
-  /* type */
-  --spiral-font-display: "Archivo", sans-serif; /* variable: wdth + wght */
-  --spiral-font-mono: "IBM Plex Mono", monospace;
-  --spiral-wdth-display: 125;
-  --spiral-wght-display: 850;
-  --spiral-wdth-heading: 112;
-  --spiral-wght-heading: 700;
+  /* type — Host Grotesk, static files. Ignore leftover variation settings. */
+  --spiral-font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --spiral-wdth-display: 100;
+  --spiral-wght-display: 400;
+  --spiral-wdth-heading: 100;
+  --spiral-wght-heading: 400;
 
   /* rhythm */
   --spiral-unit: 8px;
-  --spiral-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --spiral-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spiral-dur-fast: 150ms;
   --spiral-dur-slow: 400ms;
 
-  /* glass — CTA pills only, never surfaces */
-  --spiral-radius-ctl: 999px;
+  /* chrome — surfaces are square; controls are 12px. Pills (999px) are retired. */
+  --spiral-radius-ctl: 12px;
   --spiral-glass-blur: blur(16px) saturate(1.7);
   --spiral-glass-edge: rgba(255, 255, 255, 0.45);
   --spiral-glass-sheen: linear-gradient(

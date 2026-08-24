@@ -59,10 +59,12 @@ export default function AppBar({
 
   return (
     <header className="bar" ref={bar}>
-      <span className="bar__mark" aria-hidden="true" />
-      <h1 className="bar__name">
-        <span className="bar__collection">Spiral</span> {app}
-      </h1>
+      <div className="bar__brand">
+        <span className="bar__mark" aria-hidden="true" />
+        <h1 className="bar__name">
+          <span className="bar__collection">Spiral</span> {app}
+        </h1>
+      </div>
 
       <button
         type="button"

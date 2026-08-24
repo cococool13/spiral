@@ -117,4 +117,13 @@ for (const { arch, triple } of MAC_TARGETS) {
   console.log(`build-sidecar: ${triple}`);
 }
 
+// `tauri build --target universal-apple-darwin` looks for this triple, not
+// the two slices. The slices stay: live sidecar tests resolve the host one.
+const arm = join(out, "llama-server-aarch64-apple-darwin");
+const intel = join(out, "llama-server-x86_64-apple-darwin");
+const universal = join(out, "llama-server-universal-apple-darwin");
+run("lipo", ["-create", arm, intel, "-output", universal]);
+chmodSync(universal, 0o755);
+console.log("build-sidecar: universal-apple-darwin");
+
 console.log("build-sidecar: done. `pnpm bundle` can now bundle it.");

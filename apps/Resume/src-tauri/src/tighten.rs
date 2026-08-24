@@ -11,34 +11,13 @@
 //! in someone's mouth on a document they are judged by.
 
 use crate::model::ResumeDoc;
+use crate::openers::{FILLER_OPENERS, PRONOUN_OPENERS};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tightened {
     pub text: String,
     pub notes: Vec<String>,
 }
-
-/// Leading phrases that say nothing. Removed, and the sentence restarts at the
-/// next word. Longest first, so "Was responsible for" wins over "Responsible".
-const FILLER_OPENERS: &[&str] = &[
-    "was responsible for",
-    "were responsible for",
-    "responsible for",
-    "duties included",
-    "duties included:",
-    "tasked with",
-    "was tasked with",
-    "helped to",
-    "assisted with",
-    "assisted in",
-    "worked on",
-    "worked with",
-    "involved in",
-    "in charge of",
-];
-
-/// Leading pronouns. A resume bullet is not a sentence about "I".
-const PRONOUN_OPENERS: &[&str] = &["i ", "i've ", "i have ", "my ", "we ", "we've "];
 
 /// Weak opener → the verb a reader expects, in (as written, past, present) form.
 /// Closed on purpose: an unknown verb is left exactly as the person wrote it.
@@ -49,16 +28,6 @@ const PRONOUN_OPENERS: &[&str] = &["i ", "i've ", "i have ", "my ", "we ", "we'v
 /// at doubled consonants and dropped `e`s, and a guess here rewrites a verb on
 /// someone's resume. Listing them is duller and cannot be wrong.
 const VERBS: &[(&str, &str, &str)] = &[
-    ("help", "Supported", "Support"),
-    ("helped", "Supported", "Support"),
-    ("make", "Built", "Build"),
-    ("made", "Built", "Build"),
-    ("do", "Delivered", "Deliver"),
-    ("did", "Delivered", "Deliver"),
-    ("get", "Secured", "Secure"),
-    ("got", "Secured", "Secure"),
-    ("use", "Applied", "Apply"),
-    ("used", "Applied", "Apply"),
     ("run", "Ran", "Run"),
     ("ran", "Ran", "Run"),
     ("lead", "Led", "Lead"),
@@ -69,11 +38,6 @@ const VERBS: &[(&str, &str, &str)] = &[
     ("built", "Built", "Build"),
     ("manage", "Managed", "Manage"),
     ("managed", "Managed", "Manage"),
-    ("helping", "Supported", "Supporting"),
-    ("making", "Built", "Building"),
-    ("doing", "Delivered", "Delivering"),
-    ("getting", "Secured", "Securing"),
-    ("using", "Applied", "Applying"),
     ("running", "Ran", "Running"),
     ("leading", "Led", "Leading"),
     ("writing", "Wrote", "Writing"),
@@ -194,9 +158,10 @@ mod tests {
     }
 
     #[test]
-    fn a_weak_opening_verb_is_replaced_from_the_closed_table() {
-        assert_eq!(past("Helped the team ship 3 features"), "Supported the team ship 3 features");
-        assert_eq!(past("Used Rust to cut latency"), "Applied Rust to cut latency");
+    fn a_known_verb_is_put_in_the_right_tense() {
+        assert_eq!(past("Manage a team of 6"), "Managed a team of 6");
+        assert_eq!(past("Helped the team ship 3 features"), "Helped the team ship 3 features");
+        assert_eq!(past("Used Rust to cut latency"), "Used Rust to cut latency");
     }
 
     #[test]

@@ -2,6 +2,7 @@
 //! resumes use — and the split of a document into those sections.
 
 use super::lines::is_bullet;
+use std::sync::OnceLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section {
@@ -48,6 +49,9 @@ pub(super) const HEADINGS: &[(&str, Section)] = &[
     ("academic projects", Section::Projects),
     ("key projects", Section::Projects),
     ("skills", Section::Skills),
+    ("languages", Section::Skills),
+    ("language skills", Section::Skills),
+    ("languages spoken", Section::Skills),
     ("technical skills", Section::Skills),
     ("technical proficiencies", Section::Skills),
     ("core skills", Section::Skills),
@@ -72,6 +76,11 @@ pub(super) const HEADINGS: &[(&str, Section)] = &[
     ("community involvement", Section::Leadership),
     ("campus involvement", Section::Leadership),
     ("awards", Section::Awards),
+    ("certifications", Section::Awards),
+    ("certificates", Section::Awards),
+    ("licences", Section::Awards),
+    ("licenses", Section::Awards),
+    ("professional certifications", Section::Awards),
     ("honors", Section::Awards),
     ("honours", Section::Awards),
     ("achievements", Section::Awards),
@@ -149,6 +158,29 @@ pub(super) const FOREIGN_HEADINGS: &[(&str, Section)] = &[
     ("competenze", Section::Skills),
     ("lingue", Section::Skills),
 ];
+
+/// All-caps forms of every heading, longest first. PDF extraction glues a
+/// heading onto the words beside it; finding the caps form is what cuts it
+/// back out. "AND" headings also match the "&" the templates print.
+pub(super) fn all_caps_needles() -> &'static [String] {
+    static NEEDLES: OnceLock<Vec<String>> = OnceLock::new();
+    NEEDLES.get_or_init(|| {
+        let mut out: Vec<String> = HEADINGS
+            .iter()
+            .chain(FOREIGN_HEADINGS)
+            .map(|(name, _)| name.to_uppercase())
+            .collect();
+        let ampersand: Vec<String> = out
+            .iter()
+            .filter(|name| name.contains(" AND "))
+            .map(|name| name.replace(" AND ", " & "))
+            .collect();
+        out.extend(ampersand);
+        out.sort_by_key(|name| std::cmp::Reverse(name.len()));
+        out.dedup();
+        out
+    })
+}
 
 /// Accents are stripped before a heading is matched, so one spelling of
 /// "EDUCACIÓN" covers the one somebody typed without the accent too — and the

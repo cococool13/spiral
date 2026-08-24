@@ -1,93 +1,82 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { apps } from "@/lib/apps";
+import DownloadMenu from "./DownloadMenu";
+import Mark from "./Mark";
 
 /**
  * Floating glass pill nav — sits 24px below the top, never flush at y=0.
  *
- * It carries no download control. It used to: a pill reading "Download for"
- * plus a platform glyph, wired to Spiral Wallpaper on every page of the site.
- * It named no app, no version and no size, it was the highest-emphasis control
- * on every screen, and it competed with the hero's own chooser directly
- * beneath it — two primary actions, and the wrong one winning by being higher.
- * Downloads now happen in one place, where the visitor picks the app.
- *
- * Section links are written absolute (`/#apps`, not `#apps`) because the nav
- * renders on `/cool` and the app pages too, where a bare hash would resolve
- * against that route and go nowhere. They show at every width: with the CTA
- * gone there is room, and a phone previously got a bar containing only a
- * wordmark, which put `/cool` and Other Work behind 8,000px of scrolling.
+ * On the home hero it stays off-screen until the visitor scrolls a little,
+ * so the photograph is the first thing they see. App pages show it at once.
+ * Keyboard focus reveals it immediately so it cannot trap a tab stop.
  */
 export default function Nav() {
   const pathname = usePathname();
-  const onCool = pathname?.startsWith("/cool") ?? false;
   // `trailingSlash: true`, so `/wallpaper/` is the real path — compare without
   // the slash so a missing or extra one cannot silently un-match.
   const trimmed = pathname?.replace(/\/$/, "") ?? "";
+  const home = trimmed === "";
+  const work = trimmed === "/work";
   const current = apps.find((app) => app.page && app.page.replace(/\/$/, "") === trimmed);
+  const [revealed, setRevealed] = useState(!home);
+
+  useEffect(() => {
+    if (!home) {
+      setRevealed(true);
+      return;
+    }
+    const onScroll = () => setRevealed(window.scrollY > 48);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [home]);
+
   return (
-    <header className="fixed inset-x-0 top-6 z-50 flex justify-center px-4">
-      <nav className="nav-pill flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-2 sm:px-5">
-        {/* min-h-11 = 44px: the mark and wordmark are only 20px tall, so the
-            link needs its own hit area, and with the download pill gone it is
-            what sets the bar's height. */}
-        <div className="flex items-center gap-3">
-          <a
-            href="/"
-            className="flex min-h-11 items-center gap-3 focus-visible:outline-2 focus-visible:outline-red"
-          >
-            {/* Small filled mark from /brand, recolored paper via CSS mask */}
-            <span
-              aria-hidden="true"
-              className="block h-5 w-5 bg-red"
-              style={{
-                maskImage: "url(/brand/logo/mark.svg)",
-                WebkitMaskImage: "url(/brand/logo/mark.svg)",
-                maskSize: "contain",
-                WebkitMaskSize: "contain",
-                maskRepeat: "no-repeat",
-                WebkitMaskRepeat: "no-repeat",
-                maskPosition: "center",
-                WebkitMaskPosition: "center",
-              }}
-            />
-            <span className="type-heading text-sm tracking-wide">Spiral</span>
-          </a>
-          {/* Which page this is. The wordmark beside it is the way back. */}
-          {current ? (
-            <span
-              aria-current="page"
-              className="hidden border-l border-gray/30 pl-3 font-mono text-xs text-paper sm:block"
+    <header
+      className={`nav-shell fixed inset-x-0 top-[calc(1.5rem+env(safe-area-inset-top,0px))] z-50 px-4 ${
+        revealed ? "" : "pointer-events-none"
+      }`}
+      onFocusCapture={() => setRevealed(true)}
+    >
+      <div className={`nav-bar ${revealed ? "nav-bar--in" : ""}`}>
+        <nav className="nav-pill mx-auto grid w-full min-w-0 max-w-4xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-2 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3 justify-self-start">
+            <a
+              href="/"
+              className="flex min-h-11 items-center gap-3 focus-visible:outline-2 focus-visible:outline-red"
             >
-              {current.name.replace("Spiral ", "")}
-            </span>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-1 font-mono text-xs text-gray sm:gap-2">
+              <Mark size={24} className="text-red" />
+              <span className="type-heading hidden text-sm tracking-wide sm:inline">
+                Spiral
+              </span>
+            </a>
+            {current ? (
+              <span
+                aria-current="page"
+                className="hidden border-l border-gray/30 pl-3 font-mono text-xs text-paper sm:block"
+              >
+                {current.name.replace("Spiral ", "")}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="justify-self-center">
+            <DownloadMenu />
+          </div>
+
           <a
-            href="/#apps"
-            className="inline-flex min-h-11 items-center px-2 transition-colors hover:text-paper"
+            href="/work/"
+            aria-current={work ? "page" : undefined}
+            className="glass-pill glass-pill--secondary glass-pill--nav justify-self-end"
           >
-            Apps
+            <span className="sm:hidden">Work</span>
+            <span className="hidden sm:inline">Other Work</span>
           </a>
-          <a
-            href="/#other-work"
-            className="inline-flex min-h-11 items-center px-2 transition-colors hover:text-paper"
-          >
-            Other Work
-          </a>
-          <a
-            href="/cool/"
-            aria-current={onCool ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center px-2 transition-colors hover:text-paper ${
-              onCool ? "text-paper" : ""
-            }`}
-          >
-            Cool
-          </a>
-        </div>
-      </nav>
+        </nav>
+      </div>
     </header>
   );
 }

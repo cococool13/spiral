@@ -24,26 +24,11 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { APPS, TAG_PREFIXES } from "./apps.manifest.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-// Adding an app here is the whole cost of putting it under the same guard.
-const APPS = {
-  wallpaper: { dir: "apps/wallpaper", crate: "spiral-wallpaper" },
-  slim: { dir: "apps/slim/desktop", crate: "spiral-slim" },
-  clean: { dir: "apps/clean", crate: "spiral-clean" },
-  resume: { dir: "apps/Resume", crate: "spiral-resume" },
-};
-
 const SEMVER = /^\d+\.\d+\.\d+$/;
-
-// Longest prefix first: every tag ends up matching bare `v` otherwise, and
-// `slim-v1.0.1` would be read as a Wallpaper release.
-const TAG_PREFIXES = [
-  { prefix: "slim-v", app: "slim" },
-  { prefix: "clean-v", app: "clean" },
-  { prefix: "v", app: "wallpaper" },
-];
 
 /** `clean-v0.1.0` -> `{ app: "clean", version: "0.1.0" }`, or null. */
 export function parseTag(tag) {
@@ -208,7 +193,7 @@ function checkTag(tag) {
   if (!parsed) {
     fail(
       `"${tag}" is not a release tag this repo understands. ` +
-        `Expected v<x.y.z>, slim-v<x.y.z>, or clean-v<x.y.z>.`,
+        `Expected v<x.y.z>, slim-v<x.y.z>, clean-v<x.y.z>, or resume-v<x.y.z>.`,
     );
   }
   const { app, version } = parsed;

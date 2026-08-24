@@ -1,27 +1,58 @@
-/* Fonts — self-hosted, zero runtime network calls. */
+/* Identity 02 — Host Grotesk, self-hosted. Files synced from /brand. */
 @font-face {
-  font-family: "Archivo";
-  src: url("../fonts/archivo-latin-wdth-normal.woff2") format("woff2");
-  font-weight: 100 900;
-  font-stretch: 62.5% 125%;
+  font-family: "Host Grotesk";
   font-style: normal;
-  font-display: block;
-}
-
-@font-face {
-  font-family: "IBM Plex Mono";
-  src: url("../fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
   font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
   font-style: normal;
-  font-display: block;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-600.woff2") format("woff2");
 }
 
-@font-face {
-  font-family: "IBM Plex Mono";
-  src: url("../fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: block;
+/* Names the Wallpaper CSS already uses, bound to Identity 02 tokens. */
+:root {
+  --conc-01: var(--spiral-void);
+  --conc-02: var(--spiral-lift);
+  --conc-03: var(--spiral-conc-03);
+  --ink-01: var(--spiral-ink);
+  --stl-02: var(--spiral-mute);
+  --hlx-01: var(--spiral-helix);
+  --hlx-02: var(--spiral-oxblood);
+  --paper: var(--spiral-paper);
+  --hlx-01-ink: var(--spiral-red-fill);
+  --font-ui: var(--spiral-font-sans);
+  --font-mono: var(--spiral-font-mono);
+  --wdth-display: 100;
+  --wght-display: 400;
+  --wdth-heading: 100;
+  --wght-heading: 600;
+  --unit: var(--spiral-unit);
+  --ease: var(--spiral-ease);
+  --dur-fast: var(--spiral-dur-fast);
+  --dur-slow: var(--spiral-dur-slow);
+  --radius-ctl: var(--spiral-radius-ctl);
+  --glass-blur: var(--spiral-glass-blur);
+  --glass-edge: var(--spiral-glass-edge);
+  --glass-sheen: var(--spiral-glass-sheen);
 }
 
 *,
@@ -40,7 +71,7 @@ body,
 
 body {
   background: var(--conc-01);
-  color: var(--ink-01);
+  color: var(--paper);
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.5;
@@ -48,6 +79,7 @@ body {
   overflow: hidden;
   user-select: none;
   cursor: default;
+  color-scheme: dark;
 }
 
 /* Chrome behaves like a native window; prose does not. Error copy, the

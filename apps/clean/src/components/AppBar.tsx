@@ -9,15 +9,9 @@ export interface BarItem {
 }
 
 /**
- * The bar every Spiral app wears: the mark, the app's name, and one menu.
- *
- * There is no rule under it. Separation is space and material, which is the
- * design system's first principle and the reason four apps that used to have
- * four different chromes now read as one collection. The word before the app's
- * own name is set quiet, so "Spiral" recedes and the app is what you read.
- *
- * The menu is a menu even when it holds one item: an app that grows a second
- * destination should not grow a different header to hold it.
+ * Shared chrome: mark, app name, one menu.
+ * Wallpaper and Clean stay byte-identical (`node scripts/check-app-bar.mjs`).
+ * Resume may diverge. Slim has its own header.
  */
 export default function AppBar({
   app,

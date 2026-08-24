@@ -5,23 +5,32 @@
 @import "../public/brand/tokens.css";
 
 @font-face {
-  font-family: "Archivo";
-  src: url("/brand/fonts/archivo-latin-wdth-normal.woff2") format("woff2");
-  font-weight: 100 900;
-  font-stretch: 62.5% 125%;
-  font-display: swap;
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  src: url("/brand/fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+  font-family: "Host Grotesk";
+  font-style: normal;
   font-weight: 400;
   font-display: swap;
+  src: url("/brand/fonts/host-grotesk-400.woff2") format("woff2");
 }
 @font-face {
-  font-family: "IBM Plex Mono";
-  src: url("/brand/fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+  font-family: "Host Grotesk";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/host-grotesk-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: normal;
   font-weight: 500;
   font-display: swap;
+  src: url("/brand/fonts/host-grotesk-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/brand/fonts/host-grotesk-600.woff2") format("woff2");
 }
 
 @theme {
@@ -37,9 +46,13 @@
   --color-conc2: var(--spiral-conc-02);
   --color-conc3: var(--spiral-conc-03);
   --font-display: var(--spiral-font-display);
+  --font-sans: var(--spiral-font-sans);
   --font-mono: var(--spiral-font-mono);
   --ease-spiral: var(--spiral-ease);
   --radius-ctl: var(--spiral-radius-ctl);
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.4;
+  --aspect-work: 16 / 10;
 }
 
 html {
@@ -61,18 +74,6 @@ a:focus-visible {
   outline-offset: 3px;
 }
 
-/* The hero mark ships hidden in server HTML so it never flashes fully
-   assembled before hydration; the component unhides itself on mount.
-   (Must live on the svg, not the pieces — framer writes piece opacity as an
-   SVG attribute, which any CSS rule would override.) */
-.pre-hydration-hidden {
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pre-hydration-hidden {
-    opacity: 1;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -82,11 +83,33 @@ a:focus-visible {
 body {
   background: var(--spiral-black);
   color: var(--spiral-paper);
-  font-family: var(--spiral-font-display);
-  font-variation-settings: "wdth" 100;
+  font-family: var(--spiral-font-sans);
   font-weight: 400;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+.skip-link {
+  position: absolute;
+  z-index: 60;
+  left: var(--spiral-unit);
+  top: var(--spiral-unit);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  background: var(--spiral-paper);
+  color: var(--spiral-ink);
+  font-family: var(--spiral-font-mono);
+  font-size: 0.875rem;
+  text-decoration: none;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skip-link:focus-visible {
+  clip-path: none;
+  outline: 2px solid var(--spiral-red);
+  outline-offset: 3px;
 }
 
 p {
@@ -95,19 +118,17 @@ p {
 
 .type-display {
   font-family: var(--spiral-font-display);
-  font-variation-settings: "wdth" var(--spiral-wdth-display);
-  font-weight: var(--spiral-wght-display);
-  letter-spacing: -0.02em;
-  line-height: 0.95;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 0.96;
   text-wrap: balance;
 }
 
 .type-heading {
   font-family: var(--spiral-font-display);
-  font-variation-settings: "wdth" var(--spiral-wdth-heading);
-  font-weight: var(--spiral-wght-heading);
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.12;
   text-wrap: balance;
 }
 
@@ -123,145 +144,111 @@ p {
   display: inline-block;
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--spiral-red);
   margin-right: 10px;
   vertical-align: 2px;
 }
 
-/* Glass pill — the ONE glassmorphism treatment on the site. CTAs only. */
+/* Stadium capsules — long, low, one fill. CTAs only. */
 .glass-pill {
   position: relative;
   isolation: isolate;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
   min-height: 44px;
-  padding: 10px 24px;
-  border-radius: var(--spiral-radius-ctl);
-  border: 1px solid var(--spiral-glass-edge);
-  background: rgba(213, 46, 43, 0.28);
-  backdrop-filter: var(--spiral-glass-blur);
-  -webkit-backdrop-filter: var(--spiral-glass-blur);
-  box-shadow:
-    rgba(0, 0, 0, 0.08) 0 24px 48px,
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  min-width: min(14rem, 100%);
+  max-width: 100%;
+  padding: 0 2.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--spiral-red-fill);
   color: var(--spiral-paper);
-  font-family: var(--spiral-font-mono);
+  font-family: var(--spiral-font-sans);
   font-weight: 500;
   font-size: 0.875rem;
+  letter-spacing: 0;
   white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
   transition:
-    transform var(--spiral-dur-fast) var(--spiral-ease),
     background var(--spiral-dur-fast) var(--spiral-ease),
-    border-color var(--spiral-dur-fast) var(--spiral-ease);
-}
-.glass-pill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--spiral-glass-sheen);
-  opacity: 0.35;
-  pointer-events: none;
+    border-color var(--spiral-dur-fast) var(--spiral-ease),
+    color var(--spiral-dur-fast) var(--spiral-ease);
 }
 @media (hover: hover) and (pointer: fine) {
   .glass-pill:hover {
-    transform: translateY(-1px);
-    background: rgba(111, 16, 17, 0.45);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: var(--spiral-oxblood);
   }
 }
 .glass-pill:active {
-  transform: scale(0.97);
-  background: rgba(111, 16, 17, 0.6);
+  background: var(--spiral-oxblood);
 }
 .glass-pill:focus-visible {
   outline: 2px solid var(--spiral-red);
   outline-offset: 3px;
 }
 .glass-pill--secondary {
-  background: rgba(244, 243, 240, 0.08);
+  min-width: min(14rem, 100%);
+  background: transparent;
+  border-color: color-mix(in oklab, var(--spiral-paper) 28%, transparent);
   color: var(--spiral-paper);
-}
-.glass-pill--secondary:hover {
-  background: rgba(244, 243, 240, 0.14);
-}
-.glass-pill--disabled {
-  background: rgba(140, 141, 138, 0.12);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: var(--spiral-gray);
-  cursor: not-allowed;
-  box-shadow: none;
-}
-.glass-pill--disabled::after {
-  opacity: 0.1;
-}
-.glass-pill--disabled:hover {
-  transform: none;
-  background: rgba(140, 141, 138, 0.12);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Block CTA — the hero's one primary action. Square corners, which is the
-   only radius this system allows besides a full pill: a paper field carrying
-   the words, and a red chip carrying the action. Red stays the interaction
-   colour and nothing else on the surface competes with it. */
-.btn-block {
-  display: inline-flex;
-  align-items: stretch;
-  min-height: 52px;
-  border-radius: 0;
-  background: var(--spiral-paper);
-  color: var(--spiral-ink);
-  font-family: var(--spiral-font-mono);
-  font-weight: 500;
-  font-size: 0.875rem;
-  white-space: nowrap;
-  box-shadow: rgba(0, 0, 0, 0.45) 0 18px 40px -18px;
-  transition:
-    transform var(--spiral-dur-fast) var(--spiral-ease),
-    box-shadow var(--spiral-dur-fast) var(--spiral-ease);
-}
-.btn-block__label {
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-}
-.btn-block__chip {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  flex: none;
-  background: var(--spiral-red);
-  color: var(--spiral-paper);
-  transition: background var(--spiral-dur-fast) var(--spiral-ease);
 }
 @media (hover: hover) and (pointer: fine) {
-  .btn-block:hover {
-    transform: translateY(-2px);
-    box-shadow: rgba(0, 0, 0, 0.55) 0 24px 48px -20px;
-  }
-  .btn-block:hover .btn-block__chip {
-    background: var(--spiral-oxblood);
+  .glass-pill--secondary:hover {
+    background: color-mix(in oklab, var(--spiral-paper) 10%, transparent);
+    border-color: color-mix(in oklab, var(--spiral-paper) 45%, transparent);
   }
 }
-.btn-block:active {
-  transform: translateY(0) scale(0.985);
+.glass-pill--disabled {
+  min-width: min(14rem, 100%);
+  background: color-mix(in oklab, var(--spiral-mute) 16%, transparent);
+  border-color: transparent;
+  color: var(--spiral-gray);
+  cursor: not-allowed;
 }
-.btn-block:focus-visible {
-  outline: 2px solid var(--spiral-red);
-  outline-offset: 3px;
+.glass-pill--disabled:hover {
+  background: color-mix(in oklab, var(--spiral-mute) 16%, transparent);
+}
+
+/* Compact enough to sit in the floating nav without becoming a second hero. */
+.glass-pill--nav {
+  min-width: 0;
+  padding: 0 1.25rem;
+  font-size: 0.8125rem;
+  gap: 8px;
+}
+
+/* Download disclosure — exit only. Instant open; ease-in fade on close. */
+.download-panel {
+  opacity: 0;
+  pointer-events: none;
+  border-radius: var(--spiral-radius-ctl);
+  transition: opacity 200ms ease-in;
+}
+.download-panel--open {
+  opacity: 1;
+  pointer-events: auto;
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .download-panel {
+    transition: opacity var(--spiral-dur-fast) ease-in;
+  }
 }
 
 /* Rise — the arrival entrance, for things already on screen at load.
-   In CSS rather than in JavaScript for the same reason as `.reveal`, plus one
-   specific to the hero: the headline is the LCP element, and shipping it as
-   `opacity: 0` made the largest paint wait on a framer chunk. A CSS animation
-   runs whether or not script does. */
+   In CSS rather than in JavaScript: the headline is the LCP element, and
+   shipping it as `opacity: 0` made the largest paint wait on a framer chunk.
+   A CSS animation runs whether or not script does. */
 .rise {
-  animation: rise-in 640ms var(--spiral-ease) both;
-  animation-delay: calc(var(--rise-step, 0) * 90ms);
+  animation: rise-in 420ms var(--spiral-ease) both;
+  animation-delay: calc(var(--rise-step, 0) * 50ms);
 }
 @keyframes rise-in {
   from {
@@ -277,12 +264,12 @@ p {
    travel to. */
 .rise--figure {
   animation-name: rise-figure;
-  animation-duration: 900ms;
+  animation-duration: 520ms;
 }
 @keyframes rise-figure {
   from {
     opacity: 0;
-    transform: scale(0.94);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -295,163 +282,210 @@ p {
   }
 }
 
-/* Reveal — the section entrance, on a view timeline rather than in JavaScript.
-   Visible is the default state and the rise is the enhancement, so nothing on
-   the page depends on a script having run. A browser without view timelines
-   shows the content and skips the movement, which is the correct trade for a
-   decorative entrance.
-
-   `--reveal-step` staggers a group. Scroll-driven animations have no time
-   delay, so each item instead starts its rise a little further into the
-   section's entry. */
-.reveal {
-  --reveal-step: 0;
-  /* Scroll distance one rung of the stagger is worth. The default suits a
-     handful of blocks; a dense list sets it far smaller so 54 rungs still fit
-     inside the section's entry. */
-  --reveal-spread: 7%;
-  /* How far the element travels. Small items move a small distance. */
-  --reveal-lift: 32px;
+/* Other work — editorial index. Always on the page; the cover follows
+   the active row. Kind chips and rows share the control radius. */
+.work-cover {
+  animation: cover-in 220ms var(--spiral-ease) both;
 }
-@keyframes reveal-rise {
+@keyframes cover-in {
   from {
     opacity: 0;
-    transform: translateY(var(--reveal-lift));
   }
   to {
     opacity: 1;
-    transform: none;
-  }
-}
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .reveal {
-      animation: reveal-rise linear both;
-      animation-timeline: view();
-      animation-range: entry calc(var(--reveal-step) * var(--reveal-spread)) cover 24%;
-    }
-  }
-}
-
-/* Work stack — seven projects as a deck that opens into a list.
-   Closed, each row is pulled up under the one above it and only `--peek` of
-   itself shows; opened, the pull disappears and they become an ordinary list.
-
-   `margin-top` rather than `transform` on purpose. A transform would slide the
-   rows over one another and leave the section its full height in both states,
-   which is not collapsing — it is hiding. The margin is what makes the page
-   actually shorter, and seven rows moving one property on one click is a cost
-   this surface can afford. */
-.work-stack {
-  --peek: 1.75rem;
-  /* An explicit row height, because the collapse is a negative `margin-top`
-     and a percentage margin resolves against the container's *width*, not the
-     element's height — `calc(var(--peek) - 100%)` subtracted ~700px and folded
-     the whole stack to nothing. The row is the thumbnail plus its padding. */
-  --row: 6rem;
-}
-@media (min-width: 640px) {
-  .work-stack {
-    --row: 7.5rem;
-  }
-}
-.work-stack > li {
-  position: relative;
-  transition:
-    margin-top 520ms var(--spiral-ease),
-    transform 520ms var(--spiral-ease),
-    opacity 360ms var(--spiral-ease);
-}
-.work-stack > li > * {
-  height: var(--row);
-}
-.work-stack:not(.is-open) > li + li {
-  /* Everything below the top card is pulled up to `--peek` of visible edge. */
-  margin-top: calc(var(--peek) - var(--row));
-}
-.work-stack:not(.is-open) > li + li {
-  /* A little narrower the further down the deck, so the stack reads as depth.
-     Scale only — an opacity fade here made every buried card translucent, and
-     a translucent card in a stack prints the title underneath it straight
-     through the one on top. */
-  transform: scale(calc(1 - var(--i) * 0.014));
-}
-.work-stack.is-open > li + li {
-  margin-top: 0.5rem;
-}
-.work-stack > li > * {
-  box-shadow: rgba(16, 24, 27, 0.06) 0 -8px 20px -8px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .work-stack > li {
-    transition-duration: 1ms;
-  }
-}
-
-/* Footer room — one-point perspective, and the single source of its geometry.
-   Every wall polygon, the panel and the rim read these four numbers, so the
-   perspective cannot come apart.
-
-   Narrow first. A footer on a phone is tall and thin, and the desktop numbers
-   there produce a vertical shaft whose panel runs straight down the middle of
-   the content. Wide-and-shallow keeps the panel a band the copy sits over
-   rather than a bar the copy is split by. */
-.footer-room {
-  --room-l: 12%;
-  --room-r: 88%;
-  --room-t: 32%;
-  --room-b: 56%;
-}
-@media (min-width: 1024px) {
-  .footer-room {
-    --room-l: 28%;
-    --room-r: 72%;
-    --room-t: 25%;
-    --room-b: 66%;
-  }
-}
-
-/* Hero orbit — the rosette behind the mark. Each ring turns at its own rate
-   about the shared centre, which is what makes the figure read as orbits
-   rather than as a spinning graphic. Transform-only, so it composites. */
-.orbit-ring {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-  animation: orbit-turn var(--orbit-dur, 72s) linear infinite;
-}
-.orbit-ring--rev {
-  animation-direction: reverse;
-}
-@keyframes orbit-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-/* A slow lean, so the rosette sits in space instead of flat on the glass */
-.orbit-tilt {
-  animation: orbit-lean 28s ease-in-out infinite alternate;
-}
-@keyframes orbit-lean {
-  from {
-    transform: perspective(1400px) rotateX(20deg) rotateZ(-4deg);
-  }
-  to {
-    transform: perspective(1400px) rotateX(9deg) rotateZ(4deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .orbit-ring,
-  .orbit-tilt {
+  .work-cover {
     animation: none;
   }
-  .orbit-tilt {
-    transform: perspective(1400px) rotateX(14deg);
+}
+
+.kind-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--spiral-radius-ctl);
+  border: 1px solid color-mix(in oklab, var(--spiral-ink) 15%, transparent);
+  background: transparent;
+  color: var(--spiral-steel);
+  font-family: var(--spiral-font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color var(--spiral-dur-fast) var(--spiral-ease),
+    color var(--spiral-dur-fast) var(--spiral-ease),
+    border-color var(--spiral-dur-fast) var(--spiral-ease),
+    transform var(--spiral-dur-fast) var(--spiral-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .kind-chip:hover {
+    color: var(--spiral-ink);
+    border-color: color-mix(in oklab, var(--spiral-ink) 35%, transparent);
   }
-  .btn-block,
-  .btn-block:hover,
-  .btn-block__chip {
-    transition: none;
+}
+.kind-chip.is-on {
+  background: var(--spiral-ink);
+  border-color: var(--spiral-ink);
+  color: var(--spiral-paper);
+}
+.kind-chip:active {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kind-chip:active {
     transform: none;
+  }
+}
+
+.work-row {
+  position: relative;
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto 1fr auto;
+  column-gap: 1rem;
+  align-items: start;
+  padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid color-mix(in oklab, var(--spiral-ink) 10%, transparent);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--spiral-dur-fast) var(--spiral-ease),
+    transform var(--spiral-dur-fast) var(--spiral-ease);
+}
+.work-row:active {
+  transform: scale(0.98);
+}
+.work-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--spiral-red);
+  opacity: 0;
+  transition: opacity var(--spiral-dur-fast) var(--spiral-ease);
+}
+.work-row:hover,
+.work-row:focus-visible {
+  background: color-mix(in oklab, var(--spiral-concrete) 55%, transparent);
+}
+.work-row.is-on {
+  background: var(--spiral-concrete);
+}
+.work-row.is-on::before {
+  opacity: 1;
+}
+
+.work-plate {
+  display: block;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--spiral-ink) 15%, transparent);
+  background: var(--spiral-concrete);
+  color: inherit;
+  text-decoration: none;
+}
+
+.cover-frame {
+  outline: 1px solid color-mix(in oklab, var(--spiral-ink) 12%, transparent);
+  outline-offset: -1px;
+}
+
+.nav-shell {
+  width: 100%;
+  max-width: 100%;
+}
+.nav-bar {
+  transform: translateY(calc(-100% - 2rem));
+  pointer-events: none;
+  transition: transform 280ms var(--spiral-ease);
+}
+.nav-bar--in {
+  transform: none;
+  pointer-events: auto;
+}
+
+/* Superwhisper zoom-out: sticky plate, --hero-p 0→1 as the pin scrolls. */
+.hero-pin {
+  height: 180svh;
+  --hero-p: 0;
+}
+@media (max-width: 768px) {
+  .hero-pin {
+    height: 130svh;
+  }
+}
+.hero-sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--spiral-void);
+}
+.hero-frame {
+  position: absolute;
+  inset: calc(var(--hero-p) * 6vh) calc(var(--hero-p) * 6vw);
+  overflow: hidden;
+  border-radius: calc(var(--hero-p) * 16px);
+}
+.hero-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(calc(1.18 - var(--hero-p) * 0.18));
+  will-change: transform;
+}
+.hero-wash {
+  position: absolute;
+  inset: 0;
+}
+.hero-copy {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  inset: -12% -20%;
+  background: radial-gradient(
+    ellipse 70% 65% at 50% 50%,
+    color-mix(in oklab, var(--spiral-void) 62%, transparent) 0%,
+    transparent 72%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-pin {
+    height: 100svh;
+  }
+  .hero-frame {
+    inset: 0;
+    border-radius: 0;
+  }
+  .hero-photo {
+    transform: none;
+    will-change: auto;
+  }
+  .nav-bar {
+    transition: none;
   }
 }
 
@@ -465,7 +499,7 @@ p {
 .nav-pill {
   border-radius: var(--spiral-radius-ctl);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(11, 11, 12, 0.92);
+  background: color-mix(in oklab, var(--spiral-void) 92%, transparent);
   backdrop-filter: var(--spiral-glass-blur);
   -webkit-backdrop-filter: var(--spiral-glass-blur);
   box-shadow: rgba(0, 0, 0, 0.28) 0 4px 24px;
@@ -475,6 +509,5 @@ p {
   .glass-pill,
   .glass-pill:hover {
     transition: none;
-    transform: none;
   }
 }

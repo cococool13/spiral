@@ -14,6 +14,7 @@ dist-ssr
 
 # synced from /brand at build time — never edit or commit the copy
 src/assets/brand/
+src/assets/fonts/
 
 # Editor directories and files
 .vscode/*

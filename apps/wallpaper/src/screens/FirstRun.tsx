@@ -10,7 +10,7 @@ export function FirstRun({ onDone }: FirstRunProps) {
       <img src={lockupRed} alt="Spiral" className="firstrun__lockup" />
 
       <p className="firstrun__line">
-        Click a wallpaper. It downloads and applies. That’s it.
+        Wallhaven, SFW only. Click a wallpaper. It downloads and applies.
       </p>
 
       <button className="btn-glass btn-glass--primary" onClick={onDone} autoFocus>

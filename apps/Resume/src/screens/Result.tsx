@@ -10,20 +10,13 @@ export function Result({
   versions,
   showing,
   format,
-  canRewrite,
   onShow,
-  onRewrite,
   onAnotherStyle,
 }: {
   versions: BuildResult[];
   showing: number;
   format: ExportFormat;
-  /** Only true when a model tier would actually run — a saved key, or the
-   *  offline model installed. Otherwise there is nothing behind the button,
-   *  so it is not shown at all. */
-  canRewrite: boolean;
   onShow: (index: number) => void;
-  onRewrite: () => void;
   onAnotherStyle: () => void;
 }) {
   const [savedTo, setSavedTo] = useState("");
@@ -51,8 +44,8 @@ export function Result({
   }
 
   return (
-    <section className="panel panel--wide">
-      <h2 className="panel__title">Your resume</h2>
+    <section className="stage stage--result">
+      <h2 className="visually-hidden">Your resume</h2>
       <p className="panel__lede">{result.engine}</p>
 
       {versions.length > 1 ? (
@@ -92,15 +85,10 @@ export function Result({
       {savedTo ? <Notice>Saved to {savedTo}</Notice> : null}
       {error ? <Notice tone="warn">{error}</Notice> : null}
 
-      <div className="panel__actions">
+      <div className="panel__actions panel__actions--dock">
         <button type="button" className="btn btn--primary" disabled={busy} onClick={save}>
           Save the {FORMAT_NAME[format]} to your computer
         </button>
-        {canRewrite ? (
-          <button type="button" className="btn" disabled={busy} onClick={onRewrite}>
-            Rewrite the wording again
-          </button>
-        ) : null}
         <button type="button" className="btn" onClick={onAnotherStyle}>
           Try another style
         </button>

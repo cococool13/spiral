@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { formatBytes } from "../lib/format";
 
@@ -93,6 +93,7 @@ export default function History() {
   const [runs, setRuns] = useState<RunRecord[] | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const confirmRef = useRef<HTMLDialogElement>(null);
 
   const load = useCallback(() => {
     invoke<RunRecord[]>("history_read")
@@ -106,6 +107,15 @@ export default function History() {
   }, []);
 
   useEffect(load, [load]);
+
+  // showModal() gives Escape, focus containment, and a dimmed ::backdrop —
+  // the same modality ConfirmSheet and Uninstall already use.
+  useEffect(() => {
+    const dialog = confirmRef.current;
+    if (!dialog || !confirming) return;
+    dialog.showModal();
+    return () => dialog.close();
+  }, [confirming]);
 
   const clear = () => {
     setConfirming(false);
@@ -161,7 +171,11 @@ export default function History() {
       <p>This log stays on this Mac. It is never sent anywhere.</p>
 
       {confirming && (
-        <div role="dialog" aria-label="Clear history">
+        <dialog
+          ref={confirmRef}
+          aria-label="Clear history"
+          onCancel={() => setConfirming(false)}
+        >
           <p>
             This erases the only record of what Spiral Clean has removed. It does not put anything
             back, and it cannot be undone.
@@ -169,10 +183,10 @@ export default function History() {
           <button type="button" onClick={clear}>
             Clear history
           </button>
-          <button type="button" onClick={() => setConfirming(false)}>
+          <button type="button" autoFocus onClick={() => setConfirming(false)}>
             Cancel
           </button>
-        </div>
+        </dialog>
       )}
     </section>
   );

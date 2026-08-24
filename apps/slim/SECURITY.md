@@ -57,7 +57,7 @@ release; every version after it ships from
 - **No `.pkg`, and no macOS installer other than the signed DMG above.**
 - **No browser extension.**
 - **No standalone website** outside this GitHub repo and
-  [spiral-collection.pages.dev](https://spiral-collection.pages.dev), which
+  [spiralcc.tech](https://spiralcc.tech), which
   links here rather than hosting anything.
 
 If someone offers you a "Spiral Slim" (or "SlimBrave") executable for Windows

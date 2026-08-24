@@ -72,8 +72,8 @@ export type ExportFormat = "pdf" | "docx";
 export interface Draft {
   doc: ResumeDoc;
   template: string;
-  /** Empty until the Format step is reached — a closed set, not a free string,
-   *  so a bad value cannot travel to Rust and be rejected there instead. */
+  /** Empty until PDF or Word is chosen on Build — a closed set, not a free
+   *  string, so a bad value cannot travel to Rust and be rejected there. */
   format: ExportFormat | "";
   accent: string;
   tighten: boolean;
@@ -84,8 +84,9 @@ export interface StoredDoc extends Draft {
   savedAt: string;
 }
 
-/** One of six swatches. The hex comes from Rust — the frontend may not hold
- *  colour values, because `check-hex` allows them only in the token file. */
+/** The closed set of document swatches. The hex comes from Rust — the frontend
+ *  may not hold colour values, because `check-hex` allows them only in the
+ *  token file. */
 export interface Accent {
   id: string;
   hex: string;
@@ -133,6 +134,23 @@ export function emptyRole(id: string): Role {
     start: emptyDate(),
     end: emptyDate(),
     bullets: [],
+  };
+}
+
+/** A blank document ready to type into. One empty role with one empty bullet,
+ *  so Check opens as a form rather than a heading and an Add button. Ids match
+ *  the first experience entry Rust would mint. Empty bullets are skipped when
+ *  typesetting — they do not print as holes. */
+export function scratchDoc(): ResumeDoc {
+  const id = "exp-0";
+  return {
+    ...emptyDoc(),
+    experience: [
+      {
+        ...emptyRole(id),
+        bullets: [{ id: `${id}-b-0`, text: "" }],
+      },
+    ],
   };
 }
 
@@ -217,4 +235,6 @@ export interface EngineInfo {
   host: string;
   /** Where this provider issues keys, or empty when there is nowhere to go. */
   keyUrl: string;
+  /** First launch has not yet chosen a wording path. */
+  needsSetup: boolean;
 }

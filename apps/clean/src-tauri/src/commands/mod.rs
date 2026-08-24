@@ -5,7 +5,8 @@
 //!
 //! Split by screen when the single file passed 2,200 lines. What stays
 //! here is what more than one screen needs: the timestamp, the canonical
-//! home, and the tally that turns removal reports into counts.
+//! home, and re-exports of the clean-run tally helpers Uninstall and
+//! Leftovers share.
 
 pub(crate) mod clean;
 pub(crate) mod leftovers;
@@ -15,53 +16,17 @@ pub use clean::*;
 pub use leftovers::*;
 pub use uninstall::*;
 
-use crate::{catalog, paths, remove};
+use crate::paths;
 use std::path::{Path, PathBuf};
-use clean::FailedItem;
 
-/// What a batch of `remove::Report`s adds up to. Split out of `run_clean` so
-/// it can be tested against hand-built outcomes without going anywhere near
-/// `remove::execute` — pure aggregation over reports that never touched a
-/// filesystem, temp-rooted or otherwise.
-#[derive(Default)]
-pub(crate) struct Tally {
-    removed: usize,
-    partially_removed: Vec<FailedItem>,
-    excluded: usize,
-    failed: Vec<FailedItem>,
-}
+/// Max paths returned per category across the IPC bridge.
+/// The UI's disclosure view caps expansion at 500. `items` (true file count)
+/// and `bytes` (total size) are always complete; this bounds only the preview list.
+/// Shipping tens of thousands of paths to the webview costs seconds on real machines.
+pub(crate) const PATHS_PREVIEW_LIMIT: usize = 500;
 
-pub(crate) fn tally(reports: Vec<remove::Report>) -> Tally {
-    let mut t = Tally::default();
-    for remove::Report { path, outcome } in reports {
-        let path = path.display().to_string();
-        match outcome {
-            remove::Outcome::Removed(_) => t.removed += 1,
-            // Not `failed`. Something *was* destroyed here.
-            remove::Outcome::PartiallyRemoved(reason) => {
-                t.partially_removed.push(FailedItem { path, reason })
-            }
-            remove::Outcome::Excluded(_) => t.excluded += 1,
-            remove::Outcome::Denied(reason) | remove::Outcome::Failed(reason) => {
-                t.failed.push(FailedItem { path, reason })
-            }
-        }
-    }
-    t
-}
-
-/// A duplicated id would otherwise scan the same category twice: the second
-/// candidate for each path finds the file the first one already removed and
-/// lands in `failed`, showing the user a list of OS-level errors after what
-/// was actually a clean run. `dedup_by` only removes *adjacent* duplicates,
-/// so the sort has to come first; ordering afterward has no other meaning.
-pub(crate) fn dedup_by_id(
-    mut entries: Vec<(String, &'static catalog::CatalogEntry)>,
-) -> Vec<(String, &'static catalog::CatalogEntry)> {
-    entries.sort_by(|a, b| a.0.cmp(&b.0));
-    entries.dedup_by(|a, b| a.0 == b.0);
-    entries
-}
+// Shared by Uninstall and Leftovers; owned by `catalog_clean` with Clean.
+pub(crate) use crate::catalog_clean::{tally, Tally};
 
 /// Canonicalise `home` the same way `remove::execute`'s own `Roots::new`
 /// will when it builds its scope roots — `strip_firmlink(resolve(home))` —

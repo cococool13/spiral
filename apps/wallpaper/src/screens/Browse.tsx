@@ -25,8 +25,9 @@ export function Browse() {
   const [lastPage, setLastPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
-  // Privacy pillar: no network until the user acts.
-  const [touched, setTouched] = useState(false);
+  // First-run already said Wallhaven would be reached. Opening Browse is the
+  // act; an empty window is not the errand.
+  const [touched, setTouched] = useState(true);
   const requestId = useRef(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   // Roving tabindex: only this tile is in the tab order.

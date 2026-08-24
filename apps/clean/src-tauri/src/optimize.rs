@@ -680,7 +680,7 @@ pub fn optimize_execute(
         &Effects {
             run_command: &|command| run_plain(&[command]),
             remove_catalog: &|catalog_id| {
-                crate::commands::run_clean(
+                crate::catalog_clean::run_clean(
                     vec![catalog_id.to_string()],
                     &dir,
                     &home,

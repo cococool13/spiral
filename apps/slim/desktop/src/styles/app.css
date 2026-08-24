@@ -1,6 +1,68 @@
+/* Identity 02 — Host Grotesk, self-hosted. Files synced from /brand. */
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Host Grotesk";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/host-grotesk-600.woff2") format("woff2");
+}
+
+:root {
+  --conc-01: var(--spiral-void);
+  --conc-02: var(--spiral-lift);
+  --conc-03: var(--spiral-conc-03);
+  --ink-01: var(--spiral-ink);
+  --stl-02: var(--spiral-mute);
+  --ink-02: var(--spiral-mute);
+  --hlx-01: var(--spiral-helix);
+  --hlx-02: var(--spiral-oxblood);
+  --paper: var(--spiral-paper);
+  --hlx-01-ink: var(--spiral-red-fill);
+  --font-ui: var(--spiral-font-sans);
+  --font-mono: var(--spiral-font-mono);
+  --wdth-display: 100;
+  --wght-display: 400;
+  --wdth-heading: 100;
+  --wght-heading: 600;
+  --unit: var(--spiral-unit);
+  --ease: var(--spiral-ease);
+  --dur-fast: var(--spiral-dur-fast);
+  --dur-slow: var(--spiral-dur-slow);
+  --radius-ctl: var(--spiral-radius-ctl);
+  --glass-blur: var(--spiral-glass-blur);
+  --glass-edge: var(--spiral-glass-edge);
+  --glass-sheen: var(--spiral-glass-sheen);
+  --radius-card: 12px;
+  --aura-near: color-mix(in srgb, var(--spiral-helix) 55%, transparent);
+  --aura-far: color-mix(in srgb, var(--spiral-helix) 22%, transparent);
+  --scene-base: var(--spiral-void);
+  --scene-mid: var(--spiral-lift);
+  --scene-warm: var(--spiral-lift);
+}
+
 /* Spiral Slim — industrial, calm, high contrast.
-   Colours come from tokens.css only. Square corners everywhere except
-   pill controls; all spacing is a multiple of --unit. */
+   Colours come from tokens.css only. */
 
 *,
 *::before,
@@ -17,11 +79,12 @@ body,
 body {
   margin: 0;
   background: var(--conc-01);
-  color: var(--ink-01);
+  color: var(--paper);
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
   /* Every number here is a quantity that changes with the selection: policy
      counts, change counts, step indices. Proportional digits make them
      jitter as they update. */
@@ -29,7 +92,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: 2px;
 }
 
@@ -126,7 +189,7 @@ body {
 
 .header__wordmark {
   margin: 0;
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -154,7 +217,7 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  animation: stage-in var(--dur-slow) var(--ease);
+  animation: stage-in 280ms var(--ease);
 }
 
 @keyframes stage-in {
@@ -172,7 +235,8 @@ body {
   margin: 0;
   font-size: 22px;
   line-height: 1.1;
-  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  font-weight: 400;
+  font-family: var(--spiral-font-display);
   text-transform: uppercase;
   letter-spacing: -0.005em;
   text-wrap: balance;
@@ -317,7 +381,7 @@ body {
 }
 
 .card:has(.card__input:focus-visible) {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: -6px;
 }
 
@@ -352,7 +416,8 @@ body {
   color: var(--hlx-01);
   font-size: 30px;
   line-height: 1.02;
-  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  font-weight: 400;
+  font-family: var(--spiral-font-display);
   text-transform: uppercase;
   letter-spacing: -0.015em;
   text-wrap: balance;
@@ -461,7 +526,7 @@ body {
   border: 1px solid var(--conc-03);
   border-radius: var(--radius-ctl);
   background: var(--conc-01);
-  color: var(--ink-01);
+  color: var(--paper);
   font-family: var(--font-mono);
   font-size: 16px;
   transition:
@@ -474,7 +539,7 @@ body {
 }
 
 .deck__edge:active span {
-  transform: scale(0.94);
+  transform: scale(0.97);
 }
 
 .deck__dots {
@@ -554,7 +619,7 @@ body {
 }
 
 .review__note strong {
-  color: var(--ink-01);
+  color: var(--paper);
 }
 
 .review__note[data-tone="blocked"] strong,
@@ -616,7 +681,8 @@ h1 {
   margin: 0 0 calc(var(--unit) * 1.5);
   font-size: 32px;
   line-height: 1.08;
-  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  font-weight: 400;
+  font-family: var(--spiral-font-display);
   text-transform: uppercase;
   /* A display face at 850 weight tightens as it grows. 0.01em was set for
      28px and reads loose at 32. */
@@ -627,7 +693,7 @@ h1 {
 h2 {
   margin: calc(var(--unit) * 4) 0 var(--unit);
   font-size: 15px;
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   text-wrap: balance;
@@ -657,7 +723,7 @@ legend {
   padding: 0;
   margin-bottom: var(--unit);
   font-size: 15px;
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
 }
 
 .choices {
@@ -691,12 +757,12 @@ legend {
 }
 
 .choice:has(input:checked) {
-  border-color: var(--ink-01);
+  border-color: var(--paper);
   box-shadow: inset 3px 0 0 var(--hlx-01);
 }
 
 .choice:has(input:focus-visible) {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: 2px;
 }
 
@@ -715,7 +781,7 @@ legend {
 }
 
 .choice__title {
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
 }
 
 .choice__meta {
@@ -784,7 +850,7 @@ legend {
   flex: 1;
   min-width: 0;
   font-size: 14px;
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
 }
 
 .module__count {
@@ -949,7 +1015,7 @@ details[open] > summary {
   gap: calc(var(--unit) * 2);
   margin-top: calc(var(--unit) * 3);
   padding: calc(var(--unit) * 2);
-  border: 1px solid var(--ink-01);
+  border: 1px solid var(--conc-03);
   background: var(--conc-02);
   cursor: pointer;
   /* Same vocabulary as .choice: the irreversible control should not be the
@@ -975,7 +1041,7 @@ details[open] > summary {
 }
 
 .confirm:has(input:focus-visible) {
-  outline: 2px solid var(--ink-01);
+  outline: 2px solid var(--hlx-01);
   outline-offset: 2px;
 }
 
@@ -1000,20 +1066,16 @@ details[open] > summary {
 button {
   font: inherit;
   padding: 10px calc(var(--unit) * 3);
-  border: 1px solid var(--ink-01);
+  border: 1px solid var(--conc-03);
   border-radius: var(--radius-ctl);
   background: transparent;
-  color: var(--ink-01);
+  color: var(--paper);
   cursor: pointer;
   transition:
     background-color var(--dur-fast) var(--ease),
     border-color var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease),
     transform var(--dur-fast) var(--ease);
-}
-
-button:hover:not(:disabled) {
-  background: var(--conc-03);
 }
 
 /* Press feedback. Apply is the most consequential control in the app and
@@ -1030,12 +1092,18 @@ button[data-variant="primary"] {
   border-color: var(--hlx-01-ink);
   background: var(--hlx-01-ink);
   color: var(--paper);
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
 }
 
-button[data-variant="primary"]:hover:not(:disabled) {
-  background: var(--hlx-02);
-  border-color: var(--hlx-02);
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) {
+    background: var(--conc-03);
+  }
+
+  button[data-variant="primary"]:hover:not(:disabled) {
+    background: var(--hlx-02);
+    border-color: var(--hlx-02);
+  }
 }
 
 button:disabled {
@@ -1057,7 +1125,7 @@ button:disabled {
 
 .notice__title {
   margin: 0 0 4px;
-  font-variation-settings: "wdth" var(--wdth-heading), "wght" var(--wght-heading);
+  font-weight: 600;
 }
 
 .notice__detail,
@@ -1300,7 +1368,8 @@ code {
   margin: 0;
   font-size: 46px;
   line-height: 1;
-  font-variation-settings: "wdth" var(--wdth-display), "wght" var(--wght-display);
+  font-weight: 400;
+  font-family: var(--spiral-font-display);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   /* Two words at 46px display width can wrap in a narrow window, and the

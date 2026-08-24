@@ -45,14 +45,14 @@ the file is given — those two must not drift apart.
 | --- | --- |
 | **Template** | One of twelve layouts. Each exists **twice** — a Typst source for the PDF and the thumbnails, and a DOCX builder for Word — and the two must carry the same facts. `FACTS` in `docx.rs` is the list that proves it. |
 | **Accent** | The single colour the user chooses. Validated against a closed set in `accent.rs` before it reaches a template; a template never writes a colour of its own. |
-| **Thumbnail** | A style-picker card rendered from the user's own content, at page scale. Never a generic sample image. |
-| **Engine tier** | What rewrites the wording: **deterministic** (default, always available), the **offline model** (an optional local download), or **your key** (the user's own API key). Chosen in Settings only; the flow never asks and never upsells. |
+| **Thumbnail** | A style-picker card. Drawn from a fixed sample resume, at page scale, so choosing a style does not wait on typesetting the user's document. The user's facts land on the page at Build. |
+| **Engine tier** | What rewrites the wording: **deterministic** (default, always available), the **offline model** (an optional local download), or **your key** (the user's own API key). First launch asks once; after that it lives in Settings. The rest of the flow never asks and never upsells. |
 | **Unprintable character** | A character no bundled face can draw. Typst leaves it blank rather than failing, so the build names it in a note instead of letting a resume go out with a hole where the name was. |
 
 ## Screens
 
 | Term | Meaning |
 | --- | --- |
-| **Input** | Where the source arrives: a file, a paste, or the guided form. |
+| **Import** | Where the source arrives: a file, a paste, or the guided form. |
 | **Check** | The editable list of every extracted fact, before any styling. It is the only place a mis-parse can be caught, and it is what makes the fact freeze meaningful rather than decorative. |
-| **Style** · **Format** · **Build** · **Result** | Choose a template and accent · choose PDF or Word · watch real stages with real percent · download, try another style, or rewrite again. |
+| **Style** · **Build** | Choose a template and accent · choose PDF or Word, press Generate, watch real stages, then save or try another style. |

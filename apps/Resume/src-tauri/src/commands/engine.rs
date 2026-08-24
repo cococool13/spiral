@@ -30,6 +30,9 @@ pub struct EngineInfo {
     /// Where this provider issues keys, or empty when there is nowhere to send
     /// someone. The frontend opens it; it never guesses it.
     pub key_url: String,
+    /// True until the person has picked a wording path — a model, a key, or
+    /// the rule-based pass — so first launch can open on that choice.
+    pub needs_setup: bool,
 }
 
 pub(super) fn engine_of(app: &tauri::AppHandle) -> Result<(EngineSettings, Provider), String> {
@@ -65,6 +68,7 @@ pub fn engine_info(app: tauri::AppHandle) -> Result<EngineInfo, String> {
         provider: stored.provider,
         model: stored.model,
         base_url: stored.base_url,
+        needs_setup: !stored.setup_done && !model_ready(&root, &provider),
     })
 }
 
@@ -91,6 +95,7 @@ pub fn save_engine(
             base_url,
             // Changing provider does not forget which offline model was picked.
             offline_model: settings::load(&root).offline_model,
+            setup_done: true,
         },
     )
     .map_err(|e| format!("Could not save these settings: {e}."))?;
@@ -106,6 +111,7 @@ pub fn save_api_key(app: tauri::AppHandle, key: String) -> Result<EngineInfo, St
         return Err("The offline engine runs on this computer and needs no key.".to_string());
     }
     keys::store(provider.id(), &key)?;
+    mark_setup_done(store_for(&app)?.path())?;
     engine_info(app)
 }
 
@@ -159,6 +165,7 @@ pub async fn download_offline_model(
     // they just replaced.
     let mut stored = crate::settings::load(&root);
     stored.offline_model = entry.id.clone();
+    stored.setup_done = true;
     crate::settings::save(&root, &stored)
         .map_err(|e| format!("The model installed, but the choice could not be saved: {e}."))?;
     Ok(crate::local::status(&root, &stored.offline_model))
@@ -172,4 +179,18 @@ pub fn remove_offline_model(
     let root = store_for(&app)?.path().to_path_buf();
     crate::local::remove(&root, &id)?;
     Ok(crate::local::status(&root, &crate::settings::load(&root).offline_model))
+}
+
+fn mark_setup_done(root: &std::path::Path) -> Result<(), String> {
+    let mut stored = settings::load(root);
+    stored.setup_done = true;
+    settings::save(root, &stored).map_err(|e| format!("Could not save these settings: {e}."))
+}
+
+/// First-run skip, or any other path that has finished choosing how wording
+/// is rewritten. Does not change the provider.
+#[tauri::command]
+pub fn complete_setup(app: tauri::AppHandle) -> Result<EngineInfo, String> {
+    mark_setup_done(store_for(&app)?.path())?;
+    engine_info(app)
 }

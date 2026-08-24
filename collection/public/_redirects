@@ -1,0 +1,7 @@
+# Old /cool ride. The page is gone; send people home.
+/cool / 301
+/cool/ / 301
+/cool/* / 301
+
+# Canonical host: www → apex (belt alongside the Cloudflare redirect rule).
+https://www.spiralcc.tech/* https://spiralcc.tech/:splat 301

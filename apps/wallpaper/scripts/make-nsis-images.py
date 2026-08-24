@@ -10,9 +10,9 @@ Run from apps/wallpaper/:  python3 scripts/make-nsis-images.py
 from PIL import Image, ImageDraw, ImageFont
 
 # Spiral tokens (tokens.css)
-CONC_01 = "#EBE9E4"
-CONC_03 = "#CFCCC4"
-STL_02 = "#666863"
+CONC_01 = "#0B0B0C"
+CONC_03 = "#2C2C2E"
+STL_02 = "#8C8D8A"
 HLX_01 = "#D52E2B"
 
 MONO_500 = "src/fonts/ibm-plex-mono-latin-500-normal.woff2"

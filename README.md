@@ -9,7 +9,7 @@
 Every Spiral app, the brand system they share, and the site that houses them.
 One repository — each app is a folder, not a separate project.
 
-[**spiral-collection.pages.dev**](https://spiral-collection.pages.dev)
+[**spiralcc.tech**](https://spiralcc.tech)
 
 On a Mac, one line gets you the app:
 
@@ -43,7 +43,7 @@ Three promises, kept the same way in every app:
 | [**Spiral Wallpaper**](apps/wallpaper/) | Click a wallpaper, it downloads and applies. Browses [Wallhaven](https://wallhaven.cc). 4.6 MB binary, ~95 MB idle RAM, window on screen in 0.23 s. | **v1.0.3** — macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/latest) |
 | [**Spiral Slim**](apps/slim/) | Debloats and hardens Brave, Chrome, Edge, and Firefox with enterprise policies the browsers respect natively. Shows every change before it makes it. | **v1.0.0** — macOS app, scripts everywhere | [Download](https://github.com/cococool13/Spiral-Slim/releases/latest) · [Read the scripts](apps/slim/) |
 | [**Spiral Clean**](apps/clean/) | Reclaims disk space and uninstalls apps, macOS only. Every removal is proven safe by a Rust test suite before it ships. | Unreleased — Clean and Uninstall built | [Design spec](apps/clean/docs/design-spec.md) |
-| [**Spiral Resume**](apps/Resume/) | Your resume in twelve typeset layouts, as a PDF or a Word file. It tightens the wording and is never allowed to change a fact. | Unreleased — the whole flow is built | [Design spec](apps/Resume/docs/design-spec.md) |
+| [**Spiral Resume**](apps/Resume/) | Your resume in twelve typeset layouts, as a PDF or a Word file. It tightens the wording and is never allowed to change a fact. | **v0.1.1** — first downloadable release, macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/tag/resume-v0.1.1) |
 
 Spiral Resume is the one app that breaks the megabyte promise, and it says so
 here rather than quietly: it embeds the Typst typesetter so that the preview and
@@ -152,7 +152,7 @@ Three top-level areas, one job each.
 ```
 brand/         the design system — every colour, font, and mark lives here
 apps/          one folder per app — shipped, in progress, or still just docs
-collection/    the spiral-collection.pages.dev website
+collection/    the spiralcc.tech website
 docs/          product context, visual system, external reference
 ```
 
@@ -166,7 +166,7 @@ started that way, and its ADRs still sit beside the code they became.
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
 | [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
 | [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall, plus History and Settings. macOS only, unreleased. **Feature-complete: every screen is built.** 428 Rust tests, 97 Vitest, a native smoke gate, and nineteen ADRs. See its own [README](apps/clean/README.md) | working on the maintenance app |
-| [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows, unreleased. The whole flow is built — import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | working on the resume app |
+| [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows. First downloadable release **v0.1.1**. Import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | shipping the resume app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Cloudflare Pages. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
@@ -205,7 +205,7 @@ cd collection        && pnpm install && pnpm dev         # the website (localhos
 | `pnpm typecheck` | `collection` | `tsc --noEmit` |
 | `pnpm sync-brand` | any app or `collection` | re-copy brand assets from `brand/` |
 
-The design system is eight colors, two fonts, two radii, and one easing
+The design system is eight colors, one grotesque, two radii, and one easing
 curve, enforced by the build. When in doubt, open the brand guide at
 [`brand/guide.html`](brand/guide.html).
 
@@ -242,6 +242,7 @@ git tag vX.Y.Z && git push origin vX.Y.Z
 
 # or let the release script do the bump, the commit and the tag for you
 node scripts/release.mjs clean 0.1.0           # bump, commit, tag — nothing pushed
+node scripts/release.mjs resume 0.1.0          # Spiral Resume, tag resume-v0.1.0
 node scripts/release.mjs clean 0.1.0 --push    # ...and push it
 ```
 
@@ -319,10 +320,12 @@ Out of scope for Clean v1, deliberately: a menu bar HUD or anything resident,
 scheduled cleaning, duplicate and large-file finders, `node_modules`, and any
 network call whatsoever.
 
-**Resume** is feature-complete and unreleased: import, the Check screen, twelve
-templates, PDF and Word export, and three engine tiers all work. What stands
-between it and a release is packaging, not features — a release workflow, the
-llama.cpp sidecar, and a pinned model file.
+**Resume** first downloads as **v0.1.1** (`resume-v0.1.1`): import, the Check
+screen, twelve templates, PDF and Word export, and three engine tiers. macOS is
+signed and notarized; Windows is unsigned, the same accepted gap as Wallpaper.
+The `resume-v0.1.0` tag never produced a DMG. Homebrew needs a cask in
+`cococool13/homebrew-spiral` — that step is not CI. Do not use `/releases/latest`
+for Resume; that URL is Wallpaper.
 
 **Slim** is done for what it set out to do. It stays script-first on every
 platform by design — see [`apps/slim/SECURITY.md`](apps/slim/SECURITY.md).

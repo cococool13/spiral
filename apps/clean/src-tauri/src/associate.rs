@@ -77,43 +77,6 @@ pub struct Associated {
     pub evidence: Evidence,
 }
 
-/// True when `name` is evidence that the path itself belongs to
-/// `bundle_id` — the same three shapes `remove.rs`'s own boundary re-check
-/// (`verified_name_matches`) accepts for `Evidence::Verified`: the bundle id
-/// itself, the bundle id plus a `.`-separated suffix
-/// (`com.foo.bar.plist`, `com.foo.bar.savedState`), or an exact
-/// `group.<bundle id>` container.
-///
-/// **Deliberately not a raw substring/`.contains()` test.** `com.example.foo`
-/// is a literal prefix of a *different* app's own id, `com.example.foobar` —
-/// so `name.contains(bundle_id)` would classify a `com.example.foobar` entry
-/// as `Verified` evidence for `com.example.foo`. That is the exact bug class
-/// ADR-0011 records `disposition_for` having shipped once already (as a bare
-/// `name.contains(bundle_id)`) before review caught it. Matching this
-/// module's classification to `remove.rs`'s own acceptance is not just
-/// consistency for its own sake: a `Verified` claim this function makes that
-/// `verified_name_matches` would refuse is a claim the removal boundary can
-/// never honour.
-///
-/// **Deliberately not suffix-tolerant on the `group.` form either.**
-/// `remove.rs::verified_name_matches` accepts `group.<bundle_id>` only as an
-/// exact name — never `group.<bundle_id>.<anything>`. A looser rule here
-/// (e.g. "contains" or "starts with `group.<bundle_id>`") would let this
-/// function report `Evidence::Verified` for a suffixed group container that
-/// the removal boundary then silently denies — showing the user an item
-/// that can never actually be removed. Keeping this function exactly as
-/// strict as `verified_name_matches` is how that mismatch is avoided: a
-/// suffixed group container never becomes `Verified` in the first place, so
-/// it is never a broken promise. (See the module doc comment and
-/// task-4-report.md for the write-up of this decision.)
-fn name_carries_bundle_id(name: &str, bundle_id: &str) -> bool {
-    if bundle_id.is_empty() {
-        return false;
-    }
-    let name = name.to_lowercase();
-    let id = bundle_id.to_lowercase();
-    name == id || name.starts_with(&format!("{id}.")) || name == format!("group.{id}")
-}
 
 /// True when `entry_name` matches `app_name` as a **whole component**,
 /// case-insensitively — `Foo` matches `Foo`, but not `Foo Helper` or
@@ -164,42 +127,6 @@ pub(crate) fn is_apple_bundle_id(bundle_id: &str) -> bool {
     bundle_id.to_lowercase().starts_with("com.apple.")
 }
 
-/// Logical size of `path`: its own length if it is a file, or the sum of
-/// every file beneath it (symlinks never followed, at the root or inside
-/// the tree) if it is a directory.
-///
-/// This mirrors `scan::walk_files`'s rules on purpose — no followed
-/// symlinks, only `is_file()` entries counted — so an association hit is
-/// sized on the same terms as everything else this app reports. It is not
-/// a call into `scan::walk_files` itself: that function is private to the
-/// `scan` module, and this task's own constraints forbid editing `scan.rs`
-/// to export it. Duplicating the four-line policy locally was judged the
-/// lesser cost against widening a security-relevant module's surface for a
-/// task that is expressly barred from touching it.
-fn size_of(path: &Path) -> u64 {
-    let metadata = match std::fs::symlink_metadata(path) {
-        Ok(m) => m,
-        Err(_) => return 0,
-    };
-    if metadata.is_file() {
-        return metadata.len();
-    }
-    if !metadata.is_dir() {
-        // A symlink (or other non-file/dir entry) at the top level
-        // contributes nothing of its own, matching `walk_files`'s
-        // `is_file()`-only rule at the root.
-        return 0;
-    }
-    walkdir::WalkDir::new(path)
-        .min_depth(1)
-        .follow_links(false)
-        .follow_root_links(false)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .filter_map(|entry| entry.metadata().ok().map(|m| m.len()))
-        .sum()
-}
 
 /// Find every file or directory under a [`LOCATIONS`] entry of
 /// `home/Library` that is evidence of `bundle_id` or `app_name`.
@@ -242,7 +169,7 @@ pub fn associate(bundle_id: &str, app_name: &str, home: &Path) -> Vec<Associated
             let name = entry.file_name();
             let name = name.to_string_lossy();
 
-            let evidence = if name_carries_bundle_id(&name, bundle_id) {
+            let evidence = if crate::remove::verified_name_matches(&name, bundle_id) {
                 Some(Evidence::Verified)
             } else if matches_app_name(&name, app_name) && !is_apple_owned(&name) {
                 Some(Evidence::Likely)
@@ -252,7 +179,7 @@ pub fn associate(bundle_id: &str, app_name: &str, home: &Path) -> Vec<Associated
 
             if let Some(evidence) = evidence {
                 let path = entry.path();
-                let bytes = size_of(&path);
+                let bytes = crate::sizing::size_of(&path);
                 found.push(Associated { path, bytes, evidence });
             }
         }

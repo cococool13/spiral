@@ -284,36 +284,6 @@ fn belongs_to_installed(id: &str, installed: &HashSet<String>) -> bool {
     installed.iter().any(|inst| id == *inst || id.starts_with(&format!("{inst}.")))
 }
 
-/// Logical size of `path`: its own length if it is a file, or the sum of
-/// every file beneath it (symlinks never followed, at the root or inside the
-/// tree) if it is a directory.
-///
-/// Mirrors `scan::walk_files`'s and `associate::size_of`'s rules on purpose —
-/// no followed symlinks, only `is_file()` entries counted — so a leftover is
-/// sized on the same terms as everything else this app reports. Duplicated
-/// rather than reused from either: `scan.rs` is off-limits to this task, and
-/// `associate::size_of` is private to its own module.
-fn size_of(path: &Path) -> u64 {
-    let metadata = match std::fs::symlink_metadata(path) {
-        Ok(m) => m,
-        Err(_) => return 0,
-    };
-    if metadata.is_file() {
-        return metadata.len();
-    }
-    if !metadata.is_dir() {
-        return 0;
-    }
-    walkdir::WalkDir::new(path)
-        .min_depth(1)
-        .follow_links(false)
-        .follow_root_links(false)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .filter_map(|entry| entry.metadata().ok().map(|m| m.len()))
-        .sum()
-}
 
 /// [`find_in`] against the real machine: the real `/Applications` and
 /// `home.join("Applications")`, matching `apps::discover`'s own two roots
@@ -383,7 +353,7 @@ pub fn find_in(home: &Path, app_roots: &[PathBuf]) -> Vec<Leftover> {
             }
 
             let path = entry.path();
-            let bytes = size_of(&path);
+            let bytes = crate::sizing::size_of(&path);
             let leftover = by_id.entry(id.to_lowercase()).or_insert_with(|| Leftover {
                 bundle_id: id.to_string(),
                 paths: Vec::new(),

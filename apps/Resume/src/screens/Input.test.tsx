@@ -16,7 +16,6 @@ vi.mock("../lib/ipc", () => ({
   parsePastedText: (text: string) => parsePastedText(text),
 }));
 
-// The drop listener lives on the Tauri webview, which does not exist in jsdom.
 vi.mock("@tauri-apps/api/webview", () => ({
   getCurrentWebview: () => ({ onDragDropEvent: async () => () => undefined }),
 }));
@@ -27,7 +26,7 @@ describe("Input", () => {
   it("imports the file the user chose", async () => {
     const onReady = vi.fn();
     render(<Input onReady={onReady} />);
-    fireEvent.click(screen.getByRole("button", { name: "Choose a file" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload a file" }));
     await waitFor(() => expect(onReady).toHaveBeenCalled());
     expect(onReady.mock.calls[0][0].contact.name).toBe("Grace Hopper");
   });
@@ -36,7 +35,7 @@ describe("Input", () => {
     importResumeFile.mockResolvedValueOnce(null);
     const onReady = vi.fn();
     render(<Input onReady={onReady} />);
-    fireEvent.click(screen.getByRole("button", { name: "Choose a file" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload a file" }));
     await waitFor(() => expect(importResumeFile).toHaveBeenCalled());
     expect(onReady).not.toHaveBeenCalled();
     expect(screen.queryByText(/could not/i)).toBeNull();
@@ -47,14 +46,15 @@ describe("Input", () => {
       "That PDF has no text in it — it looks like a scan or a picture of a resume.",
     );
     render(<Input onReady={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Choose a file" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload a file" }));
     await waitFor(() => expect(screen.getByText(/looks like a scan/)).toBeTruthy());
   });
 
   it("still reads pasted text", async () => {
     const onReady = vi.fn();
     render(<Input onReady={onReady} />);
-    fireEvent.change(screen.getByLabelText("Or paste your resume"), {
+    fireEvent.click(screen.getByRole("button", { name: "Paste contents" }));
+    fireEvent.change(screen.getByLabelText("Paste your resume"), {
       target: { value: "Ada Lovelace\nada@example.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Read the pasted text" }));
@@ -64,19 +64,42 @@ describe("Input", () => {
 
   it("will not read empty text", () => {
     render(<Input onReady={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Paste contents" }));
     const read = screen.getByRole("button", { name: "Read the pasted text" }) as HTMLButtonElement;
     expect(read.disabled).toBe(true);
   });
 
-  it("starts from scratch with an empty document", () => {
+  it("starts from scratch with a blank role ready to type", () => {
     const onReady = vi.fn();
     render(<Input onReady={onReady} />);
     fireEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
+    expect(onReady.mock.calls[0][1]).toBe("scratch");
     expect(onReady.mock.calls[0][0].contact.name).toBe("");
+    expect(onReady.mock.calls[0][0].experience[0].id).toBe("exp-0");
+  });
+
+  it("is three tiles and nothing else", () => {
+    render(<Input onReady={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "Import" })).toBeTruthy();
+    expect(screen.getAllByRole("button")).toHaveLength(3);
+  });
+
+  it("offers a quiet way back to a saved resume", () => {
+    const onOpenSaved = vi.fn();
+    render(
+      <Input
+        onReady={vi.fn()}
+        savedAt="2026-08-01T10:00:00Z"
+        onOpenSaved={onOpenSaved}
+      />,
+    );
+    expect(screen.getByText(/Saved from/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open it" }));
+    expect(onOpenSaved).toHaveBeenCalled();
   });
 
   it("names every format it can read", () => {
     render(<Input onReady={vi.fn()} />);
-    expect(screen.getByText(/PDF, Word or a text file/)).toBeTruthy();
+    expect(screen.getByText(/PDF, Word or text/)).toBeTruthy();
   });
 });

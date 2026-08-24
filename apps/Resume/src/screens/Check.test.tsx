@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { emptyDoc, emptyRole, emptySchool, type ResumeDoc, type School } from "../lib/types";
+import { emptyDoc, emptyRole, emptySchool, scratchDoc, type ResumeDoc, type School } from "../lib/types";
 import { Check } from "./Check";
 
 // The wording review is a Rust call; jsdom has no backend.
@@ -35,6 +35,56 @@ describe("Check", () => {
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Ada");
     expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Analyst");
     expect((screen.getByLabelText("Employer") as HTMLInputElement).value).toBe("Admiralty");
+  });
+
+  /** Decision 9: Check is the only place a mis-parse can be caught. Summary,
+   *  links and a role's place were typeset but had no editor, so a wrong one
+   *  went to the page. */
+  it("edits the summary, a link, and a role's place", () => {
+    const onChange = vi.fn();
+    const role = emptyRole("exp-0");
+    role.title = "Analyst";
+    role.organization = "Admiralty";
+    role.location = "Portsmouth";
+    const doc: ResumeDoc = {
+      ...emptyDoc(),
+      contact: { ...emptyDoc().contact, name: "Ada", links: ["github.com/ada"] },
+      summary: "Analytical engine programmer.",
+      experience: [role],
+    };
+    render(
+      <Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />,
+    );
+
+    expect((screen.getByLabelText("Summary") as HTMLTextAreaElement).value).toBe(
+      "Analytical engine programmer.",
+    );
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Wrote the first algorithm." },
+    });
+    expect(onChange.mock.calls[0][0].summary).toBe("Wrote the first algorithm.");
+
+    expect((screen.getByLabelText("Links 1") as HTMLInputElement).value).toBe("github.com/ada");
+    fireEvent.change(screen.getByLabelText("Links 1"), {
+      target: { value: "linkedin.com/in/ada" },
+    });
+    expect(onChange.mock.calls[1][0].contact.links).toEqual(["linkedin.com/in/ada"]);
+
+    expect((screen.getByLabelText("Place") as HTMLInputElement).value).toBe("Portsmouth");
+    fireEvent.change(screen.getByLabelText("Place"), { target: { value: "London" } });
+    expect(onChange.mock.calls[2][0].experience[0].location).toBe("London");
+  });
+
+  it("edits a school's place", () => {
+    const onChange = vi.fn();
+    const next = school();
+    next.location = "Cambridge";
+    const doc = { ...docWithRole(), education: [next] };
+    render(
+      <Check doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />,
+    );
+    fireEvent.change(screen.getByDisplayValue("Cambridge"), { target: { value: "London" } });
+    expect(onChange.mock.calls[0][0].education[0].location).toBe("London");
   });
 
   it("reports an edited fact upward without keeping its own copy", () => {
@@ -121,6 +171,7 @@ describe("Check", () => {
     const ids = onChange.mock.calls[0][0].experience.map((r: { id: string }) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual(["exp-1", "exp-2"]);
+    expect(onChange.mock.calls[0][0].experience[1].bullets[0].id).toBe("exp-2-b-0");
   });
 
   it("adds an empty role for a resume that parsed nothing", () => {
@@ -128,6 +179,27 @@ describe("Check", () => {
     render(<Check doc={emptyDoc()} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Add a role" }));
     expect(onChange.mock.calls[0][0].experience[0].id).toBe("exp-0");
+    expect(onChange.mock.calls[0][0].experience[0].bullets).toEqual([
+      { id: "exp-0-b-0", text: "" },
+    ]);
+  });
+
+  it("opens as a form when the person is typing from scratch", () => {
+    render(
+      <Check
+        doc={scratchDoc()}
+        fromScratch
+        tighten={false}
+        onChange={vi.fn()}
+        onTighten={vi.fn()}
+        onContinue={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Fill in the facts" })).toBeTruthy();
+    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("");
+    expect(screen.getByLabelText("Title")).toBeTruthy();
+    expect(screen.getByLabelText("Employer")).toBeTruthy();
+    expect(screen.getByLabelText(/Bullet in Title/)).toBeTruthy();
   });
 
   /** Education and Projects parsed but had no editor at all: a school read out
@@ -166,9 +238,19 @@ describe("Check", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Add a project" }));
     expect(onChange.mock.calls[0][0].projects[0].id).toBe("proj-0");
+    expect(onChange.mock.calls[0][0].projects[0].bullets[0].id).toBe("proj-0-b-0");
 
     fireEvent.click(screen.getByRole("button", { name: "Add a school" }));
     expect(onChange.mock.calls[1][0].education[0].id).toBe("edu-0");
+  });
+
+  it("keeps empty optional sections off the page until they are asked for", () => {
+    render(
+      <Check doc={docWithRole()} tighten={false} onChange={vi.fn()} onTighten={vi.fn()} onContinue={vi.fn()} />,
+    );
+    expect(screen.queryByRole("heading", { name: "Projects" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Awards" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Add a project" })).toBeTruthy();
   });
 
   it("adds a note to a school under that school's id", () => {

@@ -4,29 +4,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spiral — Brand Guidelines</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:"Host Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/host-grotesk-400.woff2") format("woff2")}
+@font-face{font-family:"Host Grotesk";font-style:italic;font-weight:400;font-display:swap;src:url("fonts/host-grotesk-400-italic.woff2") format("woff2")}
+@font-face{font-family:"Host Grotesk";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/host-grotesk-500.woff2") format("woff2")}
+@font-face{font-family:"Host Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/host-grotesk-600.woff2") format("woff2")}
+</style>
 <style>
 :root{
-  --conc-01:#EBE9E4; /* poured concrete — page */
-  --conc-02:#DDDAD3; /* raw panel — surfaces */
-  --conc-03:#CFCCC4; /* formwork line */
-  --ink:#10181B;     /* mill steel — sampled from the mark's source ink */
-  --steel:#666863;   /* galvanized — secondary, 4.65:1 on page */
-  --helix:#D52E2B;   /* helix red */
-  --oxblood:#6F1011; /* pressed / hover red */
-  --paper:#F5F4F0;
+  --conc-01:#080809; /* void — page */
+  --conc-02:#131315; /* lift */
+  --conc-03:#1c1c1f; /* hairline */
+  --ink:#f1efe8;     /* paper — body text on the page */
+  --mill:#121214;    /* ink — text on paper islands */
+  --steel:#8a8880;   /* mute — secondary on void */
+  --helix:#d52e2b;   /* helix red */
+  --oxblood:#6f1011; /* pressed / hover red */
+  --paper:#f1efe8;
   --unit:8px;
   --measure:64ch;
-  --ease:cubic-bezier(.2,.7,.2,1);
+  --ease:cubic-bezier(0.22, 1, 0.36, 1);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
   background:var(--conc-01);
   color:var(--ink);
-  font-family:"Archivo",sans-serif;
-  font-variation-settings:"wdth" 100;
+  font-family:"Host Grotesk",ui-sans-serif,system-ui,sans-serif;
   font-size:16px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
 }
@@ -44,7 +48,7 @@ nav{
 }
 nav .navmark{height:22px;flex:none;display:flex}
 nav a{
-  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--steel);text-decoration:none;
 }
 nav a:hover{color:var(--helix)}
@@ -52,16 +56,15 @@ nav a:focus-visible{outline:2px solid var(--helix);outline-offset:3px}
 
 /* ---------- utility type ---------- */
 .spec{
-  font-family:"IBM Plex Mono",monospace;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   font-size:11px;letter-spacing:.08em;
   color:var(--steel);text-transform:uppercase;
 }
 .spec b{color:var(--ink);font-weight:500}
 h2{
-  font-weight:800;letter-spacing:-.01em;
-  font-variation-settings:"wdth" 118;
+  font-weight:500;
   font-size:clamp(28px,4vw,44px);
-  text-transform:uppercase;line-height:1.02;
+  letter-spacing:0;line-height:1.05;
 }
 p{max-width:var(--measure)}
 a{color:inherit;text-decoration-color:var(--helix);text-underline-offset:3px}
@@ -84,9 +87,9 @@ header{border-top:none;min-height:88vh;display:flex;align-items:center;
 @media(max-width:760px){.hero{grid-template-columns:1fr}}
 .hero .markbox{height:min(52vh,440px)}
 .wordmark{
-  font-weight:850;font-variation-settings:"wdth" 125;
+  font-weight:400;
   font-size:clamp(56px,11vw,140px);
-  letter-spacing:.02em;text-transform:uppercase;line-height:.95;
+  letter-spacing:0;line-height:.95;
   user-select:none;
 }
 .tagline{
@@ -111,7 +114,7 @@ blockquote{
 blockquote .spec{display:block;margin-top:calc(var(--unit)*1.5)}
 .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:calc(var(--unit)*3);margin-top:calc(var(--unit)*5)}
 .pillar{background:var(--conc-02);border:1px solid var(--conc-03);padding:calc(var(--unit)*3)}
-.pillar h3{font-weight:750;font-variation-settings:"wdth" 112;text-transform:uppercase;font-size:15px;letter-spacing:.04em;margin-bottom:var(--unit)}
+.pillar h3{font-weight:500;text-transform:uppercase;font-size:15px;letter-spacing:.04em;margin-bottom:var(--unit)}
 .pillar p{font-size:14.5px;color:var(--steel);max-width:none}
 
 /* ---------- panels & grids ---------- */
@@ -127,7 +130,7 @@ blockquote .spec{display:block;margin-top:calc(var(--unit)*1.5)}
   position:relative;overflow:hidden;
 }
 .mark-stage .markbox{height:64%}
-.mark-stage.dark{background:var(--ink)}
+.mark-stage.dark{background:var(--mill)}
 .mark-stage.clearspace::after{
   content:"";position:absolute;inset:13%;
   border:1px dashed var(--helix);pointer-events:none;
@@ -172,17 +175,17 @@ table.contrast th,table.contrast td{
   text-align:left;padding:calc(var(--unit)*1.5) calc(var(--unit)*2);
   border-bottom:1px solid var(--conc-03);font-size:14px;
 }
-table.contrast th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel);font-weight:500}
-table.contrast td.r{font-family:"IBM Plex Mono",monospace;font-size:13px}
+table.contrast th{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel);font-weight:500}
+table.contrast td.r{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px}
 
 /* ---------- type ---------- */
 .specimen{border-top:1px solid var(--conc-03);padding:calc(var(--unit)*3) 0;display:grid;grid-template-columns:180px 1fr;gap:calc(var(--unit)*3)}
 .specimen:last-child{border-bottom:1px solid var(--conc-03)}
 @media(max-width:640px){.specimen{grid-template-columns:1fr}}
-.t-display{font-weight:850;font-variation-settings:"wdth" 125;font-size:clamp(34px,6vw,64px);text-transform:uppercase;line-height:1}
-.t-h{font-weight:700;font-variation-settings:"wdth" 112;font-size:clamp(22px,3vw,32px);line-height:1.15}
+.t-display{font-weight:400;font-size:clamp(34px,6vw,64px);font-style:italic;line-height:1}
+.t-h{font-weight:500;font-size:clamp(22px,3vw,32px);line-height:1.15}
 .t-body{font-size:16px;max-width:var(--measure)}
-.t-mono{font-family:"IBM Plex Mono",monospace;font-size:13px}
+.t-mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px}
 
 /* ---------- spacing ---------- */
 .scale{display:flex;align-items:flex-end;gap:calc(var(--unit)*2);flex-wrap:wrap}
@@ -192,11 +195,10 @@ table.contrast td.r{font-family:"IBM Plex Mono",monospace;font-size:13px}
 /* ---------- in use ---------- */
 .btn{
   display:inline-flex;align-items:center;gap:10px;
-  font-family:"Archivo",sans-serif;font-weight:700;font-size:15px;
-  font-variation-settings:"wdth" 108;
+  font-family:"Host Grotesk",ui-sans-serif,system-ui,sans-serif;font-weight:600;font-size:15px;
   padding:13px 26px;cursor:pointer;
   position:relative;isolation:isolate;overflow:hidden;
-  border-radius:999px;
+  border-radius:12px;
   border:1px solid rgba(255,255,255,.45);
   backdrop-filter:blur(16px) saturate(1.7);
   -webkit-backdrop-filter:blur(16px) saturate(1.7);
@@ -254,23 +256,23 @@ table.contrast td.r{font-family:"IBM Plex Mono",monospace;font-size:13px}
 .appwin .titlebar .navmark{height:16px;display:flex}
 .appwin .titlebar .t{font-weight:650;font-size:13px}
 .appwin .body{padding:calc(var(--unit)*3)}
-.appwin .body h3{font-weight:750;font-variation-settings:"wdth" 112;font-size:18px;margin-bottom:6px}
+.appwin .body h3{font-weight:500;font-size:18px;margin-bottom:6px}
 .appwin .body p{font-size:14px;color:var(--steel);margin-bottom:calc(var(--unit)*2.5);max-width:none}
 .appwin .statusline{
   border-top:1px solid var(--conc-03);padding:8px 14px;
 }
 .menubar{
   display:flex;align-items:center;gap:14px;
-  background:var(--ink);color:var(--conc-01);
-  padding:6px 14px;border:1px solid var(--ink);max-width:520px;
+  background:var(--conc-02);color:var(--ink);
+  padding:6px 14px;border:1px solid var(--conc-03);max-width:520px;
 }
 .menubar .navmark{height:14px;display:flex}
-.menubar span{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em}
+.menubar span{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.06em}
 
 /* ---------- tokens ---------- */
 pre{
-  background:var(--ink);color:var(--conc-01);
-  font-family:"IBM Plex Mono",monospace;font-size:13px;line-height:1.6;
+  background:var(--conc-02);color:var(--ink);
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.6;
   padding:calc(var(--unit)*3);overflow-x:auto;
 }
 pre .c{color:#8A8583}
@@ -301,10 +303,10 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <div class="markbox reveal"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--helix)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--helix)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--helix)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--helix)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></div>
     <div class="reveal">
       <div class="wordmark">Spiral</div>
-      <p class="tagline">Complex made simple. Private, lightweight software — free for everyone.</p>
+      <p class="tagline">Software that knows when to leave.</p>
       <div class="hero-meta">
-        <span class="spec"><b>SPR-BG-01</b> · Brand Guidelines · v1.0</span>
-        <span class="spec">July 2026</span>
+        <span class="spec"><b>SPR-BG-02</b> · Brand Guidelines</span>
+        <span class="spec">August 2026</span>
       </div>
     </div>
   </div>
@@ -366,7 +368,7 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       </div>
       <div class="panel">
         <span class="spec"><b>B.</b> Reversed — paper on steel</span>
-        <div class="mark-stage dark"><div class="markbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--conc-01)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--conc-01)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--conc-01)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--conc-01)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></div></div>
+        <div class="mark-stage dark"><div class="markbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--paper)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--paper)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--paper)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--paper)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></div></div>
       </div>
       <div class="panel">
         <span class="spec"><b>C.</b> Clearspace — ¼ mark height, all sides</span>
@@ -423,7 +425,7 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="panel">
         <span class="spec"><b>B.</b> Rules</span>
         <ul class="rules">
-          <li>The lockup's letterforms are drawn — never retype "SPIRAL" in Archivo inside a lockup</li>
+          <li>The lockup's letterforms are drawn — never retype SPIRAL in Host Grotesk inside a lockup</li>
           <li>Mark in helix red, letters in ink; reversed: everything paper</li>
           <li>Use the lockup on the website header, packaging, and first-run screens</li>
           <li>Inside apps, the mark stands alone — one brand, one website, many apps</li>
@@ -440,25 +442,25 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <h2>Material</h2>
       <span class="spec"><b>SPR-03</b> · Color</span>
     </div>
-    <p style="margin-bottom:calc(var(--unit)*5)">The palette is the warehouse with one object in it: poured concrete floors, mill steel beams, and helix red as the only color. Red is for the mark, interaction, and warnings. If a screen is more than a few percent red, something is wrong. One more material exists but has no swatch: glass. Controls — buttons, and only buttons — are frosted glass floating over the concrete; surfaces never are.</p>
+    <p style="margin-bottom:calc(var(--unit)*5)">The palette is a dark room with one object in it: near-black floors, paper type, and helix red as the only color. Red is for the mark, interaction, and warnings. If a screen is more than a few percent red, something is wrong. One more material exists but has no swatch: glass. Controls — buttons, and only buttons — are frosted glass floating over the black; surfaces never are.</p>
     <div class="swatches">
-      <div class="swatch"><div class="chip" style="background:#EBE9E4"></div><div class="meta"><div class="name">Poured Concrete</div><div class="spec"><b>CONC-01</b> · #EBE9E4 · page</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#DDDAD3"></div><div class="meta"><div class="name">Raw Panel</div><div class="spec"><b>CONC-02</b> · #DDDAD3 · surface</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#CFCCC4"></div><div class="meta"><div class="name">Formwork</div><div class="spec"><b>CONC-03</b> · #CFCCC4 · rule / border</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#666863"></div><div class="meta"><div class="name">Galvanized</div><div class="spec"><b>STL-02</b> · #666863 · secondary text</div></div></div>
-      <div class="swatch"><div class="chip" style="background:#10181B"></div><div class="meta"><div class="name">Mill Steel</div><div class="spec"><b>INK-01</b> · #10181B · ink / primary</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0B0B0C;border:1px solid #2C2C2E"></div><div class="meta"><div class="name">Void</div><div class="spec"><b>CONC-01</b> · #0B0B0C · page</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#161618"></div><div class="meta"><div class="name">Lifted</div><div class="spec"><b>CONC-02</b> · #161618 · surface</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#2C2C2E"></div><div class="meta"><div class="name">Hairline</div><div class="spec"><b>CONC-03</b> · #2C2C2E · rule / border</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#8C8D8A"></div><div class="meta"><div class="name">Galvanized</div><div class="spec"><b>GRAY</b> · #8C8D8A · secondary on black</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#F4F3F0"></div><div class="meta"><div class="name">Paper</div><div class="spec"><b>PAPER</b> · #F4F3F0 · type on black</div></div></div>
       <div class="swatch"><div class="chip" style="background:#D52E2B"></div><div class="meta"><div class="name">Helix Red</div><div class="spec"><b>HLX-01</b> · #D52E2B · the mark, accents</div></div></div>
       <div class="swatch"><div class="chip" style="background:#6F1011"></div><div class="meta"><div class="name">Oxblood</div><div class="spec"><b>HLX-02</b> · #6F1011 · pressed / hover state</div></div></div>
     </div>
 
     <table class="contrast">
-      <caption class="spec" style="text-align:left;padding-bottom:calc(var(--unit)*2)"><b>Measured contrast</b> — WCAG 2.1, against Poured Concrete unless noted</caption>
+      <caption class="spec" style="text-align:left;padding-bottom:calc(var(--unit)*2)"><b>Measured contrast</b> — WCAG 2.1, against Void unless noted</caption>
       <tr><th>Pairing</th><th>Ratio</th><th>Use for</th></tr>
-      <tr><td>Mill Steel on Poured Concrete</td><td class="r">14.8 : 1</td><td>All text, any size</td></tr>
-      <tr><td>Galvanized on Poured Concrete</td><td class="r">4.7 : 1</td><td>Secondary text, labels</td></tr>
-      <tr><td>Helix Red on Poured Concrete</td><td class="r">4.1 : 1</td><td>Large text, icons, UI — never body copy</td></tr>
-      <tr><td>Paper on Helix Red</td><td class="r">4.5 : 1</td><td>Button labels, bold ≥ 15px</td></tr>
-      <tr><td>Paper on Mill Steel</td><td class="r">16.3 : 1</td><td>Reversed sections, any size</td></tr>
+      <tr><td>Paper on Void</td><td class="r">17.7 : 1</td><td>All text, any size</td></tr>
+      <tr><td>Galvanized on Void</td><td class="r">5.9 : 1</td><td>Secondary text, labels</td></tr>
+      <tr><td>Helix Red on Void</td><td class="r">4.0 : 1</td><td>Icons, UI — never body copy</td></tr>
+      <tr><td>Paper on red-fill</td><td class="r">4.8 : 1</td><td>Button labels, bold ≥ 15px</td></tr>
+      <tr><td>Mill Steel on Paper</td><td class="r">16.2 : 1</td><td>Document sheets, OtherWork</td></tr>
     </table>
   </div>
 </section>
@@ -470,22 +472,22 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <h2>Type</h2>
       <span class="spec"><b>SPR-04</b> · Typography</span>
     </div>
-    <p style="margin-bottom:calc(var(--unit)*4)">One family, many widths — complex but simple, the same move as the mark. Archivo's variable width axis goes wide and heavy for display, normal for reading. IBM Plex Mono handles anything that behaves like data: labels, tokens, file sizes, version numbers. Both are open-source and free, so the brand costs nothing to license. The lockup's drawn letterforms are reserved for the lockup itself.</p>
+    <p style="margin-bottom:calc(var(--unit)*4)">One grotesque for display and UI: Host Grotesk, self-hosted. Italic is for emphasis only — the second line of a headline, never a paragraph. System mono handles anything that behaves like data: labels, versions, file sizes. The lockup's drawn letterforms are reserved for the lockup itself.</p>
 
     <div class="specimen">
-      <span class="spec"><b>Display</b><br>Archivo 850<br>wdth 125 · caps</span>
-      <div class="t-display">Nothing to hide,<br>nothing to carry</div>
+      <span class="spec"><b>Display</b><br>Host Grotesk 400 italic</span>
+      <div class="t-display">Software that<br>knows when to leave.</div>
     </div>
     <div class="specimen">
-      <span class="spec"><b>Heading</b><br>Archivo 700<br>wdth 112</span>
+      <span class="spec"><b>Heading</b><br>Host Grotesk 500</span>
       <div class="t-h">Click a wallpaper. It downloads and applies itself. That's the whole manual.</div>
     </div>
     <div class="specimen">
-      <span class="spec"><b>Body</b><br>Archivo 400<br>wdth 100</span>
+      <span class="spec"><b>Body</b><br>Host Grotesk 400</span>
       <p class="t-body">Every Spiral app works without an account. Nothing leaves your machine unless you send it somewhere, and anything running in the background says so, in plain language, before it starts.</p>
     </div>
     <div class="specimen">
-      <span class="spec"><b>Utility</b><br>IBM Plex Mono 400</span>
+      <span class="spec"><b>Utility</b><br>System mono</span>
       <div class="t-mono">spiral-wallpaper 1.0.3 · 4.6 MB · no account required · background processes: none</div>
     </div>
   </div>
@@ -521,7 +523,7 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     </div>
     <ul class="rules">
       <li>Motion explains state; it never decorates. If nothing changed, nothing moves.</li>
-      <li>One easing curve everywhere: <span class="t-mono">cubic-bezier(.2,.7,.2,1)</span>, 150–400ms.</li>
+      <li>One easing curve everywhere: <span class="t-mono">cubic-bezier(0.22, 1, 0.36, 1)</span>, 150–400ms.</li>
       <li>Entrances rise — the direction the ribbon climbs. Exits fade.</li>
       <li><span class="t-mono">prefers-reduced-motion</span> is honored in every app, always.</li>
       <li>Optimized like a gaming PC: an animation that costs a frame is cut. Never sacrifice the look — but everything that can be faster, is.</li>
@@ -553,7 +555,7 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="panel">
         <span class="spec"><b>B.</b> Menu bar — mark stands alone</span>
         <div class="menubar">
-          <span class="navmark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--conc-01)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--conc-01)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--conc-01)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--conc-01)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></span>
+          <span class="navmark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="337 154 352 566" style="height:100%;width:auto"><path fill="var(--paper)" d="M529.259 337.978C531.149 337.917 539.823 342.101 542.227 343.176L565.834 353.636C575.81 358.069 585.831 362.398 595.896 366.624C607.103 371.227 616.429 374.136 626.727 380.807C643.878 391.918 657.468 408.737 650.84 430.226C642.57 457.039 615.21 472.463 591.975 484.903C572.681 458.156 538.448 450.902 510.297 435.992C510.673 449.177 510.44 463.253 510.554 476.526C510.864 498.047 510.993 519.571 510.939 541.095C508.763 540.243 506.305 539.118 504.125 538.182C474.206 525.739 444.975 511.316 414.678 499.592C399.233 493.615 383.552 484.757 376.377 469.154C371.522 458.458 371.139 446.265 375.312 435.285C381.114 419.787 393.357 413.164 407.017 405.462C415.476 400.692 422.463 397.173 431.284 393.232C448.417 407.993 458.979 412.347 479.189 421.484L509.836 435.63C509.045 426.941 509.377 413.395 509.328 404.435L509.065 348.632C515.793 345.335 522.634 341.539 529.259 337.978Z"/><path fill="var(--paper)" d="M556.692 174.487L557.044 174.592C557.51 175.745 557.932 298.469 557.739 306.768C518.556 328.362 479.207 349.653 439.694 370.638C420.47 380.993 399.084 391.105 381.252 403.764C371.714 410.534 363.903 420.45 359.371 431.308L359.257 431.547L358.909 431.314C358.121 417.082 358.542 398.38 358.472 383.805L358.33 350.887C358.28 337.345 357.475 325.345 361.09 312.138C364.9 297.735 372.717 284.708 383.633 274.569C393.724 265.211 407.036 258.21 419.074 251.452L449.278 234.549L556.692 174.487Z"/><path fill="var(--paper)" d="M663.932 440.8L665.658 441.395C665.388 463.86 665.553 486.811 665.581 509.123C665.626 545.117 668.613 578.143 637.226 603.154C618.862 617.788 597.54 627.201 576.807 638.402C554.404 650.358 532.131 662.556 509.991 674.992C495.152 683.2 481.231 690.608 466.512 699.311L466.382 570.818C491.036 557.713 515.265 543.791 539.805 530.554C558.871 520.474 578.016 510.469 596.685 499.664C621.384 485.369 652.41 468.546 663.932 440.8Z"/><path fill="var(--paper)" d="M663.932 440.8C664.182 440.234 664.754 438.67 665.225 438.324C665.689 438.322 665.642 441.063 665.658 441.395L663.932 440.8Z"/></svg></span>
           <span>wallpaper: applied · next rotation 18:00</span>
         </div>
         <p class="spec" style="margin-top:calc(var(--unit)*2);max-width:none">16px paper mark on ink. Status text in mono — it behaves like data.</p>
@@ -619,40 +621,34 @@ footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <h2>Tokens</h2>
       <span class="spec"><b>SPR-09</b> · Drop-in CSS</span>
     </div>
-    <p style="margin-bottom:calc(var(--unit)*3)">Paste this into every Spiral app. If a value isn't here, it isn't in the brand.</p>
+    <p style="margin-bottom:calc(var(--unit)*3)">The live file is tokens.css. If a value is not there, it is not in the brand.</p>
 <pre>:root {
-  <span class="c">/* material */</span>
-  --conc-01: #EBE9E4;   <span class="c">/* page */</span>
-  --conc-02: #DDDAD3;   <span class="c">/* surface */</span>
-  --conc-03: #CFCCC4;   <span class="c">/* border */</span>
-  --ink-01:  #10181B;   <span class="c">/* ink — all body text */</span>
-  --stl-02:  #666863;   <span class="c">/* secondary text — 4.7:1 on page */</span>
-  --hlx-01:  <span class="a">#D52E2B</span>;   <span class="c">/* helix red — mark, accents, never body copy */</span>
-  --hlx-02:  <span class="a">#6F1011</span>;   <span class="c">/* oxblood — pressed / hover */</span>
+  <span class="c">/* live values live in tokens.css — this is the map */</span>
+  --spiral-void:    #080809;  <span class="c">/* page */</span>
+  --spiral-lift:    #131315;  <span class="c">/* surface */</span>
+  --spiral-conc-03: #1c1c1f;  <span class="c">/* hairline */</span>
+  --spiral-paper:   #f1efe8;  <span class="c">/* type on void */</span>
+  --spiral-mute:    #8a8880;  <span class="c">/* secondary */</span>
+  --spiral-ink:     #121214;  <span class="c">/* text on paper islands only */</span>
+  --spiral-helix:   <span class="a">#d52e2b</span>;  <span class="c">/* mark, the one action, never body copy */</span>
+  --spiral-oxblood: <span class="a">#6f1011</span>;  <span class="c">/* pressed / hover */</span>
 
   <span class="c">/* type */</span>
-  --font-ui:   "Archivo", sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
-  --wdth-display: 125;  --wght-display: 850;
-  --wdth-heading: 112;  --wght-heading: 700;
+  --spiral-font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-sans:    "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   <span class="c">/* rhythm */</span>
-  --unit: 8px;
-  --ease: cubic-bezier(.2, .7, .2, 1);
-  --dur-fast: 150ms;  --dur-slow: 400ms;
-
-  <span class="c">/* glass — controls only, never surfaces */</span>
-  --radius-ctl: 999px;
-  --glass-blur: blur(16px) saturate(1.7);
-  --glass-edge: rgba(255, 255, 255, .45);
-  --glass-sheen: linear-gradient(115deg,
-      rgba(255,255,255,.55), rgba(255,255,255,0) 55%);
+  --spiral-unit: 8px;
+  --spiral-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spiral-dur-fast: 150ms;  --spiral-dur-slow: 400ms;
+  --spiral-radius-ctl: 12px;
 }</pre>
   </div>
 </section>
 
 <footer>
-  <span class="spec"><b>Spiral</b> · Brand Guidelines · SPR-BG-01 · v1.0</span>
+  <span class="spec"><b>Spiral</b> · Brand Guidelines · SPR-BG-02</span>
   <span class="spec">Privacy · Ease of use · Super lightweight · Free for everyone</span>
 </footer>
 

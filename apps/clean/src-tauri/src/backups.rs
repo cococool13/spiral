@@ -59,7 +59,7 @@ pub fn list(home: &Path) -> Vec<DeviceBackup> {
                     .unwrap_or_else(|| id.clone()),
                 device_model: describe_device(&info),
                 last_backup: crate::apps::extract_plist_string(&info, "Last Backup Date"),
-                bytes: size_of(&path),
+                bytes: crate::sizing::size_of(&path),
                 path: path.to_string_lossy().into_owned(),
                 id,
             })
@@ -82,15 +82,6 @@ fn describe_device(info: &str) -> Option<String> {
     }
 }
 
-fn size_of(path: &Path) -> u64 {
-    walkdir::WalkDir::new(path)
-        .follow_links(false)
-        .into_iter()
-        .flatten()
-        .filter(|e| e.file_type().is_file())
-        .filter_map(|e| e.metadata().ok())
-        .fold(0u64, |sum, meta| sum.saturating_add(meta.len()))
-}
 
 #[tauri::command]
 pub fn backups_list() -> Vec<DeviceBackup> {

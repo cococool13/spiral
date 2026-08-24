@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import AppBar from "./components/AppBar";
 import { Notice } from "./components/Notice";
+import { Splash } from "./components/Splash";
 import { Stepper, type Step } from "./components/Stepper";
 import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
 import { emptyDoc, type BuildResult, type Draft, type ResumeDoc } from "./lib/types";
@@ -10,6 +11,7 @@ import { Format } from "./screens/Format";
 import { Input } from "./screens/Input";
 import { Result } from "./screens/Result";
 import { Settings } from "./screens/Settings";
+import { Setup } from "./screens/Setup";
 import { useDebounced } from "./lib/useDebounced";
 import { Style } from "./screens/Style";
 
@@ -27,11 +29,11 @@ export default function App() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [versions, setVersions] = useState<BuildResult[]>([]);
   const [showing, setShowing] = useState(0);
-  const [usesModel, setUsesModel] = useState(false);
-  const [rebuilding, setRebuilding] = useState(0);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [generate, setGenerate] = useState(false);
   const [saveError, setSaveError] = useState("");
-  // Closing Settings returns focus to the menu that opened it, rather than
-  // dropping it on the document.
+  const [fromScratch, setFromScratch] = useState(false);
+  const [splash, setSplash] = useState<"in" | "out" | "off">("in");
   const settingsButton = useRef<HTMLButtonElement | null>(null);
 
   function closeSettings() {
@@ -39,37 +41,50 @@ export default function App() {
     settingsButton.current?.focus();
   }
 
-  // The saved copy waits for typing to stop; `save_document` is synchronous
-  // and writes the whole document.
   const settled = useDebounced(draft);
 
   useEffect(() => {
-    loadDocument()
-      .then((stored) => {
-        if (!stored) return;
-        setSavedAt(stored.savedAt);
-        setDraft({
-          doc: stored.doc,
-          template: stored.template,
-          format: stored.format === "pdf" || stored.format === "docx" ? stored.format : "",
-          accent: stored.accent || "ink",
-          tighten: stored.tighten,
-        });
-      })
-      .catch(() => setSavedAt(null));
+    const started = Date.now();
+    Promise.all([
+      loadDocument()
+        .then((stored) => {
+          if (!stored) return;
+          setSavedAt(stored.savedAt);
+          setDraft({
+            doc: stored.doc,
+            template: stored.template,
+            format: stored.format === "pdf" || stored.format === "docx" ? stored.format : "",
+            accent: stored.accent || "ink",
+            tighten: stored.tighten,
+          });
+        })
+        .catch(() => setSavedAt(null)),
+      engineInfo()
+        .then((info) => {
+          setNeedsSetup(info.needsSetup);
+        })
+        .catch(() => undefined),
+    ]).finally(() => {
+      const reduced =
+        typeof window.matchMedia !== "function" ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const wait = Math.max(0, (reduced ? 0 : 200) - (Date.now() - started));
+      window.setTimeout(() => {
+        setSplash("out");
+        window.setTimeout(() => setSplash("off"), reduced ? 0 : 280);
+      }, wait);
+    });
   }, []);
 
-  // Asked on launch, not only when Settings is opened. Without this, someone
-  // who saved a key last week reopened the app and found "another version"
-  // missing until they wandered back into Settings.
   useEffect(() => {
-    engineInfo()
-      .then((info) => setUsesModel(info.usesModel))
-      .catch(() => setUsesModel(false));
-  }, []);
+    if (!settingsOpen) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") closeSettings();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [settingsOpen]);
 
-  // Only a document the user has actually touched is written back, so opening
-  // the app and changing nothing leaves "saved from…" where it was.
   const edited = useRef(false);
 
   function edit(changed: Partial<Draft>) {
@@ -77,8 +92,6 @@ export default function App() {
     setDraft((current) => ({ ...current, ...changed }));
   }
 
-  // A failure here is surfaced, not swallowed: an unwritable folder must not
-  // let someone keep working on a document that is not being saved.
   useEffect(() => {
     if (!edited.current) return;
     void saveDocument(settled)
@@ -86,10 +99,9 @@ export default function App() {
       .catch((e) => setSaveError(`${e}`));
   }, [settled]);
 
-  // Stable identity: an inline arrow here re-ran Input's drag-drop effect on
-  // every render of this component, stacking listeners.
-  const onInputReady = useCallback((doc: ResumeDoc) => {
+  const onInputReady = useCallback((doc: ResumeDoc, how?: "scratch") => {
     edited.current = true;
+    setFromScratch(how === "scratch");
     setDraft((current) => ({ ...current, doc }));
     setStep("check");
     setReached((seen) => (seen.includes("check") ? seen : [...seen, "check"]));
@@ -104,12 +116,13 @@ export default function App() {
     edit({ doc });
   }
 
-  /** Every style choice invalidates the built versions: they were set in the
-   *  previous one. */
   function choose(changed: Partial<Draft>) {
     edit(changed);
     setVersions([]);
+    setGenerate(false);
   }
+
+  if (splash !== "off") return <Splash leaving={splash === "out"} />;
 
   return (
     <div className="app">
@@ -120,7 +133,7 @@ export default function App() {
         items={[
           {
             id: "settings",
-            label: settingsOpen ? "Close settings" : "Settings",
+            label: "Settings",
             onSelect: () => setSettingsOpen((open) => !open),
           },
         ]}
@@ -130,38 +143,54 @@ export default function App() {
         <main className="app__main">
           <Settings
             onClose={closeSettings}
-            onEngineChanged={(info) => setUsesModel(info.usesModel)}
+            onEngineChanged={(info) => {
+              setNeedsSetup(info.needsSetup);
+            }}
             onCleared={() => {
               edit({ doc: emptyDoc() });
               setSavedAt(null);
+              setFromScratch(false);
               setStep("input");
               setReached(["input"]);
               closeSettings();
             }}
           />
         </main>
+      ) : needsSetup ? (
+        <main className="app__main app__main--stage">
+          <Setup
+            onDone={() => {
+              setNeedsSetup(false);
+            }}
+          />
+        </main>
       ) : (
         <>
           <Stepper current={step} reached={reached} onJump={goTo} />
-          <main className="app__main">
+          <main
+            className={
+              step === "input" ||
+              (step === "build" && (!generate || versions.length > 0))
+                ? "app__main app__main--stage"
+                : "app__main"
+            }
+          >
             {saveError ? <Notice tone="warn">{saveError}</Notice> : null}
             {step === "input" ? (
-              <>
-                {savedAt ? (
-                  <Notice>
-                    You have a resume saved from {new Date(savedAt).toLocaleString()}.{" "}
-                    <button type="button" className="btn" onClick={() => goTo("check")}>
-                      Continue where you left off
-                    </button>
-                  </Notice>
-                ) : null}
-                <Input onReady={onInputReady} />
-              </>
+              <Input
+                onReady={onInputReady}
+                savedAt={savedAt}
+                onOpenSaved={() => {
+                  setFromScratch(false);
+                  goTo("check");
+                }}
+              />
             ) : null}
             {step === "check" ? (
               <Check
                 doc={draft.doc}
                 tighten={draft.tighten}
+                fromScratch={fromScratch}
                 onChange={update}
                 onTighten={(tighten) => choose({ tighten })}
                 onContinue={() => goTo("style")}
@@ -174,41 +203,40 @@ export default function App() {
                 accent={draft.accent}
                 onChoose={(template) => choose({ template })}
                 onChooseAccent={(accent) => choose({ accent })}
-                onContinue={() => goTo("format")}
+                onContinue={() => goTo("build")}
               />
             ) : null}
-            {step === "format" ? (
-              <Format chosen={draft.format} onChoose={(format) => choose({ format })} onContinue={() => goTo("build")} />
-            ) : null}
-            {step === "build" && draft.format !== "" ? (
-              versions.length > 0 && rebuilding === 0 ? (
+            {step === "build" ? (
+              !generate || !draft.format ? (
+                <Format
+                  chosen={draft.format}
+                  onChoose={(format) => choose({ format })}
+                  onGenerate={() => setGenerate(true)}
+                />
+              ) : versions.length > 0 ? (
                 <Result
                   versions={versions}
                   showing={showing}
-                  format={draft.format}
-                  canRewrite={usesModel}
+                  format={draft.format === "docx" ? "docx" : "pdf"}
                   onShow={setShowing}
-                  onRewrite={() => setRebuilding((n) => n + 1)}
                   onAnotherStyle={() => {
                     setVersions([]);
                     setShowing(0);
+                    setGenerate(false);
                     goTo("style");
                   }}
                 />
               ) : (
                 <Build
-                  // A fresh key remounts the screen, which is what makes
-                  // "rewrite the wording again" actually run a second build.
-                  key={`${versions.length}-${rebuilding}`}
+                  key={String(versions.length)}
                   draft={draft}
                   onDone={(result) => {
                     setVersions((all) => [...all, result]);
                     setShowing(versions.length);
-                    setRebuilding(0);
                   }}
                   onBack={() => {
-                    setRebuilding(0);
-                    goTo("style");
+                    choose({ format: "" });
+                    goTo("build");
                   }}
                 />
               )

@@ -6,6 +6,11 @@
 //! file that stays where it is, and no amount of care in either helps here.
 //! See ADR-0019.
 //!
+//! The exclusion list still binds. Lipo does not go through `remove::execute`,
+//! so it loads `exclude` itself and refuses any app or binary
+//! `ExclusionList::covering` matches — the same veto Clean and Uninstall
+//! inherit inside `remove/`, applied at this third boundary (ADR-0009).
+//!
 //! Rewriting a Mach-O **invalidates its code signature.** On an app signed
 //! with the hardened runtime and the `kill` flag — which is every notarized
 //! Developer ID app on a current Mac — the kernel then refuses to run it, and
@@ -19,6 +24,8 @@
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+
+use crate::exclude::ExclusionList;
 
 #[derive(Debug, Serialize, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
@@ -235,8 +242,21 @@ fn refusal(app: &crate::apps::InstalledApp, effects: &Effects) -> Option<String>
     None
 }
 
+/// Why exclusion forbids stripping this app, if it does.
+fn exclusion_block(excl: &ExclusionList, app_path: &Path, binary_path: &Path) -> Option<String> {
+    excl.covering(app_path)
+        .or_else(|| excl.covering(binary_path))
+        .map(|c| c.reason())
+}
+
 /// Universal binaries among the installed apps, largest saving first.
-pub fn candidates(home: &Path, effects: &Effects) -> Vec<Candidate> {
+///
+/// An unreadable exclusion list blocks every candidate (fail closed).
+pub fn candidates(
+    home: &Path,
+    effects: &Effects,
+    excl: &Result<ExclusionList, String>,
+) -> Vec<Candidate> {
     let keep = native_arch();
     let mut found: Vec<Candidate> = crate::apps::discover(home)
         .into_iter()
@@ -253,12 +273,18 @@ pub fn candidates(home: &Path, effects: &Effects) -> Vec<Candidate> {
                 .map(|out| risk_from_codesign(&out))
                 .unwrap_or(SignatureRisk::Unknown);
 
+            let blocked = match excl {
+                Err(why) => Some(why.clone()),
+                Ok(list) => refusal(&app, effects)
+                    .or_else(|| exclusion_block(list, &app.path, &binary)),
+            };
+
             Some(Candidate {
                 savings: (effects.detailed)(&binary)
                     .map(|d| savings_from(&d, keep))
                     .unwrap_or(0),
                 bytes: std::fs::metadata(&binary).map(|m| m.len()).unwrap_or(0),
-                blocked: refusal(&app, effects),
+                blocked,
                 warning: warning_for(signature).to_string(),
                 signature,
                 archs,
@@ -283,8 +309,22 @@ pub struct StripReport {
 }
 
 /// Strip one app, re-resolving it from a fresh scan first.
-pub fn strip(home: &Path, bundle_id: &str, effects: &Effects) -> Result<StripReport, String> {
-    let candidate = candidates(home, effects)
+///
+/// `excl` is loaded by the caller immediately before this call — never held
+/// across sessions — so an exclusion added mid-session binds on the next strip.
+pub fn strip(
+    home: &Path,
+    bundle_id: &str,
+    effects: &Effects,
+    excl: &Result<ExclusionList, String>,
+) -> Result<StripReport, String> {
+    // Fail closed before any rewrite: with the list unreadable, Spiral Clean
+    // does not know what it has been forbidden to touch.
+    if let Err(why) = excl {
+        return Err(why.clone());
+    }
+
+    let candidate = candidates(home, effects, excl)
         .into_iter()
         .find(|c| c.bundle_id == bundle_id)
         .ok_or_else(|| {
@@ -317,10 +357,19 @@ pub fn strip(home: &Path, bundle_id: &str, effects: &Effects) -> Result<StripRep
     }
 }
 
+fn load_exclusions(app: &tauri::AppHandle) -> Result<ExclusionList, String> {
+    use tauri::Manager;
+    let dir = app.path().app_config_dir().map_err(|e| {
+        format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app.")
+    })?;
+    crate::exclude::load(&dir)
+}
+
 #[tauri::command]
-pub fn lipo_candidates() -> Vec<Candidate> {
+pub fn lipo_candidates(app: tauri::AppHandle) -> Vec<Candidate> {
+    let excl = load_exclusions(&app);
     match dirs::home_dir() {
-        Some(home) => candidates(&home, &real_effects()),
+        Some(home) => candidates(&home, &real_effects(), &excl),
         None => Vec::new(),
     }
 }
@@ -333,7 +382,10 @@ pub fn lipo_strip(
 ) -> Result<StripReport, String> {
     use tauri::Manager;
     let home = dirs::home_dir().ok_or("Could not find your home folder, so nothing was changed.")?;
-    let report = strip(&home, &bundle_id, &real_effects())?;
+    // Loaded here, immediately before the rewrite — same discipline as
+    // `run_clean` and every other destructive command.
+    let excl = load_exclusions(&app);
+    let report = strip(&home, &bundle_id, &real_effects(), &excl)?;
 
     // Not a removal, and logged anyway. Decision 12's log is what a user
     // consults to answer "what did this app do to my Mac", and the one
@@ -481,6 +533,10 @@ mod tests {
         };
     }
 
+    fn open_excl() -> Result<ExclusionList, String> {
+        Ok(ExclusionList::default())
+    }
+
     #[test]
     fn the_executable_comes_from_cfbundleexecutable_not_the_bundle_name() {
         // They differ often enough that guessing would skip real candidates,
@@ -512,7 +568,7 @@ mod tests {
         let apps = home.path().join("Applications");
         std::fs::create_dir_all(&apps).unwrap();
         app(&apps, "Thin", "com.example.thin", "Thin");
-        assert!(candidates(home.path(), &stub!(native_arch(), HARDENED)).is_empty());
+        assert!(candidates(home.path(), &stub!(native_arch(), HARDENED), &open_excl()).is_empty());
     }
 
     #[test]
@@ -521,7 +577,7 @@ mod tests {
         let apps = home.path().join("Applications");
         std::fs::create_dir_all(&apps).unwrap();
         app(&apps, "Foreign", "com.example.foreign", "Foreign");
-        assert!(candidates(home.path(), &stub!("ppc i386", HARDENED)).is_empty());
+        assert!(candidates(home.path(), &stub!("ppc i386", HARDENED), &open_excl()).is_empty());
     }
 
     #[test]
@@ -530,7 +586,7 @@ mod tests {
         let apps = home.path().join("Applications");
         std::fs::create_dir_all(&apps).unwrap();
         app(&apps, "Pages", "com.apple.iWork.Pages", "Pages");
-        let found = candidates(home.path(), &stub!("x86_64 arm64", HARDENED));
+        let found = candidates(home.path(), &stub!("x86_64 arm64", HARDENED), &open_excl());
         let pages = found.iter().find(|c| c.bundle_id == "com.apple.iWork.Pages").unwrap();
         assert!(pages.blocked.is_some(), "Apple's own software is never modified");
     }
@@ -548,8 +604,35 @@ mod tests {
             running: &|_| true,
             thin: &|_, _| Ok(()),
         };
-        let found = candidates(home.path(), &effects);
+        let found = candidates(home.path(), &effects, &open_excl());
         assert!(found[0].blocked.as_deref().is_some_and(|r| r.contains("Quit it first")));
+    }
+
+    #[test]
+    fn an_excluded_app_is_listed_but_blocked() {
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let bundle = app(&apps, "Kept", "com.example.kept", "Kept");
+        let excl = Ok(crate::exclude::new(vec![bundle.clone()]));
+        let found = candidates(home.path(), &stub!("x86_64 arm64", HARDENED), &excl);
+        let kept = found.iter().find(|c| c.bundle_id == "com.example.kept").unwrap();
+        assert!(
+            kept.blocked.as_deref().is_some_and(|r| r.contains("never to touch")),
+            "exclusion must block with plain language: {:?}",
+            kept.blocked
+        );
+    }
+
+    #[test]
+    fn an_unreadable_exclusion_list_blocks_every_candidate() {
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        app(&apps, "Fat", "com.example.fat", "Fat");
+        let excl = Err("Spiral Clean could not read your exclusion list.".into());
+        let found = candidates(home.path(), &stub!("x86_64 arm64", HARDENED), &excl);
+        assert!(found[0].blocked.as_deref().is_some_and(|r| r.contains("exclusion list")));
     }
 
     #[test]
@@ -558,7 +641,7 @@ mod tests {
         let apps = home.path().join("Applications");
         std::fs::create_dir_all(&apps).unwrap();
         app(&apps, "Fat", "com.example.fat", "Fat");
-        for candidate in candidates(home.path(), &stub!("x86_64 arm64", HARDENED)) {
+        for candidate in candidates(home.path(), &stub!("x86_64 arm64", HARDENED), &open_excl()) {
             assert!(!candidate.warning.is_empty(), "{} has no warning", candidate.name);
         }
     }
@@ -576,7 +659,7 @@ mod tests {
             running: &|_| false,
             thin: &|_, _| Ok(()),
         };
-        let found = candidates(home.path(), &effects);
+        let found = candidates(home.path(), &effects, &open_excl());
         assert_eq!(found[0].signature, SignatureRisk::Unknown);
         assert!(found[0].warning.contains("may stop it opening"));
     }
@@ -589,15 +672,60 @@ mod tests {
         let apps = home.path().join("Applications");
         std::fs::create_dir_all(&apps).unwrap();
         app(&apps, "Pages", "com.apple.iWork.Pages", "Pages");
-        let err = strip(home.path(), "com.apple.iWork.Pages", &stub!("x86_64 arm64", HARDENED))
-            .unwrap_err();
+        let err = strip(
+            home.path(),
+            "com.apple.iWork.Pages",
+            &stub!("x86_64 arm64", HARDENED),
+            &open_excl(),
+        )
+        .unwrap_err();
         assert!(err.contains("Apple"));
+    }
+
+    #[test]
+    fn an_excluded_app_is_refused_rather_than_stripped() {
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        let bundle = app(&apps, "Kept", "com.example.kept", "Kept");
+        let excl = Ok(crate::exclude::new(vec![bundle]));
+        let err = strip(
+            home.path(),
+            "com.example.kept",
+            &stub!("x86_64 arm64", HARDENED),
+            &excl,
+        )
+        .unwrap_err();
+        assert!(err.contains("never to touch"), "{err}");
+    }
+
+    #[test]
+    fn an_unreadable_exclusion_list_refuses_the_strip() {
+        let home = tempfile::tempdir().unwrap();
+        let apps = home.path().join("Applications");
+        std::fs::create_dir_all(&apps).unwrap();
+        app(&apps, "Fat", "com.example.fat", "Fat");
+        let excl = Err("Spiral Clean could not read your exclusion list.".into());
+        let err = strip(
+            home.path(),
+            "com.example.fat",
+            &stub!("x86_64 arm64", HARDENED),
+            &excl,
+        )
+        .unwrap_err();
+        assert!(err.contains("exclusion list"), "{err}");
     }
 
     #[test]
     fn an_unknown_bundle_id_is_refused_and_says_the_list_changed() {
         let home = tempfile::tempdir().unwrap();
-        let err = strip(home.path(), "com.example.gone", &stub!("x86_64 arm64", HARDENED)).unwrap_err();
+        let err = strip(
+            home.path(),
+            "com.example.gone",
+            &stub!("x86_64 arm64", HARDENED),
+            &open_excl(),
+        )
+        .unwrap_err();
         assert!(err.contains("Reopen Storage"));
     }
 
@@ -614,7 +742,7 @@ mod tests {
             running: &|_| false,
             thin: &|_, _| Err("lipo refused this app. Nothing was changed.".into()),
         };
-        let report = strip(home.path(), "com.example.fat", &effects).unwrap();
+        let report = strip(home.path(), "com.example.fat", &effects, &open_excl()).unwrap();
         assert_eq!(report.freed, 0);
         assert!(report.failed.is_some());
     }
