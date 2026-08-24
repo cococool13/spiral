@@ -167,10 +167,13 @@ jobs:
       # MSI/NSIS are written Tauri tries to sign updater artifacts and dies
       # with "A public key has been found, but no private key".
       #
-      # Unsigned builds therefore merge createUpdaterArtifacts: false. Do not
-      # use --no-sign: that still errors on a pubkey. Do not copy the key into
-      # Dependabot secrets. Signed main builds keep the default config and the
-      # key, so updater artifacts stay as they are today.
+      # Unsigned builds therefore merge createUpdaterArtifacts: false from
+      # tauri.unsigned.conf.json. A file, not inline JSON: Windows runners use
+      # PowerShell, which strips the quotes from '{"bundle":{...}}' so Tauri
+      # receives `{bundle:{...}}` and dies before compile. Do not use --no-sign:
+      # that still errors on a pubkey. Do not copy the key into Dependabot
+      # secrets. Signed main builds keep the default config and the key, so
+      # updater artifacts stay as they are today.
       - name: Build Tauri app (signed)
         if: env.TAURI_KEY != ''
         run: pnpm tauri build
@@ -180,7 +183,7 @@ jobs:
 
       - name: Build Tauri app (unsigned — no signing key in this context)
         if: env.TAURI_KEY == ''
-        run: pnpm tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
+        run: pnpm tauri build --config src-tauri/tauri.unsigned.conf.json
 
       - name: Upload Windows bundles
         uses: actions/upload-artifact@v7
