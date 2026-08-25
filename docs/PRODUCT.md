@@ -13,7 +13,8 @@ an app's spec disagree about that app, the spec is right and this file is stale.
 
 ## Platform
 
-web
+desktop (macOS and Windows; Clean is macOS only). The website under
+`collection/` is a separate product.
 
 ## Users
 
@@ -39,17 +40,17 @@ because it was stated on screen, and has nothing still running afterwards.
 
 | App | What it is for | Its own spec |
 | --- | --- | --- |
-| **Spiral Wallpaper** | The first app of the Spiral brand: a free, privacy-first, super-lightweight wallpaper setter over Wallhaven's free API. Click a wallpaper, it downloads and applies. The app quits when the window closes. Success = the errand completes in under a minute and the user trusts what the app did, because everything it does is stated on-screen. | [`README.md`](../README.md) and [`CLAUDE.md`](../CLAUDE.md) |
+| **Spiral Wallpaper** | The first app of the Spiral brand: a free, privacy-first, super-lightweight wallpaper setter over Wallhaven's free API. Click a wallpaper, it downloads and applies. The app quits when the window closes. Success = the errand completes in under a minute and the user trusts what the app did, because everything it does is stated on-screen. | [`apps/wallpaper/README.md`](../apps/wallpaper/README.md) |
 | **Spiral Slim** | Debloats and hardens Brave, Chrome, Edge and Firefox using enterprise policies the browsers respect natively, showing every change before it makes it. Script-first on every platform by design. | [`apps/slim/`](../apps/slim/) |
 | **Spiral Clean** | Reclaims disk space and uninstalls apps on macOS. Nothing is removed unless it is in the shipped safe-category catalog, and every removal is proven safe by a Rust test suite before it ships. | [`apps/clean/docs/design-spec.md`](../apps/clean/docs/design-spec.md) |
-| **Spiral Resume** | A resume goes in; a typeset PDF or Word file comes out, the wording is tightened, and no fact is ever changed. The facts are extracted before any model sees the document and diffed against the output afterwards. | [`apps/Resume/docs/design-spec.md`](../apps/Resume/docs/design-spec.md) |
+| **Spiral Resume** | A resume goes in; a typeset PDF or Word file comes out, the wording is tightened, and no fact is allowed to change. Digit runs and capitalized names are compared in order after every rewrite; a mechanical miss still leaves the Check screen as the backstop. | [`apps/Resume/docs/design-spec.md`](../apps/Resume/docs/design-spec.md) |
 
 ## Positioning
 
 A neighbouring wallpaper, cleaner, or resume tool can copy a feature list.
-None of them can truthfully copy this: **no account, no telemetry, and no
-network request the person did not ask for** — and, in Resume, a fact that
-moves is a rejected rewrite, not a warning.
+None of them can truthfully copy this: **no account, no telemetry, and every
+network host named on screen** — and, in Resume, a fact that moves is a
+rejected rewrite, not a warning.
 
 The website is a separate product with a separate charter. It may use motion
 and video; the apps may not import that ambition, and the site may not import

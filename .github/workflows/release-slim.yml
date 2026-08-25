@@ -7,13 +7,9 @@ name: release-slim
 #
 # macOS only, and updater off, matching what Slim already commits to:
 # apps/slim/desktop/README.md records "no auto-updater" as a decision — adding
-# one means adding a second trust root — and no Windows or Linux binary, with
-# apps/slim/CLAUDE.md repeating it as a rule.
-#
-# The shared workflow does support Windows. Turning it on here is a product and
-# security decision, not a config change: it means publishing a compiled
-# artifact for a tool that writes system policy, and the two documents above
-# have to say so first.
+# one means adding a second trust root — and no Windows or Linux binary will be
+# published (SECURITY.md). On Windows and Linux, Slim is the scripts in
+# apps/slim/, not an installer. Do not set `windows: true` here.
 
 on:
   push:

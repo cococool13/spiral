@@ -2,14 +2,14 @@
 
 Date: 2026-08-11 · Status: approved by Cohen via 16-question grilling session · First document for `apps/Resume/`, which was an empty folder before this.
 
-Spiral Resume is the fourth product in the Spiral collection, after Wallpaper, Slim and Clean. It does one job: a resume goes in, a clean typeset PDF or DOCX comes out, the wording is tightened, and **no fact is ever changed**.
+Spiral Resume is the fourth product in the Spiral collection, after Wallpaper, Slim and Clean. It does one job: a resume goes in, a clean typeset PDF or DOCX comes out, the wording is tightened, and **no fact is allowed to change** — after a rewrite, digit runs and capitalized names are compared in order (mechanical, not semantic); the Check screen is the semantic backstop.
 
 ## Identity
 
 - **Name:** Spiral Resume. Bundle identifier `app.spiral.resume`. Directory `apps/Resume/`.
 - **Platform:** macOS **and** Windows, both in v1.
 - **Stack:** Tauri 2 + Rust backend, React 18 + strict TypeScript frontend, Vite, pnpm 11.9 — mirroring `apps/clean` and `apps/wallpaper`. Independent pnpm project; no root workspace.
-- **Brand:** consumed from `brand/` at build time via `apps/Resume/scripts/sync-brand.mjs` into gitignored `src/styles/tokens.css` and `src/assets/brand/`. `check-hex.mjs` gates the build. No brand value is ever defined inside `apps/Resume/`.
+- **Brand:** consumed from `brand/` at build time via `node scripts/sync-brand.mjs resume` into gitignored `src/styles/tokens.css` and `src/assets/brand/`. `check-hex.mjs` gates the build. No brand value is ever defined inside `apps/Resume/`.
 - **Release:** tag namespace `resume-v*`, via a thin `.github/workflows/release-resume.yml` calling the shared `release-app.yml` with `macos: true, windows: true, updater: false`. macOS signed with the existing Developer ID (`CU8NTJWQ43`) and notarized. **Windows is unsigned** — a known, accepted gap (see Risks).
 - **Homebrew:** every macOS release also needs the cask in `cococool13/homebrew-spiral` bumped, or `brew install --cask cococool13/spiral/spiral-resume` keeps installing the old version.
 
@@ -17,7 +17,7 @@ Spiral Resume is the fourth product in the Spiral collection, after Wallpaper, S
 
 > Spiral Resume never invents anything on your resume.
 
-Titles, employers, dates, schools, and every number in the source are extracted before any model sees the document, passed through untouched, and diffed against the output. A changed fact is a rejected generation, not a warning. This is the differentiator; no mainstream AI resume tool makes this claim.
+Titles, employers, dates, schools, and every number in the source are extracted before any model sees the document and stay on the Check screen for the person to correct. After a rewrite, digit runs and capitalized names are compared in order; a mismatch discards that rewrite. Plain Title Case openers like “Managed” are not treated as names; acronyms and mixed-capitals are. This is mechanical, not semantic — the Check screen remains the backstop. This honesty is the differentiator; mainstream AI resume tools do not make the same claim.
 
 ## Decisions (settled with Cohen)
 
@@ -25,7 +25,7 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 
 1. **Shape:** a Tauri desktop app in `apps/`, not a page on the website. The website is a static export with no server, so it cannot host a free AI tier.
 2. **Three engine tiers:** deterministic (default, always available) → optional local model download → the user's own API key. *(Against the recommendation of two tiers; the optional local download is a third thing to build, explain and test.)*
-3. **Facts frozen.** The model may rewrite bullet phrasing and the summary. It never emits a name, employer, title, date, school or number — those are extracted first and re-inserted. Output is diffed against source and rejected on any factual delta.
+3. **Facts frozen.** The model may rewrite bullet phrasing and the summary. After a rewrite, digit runs and capitalized names are compared in order against the source; a mismatch discards that rewrite. Plain Title Case sentence openers (e.g. “Managed”) are skipped so verbs are not treated as names; acronyms and mixed-capitals are kept. Mechanical, not semantic — the Check screen remains the backstop.
 4. **Inputs:** PDF, DOCX, pasted text, and a guided from-scratch form. *(Against the recommendation of deferring PDF to v1.1; PDF parsing is the single largest source of garbled input.)* **Widened 2026-08-13:** a file is now read by its first bytes rather than its extension, so a PDF named `.docx` still opens, and a resume kept as plain text (`.txt`, `.md`, UTF-8 or UTF-16) is read through the same parser as a paste. Formats the app cannot read — `.doc`, `.rtf`, `.odt`, Pages, a password-protected PDF — each name themselves and the one action that fixes them.
 5. **Exports:** PDF **and** DOCX. This constrains template design permanently — see Template envelope.
 6. **The app is Spiral; the resume is not.** Full Spiral identity in the chrome. Templates use system-safe professional faces, ink on paper, one user-chosen accent. No mark, no red, no watermark on the user's document.

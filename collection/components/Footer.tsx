@@ -4,7 +4,7 @@ import Mark from "./Mark";
 
 const EMAIL = "cohencool@icloud.com";
 const GITHUB = "https://github.com/cococool13";
-const year = new Date().getFullYear();
+const year = 2026;
 
 const appLinks = apps.filter((a) => a.page);
 
@@ -28,7 +28,7 @@ export default function Footer() {
                   <li key={app.slug}>
                     <a
                       href={app.page}
-                      className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper"
+                      className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
                     >
                       {app.name.replace("Spiral ", "")}
                     </a>
@@ -40,7 +40,7 @@ export default function Footer() {
               <li>
                 <a
                   href={`mailto:${EMAIL}`}
-                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper"
+                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
                 >
                   {EMAIL}
                 </a>
@@ -50,7 +50,7 @@ export default function Footer() {
                   href={GITHUB}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper"
+                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
                 >
                   GitHub
                 </a>
@@ -62,17 +62,23 @@ export default function Footer() {
         <div className="mt-16 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-[var(--radius-ctl)] bg-conc2 px-5 py-4 font-mono text-micro uppercase tracking-widest text-gray">
           <span>© {year} Cohen Coolidge</span>
           <span className="flex flex-wrap gap-x-6 gap-y-2">
-            <a href="/privacy/" className="hover:text-paper">
+            <a
+              href="/privacy/"
+              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+            >
               Privacy
             </a>
-            <a href="/work/" className="hover:text-paper">
+            <a
+              href="/work/"
+              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+            >
               Other work
             </a>
             <a
               href="https://github.com/cococool13/spiral/blob/main/LICENSE"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-paper"
+              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
             >
               MIT
             </a>
@@ -80,7 +86,7 @@ export default function Footer() {
               href="https://unsplash.com/photos/E_kMaBHrw0k"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-paper"
+              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
             >
               Photograph
             </a>

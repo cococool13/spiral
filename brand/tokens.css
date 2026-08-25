@@ -1,6 +1,6 @@
 /* Spiral Identity 02 — single source of truth for all Spiral surfaces.
-   Consumed by collection/ and apps/* via each surface's scripts/sync-brand.mjs.
-   Do not hardcode these values anywhere else. */
+   Consumed via `node scripts/sync-brand.mjs <surface>` (allowlists in
+   scripts/brand-manifest.mjs). Do not hardcode these values anywhere else. */
 
 :root {
   /* Identity 02 materials */
@@ -38,8 +38,10 @@
   --spiral-dur-fast: 150ms;
   --spiral-dur-slow: 400ms;
 
-  /* chrome — surfaces are square; controls are 12px. Pills (999px) are retired. */
+  /* chrome — surfaces are square; controls are 12px.
+     Stadium capsules (999px) are allowed for CTAs only (.glass-pill). */
   --spiral-radius-ctl: 12px;
+  --spiral-radius-pill: 999px;
   --spiral-glass-blur: blur(16px) saturate(1.7);
   --spiral-glass-edge: rgba(255, 255, 255, 0.45);
   --spiral-glass-sheen: linear-gradient(

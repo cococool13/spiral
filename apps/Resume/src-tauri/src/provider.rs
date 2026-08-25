@@ -64,6 +64,18 @@ impl Provider {
                         "That base URL needs to start with http:// or https://.".to_string()
                     );
                 }
+                // Plain http is for loopback Ollama / LM Studio only. A remote
+                // http endpoint would send the keychain key in cleartext.
+                if parsed.scheme() == "http" {
+                    let host = parsed.host_str().unwrap_or("");
+                    let loopback = matches!(host, "127.0.0.1" | "localhost" | "::1");
+                    if !loopback {
+                        return Err(
+                            "Remote endpoints need https://. Use http:// only for a local server on this computer."
+                                .to_string(),
+                        );
+                    }
+                }
                 Ok(Provider::Compatible {
                     base_url: trimmed.to_string(),
                 })
@@ -359,6 +371,12 @@ mod tests {
                 .unwrap()
                 .host(),
             "localhost:11434"
+        );
+        assert!(
+            Provider::parse("compatible", "http://api.example.com/v1")
+                .unwrap_err()
+                .contains("https://"),
+            "remote http must be refused"
         );
     }
 

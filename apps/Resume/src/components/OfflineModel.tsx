@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   chooseOfflineModel,
   downloadOfflineModel,
@@ -13,47 +13,21 @@ import { Notice } from "./Notice";
  * the smaller one runs on more machines, so the choice is the user's and every
  * size is stated before a byte is fetched.
  *
- * Nothing downloads unless it is asked for, the bar measures real bytes, and
- * downloading a model chooses it — nobody fetches gigabytes they did not mean
- * to use.
+ * Nothing downloads unless a Download button is pressed. The bar measures real
+ * bytes, and downloading a model chooses it — nobody fetches gigabytes they did
+ * not mean to use.
  */
-export function OfflineModel({
-  autoDownloadId,
-  onInstalled,
-}: {
-  autoDownloadId?: string;
-  onInstalled?: () => void;
-} = {}) {
+export function OfflineModel({ onInstalled }: { onInstalled?: () => void } = {}) {
   const [list, setList] = useState<ModelList | null>(null);
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [error, setError] = useState("");
-
-  const started = useRef(false);
 
   useEffect(() => {
     offlineModelStatus()
       .then(setList)
       .catch((e) => setError(`${e}`));
   }, []);
-
-  useEffect(() => {
-    if (!autoDownloadId || !list || started.current) return;
-    const model = list.models.find((entry) => entry.id === autoDownloadId);
-    if (!model) return;
-    if (model.installed) {
-      started.current = true;
-      onInstalled?.();
-      return;
-    }
-    started.current = true;
-    void run(model.id, () => {
-      setProgress({ received: 0, total: 0, percent: 0 });
-      return downloadOfflineModel(model.id, setProgress);
-    }).then((next) => {
-      if (next?.models.some((entry) => entry.installed && entry.inUse)) onInstalled?.();
-    });
-  }, [autoDownloadId, list, onInstalled]);
 
   async function run(id: string, work: () => Promise<ModelList>) {
     setError("");
@@ -72,9 +46,11 @@ export function OfflineModel({
   }
 
   const download = (model: ModelStatus) =>
-    run(model.id, () => {
+    run(model.id, async () => {
       setProgress({ received: 0, total: 0, percent: 0 });
-      return downloadOfflineModel(model.id, setProgress);
+      const next = await downloadOfflineModel(model.id, setProgress);
+      if (next.models.some((entry) => entry.installed && entry.inUse)) onInstalled?.();
+      return next;
     });
 
   if (!list) return null;

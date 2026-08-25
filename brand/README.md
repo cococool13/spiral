@@ -18,7 +18,7 @@ The mark is the original filled helix — three bands, not the Identity 02 strok
 | `logo/mark-red.svg` | Mark in helix red | apps |
 | `logo/lockup-red.svg` | Helix + drawn SPIRAL. First-run screens only | `apps/wallpaper` |
 | `logo/png/mark-{16..1024}.png` | Icon-pipeline sources (tall helix) | Tauri icon generation |
-| `hero/hero-exit.webp` | Dark corridor, daylight at the far door | collection hero |
+| `hero/hero-exit.webp` | Dark corridor, daylight at the far door | collection hero (synced to `/brand/hero/`) |
 | `guide.html` | Full brand reference | humans |
 
 ## How surfaces consume it
@@ -51,7 +51,7 @@ Edit the file here instead.
 
 ## The rules that outlive any one file
 
-- Five colours. One grotesque (display and UI). System mono for data. Two radii: `0` and `--spiral-radius-ctl` (12px).
+- Five colours. One grotesque (display and UI). System mono for data. Two radii for most chrome: `0` and `--spiral-radius-ctl` (12px). Stadium capsules (`--spiral-radius-pill`) are CTAs only.
 - All spacing is a multiple of 8px.
 - Red (`--spiral-red` / `--spiral-helix`) is for the mark, the one action, and warnings. Never a page fill. Never body text.
 - The mark is three filled bands, one colour at a time — helix, paper, or void. Never gradients, shadows, rotation, or other hues. Do not redraw it as a stroke.

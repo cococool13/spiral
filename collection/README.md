@@ -8,7 +8,8 @@ to Cloudflare Pages at **spiralcc.tech**
 ```bash
 pnpm install
 pnpm dev          # localhost:3000
-pnpm build        # static export into out/
+pnpm build        # hex gate + static export into out/
+pnpm check:hex    # reject colours outside brand/tokens.css
 pnpm typecheck    # tsc --noEmit
 pnpm lint         # biome check .  — lint + format, read-only
 pnpm format       # biome check --write .  — apply fixes
@@ -37,7 +38,8 @@ would be a mistake.
 
 - **Tokens.** Every colour, font, radius, and easing curve comes from `/brand`.
   No hex outside the token file, no second display face, no in-between radius.
-  Two radii only: `0` and `--spiral-radius-ctl` (12px). Identity 01 pills are retired.
+  Two radii for most chrome: `0` and `--spiral-radius-ctl` (12px). Stadium
+  capsules (`--spiral-radius-pill`) are for CTAs only.
 - **The mark.** The original three-band helix. One colour at a time — red, ink,
   or paper. Never gradients, shadows, rotation, a stroke redraw, or other hues.
 - **Red discipline.** Red is the mark, interaction, and warnings. If a screen is

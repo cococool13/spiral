@@ -38,6 +38,8 @@ export function errorCopy(error: unknown): string {
       "Wallhaven allows about 45 requests a minute. Wait a moment, then try again.",
     bad_response: "Wallhaven sent an unexpected response. Try again in a minute.",
     download_failed: "The download stopped partway. Try again.",
+    too_large:
+      "This image is over 40 MB, so Spiral didn’t download it. Pick a smaller wallpaper.",
     bad_image:
       "The file that arrived wasn’t an image, so Spiral discarded it. Try another wallpaper.",
     apply_failed:

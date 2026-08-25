@@ -83,6 +83,10 @@ export default function OtherWork() {
             aria-label="Other work"
             className="border-t border-ink/10"
             onKeyDown={(e) => {
+              // Only intercept arrows when a row is the event target — never
+              // steal page scroll from the list container itself.
+              if (!(e.target instanceof HTMLElement)) return;
+              if (!e.target.closest("a")) return;
               if (e.key === "ArrowDown" || e.key === "ArrowRight") {
                 e.preventDefault();
                 move(1);

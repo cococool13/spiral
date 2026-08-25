@@ -5,6 +5,7 @@ next-env.d.ts
 *.tsbuildinfo
 # synced from /brand at build time — never edit or commit the copy
 public/brand/
+lib/brand-tokens.json
 
 # wrangler local state
 .wrangler/

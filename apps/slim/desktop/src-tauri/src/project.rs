@@ -27,14 +27,11 @@ fn required_scripts() -> [&'static str; 2] {
 }
 
 /// Checked in order. The scripts are stdlib-only, so the system interpreter
-/// on macOS is enough and is preferred: an app launched from Finder has a
-/// minimal PATH and should not depend on the user's shell setup.
+/// on macOS is enough. Homebrew paths are deliberately not tried for
+/// elevation: those directories are user-writable on a typical Mac, and the
+/// resolved interpreter is what the administrator dialog runs as root.
 #[cfg(not(target_os = "windows"))]
-const PYTHON_CANDIDATES: [&str; 3] = [
-    "/usr/bin/python3",
-    "/opt/homebrew/bin/python3",
-    "/usr/local/bin/python3",
-];
+const PYTHON_CANDIDATES: [&str; 1] = ["/usr/bin/python3"];
 
 /// Windows ships no Python, so there is no fixed path to prefer. The launcher
 /// is tried first because it is the one thing a python.org install always
@@ -174,8 +171,16 @@ pub fn resolve_python(env_override: Option<PathBuf>) -> SlimResult<PathBuf> {
 
 impl Project {
     pub fn locate(resource_dir: Option<PathBuf>) -> SlimResult<Self> {
+        // Env overrides exist for developers. In a release build they would
+        // choose what runs as root, so they are ignored outside debug.
+        #[cfg(debug_assertions)]
         let env_root = std::env::var_os("SPIRAL_SLIM_PROJECT_DIR").map(PathBuf::from);
+        #[cfg(debug_assertions)]
         let env_python = std::env::var_os("SPIRAL_SLIM_PYTHON").map(PathBuf::from);
+        #[cfg(not(debug_assertions))]
+        let env_root: Option<PathBuf> = None;
+        #[cfg(not(debug_assertions))]
+        let env_python: Option<PathBuf> = None;
         let candidates = candidate_roots(resource_dir, env_root);
         Ok(Self {
             root: resolve_root(&candidates)?,

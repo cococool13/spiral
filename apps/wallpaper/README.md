@@ -6,15 +6,16 @@ close the window; nothing keeps running in the background.
 
 - **Source:** Wallhaven, no key needed. The source sits behind a
   `WallpaperSource` interface so more free sources can be added later.
-- **Privacy:** no account, no analytics, no telemetry. Zero network requests
-  until you search or apply. All network calls happen in the Rust core, never
-  the webview.
+- **Privacy:** no account, no analytics, no telemetry. Wallhaven is reached
+  only when you search or apply. On open the app may ask GitHub once for a
+  newer build — named in Settings and switchable off. All network calls happen
+  in the Rust core, never the webview.
 - **Lightweight:** ~4.6 MB binary, ~95 MB idle RAM, window on screen in under
   a second (measured on Apple Silicon).
 
 ## Develop
 
-Prereqs: Node 18+, pnpm, Rust (rustup).
+Prereqs: Node 22+, pnpm 11.9, Rust (rustup).
 
 ```bash
 pnpm install
@@ -26,6 +27,9 @@ pnpm smoke                # debug-only end-to-end smoke test; restores your wall
 
 `scripts/make-dmg-background.py` and `scripts/make-nsis-images.py` regenerate
 the committed installer artwork from the brand tokens (Python 3 + Pillow).
+`src-tauri/icons/android/` is Tauri scaffolding leftover — not a shipped Android
+app. `src-tauri/icons/tray-44.png` is unused; this app has no tray (closing the
+window quits).
 
 ## Layout
 

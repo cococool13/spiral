@@ -163,7 +163,7 @@ p {
   min-width: min(14rem, 100%);
   max-width: 100%;
   padding: 0 2.5rem;
-  border-radius: 999px;
+  border-radius: var(--spiral-radius-pill);
   border: 1px solid transparent;
   background: var(--spiral-red-fill);
   color: var(--spiral-paper);
@@ -218,7 +218,7 @@ p {
 
 /* Compact enough to sit in the floating nav without becoming a second hero. */
 .glass-pill--nav {
-  min-width: 0;
+  min-width: 11rem;
   padding: 0 1.25rem;
   font-size: 0.8125rem;
   gap: 8px;
@@ -337,6 +337,10 @@ p {
 .kind-chip:active {
   transform: scale(0.97);
 }
+.kind-chip:focus-visible {
+  outline: 2px solid var(--spiral-helix);
+  outline-offset: 2px;
+}
 @media (prefers-reduced-motion: reduce) {
   .kind-chip:active {
     transform: none;
@@ -377,6 +381,11 @@ p {
 .work-row:hover,
 .work-row:focus-visible {
   background: color-mix(in oklab, var(--spiral-concrete) 55%, transparent);
+}
+.work-row:focus-visible,
+.work-row a:focus-visible {
+  outline: 2px solid var(--spiral-helix);
+  outline-offset: 2px;
 }
 .work-row.is-on {
   background: var(--spiral-concrete);
@@ -498,11 +507,11 @@ p {
    bar over the app grid. The blur stays; the transparency is what had to go. */
 .nav-pill {
   border-radius: var(--spiral-radius-ctl);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid color-mix(in oklab, var(--spiral-paper) 18%, transparent);
   background: color-mix(in oklab, var(--spiral-void) 92%, transparent);
   backdrop-filter: var(--spiral-glass-blur);
   -webkit-backdrop-filter: var(--spiral-glass-blur);
-  box-shadow: rgba(0, 0, 0, 0.28) 0 4px 24px;
+  box-shadow: color-mix(in oklab, var(--spiral-void) 28%, transparent) 0 4px 24px;
 }
 
 @media (prefers-reduced-motion: reduce) {

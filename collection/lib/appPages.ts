@@ -50,23 +50,24 @@ export const appPages: AppPage[] = [
     name: "Spiral Resume",
     title: "Spiral Resume — your resume, set properly",
     description:
-      "A free desktop resume builder. Twelve typeset layouts, PDF and Word from one source, and a model that is never allowed to change a fact.",
+      "A free desktop resume builder. Twelve typeset layouts, PDF and Word from one source, and a mechanical gate that discards a rewrite when a digit run or capitalized name moves.",
     eyebrow: "Spiral Resume",
     headline: ["Your resume,", "set properly."],
     sub: "Twelve typeset layouts. Your words, your facts, your file — PDF or Word, on your computer in about a second.",
     cta: { label: "Get 0.1.1", href: `${REPO}/releases/tag/resume-v0.1.1` },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/Resume` },
-    proofLine: "Free. No account, no upload, no telemetry.",
+    proofLine:
+      "Free. Digits and names are checked in order; a rewrite that moves one is discarded.",
     tagline: [
       "A resume tool that rewrites",
       "your job title is not helping.",
-      "This one is not allowed to.",
+      "This one discards a rewrite that moves a digit or a name.",
     ],
     benefitsHeading: "Built to be trusted with the truth.",
     benefits: [
       {
-        title: "It never invents a fact",
-        body: "Every number, employer, date and acronym in a rewrite is checked against what you wrote. One that moved is thrown away and your own wording is kept. The app tells you when that happens.",
+        title: "A moved digit or name is discarded",
+        body: "Before a rewrite is kept, digit runs and capitalized names are compared in order. A plain Title Case opener like “Managed” is skipped; acronyms like AWS are kept. One that moved is thrown away. It is a mechanical filter — the Check screen is the semantic backstop.",
       },
       {
         title: "Twelve layouts, shown as they set",
@@ -114,7 +115,7 @@ export const appPages: AppPage[] = [
       },
       {
         q: "What does “never changes a fact” actually mean?",
-        a: "Before a rewritten bullet is allowed into your document, it is compared with the original. Every run of digits must still be there, in the same order, and every proper noun must still be there. A rewrite that moved one is discarded and your sentence is kept. It is a filter, not advice.",
+        a: "Before a rewritten bullet is kept, the app compares digit runs and capitalized names in the order they appear. A plain Title Case word at the start of a sentence is skipped so verbs like “Managed” are not treated as names; acronyms and mixed-capitals there (AWS, PostgreSQL) are kept. A rewrite that moved one of those is discarded. It is a mechanical filter, not a full reading of meaning — verbs, lowercase names, and relationships can still drift, so the Check screen remains the backstop.",
       },
       {
         q: "Does anything I type leave my computer?",
@@ -122,7 +123,7 @@ export const appPages: AppPage[] = [
       },
       {
         q: "How big is the offline model, and how slow is it?",
-        a: "2.7 GB, downloaded once, only if you ask for it. On an Apple silicon laptop it rewrote a 64 bullet resume in about 44 seconds. An API key is faster; the rule based pass is instant.",
+        a: "Three tiers from about 1.3 GB to 5.7 GB; the recommended one is about 2.7 GB, downloaded once, only if you ask for it. On an Apple silicon laptop that tier rewrote a 64-bullet resume in about 44 seconds. An API key is faster; the rule-based pass is instant.",
       },
       {
         q: "Will the Word file look like the PDF?",
@@ -175,7 +176,7 @@ export const appPages: AppPage[] = [
       },
       {
         title: "Nothing is sent anywhere",
-        body: "No account, no analytics, no telemetry. It makes no network request at all until you search, and every request it does make happens in the Rust core rather than the webview.",
+        body: "No account, no analytics, no telemetry. Wallhaven is reached only when you search or apply. On open the app may ask GitHub once for a newer build — named in Settings and switchable off. Every request runs in the Rust core, not the webview.",
       },
       {
         title: "It stays out of your disk",
@@ -209,7 +210,7 @@ export const appPages: AppPage[] = [
     facts: [
       { label: "Binary", value: "4.6 MB" },
       { label: "Idle memory", value: "95 MB" },
-      { label: "Window on screen", value: "Under a second" },
+      { label: "Window on screen", value: "0.23 s" },
       { label: "Background processes", value: "None" },
     ],
     faq: [
@@ -253,7 +254,10 @@ export const appPages: AppPage[] = [
     eyebrow: "Spiral Slim",
     headline: ["Debloat your", "browser."],
     sub: "The signed macOS app configures Brave. The same policies, as scripts, cover Brave, Chrome, Edge and Firefox. No extension, no patch, nothing injected.",
-    cta: { label: "Download for macOS", href: RELEASE },
+    cta: {
+      label: "Download for macOS",
+      href: "https://github.com/cococool13/Spiral-Slim/releases/latest",
+    },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/slim` },
     proofLine: "Free. Python standard library only, no dependencies.",
     tagline: [
@@ -325,7 +329,7 @@ export const appPages: AppPage[] = [
       },
       {
         q: "Does it work on Linux and Windows?",
-        a: "Yes, the scripts run on Linux, macOS and Windows. The only signed binary is the macOS wizard; everywhere else it runs from source, and the project's SECURITY.md draws that line deliberately.",
+        a: "Yes. The scripts run on Linux, macOS and Windows. The only published binary is the signed macOS wizard; on Windows and Linux you run the scripts from source. The project's SECURITY.md draws that line deliberately — no Windows or Linux installer will be published.",
       },
       {
         q: "Why Python with no dependencies?",

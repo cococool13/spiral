@@ -18,7 +18,7 @@ the file is given — those two must not drift apart.
 | --- | --- |
 | **Fact** | A title, employer, date, school, place, or number as the user wrote it. Facts are extracted before any model sees the document and re-inserted afterwards; a model is never asked to produce one. |
 | **Fact freeze** | The rule that the wording of a bullet may change and its facts may not. |
-| **The fact gate** | `gate.rs`. It compares the numbers and proper nouns of a rewrite against the original, in order, and refuses anything that moved one. It does not try to understand the sentence. |
+| **The fact gate** | `gate.rs`. It compares the numbers and proper nouns of a rewrite against the original, in order, and refuses anything that moved one. Plain Title Case at the start of a sentence is skipped so verbs are not treated as names; acronyms and mixed-capitals there are kept. It does not try to understand the sentence. |
 | **Rejected rewrite** | A rewrite the gate refused. The original bullet is kept, the count is reported, and nothing is silently changed. A rejection is an outcome, not an error. |
 | **Tightening** | The deterministic wording pass in `tighten.rs` — the free tier's engine. It shortens phrasing by rule, never by generation. |
 | **Note** | A sentence shown under the result about the document that was built — how many rewrites were refused, or which characters the faces cannot draw. Advice, never a change. |

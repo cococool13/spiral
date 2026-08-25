@@ -19,7 +19,7 @@ export default function Hero() {
         <div className="hero-frame">
           {/* biome-ignore lint/performance/noImgElement: still is the LCP image */}
           <img
-            src="/images/hero-exit.webp"
+            src="/brand/hero/hero-exit.webp"
             alt="A dark corridor with daylight at the far door."
             width={2400}
             height={1350}
@@ -49,7 +49,8 @@ export default function Hero() {
             className="rise mt-6 max-w-xl text-base leading-relaxed text-paper sm:text-lg"
             style={rise(1)}
           >
-            No account. No bloat. No tracking.
+            Private desktop tools. No account. No bloat. No tracking. Mac and Windows
+            where each app ships.
           </p>
 
           <div

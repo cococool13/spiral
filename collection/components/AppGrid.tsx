@@ -3,9 +3,9 @@ import { apps } from "@/lib/apps";
 /** One measured fact per app — not a slogan. */
 const PROOF: Record<string, string> = {
   wallpaper: "4.6 MB. Click, it applies.",
-  slim: "54 policies. Every change shown first.",
+  slim: "Brave on Mac. Scripts for four browsers.",
   clean: "Not released. Delete, Trash, or never touch.",
-  resume: "Twelve layouts. A moved fact is discarded.",
+  resume: "Twelve layouts. A moved digit or name is discarded.",
 };
 
 export default function AppGrid() {

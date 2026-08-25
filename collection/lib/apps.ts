@@ -72,7 +72,7 @@ export const apps: SpiralApp[] = [
   {
     slug: "slim",
     name: "Spiral Slim",
-    tagline: "Sets Brave's privacy policies. Shows every change first.",
+    tagline: "Brave wizard on Mac. Scripts for Brave, Chrome, Edge, and Firefox.",
     status: "live",
     version: "1.0.0",
     brewCask: "spiral-slim",
@@ -82,11 +82,10 @@ export const apps: SpiralApp[] = [
         url: `${SLIM_RELEASE}/Spiral.Slim_1.0.0_universal.dmg`,
         label: "Download for Mac",
       },
-      // Windows runs the same app, built from source. This points at the
-      // repository rather than at a binary that does not and will not exist.
+      // No Windows binary is published — SECURITY.md. Source link only.
       windows: {
         url: "https://github.com/cococool13/spiral/tree/main/apps/slim",
-        label: "Build it for Windows",
+        label: "Read the source",
       },
       all: "https://github.com/cococool13/Spiral-Slim/releases/latest",
     },
@@ -117,9 +116,10 @@ export const apps: SpiralApp[] = [
   {
     slug: "resume",
     name: "Spiral Resume",
-    tagline: "Twelve typeset layouts. It is never allowed to change a fact.",
+    tagline: "Twelve typeset layouts. Digits and names are not allowed to move.",
     status: "live",
     version: "0.1.1",
+    brewCask: "spiral-resume",
     page: "/resume/",
     iconPath: "M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 13h6M9 16h4",
     downloads: {

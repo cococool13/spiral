@@ -3,10 +3,8 @@ import { buildDocument } from "../lib/ipc";
 import type { BuildResult, Draft, Progress } from "../lib/types";
 import { Notice } from "../components/Notice";
 
-const STAGE_FLOOR_MS = 400;
-
-/** Each named stage stays on screen long enough to be read. The percentages
- *  still come from Rust after the work that earned them. */
+/** Progress comes from Rust after each real stage finishes — no artificial
+ *  floor. Spec: do not pad stage display time. */
 export function Build({
   draft,
   aim = "",
@@ -23,30 +21,15 @@ export function Build({
 
   useEffect(() => {
     let current = true;
-    let chain = Promise.resolve();
-
-    function hold(next: Progress) {
-      chain = chain.then(
-        () =>
-          new Promise<void>((resolve) => {
-            window.setTimeout(() => {
-              if (current) setProgress(next);
-              resolve();
-            }, STAGE_FLOOR_MS);
-          }),
-      );
-    }
 
     buildDocument(
       draft,
       (next) => {
-        hold(next);
+        if (current) setProgress(next);
       },
       aim,
     )
-      .then(async (result) => {
-        await chain;
-        await new Promise<void>((resolve) => window.setTimeout(resolve, STAGE_FLOOR_MS));
+      .then((result) => {
         if (current) onDone(result);
       })
       .catch((e) => {

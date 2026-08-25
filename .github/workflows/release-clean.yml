@@ -16,27 +16,64 @@ on:
     tags: ["clean-v*"]
   workflow_dispatch:
 
-# One run per ref. Without this, two runs can exist for the same tag and both
-# reach `publish`, racing to create the same GitHub Release — which is exactly
-# what happened to v1.0.3 on 2026-08-06, when a dispatched run and a
-# late-firing push run appeared 21 seconds apart.
-#
-# `cancel-in-progress` is true for branches and pull requests, where a newer
-# push makes an older run pointless, and **false for tags**: cancelling a
-# release part-way through publishing is a worse outcome than the duplicate.
-# A second tag run instead queues behind the first and then fails loudly at
-# `publish` because the release already exists, which is a clear answer.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
+  # The tagged commit is what people download. Per-push CI skips tags, so this
+  # gate is the only place the safety suite runs on the release artifact.
+  verify:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/clean
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/clean/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/clean/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/clean/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync brand assets
+        run: pnpm sync-brand
+
+      - name: Quality gates
+        run: pnpm check:hex && pnpm tsc --noEmit
+
+      - name: Build the frontend
+        run: pnpm build
+
+      - name: Frontend tests
+        run: pnpm test
+
+      - name: Rust safety suite
+        working-directory: apps/clean/src-tauri
+        run: cargo test
+
+      - name: Clippy
+        working-directory: apps/clean/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
   release:
-    # Without this the workflow does not merely fail — it never starts. A
-    # called workflow cannot hold more than its caller was granted, this
-    # repository defaults the token to read, and the shared workflow's publish
-    # job needs `contents: write` to create the release. See release-slim.yml
-    # for the same note.
+    needs: [verify]
     permissions:
       contents: write
     uses: ./.github/workflows/release-app.yml

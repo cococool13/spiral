@@ -196,7 +196,7 @@ Two smaller differences worth knowing, both of which the UI already handles:
 
 ### What Windows CI proves, and what it does not
 
-The `windows-latest` job in `.github/workflows/ci.yml` is where this code
+The `windows-latest` job in `.github/workflows/build.yml` is where this code
 actually runs. Every push, on a real Windows machine, it:
 
 - runs the Python suite, then `--detect` with no elevation;

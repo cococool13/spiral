@@ -32,11 +32,17 @@ export const SURFACES = {
     entries: [
       { from: "tokens.css", to: "tokens.css", mode: "tree" },
       { from: "tokens.json", to: "tokens.json", mode: "tree" },
+      { from: "tokens.json", to: "lib/brand-tokens.json", mode: "file" },
       { from: "fonts", to: "fonts", mode: "tree" },
       { from: "logo/mark.svg", to: "logo/mark.svg", mode: "tree" },
       { from: "logo/mark-compact.svg", to: "logo/mark-compact.svg", mode: "tree" },
       { from: "logo/mark-red.svg", to: "logo/mark-red.svg", mode: "tree" },
+      { from: "hero/hero-exit.webp", to: "hero/hero-exit.webp", mode: "tree" },
     ],
+    hex: {
+      scan: ["app", "components", "lib"],
+      allow: ["lib/brand-tokens.json"],
+    },
   },
 
   wallpaper: {

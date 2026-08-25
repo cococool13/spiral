@@ -54,8 +54,8 @@ bundles; without it the same build is 45 MB installed. The published release is
 universal and carries both architectures, so it is larger again. Every other app in the table is measured
 in single-digit megabytes.
 
-Spiral Dashboard, Weather, Transcribe, and Chat are named on the site and not
-yet started. They are ideas, not promises.
+Further apps may exist as private notes. They are not on the site and are not
+promises.
 
 ## Install
 
@@ -164,8 +164,8 @@ started that way, and its ADRs still sit beside the code they became.
 | --- | --- | --- |
 | [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
-| [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows built and registry-tested on every push in CI | working on Brave policy config |
-| [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall, plus History and Settings. macOS only, unreleased. **Feature-complete: every screen is built.** 428 Rust tests, 97 Vitest, a native smoke gate, and nineteen ADRs. See its own [README](apps/clean/README.md) | working on the maintenance app |
+| [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows runs from source (no published binary). Slim CI in this monorepo is still thin — do not treat “every push” as proven here | working on Brave policy config |
+| [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall, plus History and Settings. macOS only, unreleased. **Feature-complete: every screen is built.** 432 Rust tests, 107 Vitest, a native smoke gate, and nineteen ADRs. See its own [README](apps/clean/README.md) | working on the maintenance app |
 | [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows. First downloadable release **v0.1.1**. Import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | shipping the resume app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Cloudflare Pages. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`reference/`](docs/reference/), build specs | you need context, not code |
@@ -173,8 +173,8 @@ started that way, and its ADRs still sit beside the code they became.
 
 **Brand assets are never duplicated.** Each surface copies what it needs out of
 `brand/` at build time into a gitignored folder — `collection/public/brand/`,
-`collection/public/brand/`, and `src/assets/brand/` plus `src/styles/tokens.css`
-inside `apps/wallpaper`, `apps/clean` and `apps/Resume`. Edit `brand/`, never a
+and `src/assets/brand/` plus `src/styles/tokens.css` inside `apps/wallpaper`,
+`apps/clean`, `apps/Resume`, and `apps/slim/desktop`. Edit `brand/`, never a
 synced copy.
 
 ## Working on it
@@ -300,7 +300,8 @@ things it cannot derive, checks the certificate password actually opens the
 Next: Windows signing and the remaining runtime pass on real Windows hardware.
 On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
 and were removed; the `WallpaperSource` interface is waiting for them). Out
-of scope for v1: animated wallpapers, auto-update, anything that phones home.
+of scope for v1: animated wallpapers, and any network call that is not Wallhaven
+or the named, switchable GitHub update check.
 
 **Clean** has every screen built and every gate green. Four things stand
 between it and a `clean-v0.1.0` tag, and none of them is code anyone can write
@@ -323,9 +324,10 @@ network call whatsoever.
 **Resume** first downloads as **v0.1.1** (`resume-v0.1.1`): import, the Check
 screen, twelve templates, PDF and Word export, and three engine tiers. macOS is
 signed and notarized; Windows is unsigned, the same accepted gap as Wallpaper.
-The `resume-v0.1.0` tag never produced a DMG. Homebrew needs a cask in
-`cococool13/homebrew-spiral` — that step is not CI. Do not use `/releases/latest`
-for Resume; that URL is Wallpaper.
+The `resume-v0.1.0` tag never produced a DMG. Homebrew cask
+`cococool13/spiral/spiral-resume` is live at 0.1.1 — bump it with every macOS
+release the same way as Wallpaper. Do not use `/releases/latest` for Resume;
+that URL is Wallpaper.
 
 **Slim** is done for what it set out to do. It stays script-first on every
 platform by design — see [`apps/slim/SECURITY.md`](apps/slim/SECURITY.md).

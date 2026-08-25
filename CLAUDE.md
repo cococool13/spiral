@@ -89,7 +89,7 @@ pnpm install
 pnpm dev             # localhost:3000
 pnpm lint            # biome check .
 pnpm typecheck
-pnpm build           # static export → out/
+pnpm build           # hex gate + static export → out/
 ```
 
 **Never run `cargo fmt` in `apps/clean`.** No `rustfmt.toml`, no CI format check; a blind fmt

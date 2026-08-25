@@ -205,8 +205,8 @@ export function Browse() {
           <span className="browse__empty-eyebrow">Browse</span>
           <h1 className="browse__empty-title">Nothing loaded yet.</h1>
           <p className="browse__empty-copy">
-            Search, or pick a category. Spiral makes no network requests until
-            you act.
+            Search, or pick a category. Wallhaven is reached only when you act.
+            A named GitHub update check may already have run on open — see Settings.
           </p>
         </section>
       )}

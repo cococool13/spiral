@@ -24,12 +24,12 @@ const SEMVER_IN_TEXT = /\d+\.\d+\.\d+/;
 // nobody taught this about fails loudly below instead of going stale in
 // silence.
 const RULES = [
+  // Phrases that currently exist in the docs. Drop a rule when the line goes;
+  // never leave a dead pattern — unmatched rules exit 1 on every release.
   { file: "README.md", pattern: /Spiral\.Wallpaper_\d+\.\d+\.\d+_universal\.dmg/g },
-  { file: "README.md", pattern: /Spiral\.Wallpaper_\d+\.\d+\.\d+_x64-setup\.exe/g },
-  { file: "README.md", pattern: /Current: v\d+\.\d+\.\d+,/g },
+  { file: "README.md", pattern: /\*\*v\d+\.\d+\.\d+\*\* — macOS \+ Windows/g },
+  { file: "README.md", pattern: /Wallpaper\*\* is at v\d+\.\d+\.\d+/g },
   { file: "CLAUDE.md", pattern: /Current app release \*\*v\d+\.\d+\.\d+\*\*/g },
-  { file: "CLAUDE.md", pattern: /macOS v\d+\.\d+\.\d+ is universal/g },
-  { file: "CLAUDE.md", pattern: /Windows v\d+\.\d+\.\d+ is built/g },
 ];
 
 function arg(name) {

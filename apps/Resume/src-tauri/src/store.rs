@@ -68,8 +68,18 @@ impl Store {
         let json = serde_json::to_vec_pretty(stored)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         let temp = self.root.join("resume.json.tmp");
+        let dest = self.file();
         fs::write(&temp, json)?;
-        fs::rename(&temp, self.file())
+        // Unix `rename` replaces an existing destination. Windows refuses when
+        // the destination exists, so the second autosave would fail and leave
+        // the draft stuck on the first write. Remove first; a crash between
+        // remove and rename still leaves `resume.json.tmp` for recovery.
+        match fs::remove_file(&dest) {
+            Ok(()) => {}
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
+        fs::rename(&temp, &dest)
     }
 
     pub fn load(&self) -> io::Result<Option<StoredDoc>> {

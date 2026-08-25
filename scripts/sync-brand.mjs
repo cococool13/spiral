@@ -72,15 +72,26 @@ function syncSurface(id) {
     die(`${brandSrc} not found. /brand must exist at the repo root.`);
   }
 
-  const wipeDirs =
-    surface.wipeDirs ??
-    (surface.destRoot ? [surface.destRoot] : []);
-  wipe(pkgRoot, wipeDirs);
-
   // Collection needs destRoot on every tree entry.
   const entries = (surface.entries ?? []).map((e) =>
     e.mode === "tree" ? { ...e, destRoot: surface.destRoot } : e,
   );
+
+  // Validate every source before wiping destinations — otherwise a missing
+  // mark leaves public/brand/ half-deleted and the surface unbuildable.
+  const missing = [];
+  for (const entry of entries) {
+    const from = path.join(brandSrc, entry.from);
+    if (!existsSync(from)) missing.push(`/brand/${entry.from}`);
+  }
+  if (missing.length) {
+    die(`missing sources:\n  ${missing.join("\n  ")}`);
+  }
+
+  const wipeDirs =
+    surface.wipeDirs ??
+    (surface.destRoot ? [surface.destRoot] : []);
+  wipe(pkgRoot, wipeDirs);
 
   for (const entry of entries) copyEntry(pkgRoot, entry);
   console.log(`sync-brand[${id}]: copied ${entries.length} entries`);

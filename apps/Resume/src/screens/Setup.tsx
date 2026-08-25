@@ -36,11 +36,10 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
       <section className="stage">
         <h2 className="panel__title">Download a model</h2>
         <p className="panel__lede">
-          The 4B model is the one to pick if it fits. After it is on this computer, wording is
-          rewritten here and nothing leaves.
+          The 4B model is the one to pick if it fits — choose it below. After it
+          is on this computer, wording is rewritten here and nothing leaves.
         </p>
         <OfflineModel
-          autoDownloadId="qwen3.5-4b"
           onInstalled={() =>
             void finish(async () => {
               await saveEngine("local", "", "");

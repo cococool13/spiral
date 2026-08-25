@@ -8,10 +8,11 @@
   },
   "scripts": {
     "sync-brand": "node ../scripts/sync-brand.mjs collection",
+    "check:hex": "node ../scripts/check-hex.mjs collection",
     "predev": "node ../scripts/sync-brand.mjs collection",
     "prebuild": "node ../scripts/sync-brand.mjs collection",
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm check:hex && next build",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome check --write ."

@@ -19,9 +19,8 @@ name: release-app
 #         artifact-prefix: slim
 #         windows: false
 #
-# Wallpaper deliberately still uses its own inline jobs. Migrating it means
-# re-plumbing a pipeline whose only real test is cutting a release, and it has
-# just been stabilised — it should move once this has run for another app.
+# Wallpaper, Slim, Clean, and Resume all call this workflow. Wallpaper alone
+# sets github-latest so /releases/latest (and its updater endpoint) stay on v*.
 
 on:
   workflow_call:
@@ -48,6 +47,14 @@ on:
           app actually ships an updater — a manifest for an app with no updater
           plugin is a file nobody reads, and requiring a .sig that Tauri was
           never asked to produce fails the release for no reason.
+        type: boolean
+        default: false
+      github-latest:
+        description: >
+          Mark this GitHub release as the repository's /releases/latest.
+          Wallpaper must set this true — its updater and "All downloads" link
+          read that URL. Every other family must leave it false so a Clean or
+          Resume tag cannot steal Wallpaper's latest pointer.
         type: boolean
         default: false
       macos-target:
@@ -356,12 +363,17 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          # Wallpaper alone passes github-latest=true. Everything else keeps
+          # /releases/latest pointed at Wallpaper so the updater and the site's
+          # "All downloads" link cannot land on the wrong product.
+          MARK_LATEST: ${{ inputs.github-latest }}
         run: |
-          # Wallpaper's v* tags remain GitHub's latest. This workflow ships
-          # Clean and Resume; marking them latest would send /releases/latest
-          # — and Wallpaper's "All downloads" link — at the wrong product.
+          LATEST_FLAG=--latest=false
+          if [ "$MARK_LATEST" = "true" ]; then
+            LATEST_FLAG=--latest=true
+          fi
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
-            --latest=false \
+            "$LATEST_FLAG" \
             artifacts/*

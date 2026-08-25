@@ -1,7 +1,9 @@
 # Design
 
-Visual system of Spiral Wallpaper (`apps/wallpaper/`), and — for the app bar
-below — of every app in the collection. Source of truth: `brand/tokens.css` (mirrored into `apps/wallpaper/src/styles/tokens.css`, the only file in that app allowed to contain hex) and `brand/guide.html`.
+Visual system of every Spiral app and of spiralcc.tech. Source of truth:
+`brand/tokens.css`, synced into each surface (`collection`, `apps/wallpaper`,
+`apps/clean`, `apps/Resume`, `apps/slim/desktop`) — never edit a synced copy —
+and `brand/guide.html`.
 
 ## Theme
 Dark cinematic, one collection: near-black page, paper type, helix red for the
@@ -37,7 +39,7 @@ Helix red is never a background fill and never a halo.
 
 ## Rhythm & Shape
 - `--spiral-unit: 8px`; all spacing is a multiple.
-- Two radii: `0` (surfaces) and `--spiral-radius-ctl: 12px` (controls). Identity 01 pills (`999px`) are retired.
+- Two radii for most chrome: `0` (surfaces) and `--spiral-radius-ctl` (12px controls). Stadium capsules (`--spiral-radius-pill` / 999px) are allowed for CTAs only.
 - One easing curve: `--spiral-ease: cubic-bezier(0.22, 1, 0.36, 1)`. Durations `--spiral-dur-fast: 150ms`, `--spiral-dur-slow: 400ms`.
 
 ## The app bar

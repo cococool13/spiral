@@ -86,7 +86,10 @@ pub fn delete_stored_data(app: tauri::AppHandle) -> Result<(), String> {
             "Could not delete {}: {e}. Remove the folder yourself to finish.",
             store.path().display()
         )
-    })
+    })?;
+    // Keys live in the OS credential store, not the app-data folder. The
+    // Settings button promises everything is gone — leave none behind.
+    crate::keys::clear_all()
 }
 
 #[cfg(test)]

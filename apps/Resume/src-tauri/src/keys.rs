@@ -43,6 +43,17 @@ pub fn clear(provider: &str) -> Result<(), String> {
     }
 }
 
+/// Every keychain account this app may have written. "Delete everything" must
+/// clear these too — they live outside the app-data folder on purpose.
+const KEYED_PROVIDERS: &[&str] = &["anthropic", "openai", "compatible"];
+
+pub fn clear_all() -> Result<(), String> {
+    for id in KEYED_PROVIDERS {
+        clear(id)?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

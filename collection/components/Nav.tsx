@@ -67,14 +67,23 @@ export default function Nav() {
             <DownloadMenu />
           </div>
 
-          <a
-            href="/work/"
-            aria-current={work ? "page" : undefined}
-            className="glass-pill glass-pill--secondary glass-pill--nav justify-self-end"
-          >
-            <span className="sm:hidden">Work</span>
-            <span className="hidden sm:inline">Other Work</span>
-          </a>
+          <div className="flex items-center justify-self-end gap-2 sm:gap-3">
+            <a
+              href="/privacy/"
+              aria-current={trimmed === "/privacy" ? "page" : undefined}
+              className="hidden min-h-11 items-center px-2 text-sm text-gray transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-red sm:inline-flex"
+            >
+              Privacy
+            </a>
+            <a
+              href="/work/"
+              aria-current={work ? "page" : undefined}
+              className="glass-pill glass-pill--secondary glass-pill--nav"
+            >
+              <span className="sm:hidden">Work</span>
+              <span className="hidden sm:inline">Other Work</span>
+            </a>
+          </div>
         </nav>
       </div>
     </header>

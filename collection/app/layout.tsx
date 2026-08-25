@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import tokens from "@/lib/brand-tokens.json";
 import "./globals.css";
+
+const VOID = tokens.color.void;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://spiralcc.tech"),
   title: "Spiral — Small tools. No bloat. Your data stays yours.",
   description:
-    "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
+    "Spiral Collection is a free, privacy-first suite of lightweight desktop apps. No accounts, no telemetry, no background processes. Mac, and Windows where each app ships.",
   alternates: { canonical: "/" },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "32x32" }],
@@ -17,10 +20,10 @@ export const metadata: Metadata = {
     siteName: "Spiral",
     title: "Spiral — Small tools. No bloat. Your data stays yours.",
     description:
-      "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
+      "Spiral Collection is a free, privacy-first suite of lightweight desktop apps. No accounts, no telemetry, no background processes. Mac, and Windows where each app ships.",
     images: [
       {
-        url: "/images/hero-exit.webp",
+        url: "/brand/hero/hero-exit.webp",
         width: 2400,
         height: 1350,
         alt: "A dark corridor with daylight at the far door.",
@@ -31,13 +34,13 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Spiral — Small tools. No bloat. Your data stays yours.",
     description:
-      "Spiral Collection is a free, privacy-first suite of lightweight desktop apps for macOS and Windows. No accounts, no telemetry, no background processes.",
-    images: ["/images/hero-exit.webp"],
+      "Spiral Collection is a free, privacy-first suite of lightweight desktop apps. No accounts, no telemetry, no background processes. Mac, and Windows where each app ships.",
+    images: ["/brand/hero/hero-exit.webp"],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#080809",
+  themeColor: VOID,
 };
 
 export default function RootLayout({

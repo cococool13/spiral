@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { apps } from "@/lib/apps";
-import { offerFor } from "@/lib/downloadOffer";
+import { brewCommandFor, offerFor } from "@/lib/downloadOffer";
 import { useOS } from "@/lib/useOS";
 import { AppleMark, WindowsMark } from "./GlassPillCTA";
 
@@ -69,8 +69,7 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
         ref={button}
         aria-expanded={open}
         aria-controls={panelId}
-        aria-haspopup="true"
-        aria-label={closedOffer?.label ?? "Download Spiral apps"}
+        aria-label="Download — choose an app"
         onClick={() => setOpen((v) => !v)}
         className={hero ? "glass-pill" : "glass-pill glass-pill--nav"}
       >
@@ -84,7 +83,7 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
         aria-hidden={!open}
         inert={!open ? true : undefined}
         className={[
-          "download-panel absolute z-20 w-[min(16rem,calc(100vw-2rem))] overflow-hidden border border-white/15 bg-black/95 text-left shadow-2xl backdrop-blur",
+          "download-panel absolute z-20 w-[min(16rem,calc(100vw-2rem))] overflow-hidden border border-paper/15 bg-black/95 text-left shadow-2xl backdrop-blur",
           hero
             ? "bottom-full left-1/2 mb-3 -translate-x-1/2"
             : "top-full left-1/2 mt-2 -translate-x-1/2",
@@ -104,21 +103,31 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
                   }
                 : null;
             if (!offer) return null;
+            const brew = ready ? brewCommandFor(app, os) : null;
             return (
-              <li key={app.slug} className="border-b border-white/10 last:border-0">
+              <li key={app.slug} className="border-b border-paper/10 last:border-0">
                 <a
                   href={offer.url}
-                  className="flex min-h-11 items-center px-4 text-sm text-paper transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-red"
+                  className="flex min-h-11 items-center px-4 text-sm text-paper transition-colors hover:bg-paper/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-red"
                 >
-                  {app.name.replace("Spiral ", "")}
+                  {offer.source
+                    ? `${app.name.replace("Spiral ", "")} — ${offer.label}`
+                    : app.name.replace("Spiral ", "")}
                 </a>
+                {brew ? (
+                  <p className="px-4 pb-3 font-mono text-xs leading-relaxed text-gray">
+                    {brew}
+                  </p>
+                ) : null}
               </li>
             );
           })}
         </ul>
-        {os === "windows" || os === "other" ? (
+        {os === "windows" &&
+        downloadable.some((a) => a.downloads && !a.noWindowsBinary) ? (
           <p className="px-4 py-3 text-sm leading-relaxed text-paper">
-            Windows builds are not code-signed yet. Windows warns on first run.
+            Wallpaper and Resume Windows builds are not code-signed yet. Windows warns on
+            first run. Slim has no Windows installer — use the source link.
           </p>
         ) : null}
       </div>

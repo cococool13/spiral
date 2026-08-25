@@ -45,9 +45,15 @@ pub(crate) fn digit_runs(text: &str) -> Vec<String> {
     runs
 }
 
-/// Words that start with a capital and are not merely the first word of a
-/// sentence. These are the employers, products, languages and place names a
-/// rewrite must not lose or invent.
+/// Words that start with a capital. Order is preserved — the same reason
+/// digit runs keep order. Sorted/deduped lists cannot tell "Oracle then
+/// PostgreSQL" from the reverse, and that swap is a changed fact.
+///
+/// Ordinary sentence case ("Managed six people") must not invent a proper
+/// noun from the leading verb, so a plain Title Case word at the start of a
+/// sentence is still skipped. Acronyms and mixed-capitals at that position
+/// (`AWS`, `PostgreSQL`) are kept — dropping them would let a rewrite erase
+/// the only name in the bullet.
 fn proper_nouns(text: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut sentence_start = true;
@@ -57,16 +63,20 @@ fn proper_nouns(text: &str) -> Vec<String> {
             .to_string();
         let ends_sentence = word.ends_with(['.', '!', '?', ':', ';']);
         if !cleaned.is_empty()
-            && !sentence_start
             && cleaned.chars().next().is_some_and(char::is_uppercase)
+            && (!sentence_start || looks_like_name_not_verb(cleaned.as_str()))
         {
             out.push(cleaned);
         }
         sentence_start = ends_sentence;
     }
-    out.sort_unstable();
-    out.dedup();
     out
+}
+
+/// True when a capitalized word is unlikely to be an English sentence opener.
+/// Two or more uppercase letters → acronym or camel brand (`AWS`, `PostgreSQL`).
+fn looks_like_name_not_verb(word: &str) -> bool {
+    word.chars().filter(|c| c.is_ascii_uppercase()).count() >= 2
 }
 
 pub fn check(source: &str, rewrite: &str) -> Verdict {
@@ -87,15 +97,11 @@ pub fn check(source: &str, rewrite: &str) -> Verdict {
     }
 
     let source_nouns = proper_nouns(source);
-    for noun in &source_nouns {
-        if !rewrite.contains(noun.as_str()) {
-            return Verdict::Rejected("dropped a name");
-        }
-    }
-    for noun in proper_nouns(rewrite) {
-        if !source.contains(noun.as_str()) {
-            return Verdict::Rejected("introduced a name that was not there");
-        }
+    let rewrite_nouns = proper_nouns(rewrite);
+    if source_nouns != rewrite_nouns {
+        // One message for drop, invent, or reorder — from the user's side the
+        // names moved, and that is enough.
+        return Verdict::Rejected("changed a name");
     }
 
     if rewrite.chars().count() as f32 > source.chars().count() as f32 * MAX_GROWTH {
@@ -194,7 +200,7 @@ mod tests {
                 "Wrote the first algorithm at Admiralty",
                 "Wrote the first algorithm",
             ),
-            "dropped a name"
+            "changed a name"
         );
     }
 
@@ -202,7 +208,49 @@ mod tests {
     fn rejects_an_invented_employer() {
         assert_eq!(
             rejected("Wrote the first algorithm", "Wrote the first algorithm at Google"),
-            "introduced a name that was not there"
+            "changed a name"
+        );
+    }
+
+    /// Order is load-bearing the same way digit runs are. A sorted set would
+    /// accept swapping two employers while reversing the claim.
+    #[test]
+    fn rejects_two_names_swapped_between_facts() {
+        assert_eq!(
+            rejected(
+                "Migrated Oracle to PostgreSQL",
+                "Migrated PostgreSQL to Oracle",
+            ),
+            "changed a name"
+        );
+    }
+
+    /// A bullet that opens on an acronym used to lose that name to the
+    /// sentence-start skip, so dropping `AWS` looked like a faithful rewrite.
+    #[test]
+    fn rejects_a_dropped_leading_acronym() {
+        assert_eq!(
+            rejected("AWS Lambda cut cold starts by 40%", "Cut cold starts by 40%"),
+            "changed a name"
+        );
+    }
+
+    #[test]
+    fn rejects_a_dropped_leading_mixed_capitals() {
+        assert_eq!(
+            rejected("PostgreSQL queries stayed under 12ms", "Queries stayed under 12ms"),
+            "changed a name"
+        );
+    }
+
+    #[test]
+    fn still_accepts_a_tightening_that_opens_on_a_verb() {
+        assert_eq!(
+            accepted(
+                "Was responsible for managing a team of 6 engineers at Admiralty",
+                "Managed 6 engineers at Admiralty",
+            ),
+            "Managed 6 engineers at Admiralty"
         );
     }
 
@@ -271,7 +319,7 @@ mod tests {
             .contains("SQL"));
         assert_eq!(
             rejected("Migrated the SQL database", "Migrated the database"),
-            "dropped a name"
+            "changed a name"
         );
     }
 

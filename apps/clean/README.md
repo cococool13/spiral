@@ -31,7 +31,7 @@ Most cleaners ask you to trust them. This one is built so that trust is not the 
 
 **Sizes are an estimate that says so, or a measurement that is real.** Never a number in between. A folder the app could not fully read reports "or more" rather than a confident undercount.
 
-**Every guard is proven by mutation, not coverage** ([ADR-0012](docs/adr/0012-guards-are-proven-by-mutation.md)). Stub the guard to `true`, name the tests that then fail. Four guards carry that proof today.
+**Every guard is proven by mutation, not coverage** ([ADR-0012](docs/adr/0012-guards-are-proven-by-mutation.md)). Stub the guard to `true`, name the tests that then fail. Four guards carry that proof today. Browser caches and Trash are catalog entries ([ADR-0001](docs/adr/0001-cleanup-retention-policy.md), [ADR-0006](docs/adr/0006-safe-categories-are-a-shipped-catalog.md)) — data, not guards — so they do not get their own ADR-0012 mutation rows; they delete only through the Catalog justification on the remove boundary.
 
 **Nothing leaves the Mac.** No telemetry, no accounts, no network call of any kind — not even an update check, because there is no updater yet.
 
@@ -59,7 +59,7 @@ pnpm tauri dev
 
 **Never run `cargo fmt` here.** The crate is not rustfmt-formatted and running it rewrites about 1,170 lines across files you did not touch. There is no `rustfmt.toml` and no CI format check, so nothing stops you.
 
-Current gates: **428 Rust tests · 97 Vitest · 0 clippy warnings · smoke green.**
+Current gates: **432 Rust tests · 107 Vitest · 0 clippy warnings · smoke green.**
 
 ## How it is laid out
 

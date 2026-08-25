@@ -64,14 +64,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # brand-tokens.json and public/brand are gitignored sync outputs; typecheck
+      # imports the JSON and CSS imports the tokens file.
+      - name: Sync brand assets
+        run: pnpm sync-brand
+
       - name: Lint + format check
         run: pnpm lint
 
       - name: Typecheck
         run: pnpm typecheck
 
-      # `prebuild` runs sync-brand, so a missing or renamed /brand asset fails
-      # here rather than silently shipping a 404 to production.
+      # `prebuild` runs sync-brand again; a missing /brand asset fails here
+      # rather than silently shipping a 404 to production.
       - name: Build static export
         run: pnpm build
 
@@ -112,6 +117,66 @@ jobs:
           echo "::warning::Built but not published — missing repository secret(s):$missing"
           echo "Add them under Settings -> Secrets and variables -> Actions."
           exit 0
+
+  # Spiral Slim — Python collection tests + desktop typecheck/vitest/cargo.
+  # The archived Spiral-Slim repo had ci.yml; this monorepo had none.
+  slim:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Python collection tests
+        working-directory: apps/slim
+        run: |
+          python3 -m pip install --user pytest
+          python3 -m pytest tests/ -q
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/slim/desktop/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/slim/desktop/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/slim/desktop/src-tauri
+
+      - name: Install desktop dependencies
+        working-directory: apps/slim/desktop
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync brand assets
+        working-directory: apps/slim/desktop
+        run: pnpm sync-brand
+
+      - name: Desktop hex + typecheck
+        working-directory: apps/slim/desktop
+        run: pnpm check:hex && pnpm typecheck
+
+      - name: Build the frontend
+        working-directory: apps/slim/desktop
+        run: pnpm build
+
+      - name: Desktop frontend tests
+        working-directory: apps/slim/desktop
+        run: pnpm test
+
+      # `tauri::generate_context!` resolves `frontendDist` (../dist) at compile
+      # time, so cargo test needs the Vite export from the build step above.
+      - name: Desktop Rust tests
+        working-directory: apps/slim/desktop/src-tauri
+        run: cargo test
 
   # Per-push CI, not the release build. On a tag the shared workflow builds
   # Windows itself, and running both would spend five minutes producing a
@@ -239,6 +304,8 @@ jobs:
           cache-dependency-path: apps/clean/pnpm-lock.yaml
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -271,6 +338,10 @@ jobs:
       - name: Rust safety suite
         working-directory: apps/clean/src-tauri
         run: cargo test
+
+      - name: Clippy
+        working-directory: apps/clean/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
 
   # Spiral Resume. The app shipped without a job here, so its 169 Rust tests and
   # 76 frontend tests only ever ran on the machine that wrote them.
@@ -362,6 +433,7 @@ jobs:
       macos: true
       windows: true
       updater: true
+      github-latest: true
     secrets: inherit
 
   # Wallpaper-specific, so it stays here rather than in the shared workflow:
