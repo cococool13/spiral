@@ -303,7 +303,7 @@ mod tests {
         let raw = r#"{"bullets":[{"n":2,"text":"Checked 400 tables of logarithms at Google"}]}"#;
         let (_, outcome) = apply(&doc, &bullets, raw);
         assert_eq!(outcome.rejected, 1);
-        assert!(outcome.notes[0].contains("introduced a name"));
+        assert!(outcome.notes[0].contains("changed a name"), "{:?}", outcome.notes);
     }
 
     #[test]
