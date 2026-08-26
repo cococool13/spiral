@@ -58,6 +58,17 @@ pub(super) struct Header {
 /// A contact detail is short. Past this, the line is a sentence.
 pub(super) const CONTACT_LENGTH: usize = 80;
 
+/// A line under the name that is a sentence, not a city. "London, UK" stays
+/// a location; "Senior analyst open to remote work" is the unlabelled summary.
+fn looks_like_header_prose(text: &str) -> bool {
+    let trimmed = text.trim();
+    if trimmed.ends_with(['.', '!', '?']) {
+        return true;
+    }
+    let words = trimmed.split_whitespace().count();
+    words >= 6 && !trimmed.contains(',')
+}
+
 pub(super) fn parse_contact(header: &[String]) -> Header {
     let mut prose: Vec<String> = Vec::new();
     let mut contact = Contact::default();
@@ -134,7 +145,7 @@ pub(super) fn parse_contact(header: &[String]) -> Header {
             if remainder.is_empty() {
                 continue;
             }
-            if remainder.chars().count() > CONTACT_LENGTH {
+            if remainder.chars().count() > CONTACT_LENGTH || looks_like_header_prose(remainder) {
                 prose.push(remainder.to_string());
             } else if contact.location.is_empty() {
                 contact.location = remainder.to_string();

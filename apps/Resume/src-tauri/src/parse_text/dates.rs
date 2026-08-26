@@ -44,7 +44,7 @@ pub(super) fn side_re() -> &'static Regex {
 /// ATS and many Word templates write the month as a number: "01/2021".
 pub(super) fn numeric_side_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"\b(\d{1,2})/(\d{4})\b").unwrap())
+    RE.get_or_init(|| Regex::new(r"\b(\d{1,2})[/-](\d{4})\b").unwrap())
 }
 
 /// The dash between two dates is written every way there is: spaced, unspaced,
@@ -181,6 +181,16 @@ mod tests {
         assert_eq!(start.year, Some(2021));
         assert_eq!(start.month, Some(1));
         assert_eq!(start.raw, "01/2021");
+        assert_eq!(end.year, Some(2023));
+        assert_eq!(end.month, Some(3));
+    }
+
+    #[test]
+    fn a_numeric_month_year_range_with_hyphens_is_still_a_range() {
+        let (start, end) = parse_date_range("01-2021 - 03-2023").unwrap();
+        assert_eq!(start.year, Some(2021));
+        assert_eq!(start.month, Some(1));
+        assert_eq!(start.raw, "01-2021");
         assert_eq!(end.year, Some(2023));
         assert_eq!(end.month, Some(3));
     }

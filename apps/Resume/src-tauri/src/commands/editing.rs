@@ -80,7 +80,15 @@ pub struct BulletReview {
 }
 
 #[tauri::command]
-pub fn review_wording(doc: ResumeDoc) -> Vec<BulletReview> {
+pub fn review_wording(app: tauri::AppHandle, doc: ResumeDoc) -> Vec<BulletReview> {
+    // Check previews the free pass. A ready model replaces that pass at Build,
+    // so showing a tighten preview would promise wording the page will not get.
+    if let (Ok(store), Ok((_, provider))) = (super::store_for(&app), super::engine::engine_of(&app))
+    {
+        if super::engine::model_ready(store.path(), &provider) {
+            return Vec::new();
+        }
+    }
     let mut out = Vec::new();
     for role in doc.roles() {
         for bullet in &role.bullets {

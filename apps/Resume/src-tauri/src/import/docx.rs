@@ -50,33 +50,176 @@ fn other_zip(names: &[String]) -> String {
     "That Word file has no document inside it. Open it in Word, save it again, and retry.".to_string()
 }
 
-/// Split on paragraph boundaries, then read each paragraph.
+/// Walk the body as paragraphs and tables. A two-column table that is a date
+/// rail (title | date) stays row-wise; a two-column *page* is read left column
+/// then right, so the columns do not interleave.
 pub fn text_from_document_xml(xml: &str) -> String {
-    xml.split("<w:p ")
-        .flat_map(|chunk| chunk.split("<w:p>"))
-        .skip(1)
-        .map(paragraph_text)
+    walk_blocks(xml)
+        .into_iter()
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-/// Finds the next real text element. `<w:t` is a *prefix* of `<w:tab/>`,
-/// `<w:tbl>` and `<w:tc>`, so matching on it alone treats a tab as the start of
-/// a text run and swallows every tag up to the next `</w:t>` — which is how raw
-/// XML ended up on the page. The character after the name has to be `>` or a
-/// space for this to be the element we want.
-fn next_text_open(haystack: &str) -> Option<usize> {
+enum Block {
+    Para,
+    Table,
+}
+
+fn walk_blocks(xml: &str) -> Vec<String> {
+    let mut lines = Vec::new();
     let mut from = 0usize;
-    while let Some(found) = haystack[from..].find("<w:t") {
-        let at = from + found;
-        match haystack[at + 4..].chars().next() {
-            Some('>') | Some(' ') => return Some(at),
-            None => return None,
-            Some(_) => from = at + 4,
+    while let Some((kind, start, end)) = next_block(xml, from) {
+        match kind {
+            Block::Para => lines.push(paragraph_text(&xml[start..end])),
+            Block::Table => lines.extend(table_lines(&xml[start..end])),
         }
+        from = end;
+    }
+    lines
+}
+
+fn next_block(xml: &str, from: usize) -> Option<(Block, usize, usize)> {
+    let para = find_open(xml, from, "<w:p");
+    let table = find_open(xml, from, "<w:tbl");
+    match (para, table) {
+        (None, None) => None,
+        (Some(i), None) => Some((Block::Para, i, para_end(xml, i))),
+        (None, Some(i)) => Some((Block::Table, i, match_end(xml, i, "<w:tbl", "</w:tbl>"))),
+        (Some(p), Some(t)) if t <= p => {
+            Some((Block::Table, t, match_end(xml, t, "<w:tbl", "</w:tbl>")))
+        }
+        (Some(p), Some(_)) => Some((Block::Para, p, para_end(xml, p))),
+    }
+}
+
+fn find_open(xml: &str, from: usize, name: &str) -> Option<usize> {
+    let mut search = from;
+    while let Some(rel) = xml[search..].find(name) {
+        let at = search + rel;
+        if is_named_open(&xml[at..], name) {
+            return Some(at);
+        }
+        search = at + name.len();
     }
     None
+}
+
+/// The name must be followed by `>`, space, or `/` so `<w:t` does not match
+/// `<w:tab`, `<w:tbl`, or `<w:tc`. Matching on the prefix alone used to paste
+/// raw XML onto the page.
+fn is_named_open(s: &str, name: &str) -> bool {
+    s.get(name.len()..)
+        .and_then(|rest| rest.chars().next())
+        .is_some_and(|c| matches!(c, '>' | ' ' | '/' | '\n' | '\r' | '\t'))
+}
+
+fn para_end(xml: &str, start: usize) -> usize {
+    let rest = &xml[start..];
+    if rest.starts_with("<w:p/>") || rest.starts_with("<w:p /") {
+        return start + rest.find('>').unwrap_or(0) + 1;
+    }
+    match rest.find("</w:p>") {
+        Some(rel) => start + rel + "</w:p>".len(),
+        None => xml.len(),
+    }
+}
+
+fn match_end(xml: &str, start: usize, open: &str, close: &str) -> usize {
+    let mut depth: usize = 0;
+    let mut from = start;
+    while from < xml.len() {
+        let next_open = xml[from..].find(open).map(|i| from + i);
+        let next_close = xml[from..].find(close).map(|i| from + i);
+        match (next_open, next_close) {
+            (_, None) => return xml.len(),
+            (Some(o), Some(c)) if o < c && is_named_open(&xml[o..], open) => {
+                depth += 1;
+                from = o + open.len();
+            }
+            (Some(o), Some(c)) if o < c => from = o + open.len(),
+            (_, Some(c)) => {
+                depth = depth.saturating_sub(1);
+                let end = c + close.len();
+                if depth == 0 {
+                    return end;
+                }
+                from = end;
+            }
+        }
+    }
+    xml.len()
+}
+
+fn children<'a>(xml: &'a str, open: &str, close: &str) -> Vec<&'a str> {
+    let mut out = Vec::new();
+    let mut from = 0usize;
+    while let Some(at) = find_open(xml, from, open) {
+        let end = match_end(xml, at, open, close);
+        out.push(&xml[at..end]);
+        from = end;
+    }
+    out
+}
+
+fn table_lines(table: &str) -> Vec<String> {
+    let grid = table_grid(table);
+    if grid.is_empty() {
+        return Vec::new();
+    }
+    let cols = grid.iter().map(|row| row.len()).max().unwrap_or(0);
+    if cols >= 2 && grid.len() >= 2 && !right_column_is_dates(&grid) {
+        return (0..cols)
+            .flat_map(|col| {
+                grid.iter()
+                    .filter_map(move |row| row.get(col))
+                    .flatten()
+                    .cloned()
+            })
+            .collect();
+    }
+    grid.into_iter().flatten().flatten().collect()
+}
+
+fn table_grid(table: &str) -> Vec<Vec<Vec<String>>> {
+    children(table, "<w:tr", "</w:tr>")
+        .into_iter()
+        .map(row_cells)
+        .collect()
+}
+
+fn row_cells(row: &str) -> Vec<Vec<String>> {
+    children(row, "<w:tc", "</w:tc>")
+        .into_iter()
+        .map(|cell| {
+            walk_blocks(cell)
+                .into_iter()
+                .filter(|line| !line.is_empty())
+                .collect()
+        })
+        .collect()
+}
+
+fn right_column_is_dates(grid: &[Vec<Vec<String>>]) -> bool {
+    let cells: Vec<String> = grid
+        .iter()
+        .filter_map(|row| row.get(1))
+        .map(|cell| cell.join(" "))
+        .filter(|text| !text.trim().is_empty())
+        .collect();
+    if cells.is_empty() {
+        return true;
+    }
+    let dates = cells.iter().filter(|text| looks_like_date_aside(text)).count();
+    dates * 2 >= cells.len()
+}
+
+fn looks_like_date_aside(text: &str) -> bool {
+    let trimmed = text.trim();
+    if trimmed.chars().count() > 36 {
+        return false;
+    }
+    trimmed.chars().filter(|c| c.is_ascii_digit()).count() >= 2
 }
 
 /// Tabs and line breaks are elements, not characters. A tab is how Word puts a
@@ -105,20 +248,19 @@ fn with_layout_characters(body: &str) -> String {
 
 fn paragraph_text(paragraph: &str) -> String {
     let body = paragraph.split("</w:p>").next().unwrap_or(paragraph);
-    let body = &with_layout_characters(body);
+    let body = with_layout_characters(body);
     let mut text = String::new();
-    let mut rest = body.as_str();
-    while let Some(start) = next_text_open(rest) {
-        let after = &rest[start..];
-        let Some(open) = after.find('>') else { break };
-        let content = &after[open + 1..];
+    let mut from = 0usize;
+    while let Some(start) = find_open(&body, from, "<w:t") {
+        let after = &body[start..];
+        let Some(gt) = after.find('>') else { break };
+        let content = &after[gt + 1..];
         let Some(end) = content.find("</w:t>") else {
             break;
         };
         text.push_str(&unescape(&content[..end]));
-        rest = &content[end..];
+        from = start + gt + 1 + end + "</w:t>".len();
     }
-    // Word also stores explicit tabs and breaks as elements, not characters.
     let text = text.trim().to_string();
     if text.is_empty() {
         return text;
@@ -212,6 +354,55 @@ mod tests {
     fn empty_paragraphs_do_not_become_blank_lines() {
         let xml = r#"<w:p/><w:p><w:r><w:t>Ada</w:t></w:r></w:p><w:p></w:p>"#;
         assert_eq!(text_from_document_xml(xml), "Ada");
+    }
+
+    #[test]
+    fn a_heading_row_table_keeps_the_date_on_the_role() {
+        let xml = r#"<w:tbl>
+<w:tr>
+<w:tc><w:p><w:r><w:t>Analyst, Admiralty</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>Jan 2021 - Present</w:t></w:r></w:p></w:tc>
+</w:tr>
+<w:tr>
+<w:tc><w:p><w:r><w:t>Mathematician, Royal Society</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>2016 - 2019</w:t></w:r></w:p></w:tc>
+</w:tr>
+</w:tbl>"#;
+        let text = text_from_document_xml(xml);
+        let analyst = text.find("Analyst, Admiralty").unwrap();
+        let present = text.find("Jan 2021 - Present").unwrap();
+        let mathematician = text.find("Mathematician").unwrap();
+        assert!(
+            analyst < present && present < mathematician,
+            "date rail was read as columns:\n{text}"
+        );
+    }
+
+    #[test]
+    fn a_two_column_body_table_reads_left_then_right() {
+        let xml = r#"<w:tbl>
+<w:tr>
+<w:tc><w:p><w:r><w:t>EXPERIENCE</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>SKILLS</w:t></w:r></w:p></w:tc>
+</w:tr>
+<w:tr>
+<w:tc><w:p><w:r><w:t>Analyst, Admiralty</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>Rust, Analysis</w:t></w:r></w:p></w:tc>
+</w:tr>
+<w:tr>
+<w:tc><w:p><w:pPr><w:numPr/></w:pPr><w:r><w:t>Wrote the first algorithm</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>Python</w:t></w:r></w:p></w:tc>
+</w:tr>
+</w:tbl>"#;
+        let text = text_from_document_xml(xml);
+        let experience = text.find("EXPERIENCE").unwrap();
+        let algorithm = text.find("Wrote the first algorithm").unwrap();
+        let skills = text.find("SKILLS").unwrap();
+        let rust = text.find("Rust").unwrap();
+        assert!(
+            experience < algorithm && algorithm < skills && skills < rust,
+            "columns interleaved:\n{text}"
+        );
     }
 
     #[test]

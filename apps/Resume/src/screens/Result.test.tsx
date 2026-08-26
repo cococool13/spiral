@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { BuildResult } from "../lib/types";
+import type { BuiltVersion } from "../lib/types";
 import { Result } from "./Result";
 
 const saveBuiltDocument = vi.fn(async (): Promise<string | null> => "/Users/ada/Desktop/x.pdf");
@@ -9,12 +9,13 @@ vi.mock("../lib/ipc", () => ({
   saveBuiltDocument: () => saveBuiltDocument(),
 }));
 
-function version(overrides: Partial<BuildResult> = {}): BuildResult {
+function version(overrides: Partial<BuiltVersion> = {}): BuiltVersion {
   return {
     pages: ["<svg id='p1'></svg>"],
     suggestedName: "Ada-Lovelace-resume.pdf",
     engine: "Built offline, no network used",
     notes: [],
+    style: "Column",
     ...overrides,
   };
 }
@@ -66,13 +67,24 @@ describe("Result", () => {
 
   it("shows a version strip once there is more than one build", () => {
     const onShow = vi.fn();
-    show({ versions: [version(), version()], showing: 1, onShow });
-    expect(screen.getByRole("radio", { name: "First" })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "Version 2" }).getAttribute("aria-checked")).toBe(
-      "true",
-    );
-    fireEvent.click(screen.getByRole("radio", { name: "First" }));
+    show({
+      versions: [version({ style: "Column" }), version({ style: "Sheet" })],
+      showing: 1,
+      onShow,
+    });
+    expect(screen.getByRole("radio", { name: "Column" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Sheet" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("radio", { name: "Column" }));
     expect(onShow).toHaveBeenCalledWith(0);
+  });
+
+  it("numbers two builds of the same style", () => {
+    show({
+      versions: [version({ style: "Column" }), version({ style: "Column" })],
+      showing: 0,
+    });
+    expect(screen.getByRole("radio", { name: "Column (1)" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Column (2)" })).toBeTruthy();
   });
 
   it("shows no version strip for a single build", () => {

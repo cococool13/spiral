@@ -65,8 +65,11 @@ describe("Input", () => {
   it("will not read empty text", () => {
     render(<Input onReady={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Paste contents" }));
-    const read = screen.getByRole("button", { name: "Read the pasted text" }) as HTMLButtonElement;
-    expect(read.disabled).toBe(true);
+    const read = screen.getByRole("button", { name: "Read the pasted text" });
+    expect(read.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(read);
+    expect(parsePastedText).not.toHaveBeenCalled();
+    expect(screen.getByText("Paste the resume text to continue.")).toBeTruthy();
   });
 
   it("starts from scratch with a blank role ready to type", () => {
@@ -100,6 +103,9 @@ describe("Input", () => {
 
   it("names every format it can read", () => {
     render(<Input onReady={vi.fn()} />);
+    const upload = screen.getByRole("button", { name: "Upload a file" });
+    expect(upload.getAttribute("aria-describedby")).toBe("import-file-note");
     expect(screen.getByText(/PDF, Word or text/)).toBeTruthy();
+    expect(screen.queryByText(/two-column PDF may look jumbled/i)).toBeNull();
   });
 });

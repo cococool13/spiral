@@ -59,12 +59,21 @@ export function RoleEditor({
       <div className="entry__stack">
       {role.bullets.map((bullet) => {
         const review = reviews.find((r) => r.bulletId === bullet.id);
+        const previewId = `${bullet.id}-preview`;
+        const noteIds = review?.notes.map((_, i) => `${bullet.id}-note-${i}`) ?? [];
+        const describedBy = [
+          review && review.tightened !== bullet.text ? previewId : null,
+          ...noteIds,
+        ]
+          .filter(Boolean)
+          .join(" ") || undefined;
         return (
           <div key={bullet.id}>
             <input
               className="field__input"
               type="text"
               aria-label={`Bullet in ${role.title || words.title}`}
+              aria-describedby={describedBy}
               value={bullet.text}
               onChange={(e) =>
                 onChange({
@@ -76,7 +85,7 @@ export function RoleEditor({
               }
             />
             {review && review.tightened !== bullet.text ? (
-              <p className="bullet-note">
+              <p className="bullet-note" id={previewId}>
                 Will become: {review.tightened}{" "}
                 <button
                   type="button"
@@ -94,8 +103,8 @@ export function RoleEditor({
                 </button>
               </p>
             ) : null}
-            {review?.notes.map((note) => (
-              <p className="bullet-note bullet-note--flag" key={note}>
+            {review?.notes.map((note, i) => (
+              <p className="bullet-note bullet-note--flag" id={noteIds[i]} key={note}>
                 {note}
               </p>
             ))}

@@ -4,7 +4,7 @@ import { Notice } from "./components/Notice";
 import { Splash } from "./components/Splash";
 import { Stepper, type Step } from "./components/Stepper";
 import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
-import { emptyDoc, type BuildResult, type Draft, type ResumeDoc } from "./lib/types";
+import { emptyDoc, type BuiltVersion, type Draft, type ResumeDoc } from "./lib/types";
 import { Build } from "./screens/Build";
 import { Check } from "./screens/Check";
 import { Format } from "./screens/Format";
@@ -13,6 +13,8 @@ import { Result } from "./screens/Result";
 import { Settings } from "./screens/Settings";
 import { Setup } from "./screens/Setup";
 import { useDebounced } from "./lib/useDebounced";
+import { styleName } from "./lib/styleHints";
+import { withViewTransition } from "./lib/viewTransition";
 import { Style } from "./screens/Style";
 
 export default function App() {
@@ -21,13 +23,13 @@ export default function App() {
     template: "",
     format: "",
     accent: "ink",
-    tighten: true,
+    tighten: false,
   });
   const [step, setStep] = useState<Step>("input");
   const [reached, setReached] = useState<Step[]>(["input"]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [versions, setVersions] = useState<BuildResult[]>([]);
+  const [versions, setVersions] = useState<BuiltVersion[]>([]);
   const [showing, setShowing] = useState(0);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [generate, setGenerate] = useState(false);
@@ -37,7 +39,7 @@ export default function App() {
   const settingsButton = useRef<HTMLButtonElement | null>(null);
 
   function closeSettings() {
-    setSettingsOpen(false);
+    withViewTransition(() => setSettingsOpen(false));
     settingsButton.current?.focus();
   }
 
@@ -101,15 +103,19 @@ export default function App() {
 
   const onInputReady = useCallback((doc: ResumeDoc, how?: "scratch") => {
     edited.current = true;
-    setFromScratch(how === "scratch");
-    setDraft((current) => ({ ...current, doc }));
-    setStep("check");
-    setReached((seen) => (seen.includes("check") ? seen : [...seen, "check"]));
+    withViewTransition(() => {
+      setFromScratch(how === "scratch");
+      setDraft((current) => ({ ...current, doc }));
+      setStep("check");
+      setReached((seen) => (seen.includes("check") ? seen : [...seen, "check"]));
+    });
   }, []);
 
   function goTo(next: Step) {
-    setStep(next);
-    setReached((seen) => (seen.includes(next) ? seen : [...seen, next]));
+    withViewTransition(() => {
+      setStep(next);
+      setReached((seen) => (seen.includes(next) ? seen : [...seen, next]));
+    });
   }
 
   function update(doc: ResumeDoc) {
@@ -134,7 +140,7 @@ export default function App() {
           {
             id: "settings",
             label: "Settings",
-            onSelect: () => setSettingsOpen((open) => !open),
+            onSelect: () => withViewTransition(() => setSettingsOpen((open) => !open)),
           },
         ]}
       />
@@ -147,12 +153,15 @@ export default function App() {
               setNeedsSetup(info.needsSetup);
             }}
             onCleared={() => {
-              edit({ doc: emptyDoc() });
-              setSavedAt(null);
-              setFromScratch(false);
-              setStep("input");
-              setReached(["input"]);
-              closeSettings();
+              withViewTransition(() => {
+                edit({ doc: emptyDoc() });
+                setSavedAt(null);
+                setFromScratch(false);
+                setStep("input");
+                setReached(["input"]);
+                setSettingsOpen(false);
+              });
+              settingsButton.current?.focus();
             }}
           />
         </main>
@@ -211,7 +220,7 @@ export default function App() {
                 <Format
                   chosen={draft.format}
                   onChoose={(format) => choose({ format })}
-                  onGenerate={() => setGenerate(true)}
+                  onGenerate={() => withViewTransition(() => setGenerate(true))}
                 />
               ) : versions.length > 0 ? (
                 <Result
@@ -220,10 +229,13 @@ export default function App() {
                   format={draft.format === "docx" ? "docx" : "pdf"}
                   onShow={setShowing}
                   onAnotherStyle={() => {
-                    setVersions([]);
-                    setShowing(0);
-                    setGenerate(false);
-                    goTo("style");
+                    withViewTransition(() => {
+                      setVersions([]);
+                      setShowing(0);
+                      setGenerate(false);
+                      setStep("style");
+                      setReached((seen) => (seen.includes("style") ? seen : [...seen, "style"]));
+                    });
                   }}
                 />
               ) : (
@@ -231,13 +243,15 @@ export default function App() {
                   key={String(versions.length)}
                   draft={draft}
                   onDone={(result) => {
-                    setVersions((all) => [...all, result]);
-                    setShowing(versions.length);
+                    withViewTransition(() => {
+                      setVersions((all) => [
+                        ...all,
+                        { ...result, style: styleName(draft.template) },
+                      ]);
+                      setShowing(versions.length);
+                    });
                   }}
-                  onBack={() => {
-                    choose({ format: "" });
-                    goTo("build");
-                  }}
+                  onBack={() => withViewTransition(() => choose({ format: "" }))}
                 />
               )
             ) : null}

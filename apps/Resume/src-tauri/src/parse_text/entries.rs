@@ -138,7 +138,8 @@ pub(super) fn roles_of(body: &[String], section: &str) -> Vec<Role> {
 /// followed by "London, UK". Treating any line after a date as a new entry made
 /// that office into a phantom role and gave it the real role's bullets. A line
 /// holding *only* dates is different — it closes a heading, so what follows it
-/// is the next entry.
+/// is the next entry, **unless** that next line is a short location and is not
+/// itself followed by another date (which would be the next job's heading).
 /// A heading line is short. Anything this long with no dates in it is a
 /// sentence about the job, which is how the resumes that use paragraphs instead
 /// of bullets are written.
@@ -150,7 +151,7 @@ pub(super) fn blocks_of(body: &[String]) -> Vec<Vec<String>> {
     let mut seen_prose = false;
     let mut seen_date = false;
     let mut date_closed_the_heading = false;
-    for line in body {
+    for (i, line) in body.iter().enumerate() {
         if is_skippable_entry(line) {
             continue;
         }
@@ -160,11 +161,19 @@ pub(super) fn blocks_of(body: &[String]) -> Vec<Vec<String>> {
             .is_some_and(|(start, end)| without_dates(line, start, end).is_empty());
         let prose =
             !is_bullet(line) && dates.is_none() && line.chars().count() > PROSE_LENGTH;
+        let next = body[i + 1..].iter().find(|candidate| !is_skippable_entry(candidate));
+        let next_is_date = next.is_some_and(|candidate| parse_date_range(candidate).is_some());
+        let location_after_dates = date_closed_the_heading
+            && dates.is_none()
+            && is_a_detail(line)
+            && !next_is_date;
+        let achievement = dates.is_none() && looks_like_achievement(line);
         let starts_new = !is_bullet(line)
             && !prose
+            && !location_after_dates
             && (seen_bullet
                 || seen_prose
-                || date_closed_the_heading
+                || (date_closed_the_heading && !achievement)
                 || (seen_date && dates.is_some()));
         if blocks.is_empty() || starts_new {
             blocks.push(Vec::new());
@@ -211,6 +220,50 @@ pub(super) fn is_a_detail(text: &str) -> bool {
     text.split_whitespace().count() <= 6 && !text.ends_with('.')
 }
 
+/// Unmarked achievements land in the same block as the role. Without this they
+/// were filed as a location because they are short and have no full stop.
+fn looks_like_achievement(text: &str) -> bool {
+    if text.chars().any(|c| c.is_ascii_digit()) {
+        return true;
+    }
+    if text.ends_with(['.', '!', '?']) {
+        return true;
+    }
+    let first = text
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .trim_end_matches([',', ':'])
+        .to_lowercase();
+    matches!(
+        first.as_str(),
+        "wrote"
+            | "cut"
+            | "led"
+            | "built"
+            | "managed"
+            | "developed"
+            | "created"
+            | "designed"
+            | "implemented"
+            | "delivered"
+            | "trained"
+            | "launched"
+            | "improved"
+            | "reduced"
+            | "increased"
+            | "ran"
+            | "helped"
+            | "assisted"
+            | "worked"
+            | "checked"
+            | "migrated"
+            | "shipped"
+            | "owned"
+            | "drove"
+    )
+}
+
 pub(super) fn parse_role(block: &[String], section: &str, index: usize) -> Role {
     let mut role = Role {
         id: entry_id(section, index),
@@ -248,7 +301,7 @@ pub(super) fn parse_role(block: &[String], section: &str, index: usize) -> Role 
             role.title = title;
             role.organization = org;
             heading_taken = true;
-        } else if !is_a_detail(&text) {
+        } else if looks_like_achievement(&text) || !is_a_detail(&text) {
             // A sentence is never an employer or a city, however empty the
             // field is. It is something the person did in the job.
             keep(&mut role, text, &mut bullet_index);
@@ -309,8 +362,28 @@ pub(super) fn parse_school(block: &[String], index: usize) -> School {
             });
             note_index += 1;
         } else if let Some((start, end)) = parse_date_range(line) {
+            let rest = without_dates(line, &start, &end);
             school.start = start;
             school.end = end;
+            // "BSc Mathematics, 2016 - 2019" is a credential with a range on
+            // it, not a date line that happens to mention a degree. Dropping
+            // the rest used to leave education with dates and no qualification.
+            if rest.is_empty() {
+                continue;
+            }
+            if school.institution.is_empty() {
+                school.institution = rest;
+            } else if school.credential.is_empty() {
+                school.credential = rest;
+            } else if school.location.is_empty() {
+                school.location = rest;
+            } else {
+                school.notes.push(Bullet {
+                    id: bullet_id("edu", index, note_index),
+                    text: rest,
+                });
+                note_index += 1;
+            }
         } else if school.institution.is_empty() {
             school.institution = line.clone();
         } else if school.credential.is_empty() {

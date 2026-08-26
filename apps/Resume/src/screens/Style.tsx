@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import { listAccents, renderThumbnails } from "../lib/ipc";
 import { recommendTemplate } from "../lib/recommend";
-import { STYLE_HINTS } from "../lib/styleHints";
+import { STYLE_HINTS, styleName } from "../lib/styleHints";
 import type { Accent, ResumeDoc, Thumbnail } from "../lib/types";
 import { Notice } from "../components/Notice";
 import { useRadioGroup } from "../lib/useRadioGroup";
-
-const named = (id: string) => id.charAt(0).toUpperCase() + id.slice(1);
 
 export function Style({
   doc,
@@ -26,6 +24,7 @@ export function Style({
   const [thumbnails, setThumbnails] = useState<Thumbnail[] | null>(null);
   const [accents, setAccents] = useState<Accent[]>([]);
   const [error, setError] = useState("");
+  const [draw, setDraw] = useState(0);
   const recommended = recommendTemplate(doc);
 
   const styleProps = useRadioGroup(
@@ -47,23 +46,38 @@ export function Style({
 
   useEffect(() => {
     let current = true;
-    renderThumbnails(accent)
+    renderThumbnails(accent, doc)
       .then((next) => {
-        if (current) setThumbnails(next);
+        if (!current) return;
+        setThumbnails(next);
+        setError("");
       })
       .catch((e) => {
-        if (current) setError(`Could not draw the styles: ${e}. Go back and try again.`);
+        if (current) setError(`Could not draw the styles: ${e}. Try again.`);
       });
     return () => {
       current = false;
     };
-  }, [accent]);
+  }, [accent, doc, draw]);
 
   if (error) {
     return (
       <section className="panel">
         <h2 className="panel__title">Pick a style</h2>
         <Notice tone="warn">{error}</Notice>
+        <div className="panel__actions">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setError("");
+              setThumbnails(null);
+              setDraw((n) => n + 1);
+            }}
+          >
+            Try again
+          </button>
+        </div>
       </section>
     );
   }
@@ -103,17 +117,19 @@ export function Style({
                     dangerouslySetInnerHTML={{ __html: thumbnail.svg }}
                   />
                 )}
-                <span className="style-card__name">
-                  {thumbnail.name}
-                  {thumbnail.id === recommended ? " · fits this resume" : ""}
+                <span className="style-card__meta">
+                  <span className="style-card__name">
+                    {thumbnail.name}
+                    {thumbnail.id === recommended ? " · fits this resume" : ""}
+                  </span>
+                  {STYLE_HINTS[thumbnail.id] ? (
+                    <ul className="style-card__hint">
+                      {STYLE_HINTS[thumbnail.id].map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </span>
-                {STYLE_HINTS[thumbnail.id] ? (
-                  <ul className="style-card__hint">
-                    {STYLE_HINTS[thumbnail.id].map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                ) : null}
               </button>
             ))}
           </div>
@@ -126,7 +142,7 @@ export function Style({
           <button
             key={swatch.id}
             type="button"
-            aria-label={named(swatch.id)}
+            aria-label={styleName(swatch.id)}
             className="accent"
             style={{ background: swatch.hex }}
             {...accentProps(swatch.id)}

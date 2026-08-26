@@ -38,16 +38,68 @@ const VERBS: &[(&str, &str, &str)] = &[
     ("built", "Built", "Build"),
     ("manage", "Managed", "Manage"),
     ("managed", "Managed", "Manage"),
+    ("develop", "Developed", "Develop"),
+    ("developed", "Developed", "Develop"),
+    ("create", "Created", "Create"),
+    ("created", "Created", "Create"),
+    ("design", "Designed", "Design"),
+    ("designed", "Designed", "Design"),
+    ("implement", "Implemented", "Implement"),
+    ("implemented", "Implemented", "Implement"),
+    ("deliver", "Delivered", "Deliver"),
+    ("delivered", "Delivered", "Deliver"),
+    ("coordinate", "Coordinated", "Coordinate"),
+    ("coordinated", "Coordinated", "Coordinate"),
+    ("improve", "Improved", "Improve"),
+    ("improved", "Improved", "Improve"),
+    ("reduce", "Reduced", "Reduce"),
+    ("reduced", "Reduced", "Reduce"),
+    ("increase", "Increased", "Increase"),
+    ("increased", "Increased", "Increase"),
+    ("maintain", "Maintained", "Maintain"),
+    ("maintained", "Maintained", "Maintain"),
+    ("launch", "Launched", "Launch"),
+    ("launched", "Launched", "Launch"),
+    ("train", "Trained", "Train"),
+    ("trained", "Trained", "Train"),
+    ("mentor", "Mentored", "Mentor"),
+    ("mentored", "Mentored", "Mentor"),
     ("running", "Ran", "Running"),
     ("leading", "Led", "Leading"),
     ("writing", "Wrote", "Writing"),
     ("building", "Built", "Building"),
     ("managing", "Managed", "Managing"),
+    ("developing", "Developed", "Developing"),
+    ("creating", "Created", "Creating"),
+    ("designing", "Designed", "Designing"),
+    ("implementing", "Implemented", "Implementing"),
+    ("delivering", "Delivered", "Delivering"),
+    ("coordinating", "Coordinated", "Coordinating"),
+    ("improving", "Improved", "Improving"),
+    ("reducing", "Reduced", "Reducing"),
+    ("increasing", "Increased", "Increasing"),
+    ("maintaining", "Maintained", "Maintaining"),
+    ("launching", "Launched", "Launching"),
+    ("training", "Trained", "Training"),
+    ("mentoring", "Mentored", "Mentoring"),
 ];
 
 /// Openers that stay weak even after the table has had its go. Flagged, not
-/// changed, because the fix is a decision only the person can make.
-const STILL_WEAK: &[&str] = &["participated", "attended", "various", "stuff", "things"];
+/// changed, because the fix is a decision only the person can make. Helped /
+/// Used / Made / Did / Got are here rather than synonym-swapped: "Helped the
+/// team ship" must not become "Supported the team ship".
+const STILL_WEAK: &[&str] = &[
+    "participated",
+    "attended",
+    "various",
+    "stuff",
+    "things",
+    "helped",
+    "used",
+    "made",
+    "did",
+    "got",
+];
 
 const LONG_BULLET_WORDS: usize = 32;
 
@@ -59,20 +111,40 @@ fn capitalise_first(text: &str) -> String {
     }
 }
 
+fn opener_boundary(opener: &str, rest: &str) -> bool {
+    if rest.is_empty() {
+        return true;
+    }
+    // The opener already ate its trailing space (`"i "`, `"worked on "` is
+    // not how the list is written, but `"i "` is).
+    if opener.ends_with(|c: char| c.is_whitespace()) || opener.ends_with([':', ',', ';']) {
+        return true;
+    }
+    rest.starts_with(|c: char| {
+        c.is_whitespace() || matches!(c, ',' | ':' | ';' | '.' | '—' | '–')
+    })
+}
+
 /// Strips one leading phrase if the bullet starts with it. Case-insensitive on
-/// the phrase, but the rest of the sentence is returned untouched.
+/// the phrase, but the rest of the sentence is returned untouched. A match that
+/// continues into another word ("Worked online") is left alone.
 fn strip_opener(text: &str, openers: &[&str]) -> Option<String> {
     let lower = text.to_lowercase();
     for opener in openers {
-        if lower.starts_with(opener) {
-            let rest = text[opener.len()..].trim_start();
-            // "Responsible for" alone is not a bullet; leave it rather than
-            // returning an empty string.
-            if rest.is_empty() {
-                return None;
-            }
-            return Some(rest.to_string());
+        if !lower.starts_with(opener) {
+            continue;
         }
+        let rest = &text[opener.len()..];
+        if !opener_boundary(opener, rest) {
+            continue;
+        }
+        let rest = rest.trim_start();
+        // "Responsible for" alone is not a bullet; leave it rather than
+        // returning an empty string.
+        if rest.is_empty() {
+            return None;
+        }
+        return Some(rest.to_string());
     }
     None
 }
@@ -149,6 +221,49 @@ mod tests {
         );
         assert_eq!(past("Was responsible for the ledger"), "The ledger");
         assert_eq!(past("Tasked with 3 audits"), "3 audits");
+        assert_eq!(
+            past("Was involved in training 25 operators on the Jacquard loom interface"),
+            "Trained 25 operators on the Jacquard loom interface"
+        );
+        assert_eq!(past("Involved in training 25 operators"), "Trained 25 operators");
+        assert_eq!(
+            past("Duties included: reducing turnaround from 9 days to 2"),
+            "Reduced turnaround from 9 days to 2"
+        );
+        assert_eq!(
+            past("Helped with the migration of 15 readers"),
+            "The migration of 15 readers"
+        );
+        assert_eq!(
+            past("My responsibilities included 3 audits"),
+            "3 audits"
+        );
+        assert_eq!(
+            past("Was accountable for a budget of $12,000"),
+            "A budget of $12,000"
+        );
+    }
+
+    /// Prefix match without a word boundary used to turn "Worked online" into
+    /// "Line…". The opener has to end where the phrase ends.
+    #[test]
+    fn an_opener_inside_a_longer_word_is_left_alone() {
+        assert_eq!(
+            past("Worked online systems for 3 clients"),
+            "Worked online systems for 3 clients"
+        );
+        assert_eq!(
+            past("Helped toward a 40% reduction"),
+            "Helped toward a 40% reduction"
+        );
+        assert_eq!(
+            past("Assisted internally with 2 audits"),
+            "Assisted internally with 2 audits"
+        );
+        assert_eq!(
+            past("Worked on the migration of 15 readers"),
+            "The migration of 15 readers"
+        );
     }
 
     #[test]
@@ -162,6 +277,11 @@ mod tests {
         assert_eq!(past("Manage a team of 6"), "Managed a team of 6");
         assert_eq!(past("Helped the team ship 3 features"), "Helped the team ship 3 features");
         assert_eq!(past("Used Rust to cut latency"), "Used Rust to cut latency");
+        assert_eq!(past("Responsible for developing 3 APIs"), "Developed 3 APIs");
+        assert_eq!(
+            tighten_bullet("Develop 3 APIs", true).text,
+            "Develop 3 APIs"
+        );
     }
 
     #[test]
@@ -215,6 +335,9 @@ mod tests {
         let out = tighten_bullet("Participated in 4 reviews", false);
         assert_eq!(out.text, "Participated in 4 reviews");
         assert!(out.notes.iter().any(|n| n.contains("weakly")));
+        let helped = tighten_bullet("Helped the team ship 3 features", false);
+        assert_eq!(helped.text, "Helped the team ship 3 features");
+        assert!(helped.notes.iter().any(|n| n.contains("weakly")));
     }
 
     // --- The guarantee -----------------------------------------------------

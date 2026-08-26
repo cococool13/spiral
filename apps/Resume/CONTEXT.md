@@ -20,7 +20,7 @@ the file is given — those two must not drift apart.
 | **Fact freeze** | The rule that the wording of a bullet may change and its facts may not. |
 | **The fact gate** | `gate.rs`. It compares the numbers and proper nouns of a rewrite against the original, in order, and refuses anything that moved one. Plain Title Case at the start of a sentence is skipped so verbs are not treated as names; acronyms and mixed-capitals there are kept. It does not try to understand the sentence. |
 | **Rejected rewrite** | A rewrite the gate refused. The original bullet is kept, the count is reported, and nothing is silently changed. A rejection is an outcome, not an error. |
-| **Tightening** | The deterministic wording pass in `tighten.rs` — the free tier's engine. It shortens phrasing by rule, never by generation. |
+| **Tightening** | An optional wording pass, off unless the Check-screen switch is on. A ready local model or API key does the rewriting; otherwise `tighten.rs` runs by rule. Facts never change. |
 | **Note** | A sentence shown under the result about the document that was built — how many rewrites were refused, or which characters the faces cannot draw. Advice, never a change. |
 
 ## Reading a resume
@@ -45,7 +45,7 @@ the file is given — those two must not drift apart.
 | --- | --- |
 | **Template** | One of twelve layouts. Each exists **twice** — a Typst source for the PDF and the thumbnails, and a DOCX builder for Word — and the two must carry the same facts. `FACTS` in `docx.rs` is the list that proves it. |
 | **Accent** | The single colour the user chooses. Validated against a closed set in `accent.rs` before it reaches a template; a template never writes a colour of its own. |
-| **Thumbnail** | A style-picker card. Drawn from a fixed sample resume, at page scale, so choosing a style does not wait on typesetting the user's document. The user's facts land on the page at Build. |
+| **Thumbnail** | A style-picker card. Drawn from the user's own resume, at page scale, so choosing a style is choosing how this document looks. |
 | **Engine tier** | What rewrites the wording: **deterministic** (default, always available), the **offline model** (an optional local download), or **your key** (the user's own API key). First launch asks once; after that it lives in Settings. The rest of the flow never asks and never upsells. |
 | **Unprintable character** | A character no bundled face can draw. Typst leaves it blank rather than failing, so the build names it in a note instead of letting a resume go out with a hole where the name was. |
 
@@ -55,4 +55,4 @@ the file is given — those two must not drift apart.
 | --- | --- |
 | **Import** | Where the source arrives: a file, a paste, or the guided form. |
 | **Check** | The editable list of every extracted fact, before any styling. It is the only place a mis-parse can be caught, and it is what makes the fact freeze meaningful rather than decorative. |
-| **Style** · **Build** | Choose a template and accent · choose PDF or Word, press Generate, watch real stages, then save or try another style. |
+| **Style** · **Build** | Choose a template and accent · choose PDF or Word, press Build this resume, watch real stages, then save or try another style. |

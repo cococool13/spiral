@@ -1,19 +1,17 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyDoc } from "../lib/types";
+import { emptyDoc, type ResumeDoc, type Thumbnail } from "../lib/types";
 import { Style } from "./Style";
 
-import type { Thumbnail } from "../lib/types";
-
 const renderThumbnails = vi.fn(
-  async (_accent: string): Promise<Thumbnail[]> => [
+  async (_accent: string, _doc: ResumeDoc): Promise<Thumbnail[]> => [
     { id: "column", name: "Column", svg: "<svg id='a'></svg>", error: "" },
     { id: "sheet", name: "Sheet", svg: "<svg id='b'></svg>", error: "" },
   ],
 );
 
 vi.mock("../lib/ipc", () => ({
-  renderThumbnails: (accent: string) => renderThumbnails(accent),
+  renderThumbnails: (accent: string, doc: ResumeDoc) => renderThumbnails(accent, doc),
   // Written this way on purpose: check-hex forbids colour literals outside the
   // token file, and a test fixture is no exception. The real values come from
   // Rust; what matters here is only that two swatches arrive.
@@ -37,7 +35,7 @@ describe("Style", () => {
       />);
     await waitFor(() => expect(screen.getByRole("radio", { name: /Column/ })).toBeTruthy());
     expect(screen.getByRole("radio", { name: /Sheet/ })).toBeTruthy();
-    expect(renderThumbnails).toHaveBeenCalledWith("ink");
+    expect(renderThumbnails).toHaveBeenCalledWith("ink", emptyDoc());
   });
 
   it("reports the chosen template upward", async () => {
@@ -119,5 +117,22 @@ describe("Style", () => {
       />);
     await waitFor(() => screen.getByRole("radio", { name: /Column/ }));
     expect(screen.getByText(/failed to typeset/)).toBeTruthy();
+  });
+
+  it("lets a failed draw be tried again", async () => {
+    renderThumbnails.mockRejectedValueOnce("nope");
+    render(
+      <Style
+        doc={emptyDoc()}
+        chosen=""
+        accent="ink"
+        onChoose={vi.fn()}
+        onChooseAccent={vi.fn()}
+        onContinue={vi.fn()}
+      />,
+    );
+    await waitFor(() => screen.getByText(/Could not draw the styles/));
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => screen.getByRole("radio", { name: /Column/ }));
   });
 });

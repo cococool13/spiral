@@ -3,7 +3,6 @@
 use super::{engine::engine_of, store_for};
 use crate::build::{self, Format, Progress};
 use crate::engine_run::{self, Rewritten};
-use crate::fixtures;
 use crate::model::ResumeDoc;
 use crate::templates;
 use serde::Serialize;
@@ -12,11 +11,10 @@ use tauri::ipc::Channel;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
-/// One card in the style picker: the first page of a fixed sample resume, set
-/// in that template. The user's own facts are not typeset until Build, so
-/// picking a style does not wait on their document. `error` is populated
-/// instead of `svg` when a template fails, so one broken template shows one
-/// broken card rather than blanking the whole screen.
+/// One card in the style picker: the first page of the user's resume, set in
+/// that template. Choosing a layout is choosing how this document looks.
+/// `error` is populated instead of `svg` when a template fails, so one broken
+/// template shows one broken card rather than blanking the whole screen.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Thumbnail {
@@ -85,33 +83,27 @@ fn failed_card(template: &templates::Template, message: impl Into<String>) -> Th
     }
 }
 
-/// A full enough sample that every template has sections to show. It is not
-/// the user's resume — that is the point. Shared with FACTS via `fixtures`.
-fn thumbnail_sample() -> ResumeDoc {
-    fixtures::sample_resume()
-}
-
 /// `async` so Tauri runs this off the main thread, leaving the webview free to
 /// paint while the twelve compiles run. One shot, no progress bar — a couple of
-/// milliseconds of progress would be theatre. The sample is constant, so a
-/// second visit with the same accent reuses the last draw.
+/// milliseconds of progress would be theatre. The same resume and accent
+/// reuse the last draw; an edit on Check redraws.
 #[tauri::command]
-pub async fn render_thumbnails(accent: String) -> Vec<Thumbnail> {
+pub async fn render_thumbnails(accent: String, doc: ResumeDoc) -> Vec<Thumbnail> {
     {
         let cache = THUMBNAIL_CACHE.lock().unwrap_or_else(|p| p.into_inner());
-        if let Some((cached, thumbs)) = cache.as_ref() {
-            if cached == &accent {
+        if let Some((cached_accent, cached_doc, thumbs)) = cache.as_ref() {
+            if cached_accent == &accent && cached_doc == &doc {
                 return thumbs.clone();
             }
         }
     }
-    let thumbs = render_all_thumbnails(&thumbnail_sample(), &accent);
+    let thumbs = render_all_thumbnails(&doc, &accent);
     *THUMBNAIL_CACHE.lock().unwrap_or_else(|p| p.into_inner()) =
-        Some((accent, thumbs.clone()));
+        Some((accent, doc, thumbs.clone()));
     thumbs
 }
 
-static THUMBNAIL_CACHE: Mutex<Option<(String, Vec<Thumbnail>)>> = Mutex::new(None);
+static THUMBNAIL_CACHE: Mutex<Option<(String, ResumeDoc, Vec<Thumbnail>)>> = Mutex::new(None);
 
 /// What the Build screen gets back. The bytes stay in Rust — sending a whole
 /// PDF through IPC and back again to save it would be pure waste, and the file
@@ -178,23 +170,28 @@ pub async fn build_document(
     let root = store_for(&app)?.path().to_path_buf();
     let (stored, provider) = engine_of(&app)?;
     let rewritten =
-        engine_run::rewrite_wording(&root, &stored, &provider, doc, &aim, &on_progress).await?;
+        engine_run::rewrite_wording(&root, &stored, &provider, doc, &aim, tighten, &on_progress)
+            .await?;
     let Rewritten {
         doc,
         engine,
         notes,
         used_model,
+        parsed,
     } = rewritten;
 
     // Every stage from here on carries the engine name, so the build screen
     // says what is doing the work while it is being done.
     let named = engine.clone();
+    // A model that returned nothing readable did not rewrite the document, so
+    // the free pass may still run. A model that parsed — even if every bullet
+    // was a silent keep — replaces tighten and never stacks on top.
     let result = build::build(
         &doc,
         template,
         format,
         &accent,
-        tighten && !used_model,
+        tighten && !(used_model && parsed),
         |mut progress| {
             progress.engine = named.clone();
             let _ = on_progress.send(progress);
@@ -270,9 +267,10 @@ pub async fn save_built_document(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures;
     #[test]
     fn thumbnails_come_back_one_per_template_as_svg() {
-        let thumbs = render_all_thumbnails(&thumbnail_sample(), "ink");
+        let thumbs = render_all_thumbnails(&fixtures::sample_resume(), "ink");
         assert_eq!(thumbs.len(), 12);
         for thumb in &thumbs {
             assert!(thumb.error.is_empty(), "{} errored: {}", thumb.id, thumb.error);
@@ -283,7 +281,7 @@ mod tests {
 
     #[test]
     fn a_thumbnail_is_the_sample_not_an_empty_page() {
-        let sample = render_all_thumbnails(&thumbnail_sample(), "ink");
+        let sample = render_all_thumbnails(&fixtures::sample_resume(), "ink");
         let blank = render_all_thumbnails(&ResumeDoc::empty(), "ink");
         for (a, b) in sample.iter().zip(blank.iter()) {
             assert_ne!(a.svg, b.svg, "{} drew the sample the same as an empty page", a.id);

@@ -6,6 +6,7 @@
 
 pub mod docx;
 pub mod pdf;
+mod pdf_layout;
 
 use std::path::Path;
 

@@ -14,6 +14,9 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Verdict {
     Accepted(String),
+    /// The model returned the source. That is following the prompt, not a
+    /// refused change — `apply` keeps the original and says nothing.
+    Unchanged,
     Rejected(&'static str),
 }
 
@@ -85,7 +88,7 @@ pub fn check(source: &str, rewrite: &str) -> Verdict {
         return Verdict::Rejected("came back empty");
     }
     if rewrite == source.trim() {
-        return Verdict::Rejected("came back unchanged");
+        return Verdict::Unchanged;
     }
 
     let source_digits = digit_runs(source);
@@ -119,6 +122,7 @@ mod tests {
         match check(source, rewrite) {
             Verdict::Accepted(text) => text,
             Verdict::Rejected(why) => panic!("unexpectedly rejected ({why}): {rewrite}"),
+            Verdict::Unchanged => panic!("unexpectedly unchanged: {rewrite}"),
         }
     }
 
@@ -126,6 +130,7 @@ mod tests {
         match check(source, rewrite) {
             Verdict::Rejected(why) => why,
             Verdict::Accepted(text) => panic!("unexpectedly accepted: {text}"),
+            Verdict::Unchanged => panic!("unexpectedly unchanged: {rewrite}"),
         }
     }
 
@@ -280,8 +285,8 @@ mod tests {
     fn rejects_an_empty_or_unchanged_answer() {
         assert_eq!(rejected("Wrote the parser", "   "), "came back empty");
         assert_eq!(
-            rejected("Wrote the parser", "Wrote the parser"),
-            "came back unchanged"
+            check("Wrote the parser", "Wrote the parser"),
+            Verdict::Unchanged
         );
     }
 

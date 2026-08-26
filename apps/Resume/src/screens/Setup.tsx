@@ -47,6 +47,7 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
             })
           }
         />
+        {busy ? <Notice>Saving your choice…</Notice> : null}
         {error ? <Notice tone="warn">{error}</Notice> : null}
         <div className="panel__actions">
           <button type="button" className="btn" disabled={busy} onClick={() => setPath("")}>
@@ -95,18 +96,22 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
             onChange={(e) => setKey(e.target.value)}
           />
         </label>
+        {key.trim().length === 0 ? <Notice>Paste your key to continue.</Notice> : null}
+        {busy ? <Notice>Saving your choice…</Notice> : null}
         {error ? <Notice tone="warn">{error}</Notice> : null}
         <div className="panel__actions">
           <button
             type="button"
             className="btn btn--primary"
-            disabled={busy || key.trim().length === 0}
-            onClick={() =>
+            aria-disabled={key.trim().length === 0 || undefined}
+            disabled={busy}
+            onClick={() => {
+              if (key.trim().length === 0) return;
               void finish(async () => {
                 await saveEngine(provider, "", "");
                 return saveApiKey(key);
-              })
-            }
+              });
+            }}
           >
             Save the key and continue
           </button>
@@ -131,9 +136,10 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
 
   return (
     <section className="stage">
-      <h2 className="panel__title">How should wording be rewritten?</h2>
+      <h2 className="panel__title">Optional: a model for tightening</h2>
       <p className="panel__lede">
-        Names, dates and numbers never change. You can switch this later in Settings.
+        A style restyles the page. Facts never change. Tightening is a switch on Check.
+        A model on this computer, if you download one, does that work here.
       </p>
       <div className="stage-tiles">
         <button type="button" className="stage-tile" onClick={() => setPath("local")}>
@@ -158,10 +164,12 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
         >
           <span className="stage-tile__name">Rules only</span>
           <span className="stage-tile__note">
-            No download, no key. Layout and a light wording pass. You can add a model later.
+            No download, no key. Style your resume as written. Turn tightening on later for
+            built-in rules, or come back and download a model.
           </span>
         </button>
       </div>
+      {busy ? <Notice>Saving your choice…</Notice> : null}
       {error ? <Notice tone="warn">{error}</Notice> : null}
     </section>
   );

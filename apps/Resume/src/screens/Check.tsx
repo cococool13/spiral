@@ -165,7 +165,7 @@ export function Check({
       <p className="panel__lede">
         {fromScratch
           ? "Type what belongs on the page. Optional sections stay off until you add them."
-          : "Titles, employers, dates and numbers stay exactly as they appear here."}
+          : "Titles, employers, dates and numbers stay exactly as they appear here. A style restyles this page. Tightening wording is optional."}
       </p>
 
       <div className="entry__grid">
@@ -359,11 +359,11 @@ export function Check({
       <div className="panel__actions panel__actions--dock">
         <Toggle
           checked={tighten}
-          label="Tighten my wording when building"
+          label="Tighten wording"
           onChange={onTighten}
         />
         <button type="button" className="btn btn--primary" onClick={onContinue}>
-          Continue
+          Continue to Style
         </button>
       </div>
     </section>

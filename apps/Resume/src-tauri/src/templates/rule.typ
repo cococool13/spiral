@@ -14,12 +14,13 @@
 ]
 
 #let role-entry(role) = {
-  grid(
-    columns: (1fr, auto),
-    align: (left, right),
+  heading-row(
     text(weight: "bold")[#role-heading(role)],
-    text(size: 9.5pt, style: "italic", fill: quiet)[#when-and-where(role)],
+    text(size: 9.5pt, style: "italic", fill: quiet)[#date-range(role.start, role.end)],
   )
+  if role.location != "" {
+    text(size: 9.5pt, style: "italic", fill: quiet)[#role.location]
+  }
   for bullet in bullets-of(role) {
     block(inset: (left: 14pt), above: 3pt, below: 3pt)[• #bullet]
   }
@@ -52,12 +53,11 @@
 #if has(doc.education) [
   #section("Education")
   #for school in doc.education [
-    #grid(
-      columns: (1fr, auto),
-      align: (left, right),
+    #heading-row(
       [#text(weight: "bold")[#school.institution]#if school.credential != "" [ — #school.credential]],
-      text(size: 9.5pt, style: "italic", fill: quiet)[#when-and-where(school)],
+      text(size: 9.5pt, style: "italic", fill: quiet)[#date-range(school.start, school.end)],
     )
+    #if school.location != "" [ #text(size: 9.5pt, style: "italic", fill: quiet)[#school.location] ]
     #for note in school.notes [ #block(inset: (left: 14pt), above: 3pt, below: 3pt)[#note.text] ]
   ]
 ]

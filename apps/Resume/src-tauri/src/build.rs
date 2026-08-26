@@ -176,11 +176,11 @@ pub fn build(
     let tightened;
     let doc = if tighten {
         tightened = crate::tighten::tighten_doc(doc);
+        report(progress("Tightening wording", 25));
         &tightened
     } else {
         doc
     };
-    report(progress("Tightening wording", 25));
 
     let inputs = templates::inputs_for(doc, accent)?;
     let document = render::compile(templates::source_for(template), inputs)?;
@@ -334,6 +334,25 @@ mod tests {
                 "Rendering pages",
                 "Preparing the file"
             ]
+        );
+    }
+
+    #[test]
+    fn turning_tightening_off_does_not_announce_it() {
+        let seen = Mutex::new(Vec::new());
+        build(
+            &sample(),
+            templates::find("column").unwrap(),
+            Format::Pdf,
+            "ink",
+            false,
+            |p| seen.lock().unwrap().push(p),
+        )
+        .unwrap();
+        let stages: Vec<String> = seen.into_inner().unwrap().into_iter().map(|p| p.stage).collect();
+        assert!(
+            !stages.iter().any(|s| s == "Tightening wording"),
+            "announced a pass that did not run: {stages:?}"
         );
     }
 

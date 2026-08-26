@@ -75,7 +75,12 @@ pub(super) fn split_glued_heading(line: &str) -> Option<(String, String)> {
 /// "EXPERIENCE Analyst, Admiralty" — a section rail extracted onto the same
 /// line as the entry, with a space at the join. The heading is all caps; a job
 /// titled "Experience Designer" is title case and must not split.
+/// The whole line is tried first: "SKILLS AND INTERESTS" is one heading, not
+/// "SKILLS" plus leftover "AND INTERESTS".
 pub(super) fn split_caps_heading(line: &str) -> Option<(String, String)> {
+    if heading_of(line).is_some() {
+        return None;
+    }
     let mut last = None;
     for (index, c) in line.char_indices() {
         if c != ' ' {

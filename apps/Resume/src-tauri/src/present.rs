@@ -62,4 +62,14 @@ mod tests {
         assert_eq!(date_range("", "", false), "");
         assert_eq!(date_range("2019", "", false), "2019");
     }
+
+    #[test]
+    fn when_and_where_joins_the_parts_the_prelude_joins() {
+        assert_eq!(
+            when_and_where("Jan 2021 — Present", "Portsmouth"),
+            "Jan 2021 — Present · Portsmouth"
+        );
+        assert_eq!(when_and_where("Jan 2021 — Present", ""), "Jan 2021 — Present");
+        assert_eq!(when_and_where("", "Portsmouth"), "Portsmouth");
+    }
 }

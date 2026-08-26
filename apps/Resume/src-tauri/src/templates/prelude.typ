@@ -18,6 +18,11 @@
 #let quiet = rgb("#" + sys.inputs.quiet)
 #let shading = rgb("#" + sys.inputs.shading)
 
+// Resumes are read, not justified prose. Hyphenating a name or an employer
+// mid-word is what made a restyle look unreadable. Templates may still set
+// face and size; they must not turn hyphenation back on.
+#set text(hyphenate: false)
+
 // "Jan 2021 — Present", or whichever half exists. Dates are shown exactly as
 // the user wrote them: `raw` is the field the Check screen edits, and no
 // template is allowed to reformat a date it did not parse.
@@ -45,6 +50,17 @@
   let parts = (date-range(entry.start, entry.end), entry.location).filter(p => p != "")
   parts.join(" · ")
 }
+
+// Title on the left, dates on the right. Location is a different field and
+// must not sit in the date column — that is what used to crush a long heading
+// into a single word.
+#let heading-row(primary, aside) = grid(
+  columns: (1fr, auto),
+  column-gutter: 12pt,
+  align: (left + horizon, right + horizon),
+  primary,
+  aside,
+)
 
 // A role's heading, in the order a reader scans: what you did, then where.
 #let role-heading(role) = {

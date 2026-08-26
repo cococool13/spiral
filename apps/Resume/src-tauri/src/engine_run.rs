@@ -10,12 +10,17 @@ use tauri::ipc::Channel;
 
 pub const OFFLINE_ENGINE: &str = "Built offline, no network used";
 pub const LOCAL_ENGINE: &str = "Rewritten on this computer — nothing left it";
+pub const RESTYLE_ENGINE: &str = "Your wording, restyled";
 
 pub struct Rewritten {
     pub doc: ResumeDoc,
     pub engine: String,
     pub notes: Vec<String>,
     pub used_model: bool,
+    /// True when at least one model batch parsed. A model that ran and
+    /// returned unreadable JSON has `used_model` true but this false — the
+    /// free tighten pass may still run, because the document did not change.
+    pub parsed: bool,
 }
 
 fn stage(name: &str, percent: u8, engine: &str) -> Progress {
@@ -37,13 +42,16 @@ fn model_ready(root: &Path, provider: &Provider, offline_model: &str) -> bool {
 }
 
 /// Pick a wording tier and run it. Ready model (key or offline) replaces the
-/// free tighten pass; it never stacks on top.
+/// free tighten pass; it never stacks on top. The Check-screen toggle gates
+/// this whole function: off means the page is restyled with the person's own
+/// sentences, and no model is started.
 pub async fn rewrite_wording(
     root: &Path,
     stored: &EngineSettings,
     provider: &Provider,
     doc: ResumeDoc,
     aim: &str,
+    tighten: bool,
     on_progress: &Channel<Progress>,
 ) -> Result<Rewritten, String> {
     let free = |doc| Rewritten {
@@ -51,7 +59,18 @@ pub async fn rewrite_wording(
         engine: OFFLINE_ENGINE.to_string(),
         notes: Vec::new(),
         used_model: false,
+        parsed: false,
     };
+
+    if !tighten {
+        return Ok(Rewritten {
+            doc,
+            engine: RESTYLE_ENGINE.to_string(),
+            notes: Vec::new(),
+            used_model: false,
+            parsed: false,
+        });
+    }
 
     if !model_ready(root, provider, &stored.offline_model) {
         return Ok(free(doc));
@@ -87,6 +106,7 @@ pub async fn rewrite_wording(
             engine: LOCAL_ENGINE.to_string(),
             notes: outcome.notes,
             used_model: true,
+            parsed: outcome.parsed,
         });
     }
 
@@ -105,5 +125,6 @@ pub async fn rewrite_wording(
         engine: named,
         notes: outcome.notes,
         used_model: true,
+        parsed: outcome.parsed,
     })
 }

@@ -12,7 +12,7 @@
 
 use crate::accent::{INK, QUIET};
 use crate::model::{ResumeDoc, Role, School};
-use crate::present::{contact_line, date_range, role_heading, when_and_where};
+use crate::present::{contact_line, date_range, role_heading};
 use docx_rs::*;
 use std::io::Cursor;
 
@@ -123,55 +123,114 @@ fn section(title: &str, style: &DocxStyle, accent: &str) -> Vec<DocumentChild> {
     vec![DocumentChild::Table(Box::new(ruled))]
 }
 
-fn role_block(role: &Role, style: &DocxStyle) -> Vec<Paragraph> {
+fn para(paragraph: Paragraph) -> DocumentChild {
+    DocumentChild::Paragraph(Box::new(paragraph))
+}
+
+fn add_child(file: Docx, child: DocumentChild) -> Docx {
+    match child {
+        DocumentChild::Table(table) => file.add_table(*table),
+        DocumentChild::Paragraph(paragraph) => file.add_paragraph(*paragraph),
+        _ => file,
+    }
+}
+
+/// Title flush left, dates flush right — the same row the Typst half draws.
+/// Word has no grid, so this is a two-cell borderless table. Location is a
+/// different field and sits on the next line, not in the date cell; putting
+/// both on the right is what used to crush a long heading into a dump.
+fn heading_and_dates(heading: Paragraph, dates: &str, style: &DocxStyle) -> Vec<DocumentChild> {
+    if dates.is_empty() {
+        return vec![para(heading)];
+    }
+    let dates_cell = quiet(dates, style).align(AlignmentType::Right);
+    let table = Table::without_borders(vec![TableRow::new(vec![
+        TableCell::new()
+            .add_paragraph(heading)
+            .width(6800, WidthType::Dxa)
+            .set_borders(TableCellBorders::with_empty()),
+        TableCell::new()
+            .add_paragraph(dates_cell)
+            .width(2550, WidthType::Dxa)
+            .set_borders(TableCellBorders::with_empty()),
+    ])])
+    .width(9350, WidthType::Dxa);
+    vec![DocumentChild::Table(Box::new(table))]
+}
+
+fn role_block(role: &Role, style: &DocxStyle) -> Vec<DocumentChild> {
     let mut out = Vec::new();
     let dates = date_range(&role.start.raw, &role.end.raw, role.end.present);
-    let dates = when_and_where(&dates, &role.location);
     let heading = role_heading(role);
 
-    if style.date_rail && !dates.is_empty() {
-        out.push(spaced(quiet(&dates, style), ENTRY_BEFORE, 0));
-        out.push(bold(&heading, style));
-    } else {
-        out.push(spaced(bold(&heading, style), ENTRY_BEFORE, 0));
+    if style.date_rail {
         if !dates.is_empty() {
-            out.push(quiet(&dates, style));
+            out.push(para(spaced(quiet(&dates, style), ENTRY_BEFORE, 0)));
+        }
+        out.push(para(bold(&heading, style)));
+        if !role.location.is_empty() {
+            out.push(para(quiet(&role.location, style)));
+        }
+    } else {
+        out.extend(heading_and_dates(
+            spaced(bold(&heading, style), ENTRY_BEFORE, 0),
+            &dates,
+            style,
+        ));
+        if !role.location.is_empty() {
+            out.push(para(quiet(&role.location, style)));
         }
     }
     for bullet in role.bullets.iter().filter(|b| !b.text.is_empty()) {
-        out.push(body(&format!("• {}", bullet.text), style).indent(Some(240), None, None, None));
+        out.push(para(
+            body(&format!("• {}", bullet.text), style).indent(Some(240), None, None, None),
+        ));
     }
     out
 }
 
-fn school_block(school: &School, style: &DocxStyle) -> Vec<Paragraph> {
-    let mut out = vec![spaced(bold(&school.institution, style), ENTRY_BEFORE, 0)];
-    if !school.credential.is_empty() {
-        out.push(body(&school.credential, style));
-    }
+fn school_block(school: &School, style: &DocxStyle) -> Vec<DocumentChild> {
     let dates = date_range(&school.start.raw, &school.end.raw, school.end.present);
-    let dates = when_and_where(&dates, &school.location);
-    if !dates.is_empty() {
-        out.push(quiet(&dates, style));
+    let mut out = if style.date_rail {
+        let mut rail = Vec::new();
+        if !dates.is_empty() {
+            rail.push(para(spaced(quiet(&dates, style), ENTRY_BEFORE, 0)));
+        }
+        rail.push(para(bold(&school.institution, style)));
+        rail
+    } else {
+        heading_and_dates(
+            spaced(bold(&school.institution, style), ENTRY_BEFORE, 0),
+            &dates,
+            style,
+        )
+    };
+    if !school.credential.is_empty() {
+        out.push(para(body(&school.credential, style)));
+    }
+    if !school.location.is_empty() {
+        out.push(para(quiet(&school.location, style)));
     }
     // A thesis, a GPA, a line of coursework: the Typst half has always shown
     // these, and the Word half used to drop them on the floor.
     for note in school.notes.iter().filter(|note| !note.text.is_empty()) {
-        out.push(body(&format!("• {}", note.text), style).indent(Some(240), None, None, None));
+        out.push(para(
+            body(&format!("• {}", note.text), style).indent(Some(240), None, None, None),
+        ));
     }
     out
 }
 
-/// Every paragraph one part of the document contributes, already styled.
-fn paragraphs_for(part: Part, doc: &ResumeDoc, style: &DocxStyle) -> Vec<Paragraph> {
+/// Every block one part of the document contributes, already styled.
+fn children_for(part: Part, doc: &ResumeDoc, style: &DocxStyle) -> Vec<DocumentChild> {
     match part {
         Part::Summary if doc.summary.is_empty() => Vec::new(),
-        Part::Summary => vec![body(&doc.summary, style)],
+        Part::Summary => vec![para(body(&doc.summary, style))],
         Part::Experience => doc.experience.iter().flat_map(|r| role_block(r, style)).collect(),
         Part::Projects => doc.projects.iter().flat_map(|r| role_block(r, style)).collect(),
         Part::Leadership => doc.leadership.iter().flat_map(|r| role_block(r, style)).collect(),
         Part::Education => doc.education.iter().flat_map(|s| school_block(s, style)).collect(),
-        Part::Awards => doc.awards.iter().map(|a| body(a, style)).collect(),
+        Part::Awards => doc.awards.iter().map(|a| para(body(a, style))).collect(),
         Part::Skills => doc
             .skills
             .iter()
@@ -181,11 +240,11 @@ fn paragraphs_for(part: Part, doc: &ResumeDoc, style: &DocxStyle) -> Vec<Paragra
                 } else {
                     format!("{}: {}", group.label, group.items.join(", "))
                 };
-                body(&line, style)
+                para(body(&line, style))
             })
             .collect(),
         Part::Interests if doc.interests.is_empty() => Vec::new(),
-        Part::Interests => vec![body(&doc.interests.join(" · "), style)],
+        Part::Interests => vec![para(body(&doc.interests.join(" · "), style))],
     }
 }
 
@@ -230,11 +289,7 @@ pub fn to_docx(
 
     let push_section = |mut file: Docx, title: &str| -> Docx {
         for child in section(title, style, accent) {
-            file = match child {
-                DocumentChild::Table(table) => file.add_table(*table),
-                DocumentChild::Paragraph(paragraph) => file.add_paragraph(*paragraph),
-                _ => file,
-            };
+            file = add_child(file, child);
         }
         file
     };
@@ -254,19 +309,19 @@ pub fn to_docx(
     // document from the PDF, and the FACTS test could not see it because it
     // asserts membership rather than sequence.
     for spec in sections {
-        let paragraphs: Vec<Paragraph> = spec
+        let children: Vec<DocumentChild> = spec
             .parts
             .iter()
-            .flat_map(|part| paragraphs_for(*part, doc, style))
+            .flat_map(|part| children_for(*part, doc, style))
             .collect();
-        if paragraphs.is_empty() {
+        if children.is_empty() {
             continue;
         }
         if !spec.title.is_empty() {
             file = push_section(file, spec.title);
         }
-        for paragraph in paragraphs {
-            file = file.add_paragraph(paragraph);
+        for child in children {
+            file = add_child(file, child);
         }
     }
 
@@ -485,6 +540,22 @@ mod tests {
     fn the_declared_font_is_the_one_written_into_the_file() {
         let bytes = to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap();
         assert!(document_xml(&bytes).contains("Times New Roman"));
+    }
+
+    /// Mutation proof: stack dates under the heading again (plain paragraphs,
+    /// no right-aligned cell) and only this fails. The dump that produced was
+    /// why a Word export looked like a different document from the PDF.
+    #[test]
+    fn dates_sit_flush_right_of_the_heading() {
+        let xml = document_xml(&to_docx(&sample(), &SERIF, CLASSIC_FOR_TESTS, "ink").unwrap());
+        assert!(
+            xml.contains(r#"<w:jc w:val="right""#) || xml.contains(r#"w:val="right""#),
+            "dates are not aligned to the right of the heading"
+        );
+        assert!(
+            xml.matches("<w:tc").count() >= 4,
+            "heading rows are not two-cell tables"
+        );
     }
 
     fn document_xml(bytes: &[u8]) -> String {

@@ -231,6 +231,21 @@ pub(super) fn section_named(key: &str) -> Option<Section> {
         .chain(FOREIGN_HEADINGS)
         .find(|(name, _)| *name == key || *name == folded)
         .map(|(_, section)| *section)
+        .or_else(|| spaceless_heading(key))
+}
+
+/// Letter-spacing with no word-gap left "W O R K E X P E R I E N C E" as one
+/// token, `WORKEXPERIENCE`. That is still the heading; the importer must not
+/// be the one that knows.
+fn spaceless_heading(key: &str) -> Option<Section> {
+    if key.contains(' ') {
+        return None;
+    }
+    HEADINGS
+        .iter()
+        .chain(FOREIGN_HEADINGS)
+        .find(|(name, _)| name.chars().filter(|c| *c != ' ').eq(key.chars()))
+        .map(|(_, section)| *section)
 }
 
 /// A heading matches the list and is not a bullet. A bulleted line that reads

@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { saveBuiltDocument } from "../lib/ipc";
-import type { BuildResult, ExportFormat } from "../lib/types";
+import type { BuiltVersion, ExportFormat } from "../lib/types";
 import { Notice } from "../components/Notice";
 import { useRadioGroup } from "../lib/useRadioGroup";
 
 const FORMAT_NAME: Record<ExportFormat, string> = { pdf: "PDF", docx: "Word file" };
+
+function styleLabels(versions: BuiltVersion[]): string[] {
+  const totals = new Map<string, number>();
+  for (const version of versions) {
+    totals.set(version.style, (totals.get(version.style) ?? 0) + 1);
+  }
+  const seen = new Map<string, number>();
+  return versions.map((version) => {
+    const n = (seen.get(version.style) ?? 0) + 1;
+    seen.set(version.style, n);
+    return (totals.get(version.style) ?? 1) > 1 ? `${version.style} (${n})` : version.style;
+  });
+}
 
 export function Result({
   versions,
@@ -13,7 +26,7 @@ export function Result({
   onShow,
   onAnotherStyle,
 }: {
-  versions: BuildResult[];
+  versions: BuiltVersion[];
   showing: number;
   format: ExportFormat;
   onShow: (index: number) => void;
@@ -23,10 +36,9 @@ export function Result({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const result = versions[showing];
-  const labels = versions.map((_, index) => (index === 0 ? "First" : `Version ${index + 1}`));
-  const versionProps = useRadioGroup(labels, labels[showing] ?? "", (label) =>
-    onShow(labels.indexOf(label)),
-  );
+  const labels = styleLabels(versions);
+  const keys = versions.map((_, index) => String(index));
+  const versionProps = useRadioGroup(keys, keys[showing] ?? "", (key) => onShow(Number(key)));
 
   async function save() {
     setBusy(true);
@@ -49,10 +61,10 @@ export function Result({
       <p className="panel__lede">{result.engine}</p>
 
       {versions.length > 1 ? (
-        <div className="versions" role="radiogroup" aria-label="Versions">
-          {labels.map((label) => (
-            <button key={label} type="button" className="btn" {...versionProps(label)}>
-              {label}
+        <div className="versions" role="radiogroup" aria-label="Styles">
+          {keys.map((key, index) => (
+            <button key={key} type="button" className="btn" {...versionProps(key)}>
+              {labels[index]}
             </button>
           ))}
         </div>

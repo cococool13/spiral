@@ -1,5 +1,6 @@
 import { useRadioGroup } from "../lib/useRadioGroup";
 import type { ExportFormat } from "../lib/types";
+import { Notice } from "../components/Notice";
 
 const FORMATS: { id: ExportFormat; name: string; note: string }[] = [
   {
@@ -32,7 +33,7 @@ export function Format({
   return (
     <section className="stage">
       <h2 className="visually-hidden">Choose a format</h2>
-      <div className="stage-tiles stage-tiles--formats" role="radiogroup" aria-label="Export format">
+      <div className="stage-tiles" role="radiogroup" aria-label="Export format">
         {FORMATS.map((format) => (
           <button
             key={format.id}
@@ -46,16 +47,19 @@ export function Format({
         ))}
       </div>
       {onGenerate ? (
-        <div className="panel__actions panel__actions--generate">
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={!chosen}
-            onClick={onGenerate}
-          >
-            Generate
-          </button>
-        </div>
+        <>
+          {chosen === "" ? <Notice>Pick a format to carry on.</Notice> : null}
+          <div className="panel__actions panel__actions--generate">
+            <button
+              type="button"
+              className="btn btn--primary"
+              aria-disabled={chosen === "" || undefined}
+              onClick={() => chosen !== "" && onGenerate()}
+            >
+              Build this resume
+            </button>
+          </div>
+        </>
       ) : null}
     </section>
   );

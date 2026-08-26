@@ -10,8 +10,13 @@
 //! And a scanned resume is a picture of a document, with no text in it at all.
 //! That is not a parse failure and must not be reported as one: the user's next
 //! step is completely different.
+//!
+//! Two-column pages are reconstructed from character positions, not from the
+//! order the writer happened to emit them. A lucky file is not required.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
+
+use super::pdf_layout;
 
 const NOT_A_PDF: &str = "That file is not a PDF. Choose a .pdf file, or paste the text instead.";
 
@@ -22,7 +27,7 @@ pub fn text_from_pdf(bytes: &[u8]) -> Result<String, String> {
 
     // The extractor prints its own diagnostics to stderr and panics on some
     // real-world files; neither is allowed to reach the user or the window.
-    let extracted = catch_unwind(AssertUnwindSafe(|| pdf_extract::extract_text_from_mem(bytes)))
+    let extracted = catch_unwind(AssertUnwindSafe(|| pdf_layout::text_from_positions(bytes)))
         .map_err(|_| damaged(bytes))?
         .map_err(|_| damaged(bytes))?;
 
@@ -122,9 +127,8 @@ mod tests {
         );
     }
 
-    /// Every template, read back. A two-column layout is the shape that breaks
-    /// extraction — the columns interleave — and `column` and `card` are two
-    /// columns. Whatever the layout, the facts have to come back.
+    /// Every template, read back. A two-column layout used to interleave in
+    /// stream order; reading by position has to keep the facts anyway.
     #[test]
     fn a_pdf_from_every_template_survives_a_round_trip() {
         let original = crate::parse_text::parse_text(
@@ -158,6 +162,43 @@ mod tests {
                 template.id
             );
         }
+    }
+
+    /// Two columns on the page, independent of each other. Stream order would
+    /// print a heading from the left next to a heading from the right; reading
+    /// order has to finish the left column before the right.
+    #[test]
+    fn a_two_column_page_reads_left_then_right() {
+        let bytes = crate::render::to_pdf(
+            r#"
+#set page(width: 500pt, height: 400pt, margin: 28pt, columns: 2)
+#set text(font: "Liberation Serif", size: 11pt)
+
+EXPERIENCE
+
+Analyst, Admiralty
+
+- Wrote the first algorithm
+
+#colbreak()
+
+SKILLS
+
+Rust, Analysis
+
+Python"#
+            .to_string(),
+        )
+        .unwrap();
+        let text = text_from_pdf(&bytes).unwrap();
+        let experience = text.find("EXPERIENCE").expect(&text);
+        let algorithm = text.find("Wrote the first algorithm").expect(&text);
+        let skills = text.find("SKILLS").expect(&text);
+        let rust = text.find("Rust").expect(&text);
+        assert!(
+            experience < algorithm && algorithm < skills && skills < rust,
+            "columns interleaved:\n{text}"
+        );
     }
 
     /// A PDF with a page and no text on it is a scan. The message has to say so,

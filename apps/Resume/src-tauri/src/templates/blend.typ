@@ -4,7 +4,7 @@
 // see docs/template-lineage.md.
 
 #set page(paper: "us-letter", margin: (x: 56pt, y: 52pt))
-#set text(font: "Liberation Sans", size: 9.5pt, fill: ink)
+#set text(font: "Liberation Sans", size: 10pt, fill: ink)
 #set par(justify: false, leading: 0.65em, spacing: 0.85em)
 
 #let section(title) = block(sticky: true, above: 11pt, below: 4pt)[

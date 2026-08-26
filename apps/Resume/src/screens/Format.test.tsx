@@ -22,18 +22,20 @@ describe("Format", () => {
     expect(screen.getByRole("radio", { name: /PDF/ }).getAttribute("aria-checked")).toBe("true");
   });
 
-  it("waits for a format before Generate will run", () => {
+  it("waits for a format before Build this resume will run", () => {
     const onGenerate = vi.fn();
     render(<Format chosen="" onChoose={vi.fn()} onGenerate={onGenerate} />);
-    expect((screen.getByRole("button", { name: "Generate" }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    const generate = screen.getByRole("button", { name: "Build this resume" });
+    expect(generate.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(generate);
+    expect(onGenerate).not.toHaveBeenCalled();
+    expect(screen.getByText("Pick a format to carry on.")).toBeTruthy();
   });
 
-  it("starts the build from Generate once a format is chosen", () => {
+  it("starts the build once a format is chosen", () => {
     const onGenerate = vi.fn();
     render(<Format chosen="pdf" onChoose={vi.fn()} onGenerate={onGenerate} />);
-    fireEvent.click(screen.getByRole("button", { name: "Generate" }));
+    fireEvent.click(screen.getByRole("button", { name: "Build this resume" }));
     expect(onGenerate).toHaveBeenCalled();
   });
 });

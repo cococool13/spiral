@@ -71,8 +71,8 @@
     #grid(
       columns: (1fr, auto),
       align: (left, right),
-      [#text(weight: "bold")[#school.institution]#if school.credential != "" [ — #school.credential]],
-      text[#when-and-where(school)],
+      [#text(weight: "bold")[#school.institution]#if school.credential != "" [ — #school.credential]#if school.location != "" [, #school.location]],
+      text[#date-range(school.start, school.end)],
     )
     #for note in school.notes [ #linebreak() #note.text ]
     #v(4pt)

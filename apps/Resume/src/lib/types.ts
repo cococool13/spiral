@@ -193,6 +193,11 @@ export interface BuildResult {
   notes: string[];
 }
 
+/** A built file plus the style it was typeset in, so Result can name versions. */
+export interface BuiltVersion extends BuildResult {
+  style: string;
+}
+
 /** The optional offline model. `available: false` means this build ships no
  *  pinned model, and the UI says so rather than offering a broken download. */
 /** One offline model, as Settings shows it. */

@@ -159,7 +159,13 @@ impl Provider {
                 "max_tokens": MAX_TOKENS,
                 // No temperature: the current Opus generation rejects sampling
                 // parameters outright. Steer with the prompt instead.
-                "output_config": { "effort": "low" },
+                "output_config": {
+                    "effort": "low",
+                    "format": {
+                        "type": "json_schema",
+                        "schema": reply_schema(),
+                    },
+                },
                 "system": system,
                 "messages": [{ "role": "user", "content": user }],
             }),
@@ -167,9 +173,9 @@ impl Provider {
             // compiles it into a grammar, so a malformed reply is not merely
             // unlikely — it cannot be generated. Measured without it: a batch of
             // twenty bullets came back missing its final brace, and every bullet
-            // in that batch was discarded. Hosted providers keep `json_object`,
-            // which is what they are tested against.
-            Provider::Local { .. } => json!({
+            // in that batch was discarded. OpenAI takes the same schema.
+            // Compatible endpoints vary; `json_object` is what they accept.
+            Provider::Local { .. } | Provider::OpenAi => json!({
                 "model": model,
                 "max_completion_tokens": MAX_TOKENS,
                 "response_format": {
@@ -400,8 +406,26 @@ mod tests {
     #[test]
     fn the_openai_shape_asks_for_json_back() {
         let body = Provider::OpenAi.body("gpt-5", "sys", "user");
-        assert_eq!(body["response_format"]["type"], "json_object");
+        assert_eq!(body["response_format"]["type"], "json_schema");
+        assert_eq!(body["response_format"]["json_schema"]["name"], "bullets");
         assert_eq!(body["messages"][0]["role"], "system");
+    }
+
+    #[test]
+    fn the_anthropic_body_asks_for_the_same_schema() {
+        let body = Provider::Anthropic.body("claude-opus-5", "sys", "user");
+        assert_eq!(body["output_config"]["format"]["type"], "json_schema");
+        assert_eq!(body["output_config"]["format"]["schema"], reply_schema());
+        assert_eq!(body["output_config"]["effort"], "low");
+    }
+
+    #[test]
+    fn a_compatible_endpoint_still_asks_for_json_object() {
+        let body = Provider::Compatible {
+            base_url: "https://openrouter.ai/api/v1".into(),
+        }
+        .body("x", "sys", "user");
+        assert_eq!(body["response_format"]["type"], "json_object");
     }
 
     #[test]

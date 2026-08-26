@@ -110,6 +110,9 @@ describe("Check", () => {
     );
     await waitFor(() => expect(screen.getByText(/Will become/)).toBeTruthy());
     expect(screen.getByText(/quantify it/)).toBeTruthy();
+    const described = screen.getByLabelText("Bullet in Analyst").getAttribute("aria-describedby");
+    expect(described).toContain("exp-0-b-0-preview");
+    expect(described).toContain("exp-0-b-0-note-0");
   });
 
   it("says nothing about wording when tightening is off", async () => {
@@ -136,7 +139,7 @@ describe("Check", () => {
     render(
       <Check doc={docWithRole()} tighten={true} onChange={vi.fn()} onTighten={onTighten} onContinue={vi.fn()} />,
     );
-    fireEvent.click(screen.getByLabelText(/Tighten my wording/));
+    fireEvent.click(screen.getByLabelText(/Tighten wording/));
     expect(onTighten).toHaveBeenCalledWith(false);
   });
 

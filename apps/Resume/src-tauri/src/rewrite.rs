@@ -14,6 +14,7 @@ use crate::gate::{self, Verdict};
 use crate::model::ResumeDoc;
 use crate::openers;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// Fixed preamble and trailing rules. Rule 5 is injected from
 /// `openers::opener_rule_text()` so the closed filler list cannot drift from
@@ -57,9 +58,9 @@ const SYSTEM_TAIL: &str = "\
 was not in the original.
 
 7. If a bullet is already a clean verb plus facts, return it unchanged. A \
-small improvement is allowed; a different sentence is not. Do not reorder \
-words. Do not correct spelling. Do not change punctuation unless you removed \
-an empty opener.
+small improvement is allowed; a different sentence is not. You may reorder \
+facts that are already in the bullet. Do not invent clauses. Do not correct \
+spelling. Do not change punctuation unless you removed an empty opener.
 
 8. If you cannot improve a bullet without breaking a rule above, return the \
 original text exactly.
@@ -74,11 +75,22 @@ pub struct Outcome {
     pub rejected: usize,
     /// One line per rejection, for the user to read. Never a stack trace.
     pub notes: Vec<String>,
+    /// At least one batch came back as JSON and went through the gate.
+    pub parsed: bool,
+}
+
+fn blank_outcome() -> Outcome {
+    Outcome {
+        rewritten: 0,
+        rejected: 0,
+        notes: Vec::new(),
+        parsed: false,
+    }
 }
 
 #[derive(Deserialize)]
 struct ReplyBullet {
-    n: usize,
+    n: Value,
     #[serde(default)]
     text: String,
 }
@@ -119,27 +131,27 @@ pub fn system_prompt() -> String {
 /// behaviour is testable without a key.
 pub fn apply(doc: &ResumeDoc, bullets: &[(String, String)], raw: &str) -> (ResumeDoc, Outcome) {
     let mut out = doc.clone();
-    let mut outcome = Outcome {
-        rewritten: 0,
-        rejected: 0,
-        notes: Vec::new(),
-    };
+    let mut outcome = blank_outcome();
 
-    let reply: Reply = match serde_json::from_str(raw) {
-        Ok(reply) => reply,
-        Err(_) => {
+    let reply = match parse_reply(raw) {
+        Some(reply) => reply,
+        None => {
             // An unreadable reply changes nothing. The document is never left
             // half-rewritten.
             outcome.notes.push(
-                "That service replied with something this app could not read — your wording is unchanged."
+                "That service replied with something this app could not read — your wording is unchanged. Build again, or check the model name in Settings."
                     .to_string(),
             );
             return (out, outcome);
         }
     };
+    outcome.parsed = true;
 
     for candidate in reply.bullets {
-        let Some((id, source)) = bullets.get(candidate.n.wrapping_sub(1)) else {
+        let Some(n) = n_of(&candidate.n) else {
+            continue;
+        };
+        let Some((id, source)) = bullets.get(n.wrapping_sub(1)) else {
             continue;
         };
         match gate::check(source, &candidate.text) {
@@ -148,6 +160,7 @@ pub fn apply(doc: &ResumeDoc, bullets: &[(String, String)], raw: &str) -> (Resum
                     outcome.rewritten += 1;
                 }
             }
+            Verdict::Unchanged => {}
             Verdict::Rejected(why) => {
                 outcome.rejected += 1;
                 outcome
@@ -158,6 +171,42 @@ pub fn apply(doc: &ResumeDoc, bullets: &[(String, String)], raw: &str) -> (Resum
     }
 
     (out, outcome)
+}
+
+fn n_of(value: &Value) -> Option<usize> {
+    match value {
+        Value::Number(n) => n
+            .as_u64()
+            .map(|n| n as usize)
+            .or_else(|| {
+                n.as_f64()
+                    .filter(|f| f.is_finite() && *f >= 0.0 && f.fract() == 0.0)
+                    .map(|f| f as usize)
+            }),
+        Value::String(s) => s.parse().ok(),
+        _ => None,
+    }
+}
+
+fn strip_fence(raw: &str) -> &str {
+    let trimmed = raw.trim();
+    let without_open = trimmed
+        .strip_prefix("```json")
+        .or_else(|| trimmed.strip_prefix("```JSON"))
+        .or_else(|| trimmed.strip_prefix("```"))
+        .unwrap_or(trimmed);
+    without_open.trim().strip_suffix("```").unwrap_or(without_open).trim()
+}
+
+fn parse_reply(raw: &str) -> Option<Reply> {
+    let body = strip_fence(raw);
+    let start = body.find(['{', '['])?;
+    let payload = &body[start..];
+    if payload.starts_with('[') {
+        let bullets: Vec<ReplyBullet> = serde_json::from_str(payload).ok()?;
+        return Some(Reply { bullets });
+    }
+    serde_json::from_str(payload).ok()
 }
 
 fn set_bullet(doc: &mut ResumeDoc, id: &str, text: &str) -> bool {
@@ -195,14 +244,7 @@ pub async fn rewrite_doc(
 ) -> Result<(ResumeDoc, Outcome), String> {
     let bullets = bullets_of(doc);
     if bullets.is_empty() {
-        return Ok((
-            doc.clone(),
-            Outcome {
-                rewritten: 0,
-                rejected: 0,
-                notes: Vec::new(),
-            },
-        ));
+        return Ok((doc.clone(), blank_outcome()));
     }
     // Sent in batches. One request for the whole document meant a long resume
     // overflowed the model's context, the reply came back cut in half, and the
@@ -212,15 +254,24 @@ pub async fn rewrite_doc(
     // requests, not less resume.
     let system = system_for(aim);
     let mut out = doc.clone();
-    let mut outcome = Outcome {
-        rewritten: 0,
-        rejected: 0,
-        notes: Vec::new(),
-    };
+    let mut outcome = blank_outcome();
     for batch in bullets.chunks(BATCH) {
-        let raw = crate::provider::send(provider, key, model, &system, &prompt_for(batch)).await?;
+        let raw = match crate::provider::send(provider, key, model, &system, &prompt_for(batch)).await
+        {
+            Ok(raw) => raw,
+            Err(err) => {
+                if outcome.parsed {
+                    outcome.notes.push(format!(
+                        "{err} Later bullets were left as they were. Build again to retry them."
+                    ));
+                    break;
+                }
+                return Err(err);
+            }
+        };
         let (next, part) = apply(&out, batch, &raw);
         out = next;
+        outcome.parsed |= part.parsed;
         outcome.rewritten += part.rewritten;
         outcome.rejected += part.rejected;
         outcome.notes.extend(part.notes);
@@ -314,6 +365,8 @@ mod tests {
         assert_eq!(out, doc);
         assert_eq!(outcome.rewritten, 0);
         assert!(outcome.notes[0].contains("could not read"));
+        assert!(outcome.notes[0].contains("Build again"));
+        assert!(!outcome.parsed);
     }
 
     #[test]
@@ -355,5 +408,55 @@ mod tests {
                 "system prompt missing shared opener {opener:?}"
             );
         }
+    }
+
+    #[test]
+    fn an_unchanged_echo_is_a_silent_keep() {
+        let doc = sample();
+        let bullets = bullets_of(&doc);
+        let source = &doc.experience[0].bullets[1].text;
+        let raw = format!(r#"{{"bullets":[{{"n":2,"text":"{source}"}}]}}"#);
+        let (out, outcome) = apply(&doc, &bullets, &raw);
+        assert_eq!(out, doc);
+        assert_eq!(outcome.rewritten, 0);
+        assert_eq!(outcome.rejected, 0);
+        assert!(outcome.notes.is_empty(), "{:?}", outcome.notes);
+        assert!(outcome.parsed);
+    }
+
+    #[test]
+    fn a_fenced_json_reply_is_still_read() {
+        let doc = sample();
+        let bullets = bullets_of(&doc);
+        let raw = "```json\n{\"bullets\":[{\"n\":1,\"text\":\"Managed 6 engineers at Admiralty\"}]}\n```";
+        let (out, outcome) = apply(&doc, &bullets, raw);
+        assert_eq!(outcome.rewritten, 1);
+        assert_eq!(out.experience[0].bullets[0].text, "Managed 6 engineers at Admiralty");
+    }
+
+    #[test]
+    fn a_string_or_float_index_is_still_read() {
+        let doc = sample();
+        let bullets = bullets_of(&doc);
+        let raw = r#"{"bullets":[{"n":"1","text":"Managed 6 engineers at Admiralty"}]}"#;
+        let (_, outcome) = apply(&doc, &bullets, raw);
+        assert_eq!(outcome.rewritten, 1);
+        let raw = r#"{"bullets":[{"n":1.0,"text":"Managed 6 engineers at Admiralty"}]}"#;
+        let (_, outcome) = apply(&doc, &bullets, raw);
+        assert_eq!(outcome.rewritten, 1);
+    }
+
+    #[test]
+    fn a_bare_array_reply_is_wrapped() {
+        let doc = sample();
+        let bullets = bullets_of(&doc);
+        let raw = r#"[{"n":1,"text":"Managed 6 engineers at Admiralty"}]"#;
+        let (_, outcome) = apply(&doc, &bullets, raw);
+        assert_eq!(outcome.rewritten, 1);
+    }
+
+    #[test]
+    fn the_system_prompt_allows_reordering_facts_already_present() {
+        assert!(system_prompt().contains("reorder facts"));
     }
 }

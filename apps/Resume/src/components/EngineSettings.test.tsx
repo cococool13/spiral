@@ -51,7 +51,7 @@ describe("EngineSettings", () => {
 
   it("says the free path is complete rather than selling the paid one", async () => {
     render(<EngineSettings onChanged={vi.fn()} />);
-    await waitFor(() => expect(screen.getByText(/works with no key at all/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/no key at all/)).toBeTruthy());
   });
 
   /** The key must never be rendered into the DOM in readable form, and must
@@ -72,9 +72,10 @@ describe("EngineSettings", () => {
   it("will not save an empty key", async () => {
     render(<EngineSettings onChanged={vi.fn()} />);
     await screen.findByLabelText(/Paste your key/);
-    expect((screen.getByRole("button", { name: "Save the key" }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    const save = screen.getByRole("button", { name: "Save the key" });
+    expect(save.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(save);
+    expect(saveApiKey).not.toHaveBeenCalled();
   });
 
   it("offers removal only once a key exists, and reports it upward", async () => {

@@ -5,7 +5,7 @@
 #set text(font: "Liberation Serif", size: 10.5pt, fill: ink)
 #set par(justify: false, leading: 0.62em, spacing: 0.85em)
 
-#let rail = 96pt
+#let rail = 110pt
 
 #let row(left-text, body) = grid(
   columns: (rail, 1fr),
@@ -25,9 +25,13 @@
 
 #let role-entry(role) = {
   row(
-    when-and-where(role),
+    date-range(role.start, role.end),
     [
       #text(weight: "bold")[#role-heading(role)]
+      #if role.location != "" [
+        #linebreak()
+        #text(size: 9pt, fill: quiet)[#role.location]
+      ]
       #for bullet in bullets-of(role) [ #block(above: 3pt, below: 3pt)[• #bullet] ]
     ],
   )
@@ -65,10 +69,11 @@
   #section("Education")
   #for school in doc.education [
     #row(
-      when-and-where(school),
+      date-range(school.start, school.end),
       [
         #text(weight: "bold")[#school.institution]
         #if school.credential != "" [ #linebreak() #school.credential ]
+        #if school.location != "" [ #linebreak() #text(size: 9pt, fill: quiet)[#school.location] ]
         #for note in school.notes [ #linebreak() #note.text ]
       ],
     )

@@ -595,7 +595,41 @@ Weaving, Music
         }
     }
 
-    /// The accent has to actually reach the page, in every template — a
+    /// A restyle that hyphenates "Admiralty" mid-word is unreadable. Mutation
+    /// proof: drop `hyphenate: false` from the prelude, or turn it back on in
+    /// a template, and only this fails.
+    #[test]
+    fn words_are_not_hyphenated_across_a_line() {
+        assert!(
+            PRELUDE.contains("hyphenate: false"),
+            "the prelude no longer forbids hyphenation"
+        );
+        for template in all() {
+            assert!(
+                !template.source.contains("hyphenate: true"),
+                "{} turns hyphenation back on",
+                template.id
+            );
+        }
+    }
+    /// `when-and-where` on the right is what crushed a long title against a
+    /// city name. Mutation proof: put `when-and-where` back on a flush-right
+    /// template's date cell and only this fails.
+    #[test]
+    fn flush_right_templates_keep_location_out_of_the_date_column() {
+        for id in ["column", "card", "rule", "ledger"] {
+            let template = find(id).expect(id);
+            assert!(
+                !template.source.contains("when-and-where"),
+                "{} still puts location in the date column",
+                template.id
+            );
+        }
+        assert!(
+            PRELUDE.contains("heading-row"),
+            "the shared heading row left the prelude"
+        );
+    }
     /// swatch that changes nothing is worse than no swatch.
     #[test]
     fn choosing_an_accent_changes_every_template() {

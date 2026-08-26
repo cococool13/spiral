@@ -76,6 +76,7 @@ export function Input({
   }
 
   if (paste) {
+    const empty = text.trim().length === 0;
     return (
       <section className="stage">
         <h2 className="visually-hidden">Paste your resume</h2>
@@ -89,13 +90,19 @@ export function Input({
             onChange={(e) => setText(e.target.value)}
           />
         </label>
+        {empty ? <Notice>Paste the resume text to continue.</Notice> : null}
+        {busy ? <Notice>Reading the pasted text…</Notice> : null}
         {error ? <Notice tone="warn">{error}</Notice> : null}
         <div className="panel__actions">
           <button
             type="button"
             className="btn btn--primary"
-            disabled={text.trim().length === 0 || busy}
-            onClick={() => run(() => parsePastedText(text))}
+            aria-disabled={empty || undefined}
+            disabled={busy}
+            onClick={() => {
+              if (empty) return;
+              void run(() => parsePastedText(text));
+            }}
           >
             Read the pasted text
           </button>
@@ -114,32 +121,47 @@ export function Input({
         <button
           type="button"
           className="stage-tile"
-          aria-label="Upload a file"
+          aria-labelledby="import-file-name"
+          aria-describedby="import-file-note"
           disabled={busy}
           onClick={() => run(importResumeFile)}
         >
-          <span className="stage-tile__name">Upload a file</span>
-          <span className="stage-tile__note">PDF, Word or text. Drag and drop, or click.</span>
+          <span id="import-file-name" className="stage-tile__name">
+            Upload a file
+          </span>
+          <span id="import-file-note" className="stage-tile__note">
+            PDF, Word or text. Drag and drop, or click.
+          </span>
         </button>
         <button
           type="button"
           className="stage-tile"
-          aria-label="Start from scratch"
+          aria-labelledby="import-scratch-name"
+          aria-describedby="import-scratch-note"
           disabled={busy}
           onClick={() => onReady(scratchDoc(), "scratch")}
         >
-          <span className="stage-tile__name">Start from scratch</span>
-          <span className="stage-tile__note">Type the facts on the next screen. Nothing is invented.</span>
+          <span id="import-scratch-name" className="stage-tile__name">
+            Start from scratch
+          </span>
+          <span id="import-scratch-note" className="stage-tile__note">
+            Type the facts on the next screen. Nothing is invented.
+          </span>
         </button>
         <button
           type="button"
           className="stage-tile"
-          aria-label="Paste contents"
+          aria-labelledby="import-paste-name"
+          aria-describedby="import-paste-note"
           disabled={busy}
           onClick={() => setPaste(true)}
         >
-          <span className="stage-tile__name">Paste contents</span>
-          <span className="stage-tile__note">A two-column PDF may look jumbled — fix it on Check.</span>
+          <span id="import-paste-name" className="stage-tile__name">
+            Paste contents
+          </span>
+          <span id="import-paste-note" className="stage-tile__note">
+            The text of the resume, as you would read it.
+          </span>
         </button>
       </div>
       {savedAt && onOpenSaved ? (
@@ -150,6 +172,7 @@ export function Input({
           </button>
         </p>
       ) : null}
+      {busy ? <Notice>Reading the file…</Notice> : null}
       {error ? <Notice tone="warn">{error}</Notice> : null}
     </section>
   );

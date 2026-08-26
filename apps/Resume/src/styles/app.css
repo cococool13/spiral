@@ -41,10 +41,17 @@ body {
   margin: 0;
   background: var(--spiral-conc-01);
   color: var(--spiral-paper);
+  caret-color: var(--spiral-paper);
   font-family: var(--spiral-font-display);
   font-size: 15px;
   line-height: 1.5;
   color-scheme: dark;
+  scrollbar-color: var(--spiral-conc-03) var(--spiral-conc-01);
+}
+
+::selection {
+  background: var(--spiral-red);
+  color: var(--spiral-paper);
 }
 
 :focus-visible {
@@ -225,6 +232,7 @@ body {
   z-index: 2;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 0;
@@ -295,6 +303,7 @@ body {
 .app__main {
   flex: 1;
   padding: calc(var(--spiral-unit) * 4) calc(var(--spiral-unit) * 3);
+  view-transition-name: stage;
 }
 
 .app__main:not(.app__main--stage) {
@@ -326,7 +335,8 @@ body {
   flex-direction: column;
   justify-content: center;
   gap: var(--spiral-unit);
-  min-height: min(42vh, 380px);
+  min-height: 160px;
+  min-width: 0;
   padding: calc(var(--spiral-unit) * 3);
   border: 1px solid var(--spiral-conc-03);
   border-radius: 0;
@@ -334,6 +344,7 @@ body {
   color: inherit;
   font: inherit;
   text-align: left;
+  overflow-wrap: anywhere;
   cursor: pointer;
   transition:
     border-color var(--spiral-dur-fast) var(--spiral-ease),
@@ -363,7 +374,7 @@ body {
 }
 
 .stage-tile__note {
-  color: var(--spiral-paper);
+  color: var(--spiral-gray);
   font-size: 13px;
 }
 
@@ -529,6 +540,7 @@ body {
   font-weight: var(--spiral-wght-heading);
   font-variation-settings: "wdth" var(--spiral-wdth-heading);
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .panel__lede {
@@ -569,6 +581,7 @@ body {
 
 .field {
   display: block;
+  min-width: 0;
   margin-bottom: calc(var(--spiral-unit) * 2);
 }
 
@@ -591,6 +604,7 @@ body {
   background: var(--spiral-conc-02);
   color: var(--spiral-paper);
   font: inherit;
+  overflow-wrap: anywhere;
 }
 
 .field__input--tall {
@@ -605,8 +619,8 @@ body {
 }
 
 .btn {
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 44px;
+  padding: 0 16px;
   border: 1px solid var(--spiral-conc-03);
   border-radius: var(--spiral-radius-ctl);
   background: var(--spiral-conc-02);
@@ -659,7 +673,9 @@ body {
 
 .notice {
   margin: var(--spiral-unit) 0 0;
+  max-width: 100%;
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .notice--warn {
@@ -668,6 +684,7 @@ body {
 }
 
 .entry {
+  contain: layout;
   padding: calc(var(--spiral-unit) * 2);
   margin-bottom: calc(var(--spiral-unit) * 2);
   border: 1px solid var(--spiral-conc-03);
@@ -681,8 +698,7 @@ body {
 }
 
 @media (max-width: 720px) {
-  .entry__grid,
-  .formats {
+  .entry__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -696,10 +712,10 @@ body {
 }
 
 .style-card {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spiral-unit);
+  min-width: 0;
   padding: var(--spiral-unit);
   border: 1px solid var(--spiral-conc-03);
   border-radius: 0;
@@ -708,6 +724,7 @@ body {
   font: inherit;
   text-align: left;
   cursor: pointer;
+  contain: layout paint;
   transition:
     border-color var(--spiral-dur-fast) var(--spiral-ease),
     transform var(--spiral-dur-fast) var(--spiral-ease);
@@ -721,15 +738,6 @@ body {
   .style-card:hover {
     border-color: var(--spiral-gray);
   }
-
-  .style-card:hover .style-card__hint,
-  .style-card:focus-visible .style-card__hint {
-    opacity: 1;
-  }
-}
-
-.style-card:focus-visible .style-card__hint {
-  opacity: 1;
 }
 
 .style-card[aria-checked="true"] {
@@ -767,72 +775,26 @@ body {
 }
 
 .style-card__name {
+  font-size: 15px;
   font-weight: var(--spiral-wght-heading);
   font-variation-settings: "wdth" var(--spiral-wdth-heading);
+  overflow-wrap: anywhere;
+}
+
+.style-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spiral-unit) * 0.5);
+  min-width: 0;
 }
 
 .style-card__hint {
-  position: absolute;
-  inset: auto var(--spiral-unit) var(--spiral-unit);
-  z-index: 1;
   margin: 0;
-  padding: var(--spiral-unit) calc(var(--spiral-unit) * 1.5);
-  border: 1px solid var(--spiral-conc-03);
-  background: var(--spiral-conc-02);
+  padding: 0;
+  list-style: none;
+  color: var(--spiral-gray);
+  font-size: 12px;
   line-height: 1.4;
-  opacity: 0;
-  pointer-events: none;
-}
-
-
-.formats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: calc(var(--spiral-unit) * 2);
-}
-
-.format-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spiral-unit);
-  min-height: 44px;
-  padding: calc(var(--spiral-unit) * 2);
-  border: 1px solid var(--spiral-conc-03);
-  border-radius: 0;
-  background: var(--spiral-conc-02);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color var(--spiral-dur-fast) var(--spiral-ease),
-    transform var(--spiral-dur-fast) var(--spiral-ease);
-}
-
-.format-card:active {
-  transform: scale(0.98);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .format-card:hover {
-    border-color: var(--spiral-gray);
-  }
-}
-
-.format-card[aria-checked="true"] {
-  border-color: var(--spiral-red);
-  box-shadow: inset 0 0 0 1px var(--spiral-red);
-}
-
-.format-card__name {
-  font-size: 17px;
-  font-weight: var(--spiral-wght-heading);
-  font-variation-settings: "wdth" var(--spiral-wdth-heading);
-}
-
-.format-card__note {
-  color: var(--spiral-paper);
-  font-size: 13px;
 }
 
 .list-editor {
@@ -882,7 +844,7 @@ body {
 }
 
 .btn--inline {
-  min-height: 32px;
+  min-height: 44px;
   padding: 0 calc(var(--spiral-unit) * 1.25);
   font-size: 12px;
 }
@@ -1029,8 +991,21 @@ body {
 }
 
 .result__page {
+  contain: layout paint;
   border: 1px solid var(--spiral-conc-03);
   background: var(--spiral-paper);
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--spiral-dur-slow) var(--spiral-ease),
+    transform var(--spiral-dur-slow) var(--spiral-ease);
+}
+
+@starting-style {
+  .result__page {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 .result__page svg {
@@ -1048,6 +1023,27 @@ body {
   overflow-wrap: anywhere;
 }
 
+::view-transition-old(stage) {
+  animation: stage-out var(--spiral-dur-slow) var(--spiral-ease) both;
+}
+
+::view-transition-new(stage) {
+  animation: stage-in var(--spiral-dur-slow) var(--spiral-ease) both;
+}
+
+@keyframes stage-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1060,6 +1056,17 @@ body {
     opacity: 1;
     animation: none;
     transform: none;
+  }
+
+  ::view-transition-old(stage),
+  ::view-transition-new(stage) {
+    animation: none;
+  }
+
+  .result__page {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 

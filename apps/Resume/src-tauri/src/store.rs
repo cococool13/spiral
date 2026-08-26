@@ -34,14 +34,10 @@ pub struct StoredDoc {
     /// The accent name, resolved through a closed set before it is ever used.
     #[serde(default)]
     pub accent: String,
-    /// Whether the free rule-based wording pass runs at build time. On unless
-    /// turned off. It does not gate the model tier — that lives in Settings.
-    #[serde(default = "yes")]
+    /// Whether wording is tightened at build time. Off unless turned on: a
+    /// style change restyles the page and leaves the sentences as written.
+    #[serde(default)]
     pub tighten: bool,
-}
-
-fn yes() -> bool {
-    true
 }
 
 pub struct Store {
@@ -197,7 +193,7 @@ mod tests {
         assert_eq!(stored.doc.contact.name, "Ada");
         assert_eq!(stored.template, "");
         assert_eq!(stored.format, "");
-        assert!(stored.tighten, "a file from before the setting must default to on");
+        assert!(!stored.tighten, "a file from before the setting must default to off");
     }
 
     /// The regression the review found: this file is what M1–M4 actually wrote,

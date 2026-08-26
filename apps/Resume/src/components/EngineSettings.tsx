@@ -51,8 +51,9 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
     <>
       <h3 className="panel__heading">Wording engine</h3>
       <p className="panel__lede">
-        Spiral Resume works with no key at all — layout and a light wording pass. A Claude or
-        ChatGPT key rewrites the phrasing instead. Names, dates and numbers never change.
+        Spiral Resume restyles a resume with no key at all. Tightening is a switch on Check. A
+        model on this computer, or a Claude or ChatGPT key, does that rewriting. Names, dates and
+        numbers never change.
       </p>
 
       <div className="entry__grid">
@@ -140,14 +141,15 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
             <button
               type="button"
               className="btn"
-              disabled={key.trim().length === 0}
-              onClick={() =>
-                run(async () => {
+              aria-disabled={key.trim().length === 0 || undefined}
+              onClick={() => {
+                if (key.trim().length === 0) return;
+                void run(async () => {
                   const next = await saveApiKey(key);
                   setKey("");
                   return next;
-                }, "Key saved to your keychain.")
-              }
+                }, "Key saved to your keychain.");
+              }}
             >
               Save the key
             </button>
