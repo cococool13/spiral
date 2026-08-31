@@ -421,15 +421,21 @@ p {
   transform: none;
   pointer-events: auto;
 }
+@media (max-width: 480px) {
+  .nav-download {
+    display: none;
+  }
+}
 
-/* Superwhisper zoom-out: sticky plate, --hero-p 0→1 as the pin scrolls. */
+/* Superwhisper zoom-out: a sticky photographic plate, --hero-p 0→1 as the
+   pin scrolls. */
 .hero-pin {
-  height: 180svh;
+  height: 150svh;
   --hero-p: 0;
 }
 @media (max-width: 768px) {
   .hero-pin {
-    height: 130svh;
+    height: 120svh;
   }
 }
 .hero-sticky {
@@ -457,6 +463,7 @@ p {
 .hero-wash {
   position: absolute;
   inset: 0;
+  background: color-mix(in oklab, var(--spiral-void) 8%, transparent);
 }
 .hero-copy {
   position: relative;

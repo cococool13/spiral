@@ -6,8 +6,8 @@ import HeroPin from "./HeroPin";
 const rise = (step: number) => ({ "--rise-step": step }) as CSSProperties;
 
 /**
- * Full-viewport still, type in the middle, no mark on this screen.
- * The plate zooms out on scroll — Superwhisper's move.
+ * Full-viewport still, type in the middle, and a plate that zooms out on
+ * scroll — the signature Superwhisper move adapted to Spiral's palette.
  *
  * Photograph: Unsplash, dark corridor with the exit lit at the far end
  * https://unsplash.com/photos/E_kMaBHrw0k
@@ -26,36 +26,20 @@ export default function Hero() {
             fetchPriority="high"
             className="hero-photo"
           />
-          <div
-            aria-hidden="true"
-            className="hero-wash"
-            style={{
-              background: "color-mix(in oklab, var(--spiral-void) 8%, transparent)",
-            }}
-          />
+          <div aria-hidden="true" className="hero-wash" />
         </div>
 
         <div className="hero-copy">
           <h1
-            className="rise type-display text-[2.75rem] text-paper sm:text-6xl lg:text-7xl"
+            className="rise type-display text-4xl text-paper sm:text-5xl"
             style={rise(0)}
           >
-            Software that
-            <br />
-            <em className="font-normal italic">knows when to leave.</em>
+            No account. No bloat. No tracking.
           </h1>
 
-          <p
-            className="rise mt-6 max-w-xl text-base leading-relaxed text-paper sm:text-lg"
-            style={rise(1)}
-          >
-            Private desktop tools. No account. No bloat. No tracking. Mac and Windows
-            where each app ships.
-          </p>
-
           <div
-            className="rise mt-10 flex w-full flex-wrap items-center justify-center gap-3"
-            style={rise(2)}
+            className="rise mt-8 flex w-full flex-wrap items-center justify-center gap-3"
+            style={rise(1)}
           >
             <DownloadMenu variant="hero" />
           </div>

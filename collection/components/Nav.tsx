@@ -63,7 +63,7 @@ export default function Nav() {
             ) : null}
           </div>
 
-          <div className="justify-self-center">
+          <div className="nav-download justify-self-center">
             <DownloadMenu />
           </div>
 
