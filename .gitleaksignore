@@ -1,0 +1,13 @@
+# Historical false positives in public policy/test fixtures. Keep these
+# fingerprint-specific so new values and new locations remain scanned.
+86a99c039dd1c7729e0c9e76d21e5b26fc271f0d:apps/clean/src-tauri/src/remove/tests.rs:generic-api-key:854
+adbe9bb9b2cbbbde68bd386bba8669e6a2c9e4a5:apps/slim/spiral-slim-linux.py:generic-api-key:436
+adbe9bb9b2cbbbde68bd386bba8669e6a0c9e2c4a5:apps/slim/spiral-slim-mac.py:generic-api-key:649
+f3e7396daa8abc28472af9dd304ae615e9ea4a32:apps/clean/src-tauri/src/remove.rs:generic-api-key:1213
+e4cfc1c1603ca21443feb354ca9fcbc888383cf7:apps/slim/SlimBrave.ps1:generic-api-key:229
+e4cfc1c1603ca21443feb354ca9fcbc888383cf7:apps/slim/slimbrave-linux.py:generic-api-key:248
+adbe9bb9b2cbbbde68bd386bba8669e6a2c9e4a5:apps/slim/SpiralSlim.ps1:generic-api-key:553
+a6b0dda6146e11ebaa0499a1573f43b083d777e8:apps/slim/SlimBrave.ps1:generic-api-key:229
+e4cfc1c1603ca21443feb354ca9fcbc888383cf7:apps/slim/slimbrave-mac.py:generic-api-key:377
+a6b0dda6146e11ebaa0499a1573f43b083d777e8:apps/slim/slimbrave-linux.py:generic-api-key:248
+a6b0dda6146e11ebaa0499a1573f43b083d777e8:apps/slim/slimbrave-mac.py:generic-api-key:377
