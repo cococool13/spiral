@@ -1,6 +1,7 @@
 import AppGrid from "@/components/AppGrid";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
+import Manifesto from "@/components/Manifesto";
 import Nav from "@/components/Nav";
 
 export default function Home() {
@@ -12,19 +13,8 @@ export default function Home() {
       <Nav />
       <main id="content">
         <Hero />
-        <section className="relative z-10 bg-black">
-          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-24">
-            <p className="type-display text-4xl text-paper sm:text-5xl">
-              <span className="block">Every one of these could have</span>
-              <span className="block">an account, a subscription</span>
-              <span className="block">and a process that never stops.</span>
-              <span className="block">None of them do.</span>
-            </p>
-          </div>
-        </section>
-        <div className="relative z-10 bg-black">
-          <AppGrid />
-        </div>
+        <Manifesto />
+        <AppGrid />
       </main>
       <Footer />
     </>

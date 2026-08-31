@@ -8,32 +8,66 @@ const PROOF: Record<string, string> = {
   resume: "Twelve layouts. A moved digit or name is discarded.",
 };
 
+const STATUS_LABEL: Record<(typeof apps)[number]["status"], string> = {
+  live: "Live",
+  source: "Source",
+  "coming-soon": "Coming soon",
+};
+
 export default function AppGrid() {
   const listed = apps.filter((app) => app.page);
 
   return (
-    <section id="apps" className="mx-auto max-w-3xl px-6 py-20 sm:py-28">
-      <h2 className="type-display text-4xl text-paper sm:text-5xl">One job each.</h2>
-      <ul className="mt-12">
-        {listed.map((app) => {
-          const short = app.name.replace("Spiral ", "");
-          return (
-            <li key={app.slug} className="border-t border-paper/10 last:border-b">
-              <a
-                href={app.page}
-                className="group flex min-h-11 flex-col gap-1 py-6 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red sm:flex-row sm:items-baseline sm:justify-between sm:gap-8"
-              >
-                <span className="type-heading text-xl text-paper transition-colors group-hover:text-red">
-                  {short}
-                </span>
-                <span className="max-w-md text-sm text-gray sm:text-right">
-                  {PROOF[app.slug] ?? app.tagline}
-                </span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+    <section id="apps" className="app-index-section relative z-10">
+      <div className="app-index-shell">
+        <header className="app-index-header">
+          <p className="type-eyebrow app-index-label">02 / Apps</p>
+          <div>
+            <h2 className="type-display app-index-title">One job each.</h2>
+            <p className="app-index-intro">
+              Small tools with a clear edge, measured by what they leave alone.
+            </p>
+          </div>
+        </header>
+        <ul className="app-index-grid">
+          {listed.map((app, index) => {
+            const short = app.name.replace("Spiral ", "");
+            return (
+              <li key={app.slug}>
+                <a
+                  href={app.page}
+                  className="app-tile group focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red"
+                >
+                  <div className="app-tile-top">
+                    <span>0{index + 1}</span>
+                    <span>{STATUS_LABEL[app.status]}</span>
+                  </div>
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    className="app-tile-icon"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.25"
+                  >
+                    <path d={app.iconPath} />
+                  </svg>
+                  <div className="app-tile-copy">
+                    <h3 className="type-heading app-tile-title">{short}</h3>
+                    <p className="app-tile-proof">{PROOF[app.slug] ?? app.tagline}</p>
+                    <p className="app-tile-tagline">{app.tagline}</p>
+                  </div>
+                  <span aria-hidden="true" className="app-tile-arrow">
+                    ↗
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }

@@ -10,9 +10,9 @@ const appLinks = apps.filter((a) => a.page);
 
 export default function Footer() {
   return (
-    <footer className="relative z-10 border-t border-paper/10 bg-black">
-      <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-        <div className="flex flex-col gap-14 sm:flex-row sm:items-start sm:justify-between">
+    <footer className="collection-footer relative z-10">
+      <div className="collection-footer-shell">
+        <div className="collection-footer-top">
           <a
             href="/"
             className="inline-flex min-h-11 items-center text-red focus-visible:outline-2 focus-visible:outline-red"
@@ -59,7 +59,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-[var(--radius-ctl)] bg-conc2 px-5 py-4 font-mono text-micro uppercase tracking-widest text-gray">
+        <div className="collection-footer-bottom font-mono text-micro uppercase tracking-widest text-gray">
           <span>© {year} Cohen Coolidge</span>
           <span className="flex flex-wrap gap-x-6 gap-y-2">
             <a

@@ -408,6 +408,219 @@ p {
   outline-offset: -1px;
 }
 
+.manifesto-section,
+.app-index-section {
+  background: var(--spiral-paper);
+  color: var(--spiral-ink);
+}
+.manifesto-section {
+  border-top: 1px solid color-mix(in oklab, var(--spiral-ink) 16%, transparent);
+}
+.manifesto-shell,
+.app-index-shell {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 5rem 1.5rem;
+}
+.manifesto-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+}
+.manifesto-label,
+.app-index-label {
+  color: var(--spiral-steel);
+}
+.manifesto-copy {
+  max-width: 48rem;
+  font-family: var(--spiral-font-display);
+  font-size: 2rem;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+.manifesto-close {
+  margin-top: 2rem;
+  font-family: var(--spiral-font-display);
+  font-size: 3rem;
+  line-height: 0.96;
+}
+.app-index-shell {
+  padding-top: 1rem;
+  padding-bottom: 6rem;
+}
+.app-index-header {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  padding: 1rem 0 3rem;
+  border-top: 1px solid color-mix(in oklab, var(--spiral-ink) 16%, transparent);
+}
+.app-index-title {
+  font-size: 3rem;
+}
+.app-index-intro {
+  max-width: 28rem;
+  margin-top: 1.25rem;
+  color: var(--spiral-steel);
+  font-size: 1rem;
+}
+.app-index-grid {
+  display: grid;
+  gap: 8px;
+}
+.app-tile {
+  position: relative;
+  display: flex;
+  min-height: 23rem;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1.5rem;
+  background: var(--spiral-ink);
+  color: var(--spiral-paper);
+  text-decoration: none;
+  transition:
+    background-color var(--spiral-dur-fast) var(--spiral-ease),
+    transform var(--spiral-dur-fast) var(--spiral-ease);
+}
+.app-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--spiral-red);
+  opacity: 0;
+  transition: opacity var(--spiral-dur-fast) var(--spiral-ease);
+}
+.app-tile:hover {
+  background: var(--spiral-lift);
+}
+.app-tile:hover::before,
+.app-tile:focus-visible::before {
+  opacity: 1;
+}
+.app-tile:active {
+  transform: scale(0.99);
+}
+.app-tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--spiral-gray);
+  font-family: var(--spiral-font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.app-tile-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: 4rem;
+  color: var(--spiral-paper);
+}
+.app-tile-copy {
+  margin-top: auto;
+  padding-top: 3rem;
+  padding-right: 2rem;
+}
+.app-tile-title {
+  font-size: 2.25rem;
+  line-height: 0.98;
+}
+.app-tile-proof {
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+.app-tile-tagline {
+  max-width: 28rem;
+  margin-top: 0.5rem;
+  color: var(--spiral-gray);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.app-tile-arrow {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.25rem;
+  color: var(--spiral-red);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.collection-footer {
+  background: var(--spiral-void);
+  color: var(--spiral-paper);
+  border-top: 1px solid color-mix(in oklab, var(--spiral-paper) 12%, transparent);
+}
+.collection-footer-shell {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 5rem 1.5rem 2rem;
+}
+.collection-footer-top {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+}
+.collection-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-top: 4rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in oklab, var(--spiral-paper) 12%, transparent);
+}
+
+@media (min-width: 640px) {
+  .manifesto-shell,
+  .app-index-shell,
+  .collection-footer-shell {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+  .manifesto-shell {
+    grid-template-columns: 10rem minmax(0, 1fr);
+    gap: 3rem;
+    padding-top: 7rem;
+    padding-bottom: 8rem;
+  }
+  .manifesto-copy {
+    font-size: 3rem;
+  }
+  .manifesto-close {
+    font-size: 4rem;
+  }
+  .app-index-header {
+    grid-template-columns: 10rem minmax(0, 1fr);
+    gap: 3rem;
+  }
+  .app-index-title {
+    font-size: 4rem;
+  }
+  .app-index-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .collection-footer-top {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 3.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-tile,
+  .app-tile::before {
+    transition: none;
+  }
+  .app-tile:active {
+    transform: none;
+  }
+}
+
 .nav-shell {
   width: 100%;
   max-width: 100%;
