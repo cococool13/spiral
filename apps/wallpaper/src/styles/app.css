@@ -666,7 +666,7 @@
   font-family: var(--font-ui);
   font-size: 14px;
   text-align: left;
-  color: var(--signal-bad, #e8a0a0);
+  color: var(--spiral-oxblood);
 }
 
 @media (prefers-reduced-motion: reduce) {
