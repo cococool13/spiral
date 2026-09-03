@@ -20,6 +20,7 @@ mod escalate;
 mod exclude;
 mod health;
 mod history;
+mod license;
 mod lipo;
 mod optimize;
 mod orphans;
@@ -78,7 +79,11 @@ pub fn run() {
             startup::startup_remove,
             startup::open_login_items_settings,
             permissions::fda_status,
-            permissions::open_privacy_settings
+            permissions::open_privacy_settings,
+            license::license_status,
+            license::license_activate,
+            license::license_ensure,
+            license::license_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Spiral Clean");

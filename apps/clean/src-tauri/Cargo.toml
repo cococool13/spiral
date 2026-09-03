@@ -28,6 +28,7 @@ dirs = "6"
 walkdir = "2"
 trash = "5"
 libc = "0.2"
+spiral-license = { path = "../../../crates/spiral-license" }
 
 [dev-dependencies]
 tempfile = "3"

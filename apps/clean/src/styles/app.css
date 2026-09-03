@@ -274,3 +274,69 @@ dialog code {
   position: static;
   margin-left: auto;
 }
+
+/* License activate gate — before Full Disk Access. */
+.activate-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--spiral-unit) * 4);
+  padding: calc(var(--spiral-unit) * 6);
+  text-align: center;
+}
+
+.activate-screen__lockup {
+  width: calc(var(--spiral-unit) * 30);
+  height: auto;
+}
+
+.activate-screen__line {
+  margin: 0;
+  font-size: 18px;
+  color: var(--spiral-paper);
+}
+
+.activate-screen__line a {
+  color: var(--spiral-paper);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.activate {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(var(--spiral-unit) * 2);
+  width: min(100%, calc(var(--spiral-unit) * 56));
+}
+
+.activate__label {
+  font-size: 14px;
+  text-align: left;
+  color: var(--spiral-paper);
+}
+
+.activate__input {
+  font: inherit;
+  font-size: 16px;
+  min-height: 44px;
+  padding: calc(var(--spiral-unit) * 2) calc(var(--spiral-unit) * 2.5);
+  border: 1px solid color-mix(in srgb, var(--spiral-paper) 35%, transparent);
+  border-radius: calc(var(--spiral-unit) * 1.5);
+  background: color-mix(in srgb, var(--spiral-conc-01) 40%, transparent);
+  color: var(--spiral-paper);
+}
+
+.activate__input:focus {
+  outline: 2px solid var(--spiral-paper);
+  outline-offset: 2px;
+}
+
+.activate__error {
+  margin: 0;
+  font-size: 14px;
+  text-align: left;
+  color: var(--spiral-oxblood);
+}

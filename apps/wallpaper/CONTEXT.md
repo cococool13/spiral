@@ -10,6 +10,7 @@ the file is given — those two must not drift apart.
 | **Spiral Wallpaper** | The first app in the Spiral collection: click a wallpaper, it downloads and applies. macOS and Windows. _Avoid_: the wallpaper changer, Spiral Wallpapers. |
 | **The errand** | What a session is. Open, browse, click, done — under a minute. Anything that turns the errand into a workflow is out of scope, which is why there is no library, no favourites sync and no account. |
 | **Closing the window quits** | Not a preference. There is no tray, no background process and nothing left running once the window is gone. |
+| **Spiral Collection license** | One Whop purchase unlocks every app. On first launch without a stored key, the **Activate** screen blocks the main UI until a key validates. Buy link: `src/lib/whop.ts`. See [`docs/licensing.md`](../../docs/licensing.md). |
 
 ## Sources
 

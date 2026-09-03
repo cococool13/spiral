@@ -7,6 +7,7 @@
 | **Spiral Clean** | The standalone, native macOS maintenance app in the Spiral product collection. It is not a module of the existing browser/configuration collection. _Avoid_: Spiral Cleaner, the cleaner. |
 | **Spiral collection** | The related set of Spiral products sharing brand and eventual presentation on the Spiral website. Products may have distinct technical and permission boundaries. |
 | **Spiral website** | The public-facing website that may eventually feature Spiral Clean. It is not the cleaner application itself. |
+| **Spiral Collection license** | One Whop purchase unlocks every app. **Activate** on first launch; buy link in `src/lib/whop.ts`. See [`docs/licensing.md`](../../docs/licensing.md). |
 
 ## Removal
 

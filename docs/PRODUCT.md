@@ -40,7 +40,7 @@ because it was stated on screen, and has nothing still running afterwards.
 
 | App | What it is for | Its own spec |
 | --- | --- | --- |
-| **Spiral Wallpaper** | The first app of the Spiral brand: a free, privacy-first, super-lightweight wallpaper setter over Wallhaven's free API. Click a wallpaper, it downloads and applies. The app quits when the window closes. Success = the errand completes in under a minute and the user trusts what the app did, because everything it does is stated on-screen. | [`apps/wallpaper/README.md`](../apps/wallpaper/README.md) |
+| **Spiral Wallpaper** | The first app of the Spiral brand: a privacy-first, super-lightweight wallpaper setter over Wallhaven's free API. Click a wallpaper, it downloads and applies. The app quits when the window closes. Unlocks with a Spiral Collection license. Success = the errand completes in under a minute and the user trusts what the app did, because everything it does is stated on-screen. | [`apps/wallpaper/README.md`](../apps/wallpaper/README.md) |
 | **Spiral Slim** | Debloats and hardens Brave, Chrome, Edge and Firefox using enterprise policies the browsers respect natively, showing every change before it makes it. Script-first on every platform by design. | [`apps/slim/`](../apps/slim/) |
 | **Spiral Clean** | Reclaims disk space and uninstalls apps on macOS. Nothing is removed unless it is in the shipped safe-category catalog, and every removal is proven safe by a Rust test suite before it ships. | [`apps/clean/docs/design-spec.md`](../apps/clean/docs/design-spec.md) |
 | **Spiral Resume** | A resume goes in; a typeset PDF or Word file comes out, the wording is tightened, and no fact is allowed to change. Digit runs and capitalized names are compared in order after every rewrite; a mechanical miss still leaves the Check screen as the backstop. | [`apps/Resume/docs/design-spec.md`](../apps/Resume/docs/design-spec.md) |
@@ -78,6 +78,9 @@ Shared, and not treated as gaps:
 - Where an app talks to the internet, it names the host and talks to nothing else.
 - Nothing is uploaded for processing.
 - No undisclosed background process.
+- **One Whop license** ($9.99) unlocks all four desktop apps. Keys validate through
+  Spiral's Cloudflare Worker on launch; 72h offline grace. Checkout URLs live in
+  `collection/lib/whop.ts`. See [`licensing.md`](licensing.md).
 
 Per app, as already confirmed:
 

@@ -25,14 +25,13 @@ export default function Manifesto() {
 
       <div className="letter-body">
         <Reveal as="p" className="letter-copy">
-          Every one of these could have an account, a subscription, and a process that
-          never stops.
+          Every one of these could have a subscription and a process that never stops.
         </Reveal>
         <Reveal as="p" step={2} className="type-display letter-close">
           None of them do.
         </Reveal>
         <Reveal as="p" step={3} className="letter-fine">
-          Free. MIT-licensed. Built from source you can read. Photograph by Arvin Yuan.
+          One $9.99 license. Source you can read. No telemetry. Photograph by Arvin Yuan.
         </Reveal>
       </div>
     </ParallaxPlate>

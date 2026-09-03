@@ -1,0 +1,11 @@
+name = "spiral-license"
+main = "src/index.ts"
+compatibility_date = "2025-08-01"
+
+# Secrets (set once; never commit values):
+#   npx wrangler secret put WHOP_API_KEY
+# Optional override:
+#   npx wrangler secret put WHOP_PRODUCT_ID
+
+[vars]
+WHOP_PRODUCT_ID = "prod_KC9w9zADh9u5F"

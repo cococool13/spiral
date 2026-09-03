@@ -8,6 +8,7 @@
 mod bridge;
 mod elevate;
 mod error;
+mod license;
 mod logo;
 mod model;
 mod project;
@@ -147,6 +148,13 @@ fn apply_profile(
     plan_hash: String,
     confirmed: bool,
 ) -> Result<ApplyOutcome, SlimError> {
+    license::require(&app).map_err(|detail| {
+        SlimError::new(
+            "License required",
+            detail,
+            "Activate Spiral Slim with your Whop license key, then try again.",
+        )
+    })?;
     let mut guard = session.plan.lock().map_err(|_| poisoned())?;
     let plan = authorise(guard.as_ref(), &plan_hash, confirmed)?;
     if plan.report.blocked {
@@ -241,6 +249,10 @@ pub fn run() {
             reset_policies,
             export_plan,
             open_policy_page,
+            license::license_status,
+            license::license_activate,
+            license::license_ensure,
+            license::license_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Spiral Slim");

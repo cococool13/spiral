@@ -358,6 +358,7 @@ pub fn uninstall_execute(
     deselected: Vec<usize>,
     displayed: Vec<String>,
 ) -> Result<UninstallReport, String> {
+    crate::license::require(&app)?;
     use tauri::Manager;
     let dir = app
         .path()

@@ -13,6 +13,7 @@ Current app release **v1.0.3** (Spiral Wallpaper).
 ## Read first
 
 - `README.md` — repo map, releases, downloads, build, roadmap
+- `docs/licensing.md` — Whop checkout URLs, license gate, validator deploy
 - `brand/README.md` — what is canonical and how surfaces consume it
 - `collection/README.md` — **required before any `collection/` work** (charter, budgets, stack)
 - `apps/clean/README.md` — Clean safety model and what blocks release
@@ -27,7 +28,10 @@ Current app release **v1.0.3** (Spiral Wallpaper).
   Tauri 2 / Rust owns network, cache, settings, OS ops. Fonts self-hosted (no font CDN).
 - **Slim** (`apps/slim`): Python + Tauri wizard (shipped on macOS).
 - **Website** (`collection/`): Next.js App Router + React 19 + Tailwind v4, `output: 'export'`,
-  Biome 2 lint/format. Deployed to Cloudflare Pages.
+  Biome 2 lint/format. Deployed to Cloudflare Pages. Checkout URLs in
+  `collection/lib/whop.ts`.
+- **Licensing:** Whop one-time purchase ($9.99). Apps gate on `crates/spiral-license`;
+  validator at `workers/license/` (Cloudflare Worker). See `docs/licensing.md`.
 - **Brand** (`brand/`): single source of truth. Sync with
   `node scripts/sync-brand.mjs <surface>` (allowlists in `scripts/brand-manifest.mjs`).
   Hex gate: `node scripts/check-hex.mjs <surface>`. Never edit a synced copy.
@@ -117,7 +121,9 @@ Resume uses `.github/workflows/release-resume.yml` (macOS + Windows, `sidecar: t
 brand/         design system — every colour, font, mark
 apps/          wallpaper | slim | clean | Resume  (capital R on Resume)
 collection/    spiralcc.tech (Next.js static export → Pages spiral-collection)
-docs/          PRODUCT.md, DESIGN.md, reference/, specs
+crates/        spiral-license — shared Whop gate for desktop apps
+workers/       spiral-license — Cloudflare Worker (Whop API proxy)
+docs/          PRODUCT.md, DESIGN.md, licensing.md, reference/, specs
 scripts/       release.mjs, version.mjs, downloads.mjs, …
 ```
 
@@ -131,7 +137,7 @@ only in Documents or a sibling repo.
 - Keep the `WallpaperSource` boundary; new providers need explicit product approval.
 - State material background/network actions in plain language before they happen; errors name the problem and a next step.
 - Preserve keyboard nav, visible focus, and reduced-motion behavior.
-- Source-only, privacy-first: no telemetry, accounts, silent startup, or undisclosed background process.
+- Source-only, privacy-first: no telemetry, accounts, silent startup, or undisclosed background process. License validation is a named call to Spiral's validator on launch — see `docs/licensing.md`.
 - Wallpaper: Wallhaven SFW only; closing the window quits (no tray); static wallpapers only until approved otherwise.
 - Resume: **no fact may ever change** (`src-tauri/src/gate.rs`). Parser lives in `parse_text/`; Typst is embedded as a Rust crate so preview and PDF cannot disagree. New templates/fields must appear in both Typst and DOCX halves and in the shared `FACTS` list in `docx.rs`.
 - Native behavior must be verified on the affected OS; a frontend build alone does not prove wallpaper, signing, or installer behavior.
@@ -147,6 +153,15 @@ pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --b
 ```
 
 `--branch=main` marks production; without it Pages files a preview and the live site does not move.
+
+License validator (Workers, not Pages):
+
+```bash
+cd workers/license
+pnpm install && npx wrangler deploy
+```
+
+Secrets: `WHOP_API_KEY` via `npx wrangler secret put`. See `workers/license/README.md`.
 
 ## Definition of done
 

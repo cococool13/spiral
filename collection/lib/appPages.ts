@@ -50,14 +50,14 @@ export const appPages: AppPage[] = [
     name: "Spiral Resume",
     title: "Spiral Resume — your resume, set properly",
     description:
-      "A free desktop resume builder. Twelve typeset layouts, PDF and Word from one source, and a mechanical gate that discards a rewrite when a digit run or capitalized name moves.",
+      "A desktop resume builder. Twelve typeset layouts, PDF and Word from one source, and a mechanical gate that discards a rewrite when a digit run or capitalized name moves.",
     eyebrow: "Spiral Resume",
     headline: ["Your resume,", "set properly."],
     sub: "Twelve typeset layouts. Your words, your facts, your file — PDF or Word, on your computer in about a second.",
     cta: { label: "Get 0.1.1", href: `${REPO}/releases/tag/resume-v0.1.1` },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/Resume` },
     proofLine:
-      "Free. Digits and names are checked in order; a rewrite that moves one is discarded.",
+      "Digits and names are checked in order; a rewrite that moves one is discarded. Needs a Spiral Collection license.",
     tagline: [
       "A resume tool that rewrites",
       "your job title is not helping.",
@@ -147,7 +147,7 @@ export const appPages: AppPage[] = [
       },
     ],
     closing: {
-      headline: ["0.1.1 is the first downloadable release.", "It is free."],
+      headline: ["0.1.1 is the first downloadable release.", "One license unlocks it."],
       body: "macOS is signed and notarized. Windows is unsigned, the same as Wallpaper.",
     },
   },
@@ -156,13 +156,13 @@ export const appPages: AppPage[] = [
     name: "Spiral Wallpaper",
     title: "Spiral Wallpaper — click a wallpaper, it applies",
     description:
-      "A 4.6 MB desktop wallpaper app for macOS and Windows. No account, no telemetry, and nothing running in the background once you close it.",
+      "A 4.6 MB desktop wallpaper app for macOS and Windows. No telemetry, and nothing running in the background once you close it. Unlocks with a Spiral Collection license key.",
     eyebrow: "Spiral Wallpaper",
     headline: ["One click.", "New wallpaper."],
     sub: "Search, click, done. A 4.6 MB app that closes when you close it and leaves nothing running behind.",
     cta: { label: "Download for macOS", href: RELEASE },
     secondary: { label: "All downloads", href: RELEASE },
-    proofLine: "Free. Version 1.0.3, signed and notarised on macOS.",
+    proofLine: "One license. Version 1.0.3, signed and notarised on macOS.",
     tagline: [
       "Most wallpaper apps want an account,",
       "a subscription and a background process.",
@@ -176,7 +176,7 @@ export const appPages: AppPage[] = [
       },
       {
         title: "Nothing is sent anywhere",
-        body: "No account, no analytics, no telemetry. Wallhaven is reached only when you search or apply. On open the app may ask GitHub once for a newer build — named in Settings and switchable off. Every request runs in the Rust core, not the webview.",
+        body: "No analytics, no telemetry. A license check runs against Spiral's validator on open. Wallhaven is reached only when you search or apply. On open the app may also ask GitHub once for a newer build — named in Settings and switchable off. Every request runs in the Rust core, not the webview.",
       },
       {
         title: "It stays out of your disk",
@@ -223,8 +223,8 @@ export const appPages: AppPage[] = [
         a: "No. There is no tray icon and no helper process. Closing the window quits the app, and that is a design decision rather than a missing feature.",
       },
       {
-        q: "Is it really free?",
-        a: "Yes, and there is no paid tier to upgrade to. The source is public.",
+        q: "Do I need a license?",
+        a: "Yes. Buy Spiral Collection once on Whop ($9.99), then paste the license key when the app asks. The source stays public; the shipped apps stay locked without a key.",
       },
       {
         q: "Windows?",
@@ -240,8 +240,8 @@ export const appPages: AppPage[] = [
       },
     ],
     closing: {
-      headline: ["Small, free,", "and out of the way."],
-      body: "Free, signed on macOS, and 4.6 MB. Version 1.0.3 is out now.",
+      headline: ["Small,", "and out of the way."],
+      body: "Signed on macOS, and 4.6 MB. Version 1.0.3 is out now. Needs a Spiral Collection license key.",
     },
   },
 
@@ -259,7 +259,7 @@ export const appPages: AppPage[] = [
       href: "https://github.com/cococool13/Spiral-Slim/releases/latest",
     },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/slim` },
-    proofLine: "Free. Python standard library only, no dependencies.",
+    proofLine: "One license. Python standard library only, no dependencies.",
     tagline: [
       "It changes settings your browser",
       "already lets an employer change.",
@@ -338,7 +338,7 @@ export const appPages: AppPage[] = [
     ],
     closing: {
       headline: ["Read the changes.", "Then make them."],
-      body: "Free, and the macOS wizard is signed and notarised. Everywhere else it runs from source.",
+      body: "The macOS wizard is signed and notarised. Everywhere else it runs from source. Needs a Spiral Collection license key.",
     },
   },
 
@@ -356,7 +356,7 @@ export const appPages: AppPage[] = [
       label: "How it decides",
       href: `${REPO}/blob/main/apps/clean/docs/design-spec.md`,
     },
-    proofLine: "Free. macOS only, feature-complete, not released yet.",
+    proofLine: "One license. macOS only, feature-complete, not released yet.",
     tagline: [
       "Every other cleaner asks you",
       "to trust its judgement.",

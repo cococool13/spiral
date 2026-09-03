@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import tokens from "@/lib/brand-tokens.json";
+import { WHOP_CHECKOUT_URL } from "@/lib/whop";
 import DefenseLines from "./DefenseLines";
 import DownloadMenu from "./DownloadMenu";
 import Scramble from "./Scramble";
@@ -59,7 +60,7 @@ export default function Hero() {
 
         <h1 className="type-display obs-title">
           <span className="obs-line rise" style={rise(0)}>
-            No account.
+            One license.
           </span>
           <span className="obs-line rise" style={rise(1)}>
             No bloat.
@@ -71,6 +72,9 @@ export default function Hero() {
 
         <div className="obs-foot">
           <div className="rise obs-actions" style={rise(3)}>
+            <a href={WHOP_CHECKOUT_URL} className="glass-pill" rel="noopener noreferrer">
+              Buy license — $9.99
+            </a>
             <DownloadMenu variant="hero" />
           </div>
           <a href="#apps" className="obs-scroll rise" style={rise(4)}>

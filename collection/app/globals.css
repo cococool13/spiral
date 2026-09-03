@@ -498,6 +498,9 @@ p {
 }
 .nav-action {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 @media (min-width: 768px) {
   .nav-bar {

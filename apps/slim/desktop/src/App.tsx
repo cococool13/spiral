@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
 import mark from "./assets/brand/mark-red.svg";
 import { BrowserCard } from "./components/BrowserCard";
@@ -9,6 +10,7 @@ import { ProfileCard } from "./components/ProfileCard";
 import { ReviewPanel } from "./components/ReviewPanel";
 import { Stage } from "./components/Stage";
 import { Intro } from "./components/Intro";
+import { Activate } from "./screens/Activate";
 import { Done } from "./screens/Done";
 import * as ipc from "./lib/ipc";
 import { authSentence, deviceNoun, waitingSentence } from "./lib/platform";
@@ -24,6 +26,8 @@ import {
   stepIndex,
 } from "./lib/wizard";
 
+type LicenseBoot = "loading" | "locked" | "ok";
+
 export function App() {
   const [state, dispatch] = useReducer(reduce, initialState);
   const [resetConfirmed, setResetConfirmed] = useState(false);
@@ -34,9 +38,21 @@ export function App() {
   // state, so it stays out of the machine and out of the progress ticks.
   const [started, setStarted] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [license, setLicense] = useState<LicenseBoot>("loading");
+  const [licenseError, setLicenseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    invoke("license_ensure")
+      .then(() => setLicense("ok"))
+      .catch((e) => {
+        setLicenseError(typeof e === "string" ? e : null);
+        setLicense("locked");
+      });
+  }, []);
 
   // Both reads are read-only and neither elevates.
   useEffect(() => {
+    if (license !== "ok") return;
     let cancelled = false;
     void (async () => {
       dispatch({ type: "detection.loading" });
@@ -68,7 +84,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [license]);
 
   const { step, selection, customDraft, selectedChannelIds, busy } = state;
   // Detection is the thing that actually looked at the machine, so its
@@ -141,6 +157,26 @@ export function App() {
     (channel) => channel.appPath !== "",
   );
   const advance = canAdvance(state);
+
+  if (license === "loading") {
+    return <div className="app" aria-busy="true" />;
+  }
+
+  if (license === "locked") {
+    return (
+      <div className="app">
+        <Activate
+          onDone={() => {
+            setLicenseError(null);
+            setLicense("ok");
+          }}
+        />
+        {licenseError ? (
+          <p className="activate__error activate__error--boot">{licenseError}</p>
+        ) : null}
+      </div>
+    );
+  }
 
   if (!started) return <Intro onStart={() => setStarted(true)} />;
 

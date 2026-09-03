@@ -88,19 +88,24 @@ fn failed_card(template: &templates::Template, message: impl Into<String>) -> Th
 /// milliseconds of progress would be theatre. The same resume and accent
 /// reuse the last draw; an edit on Check redraws.
 #[tauri::command]
-pub async fn render_thumbnails(accent: String, doc: ResumeDoc) -> Vec<Thumbnail> {
+pub async fn render_thumbnails(
+    app: tauri::AppHandle,
+    accent: String,
+    doc: ResumeDoc,
+) -> Result<Vec<Thumbnail>, String> {
+    crate::license::require(&app)?;
     {
         let cache = THUMBNAIL_CACHE.lock().unwrap_or_else(|p| p.into_inner());
         if let Some((cached_accent, cached_doc, thumbs)) = cache.as_ref() {
             if cached_accent == &accent && cached_doc == &doc {
-                return thumbs.clone();
+                return Ok(thumbs.clone());
             }
         }
     }
     let thumbs = render_all_thumbnails(&doc, &accent);
     *THUMBNAIL_CACHE.lock().unwrap_or_else(|p| p.into_inner()) =
         Some((accent, doc, thumbs.clone()));
-    thumbs
+    Ok(thumbs)
 }
 
 static THUMBNAIL_CACHE: Mutex<Option<(String, ResumeDoc, Vec<Thumbnail>)>> = Mutex::new(None);
@@ -154,6 +159,7 @@ pub async fn build_document(
     built: State<'_, BuiltFile>,
     on_progress: Channel<Progress>,
 ) -> Result<BuildResult, String> {
+    crate::license::require(&app)?;
     let BuildRequest {
         doc,
         template,

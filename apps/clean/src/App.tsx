@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import AppBar from "./components/AppBar";
 import type { Destination } from "./lib/destinations";
+import { Activate } from "./screens/Activate";
 import FirstRun from "./screens/FirstRun";
 import Clean from "./screens/Clean";
 import Storage from "./screens/Storage";
@@ -29,10 +30,23 @@ const SCREENS: Record<Destination, () => JSX.Element> = {
   settings: Settings,
 };
 
+type LicenseBoot = "loading" | "locked" | "ok";
+
 export default function App() {
+  const [license, setLicense] = useState<LicenseBoot>("loading");
+  const [licenseError, setLicenseError] = useState<string | null>(null);
   const [granted, setGranted] = useState<boolean | null>(null);
   const [active, setActive] = useState<Destination>("clean");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    invoke("license_ensure")
+      .then(() => setLicense("ok"))
+      .catch((e) => {
+        setLicenseError(typeof e === "string" ? e : null);
+        setLicense("locked");
+      });
+  }, []);
 
   const check = useCallback(() => {
     setError(null);
@@ -45,7 +59,30 @@ export default function App() {
       );
   }, []);
 
-  useEffect(check, [check]);
+  useEffect(() => {
+    if (license !== "ok") return;
+    check();
+  }, [license, check]);
+
+  if (license === "loading") return <main aria-busy="true" />;
+
+  if (license === "locked") {
+    return (
+      <div className="app">
+        <Activate
+          onDone={() => {
+            setLicenseError(null);
+            setLicense("ok");
+          }}
+        />
+        {licenseError && (
+          <p className="activate__error" style={{ textAlign: "center", padding: "0 24px" }}>
+            {licenseError}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (error) {
     return (

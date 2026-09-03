@@ -10,6 +10,7 @@ pub mod gate;
 pub mod import;
 pub mod model;
 pub mod keys;
+pub mod license;
 pub mod local;
 pub mod openers;
 pub mod parse_text;
@@ -50,6 +51,10 @@ pub fn run() {
             commands::load_document,
             commands::storage_info,
             commands::delete_stored_data,
+            license::license_status,
+            license::license_activate,
+            license::license_ensure,
+            license::license_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Spiral Resume");

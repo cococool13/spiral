@@ -1,4 +1,5 @@
 mod cache;
+mod license;
 mod net;
 mod setter;
 mod settings;
@@ -14,12 +15,14 @@ pub struct Http(pub reqwest::Client);
 
 #[tauri::command]
 async fn search_wallpapers(
+    app: AppHandle,
     http: State<'_, Http>,
     query: String,
     categories: String,
     sorting: String,
     page: u32,
 ) -> Result<net::SearchPage, String> {
+    license::require(&app)?;
     wallhaven::search(&http.0, &query, &categories, &sorting, page).await
 }
 
@@ -30,6 +33,7 @@ async fn cache_thumb(
     id: String,
     url: String,
 ) -> Result<String, String> {
+    license::require(&app)?;
     cache::cache_thumb(&app, &http.0, &id, &url).await
 }
 
@@ -40,6 +44,7 @@ async fn apply_wallpaper(
     id: String,
     url: String,
 ) -> Result<(), String> {
+    license::require(&app)?;
     let fit = app.state::<SettingsState>().0.lock().unwrap().fit_mode;
     let path = cache::download_full(&app, &http.0, &id, &url).await?;
     setter::set_wallpaper(&app, path.clone(), fit)?;
@@ -105,7 +110,11 @@ pub fn run() {
             get_settings,
             set_settings,
             thumb_cache_size,
-            clear_thumb_cache
+            clear_thumb_cache,
+            license::license_status,
+            license::license_activate,
+            license::license_ensure,
+            license::license_clear,
         ])
         .setup(|app| {
             app.manage(SettingsState(std::sync::Mutex::new(settings::load(

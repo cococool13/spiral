@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { apps } from "@/lib/apps";
+import { WHOP_CHECKOUT_URL } from "@/lib/whop";
 import DownloadMenu from "./DownloadMenu";
 import Mark from "./Mark";
 
@@ -54,6 +55,13 @@ export default function Nav() {
         </ul>
 
         <div className="nav-action">
+          <a
+            href={WHOP_CHECKOUT_URL}
+            className="glass-pill glass-pill--nav"
+            rel="noopener noreferrer"
+          >
+            Buy — $9.99
+          </a>
           <DownloadMenu />
         </div>
       </nav>

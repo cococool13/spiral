@@ -108,7 +108,7 @@ These exist so it stays fast.
 | --- | --- |
 | `app/` | App Router entry — `layout.tsx`, `page.tsx`, `globals.css` (the `@theme` token bridge, nav bar, footer close, shared motion), `home.css` (observatory hero, app frames, rules board, letter) |
 | `components/` | Flat, one file per component. Not shadcn — no `ui/` subfolder. |
-| `lib/` | `apps.ts` (the app catalogue — edit this to add an app), `otherWork.ts`, `useOS.ts` |
+| `lib/` | `apps.ts` (the app catalogue — edit this to add an app), `whop.ts` (Whop checkout URLs), `otherWork.ts`, `useOS.ts` |
 | Root `scripts/sync-brand.mjs collection` | Copies `/brand` → `public/brand/` (gitignored); allowlist in `scripts/brand-manifest.mjs` |
 | `public/brand/` | **Generated. Never edit** — deleted and rewritten on every build. |
 

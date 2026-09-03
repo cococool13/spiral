@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import AppBar from "./components/AppBar";
 import { Notice } from "./components/Notice";
 import { Splash } from "./components/Splash";
 import { Stepper, type Step } from "./components/Stepper";
 import { engineInfo, loadDocument, saveDocument } from "./lib/ipc";
 import { emptyDoc, type BuiltVersion, type Draft, type ResumeDoc } from "./lib/types";
+import { Activate } from "./screens/Activate";
 import { Build } from "./screens/Build";
 import { Check } from "./screens/Check";
 import { Format } from "./screens/Format";
@@ -16,6 +18,8 @@ import { useDebounced } from "./lib/useDebounced";
 import { styleName } from "./lib/styleHints";
 import { withViewTransition } from "./lib/viewTransition";
 import { Style } from "./screens/Style";
+
+type LicenseBoot = "loading" | "locked" | "ok";
 
 export default function App() {
   const [draft, setDraft] = useState<Draft>({
@@ -36,6 +40,8 @@ export default function App() {
   const [saveError, setSaveError] = useState("");
   const [fromScratch, setFromScratch] = useState(false);
   const [splash, setSplash] = useState<"in" | "out" | "off">("in");
+  const [license, setLicense] = useState<LicenseBoot>("loading");
+  const [licenseError, setLicenseError] = useState<string | null>(null);
   const settingsButton = useRef<HTMLButtonElement | null>(null);
 
   function closeSettings() {
@@ -66,6 +72,12 @@ export default function App() {
           setNeedsSetup(info.needsSetup);
         })
         .catch(() => undefined),
+      invoke("license_ensure")
+        .then(() => setLicense("ok"))
+        .catch((e) => {
+          setLicenseError(typeof e === "string" ? e : null);
+          setLicense("locked");
+        }),
     ]).finally(() => {
       const reduced =
         typeof window.matchMedia !== "function" ||
@@ -129,6 +141,24 @@ export default function App() {
   }
 
   if (splash !== "off") return <Splash leaving={splash === "out"} />;
+
+  if (license === "loading") return <main className="app__main" aria-busy="true" />;
+
+  if (license === "locked") {
+    return (
+      <div className="app">
+        <main className="app__main app__main--stage">
+          <Activate
+            onDone={() => {
+              setLicenseError(null);
+              setLicense("ok");
+            }}
+          />
+          {licenseError ? <Notice tone="warn">{licenseError}</Notice> : null}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app">

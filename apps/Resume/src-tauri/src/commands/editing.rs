@@ -31,6 +31,7 @@ pub fn list_accents() -> Vec<Accent> {
 /// picker, which is not a failure.
 #[tauri::command]
 pub async fn import_resume_file(app: tauri::AppHandle) -> Result<Option<ResumeDoc>, String> {
+    crate::license::require(&app)?;
     let Some(chosen) = app
         .dialog()
         .file()
@@ -53,7 +54,8 @@ pub async fn import_resume_file(app: tauri::AppHandle) -> Result<Option<ResumeDo
 /// it is a file the user physically dropped — but it is still read through the
 /// same extension check as everything else.
 #[tauri::command]
-pub fn import_dropped_file(path: String) -> Result<ResumeDoc, String> {
+pub fn import_dropped_file(app: tauri::AppHandle, path: String) -> Result<ResumeDoc, String> {
+    crate::license::require(&app)?;
     import_from(std::path::Path::new(&path))
 }
 
@@ -80,13 +82,14 @@ pub struct BulletReview {
 }
 
 #[tauri::command]
-pub fn review_wording(app: tauri::AppHandle, doc: ResumeDoc) -> Vec<BulletReview> {
+pub fn review_wording(app: tauri::AppHandle, doc: ResumeDoc) -> Result<Vec<BulletReview>, String> {
+    crate::license::require(&app)?;
     // Check previews the free pass. A ready model replaces that pass at Build,
     // so showing a tighten preview would promise wording the page will not get.
     if let (Ok(store), Ok((_, provider))) = (super::store_for(&app), super::engine::engine_of(&app))
     {
         if super::engine::model_ready(store.path(), &provider) {
-            return Vec::new();
+            return Ok(Vec::new());
         }
     }
     let mut out = Vec::new();
@@ -106,12 +109,13 @@ pub fn review_wording(app: tauri::AppHandle, doc: ResumeDoc) -> Vec<BulletReview
             }
         }
     }
-    out
+    Ok(out)
 }
 
 #[tauri::command]
-pub fn parse_pasted_text(text: String) -> ResumeDoc {
-    parse_text::parse_text(&text)
+pub fn parse_pasted_text(app: tauri::AppHandle, text: String) -> Result<ResumeDoc, String> {
+    crate::license::require(&app)?;
+    Ok(parse_text::parse_text(&text))
 }
 
 #[cfg(test)]
@@ -150,8 +154,8 @@ mod tests {
         assert_eq!(back.experience[0].organization, "Admiralty");
     }
     #[test]
-    fn parsing_is_reachable_through_the_command_layer() {
-        let doc = parse_pasted_text("Ada Lovelace\nada@example.com\n".to_string());
+    fn pasted_text_parses_into_a_document() {
+        let doc = parse_text::parse_text("Ada Lovelace\nada@example.com\n");
         assert_eq!(doc.contact.name, "Ada Lovelace");
     }
 }

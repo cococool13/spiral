@@ -11,6 +11,7 @@ the file is given — those two must not drift apart.
 | **Script-first** | The shape of the product, not a stage it is passing through. The tool ships as source you can read before you run it — stdlib-only Python and PowerShell — on every platform. |
 | **The wizard** | [`desktop/`](desktop/), a Tauri app over the macOS script. It is the *only* binary Spiral Slim publishes: a signed, notarised universal DMG. There is no Windows or Linux binary and there never will be; anything else claiming to be one is not from this project ([`SECURITY.md`](SECURITY.md)). |
 | **Managed policy** | The mechanism the whole tool rests on: the enterprise policy files each browser already reads and respects natively. No extension, no patched binary, no injected JavaScript. A change this tool cannot make through a policy is a change it does not make. |
+| **Spiral Collection license** | One Whop purchase unlocks every app. The wizard shows **Activate** on first launch; buy link in `desktop/src/lib/whop.ts`. See [`docs/licensing.md`](../../docs/licensing.md). |
 
 ## What gets applied
 

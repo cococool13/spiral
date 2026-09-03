@@ -47,7 +47,8 @@ pub(crate) fn capped(mut result: scan::CategoryResult) -> scan::CategoryResult {
 /// never subscribed — is never left with a partial list. The events are an
 /// improvement to *when* the user learns something, never the only copy of it.
 #[tauri::command]
-pub fn clean_scan(app: tauri::AppHandle) -> Vec<scan::CategoryResult> {
+pub fn clean_scan(app: tauri::AppHandle) -> Result<Vec<scan::CategoryResult>, String> {
+    crate::license::require(&app)?;
     use tauri::Emitter;
     let home = dirs::home_dir();
     let emit = |result: &scan::CategoryResult| {
@@ -60,7 +61,7 @@ pub fn clean_scan(app: tauri::AppHandle) -> Vec<scan::CategoryResult> {
         Some(home) => scan::scan_attributed_streaming(home, &emit),
         None => scan::scan_attributed(),
     };
-    all.into_iter().map(capped).collect()
+    Ok(all.into_iter().map(capped).collect())
 }
 
 #[tauri::command]
@@ -69,6 +70,7 @@ pub fn clean_execute(
     ids: Vec<String>,
     started_at: String,
 ) -> Result<CleanReport, String> {
+    crate::license::require(&app)?;
     use tauri::Manager;
     let dir = app
         .path()

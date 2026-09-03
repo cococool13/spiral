@@ -20,8 +20,7 @@ strip = true
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-# Deliberately no HTTP client and no async runtime beyond Tauri's own:
-# Spiral Slim never makes a network call.
+# No product HTTP except the Whop license check via spiral-license.
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -30,3 +29,4 @@ serde_json = "1"
 tempfile = "3"
 icns = "0.4"
 base64 = "0.23"
+spiral-license = { path = "../../../../crates/spiral-license" }

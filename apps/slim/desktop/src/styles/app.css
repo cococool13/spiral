@@ -1520,6 +1520,78 @@ code {
   margin-top: calc(var(--unit) * 2);
 }
 
+/* License activate gate — before intro / wizard. */
+.activate-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--unit) * 4);
+  padding: calc(var(--unit) * 6);
+  text-align: center;
+}
+
+.activate-screen__lockup {
+  width: calc(var(--unit) * 30);
+  height: auto;
+}
+
+.activate-screen__line {
+  margin: 0;
+  max-width: 42ch;
+  font-size: 16px;
+  color: var(--paper);
+}
+
+.activate-screen__line a {
+  color: var(--paper);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.activate {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(var(--unit) * 2);
+  width: min(100%, calc(var(--unit) * 56));
+}
+
+.activate__label {
+  font-size: 14px;
+  text-align: left;
+  color: var(--paper);
+}
+
+.activate__input {
+  font: inherit;
+  font-size: 16px;
+  min-height: 44px;
+  padding: calc(var(--unit) * 2) calc(var(--unit) * 2.5);
+  border: 1px solid var(--conc-03);
+  border-radius: var(--radius-ctl);
+  background: var(--conc-02);
+  color: var(--paper);
+}
+
+.activate__input:focus {
+  outline: 2px solid var(--hlx-01);
+  outline-offset: 2px;
+}
+
+.activate__error {
+  margin: 0;
+  font-size: 14px;
+  text-align: left;
+  color: var(--hlx-02);
+}
+
+.activate__error--boot {
+  text-align: center;
+  padding: 0 calc(var(--unit) * 6) calc(var(--unit) * 4);
+}
+
 /* The welcome step's "start clean" confirmation. Replaces a window.confirm,
    whose OK/Cancel could not name the consequence. Matches the Done screen's
    pattern so the same destructive action is confirmed the same way twice. */

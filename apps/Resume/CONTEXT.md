@@ -11,6 +11,7 @@ the file is given — those two must not drift apart.
 | **The source** | Whatever the user gave the app — a file, a paste, or the guided form. Every promise below is made relative to the source, never to what the app would have preferred. |
 | **The document** | The parsed, editable resume the whole app works on: `ResumeDoc` in `model.rs`. One document at a time; it persists locally and belongs to the user. |
 | **The promise** | "Spiral Resume never invents anything on your resume." It is a mechanism, not a slogan — see the fact gate. |
+| **Spiral Collection license** | One Whop purchase unlocks every app. **Activate** on first launch; buy link in `src/lib/whop.ts`. See [`docs/licensing.md`](../../docs/licensing.md). |
 
 ## The promise
 

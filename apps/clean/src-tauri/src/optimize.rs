@@ -667,6 +667,7 @@ pub fn optimize_execute(
     ids: Vec<String>,
     started_at: String,
 ) -> Result<OptimizeReport, String> {
+    crate::license::require(&app)?;
     use tauri::Manager;
     let dir = app.path().app_config_dir().map_err(|e| {
         format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app.")

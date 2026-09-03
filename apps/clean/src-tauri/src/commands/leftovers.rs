@@ -254,6 +254,7 @@ pub fn leftovers_remove(
     deselected: Vec<usize>,
     displayed: Vec<String>,
 ) -> Result<UninstallReport, String> {
+    crate::license::require(&app)?;
     use tauri::Manager;
     let dir = app
         .path()

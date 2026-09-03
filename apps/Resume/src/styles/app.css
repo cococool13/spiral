@@ -1121,3 +1121,28 @@ body {
   gap: var(--spiral-unit);
   margin-top: calc(var(--spiral-unit) * 1.5);
 }
+
+/* License activate gate — after splash, before Setup. */
+.activate-screen .activate {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spiral-unit) * 2);
+  max-width: 36rem;
+}
+
+.activate__error {
+  margin: 0;
+  color: var(--spiral-oxblood);
+  font-size: 14px;
+}
+
+.activate-screen__buy {
+  margin: calc(var(--spiral-unit) * 3) 0 0;
+  color: var(--spiral-gray);
+}
+
+.activate-screen__buy a {
+  color: var(--spiral-paper);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

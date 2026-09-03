@@ -1793,6 +1793,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "keyring"
+version = "3.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eebcc3aff044e5944a8fbaf69eb277d11986064cba30c468730e8b9909fb551c"
+dependencies = [
+ "log",
+ "zeroize",
+]
+
+[[package]]
 name = "libappindicator"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3350,6 +3360,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "spiral-license"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "keyring",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "spiral-wallpaper"
 version = "1.0.3"
 dependencies = [
@@ -3359,6 +3381,7 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "spiral-license",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",

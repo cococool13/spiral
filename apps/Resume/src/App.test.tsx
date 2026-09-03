@@ -25,6 +25,13 @@ vi.mock("@tauri-apps/api/webview", () => ({
   getCurrentWebview: () => ({ onDragDropEvent: async () => () => undefined }),
 }));
 
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(async (cmd: string) => {
+    if (cmd === "license_ensure") return;
+    throw new Error(`unexpected invoke: ${cmd}`);
+  }),
+}));
+
 vi.mock("./lib/ipc", () => ({
   saveDocument: (draft: Draft) => saveDocument(draft),
   loadDocument: () => loadDocument(),
