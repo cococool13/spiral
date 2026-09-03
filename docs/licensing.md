@@ -6,9 +6,12 @@ key.
 
 ## Buy
 
-Checkout link (canonical): `collection/lib/whop.ts` exports `WHOP_CHECKOUT_URL`.
-Each desktop app mirrors the same three URLs at `src/lib/whop.ts`. When the Whop
-plan changes, update all five files.
+Checkout link (canonical): `collection/lib/whop.ts`. App mirrors are generated:
+
+```bash
+node scripts/sync-whop.mjs    # rewrite app copies from canonical
+node scripts/check-whop.mjs   # CI gate — fails if mirrors drift
+```
 
 | Constant | Use |
 | --- | --- |

@@ -16,6 +16,7 @@ Apps POST here; this Worker calls Whop's API with the company key.
 ```bash
 cd workers/license
 pnpm install
+pnpm test && pnpm typecheck
 npx wrangler deploy
 npx wrangler secret put WHOP_API_KEY   # Whop → Developer → API keys
 ```

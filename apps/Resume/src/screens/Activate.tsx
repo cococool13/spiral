@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { WHOP_CHECKOUT_URL } from "../lib/whop";
+import { WHOP_CHECKOUT_URL, WHOP_MANAGE_URL } from "../lib/whop";
 
 interface ActivateProps {
   onDone: () => void;
@@ -62,6 +62,10 @@ export function Activate({ onDone }: ActivateProps) {
         </div>
       </form>
       <p className="activate-screen__buy">
+        <a href={WHOP_MANAGE_URL} target="_blank" rel="noreferrer">
+          Find your license key on Whop
+        </a>
+        {" · "}
         <a href={WHOP_CHECKOUT_URL} target="_blank" rel="noreferrer">
           Buy Spiral Collection — $9.99
         </a>

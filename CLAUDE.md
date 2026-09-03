@@ -94,6 +94,15 @@ pnpm dev             # localhost:3000
 pnpm lint            # biome check .
 pnpm typecheck
 pnpm build           # hex gate + static export → out/
+
+# Whop checkout URLs (canonical: collection/lib/whop.ts)
+node scripts/sync-whop.mjs   # rewrite app mirrors after plan change
+node scripts/check-whop.mjs  # CI gate — mirrors must match canonical
+
+# License validator Worker
+cd workers/license
+pnpm install && pnpm test && pnpm typecheck
+npx wrangler deploy
 ```
 
 **Never run `cargo fmt` in `apps/clean`.** No `rustfmt.toml`, no CI format check; a blind fmt

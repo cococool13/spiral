@@ -294,3 +294,41 @@ async fn validate_online(
 
     Err(map_api_error(body.error.as_deref().unwrap_or("unknown")))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hash_hex_is_deterministic() {
+        assert_eq!(
+            hash_hex("spiral"),
+            "0f0e99f465a65c3cb8a7514fa35714553fc70d91c948679dc7a91fb3d79e6a06"
+        );
+    }
+
+    #[test]
+    fn map_api_error_known_codes() {
+        assert_eq!(map_api_error("invalid_key"), LicenseError::InvalidKey);
+        assert_eq!(map_api_error("no_access"), LicenseError::NoAccess);
+        assert_eq!(
+            map_api_error("device_mismatch"),
+            LicenseError::DeviceMismatch
+        );
+    }
+
+    #[test]
+    fn app_id_as_str() {
+        assert_eq!(AppId::Wallpaper.as_str(), "wallpaper");
+        assert_eq!(AppId::Clean.as_str(), "clean");
+        assert_eq!(AppId::Resume.as_str(), "resume");
+        assert_eq!(AppId::Slim.as_str(), "slim");
+    }
+
+    #[test]
+    fn empty_key_user_message() {
+        assert!(LicenseError::EmptyKey
+            .user_message()
+            .contains("Whop"));
+    }
+}
