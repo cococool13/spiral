@@ -84,3 +84,5 @@ where the menu would be. An empty menu would be worse than no menu.
 
 ## Motion
 Entrances rise (translateY + fade, `--dur-slow`), exits fade. State transitions `--dur-fast`. Global `prefers-reduced-motion` collapse in `base.css`.
+
+The website's home page carries one continuous motion surface the apps do not: the filament field (`collection/components/DefenseLines.tsx`) — helix-red filaments rising through void and washing to paper along a single band, the mark's three-band idea set in motion — full-bleed behind a one-weight headline. Its budgets and the reason it is allowed live in `collection/README.md`.

@@ -55,9 +55,33 @@ would be a mistake.
 | "Static only, no video" | That is the wallpaper app's product scope, not a brand rule. Video belongs here. |
 | Binary-size and idle-RAM budgets | Meaningless for a static site. The budgets that matter here are the ones below. |
 
-The catalogue scrolls like a document. The home hero is the exception: a sticky
-plate that zooms out on scroll. Do not add word-by-word lighting, view-timeline
-rises, or WebGL rides.
+The home page is an observatory: void canvas, and type and hairlines in the
+same pale paper so every frame reads as drawn in light. Mono labels are tracked
+wide (0.16em). The headline is one weight and fills the viewport. The hero
+carries the site's **one** WebGL layer — the filament field in
+`components/DefenseLines.tsx` (helix red washing to paper along a single band),
+full-bleed behind the headline. It is allowed because it is budgeted: one draw
+call per frame,
+device pixel ratio capped at 2, the loop stops while the canvas is off-screen or
+the tab is hidden, and `prefers-reduced-motion` draws exactly one frame. Do not
+add a second WebGL surface.
+
+Everything else moves once and then rests. The motion vocabulary is four
+primitives, all transform/opacity or text, each with a reduced-motion path:
+
+- **Rise** (`.rise`, CSS) — arrival for what is on screen at load. The headline
+  rises phrase by phrase; it is the LCP element, so this stays a CSS animation.
+- **Reveal** (`components/Reveal.tsx`) — arrival on scroll, once, 16px, staggered
+  60ms. Gated on `html.js` so a blocked bundle shows the page at rest.
+- **Scramble** (`components/Scramble.tsx`) — the mono register decodes on
+  arrival: corner labels, eyebrows, the readings on the rules board. Real text
+  stays in the DOM; only the visible copy flickers.
+- **Plate drift** (`components/ParallaxPlate.tsx`) — the corridor photograph
+  moves slower than the page and dissolves into void at both edges; never a
+  hard cut between photograph and canvas. Transform only.
+
+Nothing loops except the field; nothing animates on scroll position except the
+plate drift. No word-by-word lighting.
 
 ### The budgets that do apply
 
@@ -82,7 +106,7 @@ These exist so it stays fast.
 
 | Path | What |
 | --- | --- |
-| `app/` | App Router entry — `layout.tsx`, `page.tsx`, `globals.css` (the `@theme` token bridge) |
+| `app/` | App Router entry — `layout.tsx`, `page.tsx`, `globals.css` (the `@theme` token bridge, nav bar, footer close, shared motion), `home.css` (observatory hero, app frames, rules board, letter) |
 | `components/` | Flat, one file per component. Not shadcn — no `ui/` subfolder. |
 | `lib/` | `apps.ts` (the app catalogue — edit this to add an app), `otherWork.ts`, `useOS.ts` |
 | Root `scripts/sync-brand.mjs collection` | Copies `/brand` → `public/brand/` (gitignored); allowlist in `scripts/brand-manifest.mjs` |

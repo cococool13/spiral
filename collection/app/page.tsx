@@ -1,8 +1,9 @@
-import AppGrid from "@/components/AppGrid";
+import AppIndex from "@/components/AppIndex";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
 import Manifesto from "@/components/Manifesto";
 import Nav from "@/components/Nav";
+import Rules from "@/components/Rules";
 
 export default function Home() {
   // Nav and Footer sit outside <main>. Nested inside it they were generic
@@ -13,8 +14,9 @@ export default function Home() {
       <Nav />
       <main id="content">
         <Hero />
+        <AppIndex />
+        <Rules />
         <Manifesto />
-        <AppGrid />
       </main>
       <Footer />
     </>

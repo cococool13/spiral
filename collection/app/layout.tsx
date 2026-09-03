@@ -49,6 +49,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Gates the hidden start state of `.reveal` (globals.css) on script
+            actually running, so a blocked or failed bundle still shows the
+            page at rest. Inline and first so it lands before first paint. */}
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: one static class toggle, no data
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
         <link
           rel="preload"
           href="/brand/fonts/host-grotesk-400.woff2"

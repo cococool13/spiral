@@ -1,0 +1,485 @@
+/* Home — the observatory. Void canvas; type and hairlines share one pale
+   colour, so every frame reads as drawn in light. Mono labels tracked wide.
+   Shared chrome (nav, pills, eyebrow, rise, reveal, footer) is in globals.css. */
+
+:root {
+  --shell-x: 1.5rem;
+  --shell-max: 88rem;
+  --light: color-mix(in oklab, var(--spiral-paper) 22%, transparent);
+  --light-soft: color-mix(in oklab, var(--spiral-paper) 12%, transparent);
+  --light-strong: color-mix(in oklab, var(--spiral-paper) 60%, transparent);
+}
+@media (min-width: 640px) {
+  :root {
+    --shell-x: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --shell-x: 3rem;
+  }
+}
+
+/* The mono voice, tracked like a serial number. */
+.obs-readout {
+  margin: 0;
+  font-family: var(--spiral-font-mono);
+  font-size: var(--text-micro);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--spiral-mute);
+}
+.obs-readout--end {
+  text-align: right;
+}
+
+/* ---------- Hero: the observatory frame ---------- */
+.obs {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--spiral-void);
+  color: var(--spiral-paper);
+}
+.obs-field {
+  position: absolute;
+  inset: 0;
+}
+.obs-floor {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 55%;
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--spiral-void) 78%, transparent) 0%,
+    color-mix(in oklab, var(--spiral-void) 36%, transparent) 45%,
+    transparent 100%
+  );
+}
+/* The frame: one hairline, four corner marks, inset from the viewport. */
+.obs-frame {
+  position: absolute;
+  inset: calc(4.5rem + env(safe-area-inset-top, 0px)) var(--shell-x) 1.25rem;
+  border: 1px solid var(--light);
+  pointer-events: none;
+}
+.obs-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: var(--spiral-paper);
+}
+.obs-dot--tl {
+  top: -3px;
+  left: -3px;
+}
+.obs-dot--tr {
+  top: -3px;
+  right: -3px;
+}
+.obs-dot--bl {
+  bottom: -3px;
+  left: -3px;
+}
+.obs-dot--br {
+  right: -3px;
+  bottom: -3px;
+}
+
+.obs-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  padding: calc(4.5rem + env(safe-area-inset-top, 0px) + 1.25rem)
+    calc(var(--shell-x) + 1.25rem) 2.75rem;
+}
+
+.obs-title {
+  margin: auto 0;
+  padding: 3rem 0;
+  color: var(--spiral-paper);
+  font-size: 3rem;
+  line-height: 0.94;
+}
+.obs-line {
+  display: block;
+}
+.obs-warn {
+  color: var(--spiral-helix);
+}
+.obs-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.obs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.obs-scroll {
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--light);
+  color: var(--spiral-paper);
+  text-decoration: none;
+  transition: border-color 320ms var(--spiral-ease);
+}
+.obs-scroll:hover {
+  border-color: var(--light-strong);
+}
+.obs-scroll:focus-visible {
+  outline: 2px solid var(--spiral-helix);
+  outline-offset: 3px;
+}
+@media (min-width: 640px) {
+  .obs-title {
+    font-size: 5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .obs-inner {
+    padding-bottom: 3rem;
+  }
+  .obs-title {
+    font-size: 7rem;
+  }
+}
+@media (min-width: 1440px) {
+  .obs-title {
+    font-size: 8.5rem;
+  }
+}
+
+/* ---------- Sections share one shell and one head rule ---------- */
+.frames-shell,
+.board-shell {
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: 9rem var(--shell-x);
+}
+.frames-head,
+.board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--light);
+}
+.frames-title {
+  flex-basis: 100%;
+  margin-top: 2rem;
+  color: var(--spiral-paper);
+  font-size: 3rem;
+}
+@media (min-width: 640px) {
+  .frames-title {
+    font-size: 4.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .frames-title {
+    font-size: 6rem;
+  }
+}
+
+/* ---------- Frames: the apps ---------- */
+.frames {
+  background: var(--spiral-void);
+  color: var(--spiral-paper);
+}
+.frames-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin: 0;
+  padding: 3.5rem 0 0;
+  list-style: none;
+}
+.frame {
+  position: relative;
+  display: flex;
+  min-height: 22rem;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2.5rem;
+  padding: 1.75rem;
+  border: 1px solid var(--light);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 420ms var(--spiral-ease);
+}
+.frame-status {
+  font-family: var(--spiral-font-mono);
+  font-size: var(--text-micro);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--spiral-mute);
+}
+.frame-status--live::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 8px;
+  vertical-align: 1px;
+  background: var(--spiral-helix);
+}
+.frame-name {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.frame-mark {
+  flex: none;
+  color: var(--spiral-mute);
+  transition: color 420ms var(--spiral-ease);
+}
+.frame-lockup {
+  display: flex;
+  flex-direction: column;
+  font-size: 2rem;
+  line-height: 1;
+}
+.frame-lockup-collection {
+  color: var(--spiral-mute);
+}
+.frame-lockup-app {
+  color: var(--spiral-paper);
+}
+.frame-proof {
+  max-width: 18rem;
+  color: var(--spiral-mute);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  transition: color 420ms var(--spiral-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .frame:hover {
+    border-color: var(--light-strong);
+  }
+  .frame:hover .frame-mark {
+    color: var(--spiral-helix);
+  }
+  .frame:hover .frame-proof {
+    color: var(--spiral-paper);
+  }
+}
+.frame:focus-visible {
+  outline: 2px solid var(--spiral-helix);
+  outline-offset: 4px;
+  border-color: var(--light-strong);
+}
+@media (min-width: 640px) {
+  .frames-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .frames-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem;
+    padding-top: 4rem;
+  }
+  .frame {
+    min-height: 26rem;
+    padding: 1.75rem;
+  }
+  .frame-lockup {
+    font-size: 2.25rem;
+  }
+}
+@media (min-width: 1440px) {
+  .frame-lockup {
+    font-size: 2.75rem;
+  }
+}
+
+/* ---------- Board: the four refusals ---------- */
+.board {
+  background: var(--spiral-void);
+  color: var(--spiral-paper);
+}
+.board-shell {
+  padding-top: 0;
+}
+.board-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin: 0;
+  border-left: 1px solid var(--light);
+}
+.board-cell {
+  display: flex;
+  min-height: 16rem;
+  flex-direction: column;
+  padding: 1.75rem 1.5rem 1.5rem;
+  border-right: 1px solid var(--light);
+  border-bottom: 1px solid var(--light);
+}
+.board-label {
+  font-family: var(--spiral-font-mono);
+  font-size: var(--text-micro);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--spiral-mute);
+}
+.board-value {
+  margin-top: auto;
+  padding-top: 3rem;
+  font-size: 5rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.92;
+  color: var(--spiral-paper);
+}
+.board-note {
+  margin-top: 1rem;
+  color: var(--spiral-mute);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+@media (min-width: 640px) {
+  .board-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .board-cell {
+    min-height: 19rem;
+    padding: 2rem 1.75rem 1.75rem;
+  }
+  .board-value {
+    font-size: 6.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .board-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .board-cell {
+    min-height: 22rem;
+  }
+  .board-value {
+    font-size: 7rem;
+  }
+}
+@media (min-width: 1440px) {
+  .board-value {
+    font-size: 8.5rem;
+  }
+}
+
+/* ---------- Letter: the corridor, then the statement ---------- */
+.letter {
+  position: relative;
+  background: var(--spiral-void);
+  color: var(--spiral-paper);
+  --plate-p: 0.5;
+}
+.letter-photo-wrap {
+  position: relative;
+  height: 78svh;
+  min-height: 24rem;
+  overflow: hidden;
+}
+/* Oversized by 12% and slid across that slack as --plate-p runs 0 → 1. */
+.letter-photo {
+  position: absolute;
+  inset: -6% 0;
+  width: 100%;
+  height: 112%;
+  object-fit: cover;
+  object-position: center;
+  transform: translateY(calc((var(--plate-p) - 0.5) * -10%));
+  will-change: transform;
+}
+/* Never a hard cut between photograph and canvas. */
+.letter-dissolve {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--spiral-void) 70%, transparent) 0%,
+      transparent 30%
+    ),
+    linear-gradient(
+      to top,
+      var(--spiral-void) 0%,
+      color-mix(in oklab, var(--spiral-void) 60%, transparent) 30%,
+      transparent 60%
+    );
+}
+.letter-body {
+  position: relative;
+  width: 100%;
+  max-width: 40rem;
+  margin: -6rem auto 0;
+  padding: 0 var(--shell-x) 10rem;
+  text-align: center;
+}
+.letter-copy {
+  font-family: var(--spiral-font-display);
+  font-size: 1.375rem;
+  line-height: 1.3;
+  text-wrap: balance;
+  color: var(--spiral-paper);
+}
+.letter-close {
+  margin-top: 2.5rem;
+  font-size: 3rem;
+  color: var(--spiral-paper);
+}
+.letter-fine {
+  margin-top: 3rem;
+  font-family: var(--spiral-font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  letter-spacing: 0.06em;
+  color: var(--spiral-mute);
+}
+@media (min-width: 640px) {
+  .letter-copy {
+    font-size: 1.5rem;
+  }
+  .letter-close {
+    font-size: 4rem;
+  }
+}
+@media (min-width: 1024px) {
+  .letter-body {
+    margin-top: -8rem;
+    padding-bottom: 10rem;
+  }
+  .letter-copy {
+    font-size: 1.625rem;
+  }
+  .letter-close {
+    font-size: 5rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .letter-photo {
+    inset: 0;
+    height: 100%;
+    transform: none;
+    will-change: auto;
+  }
+  .frame,
+  .frame-mark,
+  .frame-proof,
+  .obs-scroll {
+    transition: none;
+  }
+}

@@ -3,6 +3,7 @@
    /brand stays the single source of truth; reaching outside the project root
    here is what Turbopack refuses to resolve in `next dev`. */
 @import "../public/brand/tokens.css";
+@import "./home.css";
 
 @font-face {
   font-family: "Host Grotesk";
@@ -177,9 +178,9 @@ p {
   appearance: none;
   -webkit-appearance: none;
   transition:
-    background var(--spiral-dur-fast) var(--spiral-ease),
-    border-color var(--spiral-dur-fast) var(--spiral-ease),
-    color var(--spiral-dur-fast) var(--spiral-ease);
+    background 320ms var(--spiral-ease),
+    border-color 320ms var(--spiral-ease),
+    color 320ms var(--spiral-ease);
 }
 @media (hover: hover) and (pointer: fine) {
   .glass-pill:hover {
@@ -247,38 +248,47 @@ p {
    shipping it as `opacity: 0` made the largest paint wait on a framer chunk.
    A CSS animation runs whether or not script does. */
 .rise {
-  animation: rise-in 420ms var(--spiral-ease) both;
-  animation-delay: calc(var(--rise-step, 0) * 50ms);
+  animation: rise-in 1100ms var(--spiral-ease) both;
+  animation-delay: calc(var(--rise-step, 0) * 130ms);
 }
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(28px);
+    filter: blur(10px);
   }
   to {
     opacity: 1;
     transform: none;
-  }
-}
-/* The figure arrives by settling rather than rising; it has no baseline to
-   travel to. */
-.rise--figure {
-  animation-name: rise-figure;
-  animation-duration: 520ms;
-}
-@keyframes rise-figure {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+    filter: blur(0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .rise {
     animation: none;
+  }
+}
+
+/* Reveal — arrival on scroll, once. Only the hidden start state is gated on
+   html.js (set inline in layout.tsx): with scripts blocked, everything is at
+   rest. Transform + opacity only. */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 1100ms var(--spiral-ease),
+    transform 1100ms var(--spiral-ease);
+  transition-delay: calc(var(--reveal-step, 0) * 110ms);
+}
+.js .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
@@ -408,335 +418,179 @@ p {
   outline-offset: -1px;
 }
 
-.manifesto-section,
-.app-index-section {
-  background: var(--spiral-paper);
-  color: var(--spiral-ink);
-}
-.manifesto-section {
-  border-top: 1px solid color-mix(in oklab, var(--spiral-ink) 16%, transparent);
-}
-.manifesto-shell,
-.app-index-shell {
-  width: 100%;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 5rem 1.5rem;
-}
-.manifesto-shell {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 3rem;
-}
-.manifesto-label,
-.app-index-label {
-  color: var(--spiral-steel);
-}
-.manifesto-copy {
-  max-width: 48rem;
-  font-family: var(--spiral-font-display);
-  font-size: 2rem;
-  line-height: 1.08;
-  text-wrap: balance;
-}
-.manifesto-close {
-  margin-top: 2rem;
-  font-family: var(--spiral-font-display);
-  font-size: 3rem;
-  line-height: 0.96;
-}
-.app-index-shell {
-  padding-top: 1rem;
-  padding-bottom: 6rem;
-}
-.app-index-header {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  padding: 1rem 0 3rem;
-  border-top: 1px solid color-mix(in oklab, var(--spiral-ink) 16%, transparent);
-}
-.app-index-title {
-  font-size: 3rem;
-}
-.app-index-intro {
-  max-width: 28rem;
-  margin-top: 1.25rem;
-  color: var(--spiral-steel);
-  font-size: 1rem;
-}
-.app-index-grid {
-  display: grid;
-  gap: 8px;
-}
-.app-tile {
-  position: relative;
-  display: flex;
-  min-height: 23rem;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 1.5rem;
-  background: var(--spiral-ink);
-  color: var(--spiral-paper);
-  text-decoration: none;
-  transition:
-    background-color var(--spiral-dur-fast) var(--spiral-ease),
-    transform var(--spiral-dur-fast) var(--spiral-ease);
-}
-.app-tile::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--spiral-red);
-  opacity: 0;
-  transition: opacity var(--spiral-dur-fast) var(--spiral-ease);
-}
-.app-tile:hover {
-  background: var(--spiral-lift);
-}
-.app-tile:hover::before,
-.app-tile:focus-visible::before {
-  opacity: 1;
-}
-.app-tile:active {
-  transform: scale(0.99);
-}
-.app-tile-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--spiral-gray);
-  font-family: var(--spiral-font-mono);
-  font-size: var(--text-micro);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.app-tile-icon {
-  width: 2.75rem;
-  height: 2.75rem;
-  margin-top: 4rem;
-  color: var(--spiral-paper);
-}
-.app-tile-copy {
-  margin-top: auto;
-  padding-top: 3rem;
-  padding-right: 2rem;
-}
-.app-tile-title {
-  font-size: 2.25rem;
-  line-height: 0.98;
-}
-.app-tile-proof {
-  margin-top: 0.75rem;
-  font-size: 0.9375rem;
-  line-height: 1.4;
-}
-.app-tile-tagline {
-  max-width: 28rem;
-  margin-top: 0.5rem;
-  color: var(--spiral-gray);
-  font-size: 0.8125rem;
-  line-height: 1.45;
-}
-.app-tile-arrow {
-  position: absolute;
-  right: 1.5rem;
-  bottom: 1.25rem;
-  color: var(--spiral-red);
-  font-size: 1.5rem;
-  line-height: 1;
-}
-.collection-footer {
-  background: var(--spiral-void);
-  color: var(--spiral-paper);
-  border-top: 1px solid color-mix(in oklab, var(--spiral-paper) 12%, transparent);
-}
-.collection-footer-shell {
-  width: 100%;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 5rem 1.5rem 2rem;
-}
-.collection-footer-top {
-  display: flex;
-  flex-direction: column;
-  gap: 3.5rem;
-}
-.collection-footer-bottom {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem 1.5rem;
-  margin-top: 4rem;
-  padding-top: 1rem;
-  border-top: 1px solid color-mix(in oklab, var(--spiral-paper) 12%, transparent);
-}
-
-@media (min-width: 640px) {
-  .manifesto-shell,
-  .app-index-shell,
-  .collection-footer-shell {
-    padding-right: 2rem;
-    padding-left: 2rem;
-  }
-  .manifesto-shell {
-    grid-template-columns: 10rem minmax(0, 1fr);
-    gap: 3rem;
-    padding-top: 7rem;
-    padding-bottom: 8rem;
-  }
-  .manifesto-copy {
-    font-size: 3rem;
-  }
-  .manifesto-close {
-    font-size: 4rem;
-  }
-  .app-index-header {
-    grid-template-columns: 10rem minmax(0, 1fr);
-    gap: 3rem;
-  }
-  .app-index-title {
-    font-size: 4rem;
-  }
-  .app-index-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .collection-footer-top {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 3.5rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-tile,
-  .app-tile::before {
-    transition: none;
-  }
-  .app-tile:active {
-    transform: none;
-  }
-}
-
-.nav-shell {
-  width: 100%;
-  max-width: 100%;
-}
-.nav-bar {
-  transform: translateY(calc(-100% - 2rem));
-  pointer-events: none;
-  transition: transform 280ms var(--spiral-ease);
-}
-.nav-bar--in {
-  transform: none;
-  pointer-events: auto;
-}
-@media (max-width: 480px) {
-  .nav-download {
-    display: none;
-  }
-}
-
-/* Superwhisper zoom-out: a sticky photographic plate, --hero-p 0→1 as the
-   pin scrolls. */
-.hero-pin {
-  height: 150svh;
-  --hero-p: 0;
-}
-@media (max-width: 768px) {
-  .hero-pin {
-    height: 120svh;
-  }
-}
-.hero-sticky {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-  overflow: hidden;
-  background: var(--spiral-void);
-}
-.hero-frame {
-  position: absolute;
-  inset: calc(var(--hero-p) * 6vh) calc(var(--hero-p) * 6vw);
-  overflow: hidden;
-  border-radius: calc(var(--hero-p) * 16px);
-}
-.hero-photo {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  transform: scale(calc(1.18 - var(--hero-p) * 0.18));
-  will-change: transform;
-}
-.hero-wash {
-  position: absolute;
-  inset: 0;
-  background: color-mix(in oklab, var(--spiral-void) 8%, transparent);
-}
-.hero-copy {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  height: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1.5rem;
-  text-align: center;
-}
-.hero-copy::before {
-  content: "";
-  position: absolute;
-  inset: -12% -20%;
-  background: radial-gradient(
-    ellipse 70% 65% at 50% 50%,
-    color-mix(in oklab, var(--spiral-void) 62%, transparent) 0%,
-    transparent 72%
-  );
-  pointer-events: none;
-  z-index: -1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-pin {
-    height: 100svh;
-  }
-  .hero-frame {
-    inset: 0;
-    border-radius: 0;
-  }
-  .hero-photo {
-    transform: none;
-    will-change: auto;
-  }
-  .nav-bar {
-    transition: none;
-  }
-}
-
-/* Floating nav pill container — glass, never flush to y=0.
-
-   The fill is opaque enough to survive the page passing underneath it. At
-   0.55 it composited to rgb(116,116,115) over the light Other Work section and
-   the links landed at 1.40:1 — the site's only persistent navigation, gone,
-   for a whole viewport. It also let card headings print straight through the
-   bar over the app grid. The blur stays; the transparency is what had to go. */
-.nav-pill {
-  border-radius: var(--spiral-radius-ctl);
-  border: 1px solid color-mix(in oklab, var(--spiral-paper) 18%, transparent);
-  background: color-mix(in oklab, var(--spiral-void) 92%, transparent);
+/* ---------- Nav: one slim bar, the same material as the page. No rule
+   under it — the space is the separation, as on the app bar. ---------- */
+.nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 50;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in oklab, var(--spiral-void) 82%, transparent);
   backdrop-filter: var(--spiral-glass-blur);
   -webkit-backdrop-filter: var(--spiral-glass-blur);
-  box-shadow: color-mix(in oklab, var(--spiral-void) 28%, transparent) 0 4px 24px;
+}
+.nav-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 4.5rem;
+  padding: 0 var(--shell-x, 1.5rem);
+}
+.nav-brand {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--spiral-paper);
+  text-decoration: none;
+}
+.nav-brand:focus-visible {
+  outline: 2px solid var(--spiral-helix);
+  outline-offset: 4px;
+}
+.nav-mark {
+  color: var(--spiral-helix);
+}
+.nav-name {
+  font-family: var(--spiral-font-display);
+  font-size: 0.9375rem;
+  color: var(--spiral-mute);
+}
+.nav-name-app {
+  color: var(--spiral-paper);
+}
+.nav-links {
+  display: none;
+  gap: 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nav-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  font-family: var(--spiral-font-mono);
+  font-size: var(--text-micro);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--spiral-mute);
+  text-decoration: none;
+  transition: color 320ms var(--spiral-ease);
+}
+.nav-link:hover,
+.nav-link[aria-current="page"] {
+  color: var(--spiral-paper);
+}
+.nav-link[aria-current="page"]::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 10px;
+  background: var(--spiral-helix);
+}
+.nav-link:focus-visible {
+  outline: 2px solid var(--spiral-helix);
+  outline-offset: 4px;
+}
+.nav-action {
+  justify-self: end;
+}
+@media (min-width: 768px) {
+  .nav-bar {
+    grid-template-columns: 1fr auto 1fr;
+  }
+  .nav-links {
+    display: flex;
+    justify-self: center;
+  }
+}
+
+/* ---------- Footer: the close. Void, one rule of light, the mark at
+   monumental scale cropped by the page edge. ---------- */
+.close {
+  position: relative;
+  overflow: hidden;
+  background: var(--spiral-void);
+  color: var(--spiral-paper);
+  border-top: 1px solid color-mix(in oklab, var(--spiral-paper) 22%, transparent);
+}
+.close-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--shell-max, 88rem);
+  margin: 0 auto;
+  padding: 5rem var(--shell-x, 1.5rem) 0;
+}
+.close-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3rem 2rem;
+}
+.close-col-title {
+  color: var(--spiral-paper);
+}
+.close-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.close-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  font-size: 0.9375rem;
+  color: var(--spiral-mute);
+  text-decoration: none;
+  transition: color 320ms var(--spiral-ease);
+}
+.close-link:hover {
+  color: var(--spiral-paper);
+}
+.close-link:focus-visible {
+  outline: 2px solid var(--spiral-helix);
+  outline-offset: 2px;
+}
+.close-copyright {
+  align-self: end;
+}
+.close-mark {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: var(--shell-max, 88rem);
+  margin: 1rem auto 0;
+  padding: 0 var(--shell-x, 1.5rem);
+  pointer-events: none;
+  line-height: 0;
+}
+.close-glyph {
+  width: min(42vw, 22rem);
+  height: auto;
+  margin-bottom: -22%;
+  color: var(--spiral-paper);
+}
+@media (min-width: 640px) {
+  .close-cols {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .close-copyright {
+    text-align: right;
+  }
+  .close-glyph {
+    width: min(30vw, 26rem);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .glass-pill,
-  .glass-pill:hover {
+  .glass-pill:hover,
+  .nav-link,
+  .close-link {
     transition: none;
   }
 }

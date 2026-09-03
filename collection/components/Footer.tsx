@@ -8,100 +8,91 @@ const year = 2026;
 
 const appLinks = apps.filter((a) => a.page);
 
+/**
+ * The close. Three short columns, then the mark at monumental scale — three paper bands cropped by the bottom of the page. One
+ * colour, filled, never rotated; only bigger than anywhere else.
+ */
 export default function Footer() {
   return (
-    <footer className="collection-footer relative z-10">
-      <div className="collection-footer-shell">
-        <div className="collection-footer-top">
-          <a
-            href="/"
-            className="inline-flex min-h-11 items-center text-red focus-visible:outline-2 focus-visible:outline-red"
-            aria-label="Spiral"
-          >
-            <Mark size={40} />
-          </a>
-
-          <div className="flex flex-wrap gap-16">
-            <FooterCol title="Apps">
-              {appLinks.map((app) =>
-                app.page ? (
-                  <li key={app.slug}>
-                    <a
-                      href={app.page}
-                      className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-                    >
-                      {app.name.replace("Spiral ", "")}
-                    </a>
-                  </li>
-                ) : null,
-              )}
-            </FooterCol>
-            <FooterCol title="Contact">
-              <li>
-                <a
-                  href={`mailto:${EMAIL}`}
-                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-                >
-                  {EMAIL}
-                </a>
-              </li>
-              <li>
-                <a
-                  href={GITHUB}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex min-h-11 items-center text-sm text-gray transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-                >
-                  GitHub
-                </a>
-              </li>
-            </FooterCol>
-          </div>
+    <footer className="close">
+      <div className="close-shell">
+        <div className="close-cols">
+          <Col title="Apps">
+            {appLinks.map((app) =>
+              app.page ? (
+                <li key={app.slug}>
+                  <a href={app.page} className="close-link">
+                    {app.name.replace("Spiral ", "")}
+                  </a>
+                </li>
+              ) : null,
+            )}
+          </Col>
+          <Col title="Contact">
+            <li>
+              <a href={`mailto:${EMAIL}`} className="close-link">
+                {EMAIL}
+              </a>
+            </li>
+            <li>
+              <a
+                href={GITHUB}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="close-link"
+              >
+                GitHub
+              </a>
+            </li>
+          </Col>
+          <Col title="Site">
+            <li>
+              <a href="/privacy/" className="close-link">
+                Privacy
+              </a>
+            </li>
+            <li>
+              <a href="/work/" className="close-link">
+                Other work
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://github.com/cococool13/spiral/blob/main/LICENSE"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="close-link"
+              >
+                MIT licence
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://unsplash.com/photos/E_kMaBHrw0k"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="close-link"
+              >
+                Photograph
+              </a>
+            </li>
+          </Col>
+          <p className="close-copyright obs-readout">© {year} Cohen Coolidge</p>
         </div>
+      </div>
 
-        <div className="collection-footer-bottom font-mono text-micro uppercase tracking-widest text-gray">
-          <span>© {year} Cohen Coolidge</span>
-          <span className="flex flex-wrap gap-x-6 gap-y-2">
-            <a
-              href="/privacy/"
-              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              Privacy
-            </a>
-            <a
-              href="/work/"
-              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              Other work
-            </a>
-            <a
-              href="https://github.com/cococool13/spiral/blob/main/LICENSE"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              MIT
-            </a>
-            <a
-              href="https://unsplash.com/photos/E_kMaBHrw0k"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              Photograph
-            </a>
-          </span>
-        </div>
+      <div className="close-mark" aria-hidden="true">
+        <Mark size={720} className="close-glyph" />
       </div>
     </footer>
   );
 }
 
-function FooterCol({ title, children }: { title: string; children: ReactNode }) {
+function Col({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="font-mono text-micro uppercase tracking-widest text-paper">{title}</p>
-      <ul className="mt-2">{children}</ul>
+      <p className="obs-readout close-col-title">{title}</p>
+      <ul className="close-list">{children}</ul>
     </div>
   );
 }
