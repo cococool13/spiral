@@ -1,32 +1,26 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import type { SearchPage, SearchParams, Wallpaper, WallpaperSource } from "./types";
+import type { SearchPage, SearchParams, Wallpaper } from "./types";
 
-/**
- * The one active source. More free sources can return behind the same
- * `WallpaperSource` interface without the UI changing shape.
- */
-export const wallhaven: WallpaperSource = {
-  search(params: SearchParams): Promise<SearchPage> {
-    return invoke<SearchPage>("search_wallpapers", {
-      query: params.query,
-      categories: params.categories,
-      sorting: params.sorting,
-      page: params.page,
-    });
-  },
+export function search(params: SearchParams): Promise<SearchPage> {
+  return invoke<SearchPage>("search_wallpapers", {
+    query: params.query,
+    categories: params.categories,
+    sorting: params.sorting,
+    page: params.page,
+  });
+}
 
-  async getThumb(wallpaper: Wallpaper): Promise<string> {
-    const path = await invoke<string>("cache_thumb", {
-      id: wallpaper.id,
-      url: wallpaper.thumbUrl,
-    });
-    return convertFileSrc(path);
-  },
+export async function getThumb(wallpaper: Wallpaper): Promise<string> {
+  const path = await invoke<string>("cache_thumb", {
+    id: wallpaper.id,
+    url: wallpaper.thumbUrl,
+  });
+  return convertFileSrc(path);
+}
 
-  apply(wallpaper: Wallpaper): Promise<void> {
-    return invoke("apply_wallpaper", { id: wallpaper.id, url: wallpaper.fullUrl });
-  },
-};
+export function apply(wallpaper: Wallpaper): Promise<void> {
+  return invoke("apply_wallpaper", { id: wallpaper.id, url: wallpaper.fullUrl });
+}
 
 /** Backend error codes → brand-voice copy. Each names the problem and the fix. */
 export function errorCopy(error: unknown): string {

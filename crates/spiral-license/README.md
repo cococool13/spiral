@@ -8,14 +8,11 @@ an app.
 
 ## Usage
 
-Each app depends on this crate via a path in its `Cargo.toml` and wraps it in
-`src-tauri/src/license.rs` with Tauri commands.
+Each app depends on this crate via a path in its `Cargo.toml` and expands
+`license_commands!` in `src-tauri/src/license.rs`:
 
 ```rust
-use spiral_license::{self, AppId, LicenseError};
-
-spiral_license::activate(AppId::Wallpaper, &key, validator_url).await?;
-spiral_license::ensure_licensed(AppId::Wallpaper, validator_url).await?;
+spiral_license::license_commands!(spiral_license::AppId::Wallpaper);
 ```
 
 Default validator: `https://spiral-license.cohencool.workers.dev/validate`.

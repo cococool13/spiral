@@ -25,6 +25,9 @@ shown on first launch when no key is stored.
 Post-checkout uses Whop's default success page (license key shown there). No
 custom redirect is configured in code.
 
+Portfolio footer links both stores: https://cohen-portfolio.pages.dev → Whop
+(https://whop.com/@cococool13).
+
 ## Activate
 
 1. User buys on Whop and receives a license key.

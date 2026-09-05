@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WallpaperTile } from "../components/WallpaperTile";
 import { useDebounce } from "../hooks/useDebounce";
-import { errorCopy, wallhaven } from "../sources";
+import { errorCopy, search as searchWallpapers } from "../sources";
 import type { Wallpaper } from "../sources/types";
 
 const CHIPS = [
@@ -82,13 +82,12 @@ export function Browse() {
     const id = ++requestId.current;
     setStatus("loading");
     setError(undefined);
-    wallhaven
-      .search({
-        query: debouncedQuery,
-        categories: CHIPS[chipIndex].categories,
-        sorting: debouncedQuery ? "relevance" : "toplist",
-        page: 1,
-      })
+    searchWallpapers({
+      query: debouncedQuery,
+      categories: CHIPS[chipIndex].categories,
+      sorting: debouncedQuery ? "relevance" : "toplist",
+      page: 1,
+    })
       .then((result) => {
         if (id !== requestId.current) return;
         setActiveTile(0); // a fresh result set starts its tab stop at the top
@@ -132,7 +131,7 @@ export function Browse() {
     setLoadingMore(true);
     setError(undefined);
     try {
-      const result = await wallhaven.search({
+      const result = await searchWallpapers({
         query: debouncedQuery,
         categories: CHIPS[chipIndex].categories,
         sorting: debouncedQuery ? "relevance" : "toplist",
@@ -249,7 +248,6 @@ export function Browse() {
               <WallpaperTile
                 key={wallpaper.id}
                 wallpaper={wallpaper}
-                source={wallhaven}
                 tabbable={i === Math.min(activeTile, items.length - 1)}
                 position={i + 1}
                 total={items.length}

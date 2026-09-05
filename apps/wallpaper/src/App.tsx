@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import AppBar from "./components/AppBar";
 import { Activate } from "./screens/Activate";
 import { Browse } from "./screens/Browse";
 import { FirstRun } from "./screens/FirstRun";
-import { Settings } from "./screens/Settings";
-import { getSettings, setSettings, type AppSettings } from "./settings/api";
-import { checkForUpdate, type Update } from "./updates";
+import { Settings, type AppSettings } from "./screens/Settings";
 
 type Screen = "browse" | "settings";
 type LicenseBoot = "loading" | "locked" | "ok" | "error";
@@ -19,7 +18,7 @@ function App() {
   const [update, setUpdate] = useState<Update | null>(null);
 
   useEffect(() => {
-    getSettings()
+    invoke<AppSettings>("get_settings")
       .then(setBoot)
       .catch(() => setBoot("error"));
   }, []);
@@ -39,7 +38,7 @@ function App() {
   useEffect(() => {
     if (boot === "error" || !boot?.firstRunCompleted || !boot.autoUpdateCheck) return;
     if (license !== "ok") return;
-    checkForUpdate()
+    check()
       .then((found) => found && setUpdate(found))
       .catch(() => {}); // offline is fine — Settings has a manual check
   }, [boot, license]);
@@ -79,7 +78,7 @@ function App() {
           onDone={() => {
             const next = { ...boot, firstRunCompleted: true };
             setBoot(next);
-            setSettings(next).catch(() => {});
+            invoke("set_settings", { settings: next }).catch(() => {});
           }}
         />
       </div>

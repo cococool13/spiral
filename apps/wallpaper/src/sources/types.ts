@@ -17,12 +17,3 @@ export interface SearchParams {
   sorting: "toplist" | "relevance";
   page: number;
 }
-
-/** A wallpaper provider. Add new free sources by implementing this — the UI never changes. */
-export interface WallpaperSource {
-  search(params: SearchParams): Promise<SearchPage>;
-  /** Resolve a wallpaper's thumbnail to a local asset URL (cached on disk by the backend). */
-  getThumb(wallpaper: Wallpaper): Promise<string>;
-  /** Download the full-res image and set it as the desktop wallpaper. */
-  apply(wallpaper: Wallpaper): Promise<void>;
-}

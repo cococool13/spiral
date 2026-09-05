@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import AppBar from "./components/AppBar";
-import type { Destination } from "./lib/destinations";
 import { Activate } from "./screens/Activate";
 import FirstRun from "./screens/FirstRun";
 import Clean from "./screens/Clean";
@@ -10,6 +9,14 @@ import Optimize from "./screens/Optimize";
 import Uninstall from "./screens/Uninstall";
 import History from "./screens/History";
 import Settings from "./screens/Settings";
+
+type Destination =
+  | "clean"
+  | "storage"
+  | "optimize"
+  | "uninstall"
+  | "history"
+  | "settings";
 
 /** The order a person meets them: what the app does, then what it remembers. */
 const DESTINATIONS: [Destination, string][] = [

@@ -5,8 +5,7 @@ Windows. Click a wallpaper — it downloads and applies. The app quits when you
 close the window; nothing keeps running in the background. Unlocks with a Spiral
 Collection license key (buy on Whop via spiralcc.tech or the Activate screen).
 
-- **Source:** Wallhaven, no key needed. The source sits behind a
-  `WallpaperSource` interface so more free sources can be added later.
+- **Source:** Wallhaven, no key needed. A second source needs product approval.
 - **Privacy:** no account, no analytics, no telemetry. Wallhaven is reached
   only when you search or apply. On open the app may ask GitHub once for a
   newer build — named in Settings and switchable off. All network calls happen
@@ -34,8 +33,7 @@ window quits).
 
 ## Layout
 
-- `src/` — React UI. Sources sit behind the `WallpaperSource` interface in
-  `src/sources/`.
+- `src/` — React UI. Wallhaven search/thumb/apply live in `src/sources/`.
 - `src-tauri/src/` — Rust core: `net.rs`/`cache.rs` (shared HTTP + disk cache,
   image-validated), `wallhaven.rs` (API client), `setter.rs` (native wallpaper
   APIs), `settings.rs`.

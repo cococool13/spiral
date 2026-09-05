@@ -309,7 +309,7 @@ things it cannot derive, checks the certificate password actually opens the
 **Wallpaper** is at v1.0.3 with a signed and notarized universal macOS build.
 Next: Windows signing and the remaining runtime pass on real Windows hardware.
 On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
-and were removed; the `WallpaperSource` interface is waiting for them). Out
+and were removed). Out
 of scope for v1: animated wallpapers, and any network call that is not Wallhaven
 or the named, switchable GitHub update check.
 

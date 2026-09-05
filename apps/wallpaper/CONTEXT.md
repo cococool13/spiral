@@ -16,9 +16,9 @@ the file is given — those two must not drift apart.
 
 | Term | Meaning |
 | --- | --- |
-| **Source** | A provider of wallpapers, behind the `WallpaperSource` interface in `src/sources/types.ts`: search, resolve a thumbnail, apply. The UI knows the interface and never the provider. |
+| **Source** | Wallhaven, via `search` / `getThumb` / `apply` in `src/sources/index.ts`. |
 | **Wallhaven** | The only source that ships. SFW search only; there is no API-key path and no NSFW category, by product decision rather than by omission. |
-| **Adding a source** | Implementing `WallpaperSource` and nothing else. A provider that would require changing the UI is a provider this app does not take, and a new one needs explicit product approval. Unsplash and Pexels shipped briefly and were removed; the interface is what is left of them. |
+| **Adding a source** | A product decision, not a missing interface. Unsplash and Pexels shipped briefly and were removed. |
 | **Wallpaper** | One image as a source describes it: an id, a resolution, a thumbnail URL and a full-resolution URL (`WallpaperItem` in `src-tauri/src/net.rs`). |
 | **Prefixed id** | Every id carries its source's prefix (`w-…` for Wallhaven) so two sources can never collide in the same cache directory. |
 

@@ -3,7 +3,6 @@ from pathlib import Path
 import plistlib
 from types import MappingProxyType
 
-from browser_collection.adapters.base import BrowserAdapter
 from browser_collection.evidence import load_evidence
 from browser_collection.models import (
     BrowserInstallation,
@@ -47,7 +46,7 @@ def _read_windows_policy_scope(winreg, root):
         return {}, False
 
 
-class BraveAdapter(BrowserAdapter):
+class BraveAdapter:
     browser_id = "brave"
     display_name = "Brave"
 
@@ -59,7 +58,7 @@ class BraveAdapter(BrowserAdapter):
         evidence_path=EVIDENCE_PATH,
         mac_policy_path=MAC_POLICY_PATH,
     ):
-        super().__init__(runner)
+        self.runner = runner
         self.mac_app_roots = tuple(Path(item) for item in mac_app_roots)
         if windows_roots:
             self.windows_roots = tuple(Path(item) for item in windows_roots)

@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import { Toggle } from "../components/Toggle";
-import {
-  clearThumbCache,
-  formatMegabytes,
-  getSettings,
-  setSettings,
-  thumbCacheSize,
-  type AppSettings,
-  type FitMode,
-} from "../settings/api";
-import { checkForUpdate, installUpdate, type Update } from "../updates";
+
+export type FitMode = "fill" | "fit" | "center";
+
+export interface AppSettings {
+  launchAtLogin: boolean;
+  fitMode: FitMode;
+  firstRunCompleted: boolean;
+  autoUpdateCheck: boolean;
+}
 
 const FIT_MODES: { value: FitMode; label: string }[] = [
   { value: "fill", label: "Fill" },
@@ -49,7 +51,7 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
   async function runCheck() {
     setPhase("checking");
     try {
-      const found = await checkForUpdate();
+      const found = await check();
       if (found) {
         setFoundUpdate(found);
         onUpdateFound(found);
@@ -66,15 +68,16 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
     if (!foundUpdate) return;
     setPhase("installing");
     try {
-      await installUpdate(foundUpdate); // relaunches on success
+      await foundUpdate.downloadAndInstall();
+      await relaunch();
     } catch {
       setPhase("failed");
     }
   }
 
   useEffect(() => {
-    getSettings().then(setLocal).catch(() => {});
-    thumbCacheSize().then(setCacheBytes).catch(() => {});
+    invoke<AppSettings>("get_settings").then(setLocal).catch(() => {});
+    invoke<number>("thumb_cache_size").then(setCacheBytes).catch(() => {});
   }, []);
 
   async function update(patch: Partial<AppSettings>) {
@@ -84,7 +87,7 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
     setLocal(next); // optimistic — revert on failure
     setError(undefined);
     try {
-      await setSettings(next);
+      await invoke("set_settings", { settings: next });
     } catch {
       setLocal(previous);
       setError("The setting didn’t save. Try again.");
@@ -94,8 +97,8 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
   async function clearCache() {
     setError(undefined);
     try {
-      await clearThumbCache();
-      setCacheBytes(await thumbCacheSize());
+      await invoke("clear_thumb_cache");
+      setCacheBytes(await invoke<number>("thumb_cache_size"));
     } catch {
       setError("Couldn’t clear the cache. Try again.");
     }
@@ -133,7 +136,7 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
           <h2 className="settings__label">Thumbnail cache</h2>
           <p className="settings__desc">
             200 MB max, stored in Spiral’s app data.
-            {cacheBytes !== undefined && ` Currently ${formatMegabytes(cacheBytes)}.`}
+            {cacheBytes !== undefined && ` Currently ${(cacheBytes / 1048576).toFixed(1)} MB.`}
           </p>
         </div>
         <button className="btn-glass btn-glass--secondary" onClick={clearCache}>

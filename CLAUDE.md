@@ -143,7 +143,7 @@ only in Documents or a sibling repo.
 
 - **Never define a brand value outside `brand/`.** Synced copies are deleted on the next build.
 - Use exact tokens from `brand/tokens.css`; `pnpm build` enforces the approved color set — no one-off hex.
-- Keep the `WallpaperSource` boundary; new providers need explicit product approval.
+- Wallhaven is the only source; a second provider needs explicit product approval.
 - State material background/network actions in plain language before they happen; errors name the problem and a next step.
 - Preserve keyboard nav, visible focus, and reduced-motion behavior.
 - Source-only, privacy-first: no telemetry, accounts, silent startup, or undisclosed background process. License validation is a named call to Spiral's validator on launch — see `docs/licensing.md`.

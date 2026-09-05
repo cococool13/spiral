@@ -295,6 +295,59 @@ async fn validate_online(
     Err(map_api_error(body.error.as_deref().unwrap_or("unknown")))
 }
 
+/// Tauri license commands for one app. Expand in `src-tauri/src/license.rs`.
+///
+/// ```ignore
+/// spiral_license::license_commands!(spiral_license::AppId::Wallpaper);
+/// ```
+#[macro_export]
+macro_rules! license_commands {
+    ($app_id:expr) => {
+        const APP: $crate::AppId = $app_id;
+
+        fn validator_url() -> String {
+            std::env::var("SPIRAL_LICENSE_URL")
+                .unwrap_or_else(|_| $crate::DEFAULT_VALIDATOR_URL.into())
+        }
+
+        fn map_err(e: $crate::LicenseError) -> String {
+            e.user_message()
+        }
+
+        #[tauri::command]
+        pub fn license_status() -> Result<bool, String> {
+            Ok($crate::has_key(APP))
+        }
+
+        #[tauri::command]
+        pub async fn license_activate(key: String) -> Result<(), String> {
+            $crate::activate(APP, &key, &validator_url())
+                .await
+                .map_err(map_err)
+        }
+
+        #[tauri::command]
+        pub async fn license_ensure() -> Result<(), String> {
+            $crate::ensure_licensed(APP, &validator_url())
+                .await
+                .map_err(map_err)
+        }
+
+        #[tauri::command]
+        pub fn license_clear() -> Result<(), String> {
+            $crate::clear_key(APP).map_err(map_err)
+        }
+
+        /// Refuse product commands until a key is present.
+        pub fn require(_app: &tauri::AppHandle) -> Result<(), String> {
+            if !$crate::has_key(APP) {
+                return Err($crate::LicenseError::EmptyKey.user_message());
+            }
+            Ok(())
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

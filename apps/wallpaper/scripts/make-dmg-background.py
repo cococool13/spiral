@@ -20,8 +20,8 @@ HLX_01 = "#D52E2B"
 S = 2  # retina scale
 W, H = 660 * S, 400 * S
 
-MONO_500 = "src/fonts/ibm-plex-mono-latin-500-normal.woff2"
-MONO_400 = "src/fonts/ibm-plex-mono-latin-400-normal.woff2"
+MONO_500 = "src/assets/fonts/host-grotesk-500.woff2"
+MONO_400 = "src/assets/fonts/host-grotesk-400.woff2"
 MARK = "../../brand/logo/png/mark-256.png"
 OUT = "src-tauri/dmg/background.png"
 

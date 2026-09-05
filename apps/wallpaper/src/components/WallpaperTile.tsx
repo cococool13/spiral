@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { errorCopy } from "../sources";
-import type { Wallpaper, WallpaperSource } from "../sources/types";
+import { apply, errorCopy, getThumb } from "../sources";
+import type { Wallpaper } from "../sources/types";
 
 type TileState = "idle" | "applying" | "applied" | "error";
 
 interface WallpaperTileProps {
   wallpaper: Wallpaper;
-  source: WallpaperSource;
   /** Roving tabindex: the grid keeps exactly one tile in the tab order. */
   tabbable: boolean;
   /** 1-based position, so each button has a name of its own. */
@@ -24,7 +23,6 @@ const LABEL: Record<TileState, string> = {
 
 export function WallpaperTile({
   wallpaper,
-  source,
   tabbable,
   position,
   total,
@@ -35,8 +33,7 @@ export function WallpaperTile({
 
   useEffect(() => {
     let live = true;
-    source
-      .getThumb(wallpaper)
+    getThumb(wallpaper)
       .then((src) => live && setThumbSrc(src))
       .catch(() => {}); // a missing thumbnail keeps its concrete placeholder
     return () => {
@@ -44,12 +41,12 @@ export function WallpaperTile({
     };
   }, [wallpaper.id]);
 
-  async function apply() {
+  async function onApply() {
     if (state === "applying") return; // aria-disabled, so the click still lands
     setState("applying");
     setError(undefined);
     try {
-      await source.apply(wallpaper);
+      await apply(wallpaper);
       setState("applied");
     } catch (e: unknown) {
       setError(errorCopy(e));
@@ -91,7 +88,7 @@ export function WallpaperTile({
               ? "btn-glass btn-glass--primary"
               : "btn-glass btn-glass--secondary"
           }
-          onClick={apply}
+          onClick={onApply}
           aria-disabled={state === "applying"}
           tabIndex={tabbable ? 0 : -1}
           aria-label={`${LABEL[state]}, ${wallpaper.resolution}, ${position} of ${total}`}

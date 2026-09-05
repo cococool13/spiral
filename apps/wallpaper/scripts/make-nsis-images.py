@@ -15,7 +15,7 @@ CONC_03 = "#2C2C2E"
 STL_02 = "#8C8D8A"
 HLX_01 = "#D52E2B"
 
-MONO_500 = "src/fonts/ibm-plex-mono-latin-500-normal.woff2"
+MONO_500 = "src/assets/fonts/host-grotesk-500.woff2"
 MARK = "../../brand/logo/png/mark-256.png"
 
 

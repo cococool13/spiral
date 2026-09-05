@@ -232,7 +232,7 @@ export const appPages: AppPage[] = [
       },
       {
         q: "Can I add my own wallpaper source?",
-        a: "The code is arranged for it — sources sit behind a `WallpaperSource` boundary so a new one does not mean rewriting the interface. Shipping one is a product decision, not a technical one.",
+        a: "No. Wallhaven is the only source. Shipping another is a product decision, not a missing interface.",
       },
       {
         q: "Does it support animated or live wallpapers?",
