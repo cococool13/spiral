@@ -52,6 +52,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Check Whop checkout URLs
+        working-directory: .
         run: node scripts/check-whop.mjs
 
       - uses: pnpm/action-setup@v6
