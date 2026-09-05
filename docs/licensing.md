@@ -22,8 +22,8 @@ node scripts/check-whop.mjs   # CI gate — fails if mirrors drift
 Buy links on the website: Hero and Nav. Buy links in apps: the Activate screen
 shown on first launch when no key is stored.
 
-Post-checkout uses Whop's default success page (license key shown there). No
-custom redirect is configured in code.
+Post-checkout redirects to `https://spiralcc.tech/thanks` (download links plus
+how to paste the `mem_` key). Checkout URL is canonical in `collection/lib/whop.ts`.
 
 Portfolio footer links both stores: https://cohen-portfolio.pages.dev → Whop
 (https://whop.com/@cococool13).

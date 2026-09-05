@@ -47,6 +47,11 @@ export default function Footer() {
           </Col>
           <Col title="Site">
             <li>
+              <a href="/thanks/" className="close-link">
+                After you pay
+              </a>
+            </li>
+            <li>
               <a href="/privacy/" className="close-link">
                 Privacy
               </a>

@@ -6,7 +6,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/privacy/", "/work/"],
+      allow: "/",
+      disallow: "/thanks",
     },
     sitemap: "https://spiralcc.tech/sitemap.xml",
   };

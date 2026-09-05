@@ -52,7 +52,7 @@ export default function Hero() {
       <div className="obs-inner">
         <Scramble
           as="p"
-          text="Spiral Collection — four desktop apps for Mac and Windows"
+          text="Spiral Collection — Wallpaper, Slim, and Resume. One license."
           immediate
           delay={240}
           className="obs-readout"
