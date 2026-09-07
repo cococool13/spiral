@@ -162,7 +162,7 @@ export const otherWork: OtherProject[] = [
     cover: "/work/pulse.webp",
     coverAlt:
       "Rhythm picker listing Normal Sinus, Bigeminy, and Wenckebach on a dark card list.",
-    href: "https://cococool13.github.io/Pulse/",
+    href: "https://pulse-6or.pages.dev/",
   },
 ];
 
