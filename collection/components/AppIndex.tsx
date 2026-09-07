@@ -49,10 +49,10 @@ export default function AppIndex() {
 
                   <span className="frame-name">
                     <Mark size={28} className="frame-mark" />
-                    <span className="type-heading frame-lockup">
+                    <h3 className="type-heading frame-lockup">
                       <span className="frame-lockup-collection">Spiral</span>
                       <span className="frame-lockup-app">{short}</span>
-                    </span>
+                    </h3>
                   </span>
 
                   <span className="frame-proof">{PROOF[app.slug] ?? app.tagline}</span>

@@ -1,0 +1,9 @@
+# Spiral Collection — https://spiralcc.tech
+# Allow crawlers. /thanks is a post-purchase download page (noindex).
+
+User-agent: *
+Allow: /
+Disallow: /thanks
+Disallow: /thanks/
+
+Sitemap: https://spiralcc.tech/sitemap.xml
