@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://spiralcc.tech",
+    url: "/",
     siteName: "Spiral",
     title: "Spiral — Small tools. No bloat. Your data stays yours.",
     description:

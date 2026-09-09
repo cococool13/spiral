@@ -9,7 +9,13 @@ const page = appPage("clean");
 export const metadata: Metadata = {
   title: page.title,
   description: page.description,
-  openGraph: { title: page.title, description: page.description, type: "website" },
+  alternates: { canonical: `/${page.slug}/` },
+  openGraph: {
+    title: page.title,
+    description: page.description,
+    type: "website",
+    url: `/${page.slug}/`,
+  },
 };
 
 export default function CleanPage() {

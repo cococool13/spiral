@@ -8,7 +8,13 @@ const page = appPage("resume");
 export const metadata: Metadata = {
   title: page.title,
   description: page.description,
-  openGraph: { title: page.title, description: page.description, type: "website" },
+  alternates: { canonical: `/${page.slug}/` },
+  openGraph: {
+    title: page.title,
+    description: page.description,
+    type: "website",
+    url: `/${page.slug}/`,
+  },
 };
 
 /** The one claim on this page that is worth showing rather than stating: two
