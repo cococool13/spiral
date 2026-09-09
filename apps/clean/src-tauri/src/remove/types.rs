@@ -25,21 +25,16 @@ pub enum Justification {
     /// constructs — `catalog_clean::catalog_candidates_for` builds every candidate with it.
     Catalog(String),
     /// App-managed state whose owning app is gone (ADR-0007). Constructed by
-    /// the leftovers sweep in M4 (Uninstall); the disposition and containment
-    /// rules it relies on are already built and mutation-proved, which is why
-    /// the variant stays rather than being deleted and rebuilt worse.
-    #[allow(dead_code)]
+    /// leftovers (`leftover_candidates_for`).
     Orphan { bundle_id: String },
     /// The application bundle and its associated files (ADR-0004, as
-    /// amended). `evidence` is the caller's claim about how `bundle_id` was
-    /// established — `disposition_for` does not trust it blindly: for
-    /// `Evidence::Verified` it re-checks that the path itself proves the tie
-    /// (its name carries `bundle_id`, or it is an app bundle declaring it)
-    /// before granting `Permanent`, and denies the candidate outright if it
-    /// does not. An Apple bundle id is refused at that boundary whatever the
-    /// evidence. This is the enforcement ADR-0011 gated on; the first
-    /// producer lands in M4, together with `associate.rs`.
-    #[allow(dead_code)]
+    /// amended). Constructed by uninstall (`candidates_for`). `evidence` is
+    /// the caller's claim about how `bundle_id` was established —
+    /// `disposition_for` does not trust it blindly: for `Evidence::Verified`
+    /// it re-checks that the path itself proves the tie (its name carries
+    /// `bundle_id`, or it is an app bundle declaring it) before granting
+    /// `Permanent`, and denies the candidate outright if it does not. An
+    /// Apple bundle id is refused at that boundary whatever the evidence.
     AppBundle { bundle_id: String, evidence: Evidence },
     /// A launchd job definition the user chose to remove (ADR-0008, where
     /// removal is the deliberate second step after a reversible disable).

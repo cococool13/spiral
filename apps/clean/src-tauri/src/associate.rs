@@ -68,8 +68,6 @@ const APPLE_OWNED_NAMES: &[&str] = &[
 
 /// One on-disk item found under a [`LOCATIONS`] entry, and how strongly it
 /// is tied to the app being looked up.
-///
-/// No caller yet — Task 5 (the read-only uninstall commands) wires this in.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Associated {
     pub path: PathBuf,
@@ -143,8 +141,6 @@ pub(crate) fn is_apple_bundle_id(bundle_id: &str) -> bool {
 /// `Roots::new` and `is_within_app_bundle_scope` and why the fix belongs at
 /// the call site that hands the *same* `home` to both this function and
 /// `remove::execute`, not inside either one alone.
-///
-/// No caller yet — Task 5 (the read-only uninstall commands) wires this in.
 pub fn associate(bundle_id: &str, app_name: &str, home: &Path) -> Vec<Associated> {
     // Refused before any search happens, not merely excluded from the
     // results: a spoofed com.apple.* app must never even be listed, since

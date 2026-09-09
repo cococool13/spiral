@@ -1,14 +1,4 @@
-// This crate carried a blanket `#![allow(dead_code)]` through M2, when the
-// safety core existed before any screen could reach it and the lib target
-// produced 49 expected `dead_code` warnings. It was removed at M3, when the
-// Clean screen wired `scan` and `remove` to real commands.
-//
-// Removing it immediately surfaced a real finding the noise had been hiding —
-// a `Candidate` field written as a constant zero and read by nobody — which is
-// precisely what the blanket allow was predicted to cost. **Do not reintroduce
-// one.** The few items that genuinely have no caller yet carry their own
-// narrowly scoped `#[allow(dead_code)]` naming the milestone that consumes
-// them, so a warning here now means what it says.
+// Do not reintroduce `#![allow(dead_code)]`. A warning here means what it says.
 mod analyze;
 mod apps;
 mod associate;
