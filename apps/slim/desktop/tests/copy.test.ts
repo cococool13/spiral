@@ -7,42 +7,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   CONTROL_LABELS,
-  MODULE_LABELS,
   PROFILE_COPY,
   controlLabel,
-  formatPolicyValue,
-  moduleLabel,
   profileCopy,
   riskLabel,
 } from "../src/lib/copy";
 import { RECOMMENDED_PROFILE_ID } from "../src/lib/wizard";
 
-describe("policy values render the way brave://policy shows them", () => {
-  it("distinguishes an unset policy from a false one", () => {
-    expect(formatPolicyValue(null)).toBe("not set");
-    expect(formatPolicyValue(false)).toBe("false");
-  });
-
-  it("renders booleans as the literal policy values", () => {
-    expect(formatPolicyValue(true)).toBe("true");
-  });
-
-  it("renders numbers without reformatting them", () => {
-    expect(formatPolicyValue(1)).toBe("1");
-    expect(formatPolicyValue(0)).toBe("0");
-  });
-
-  it("passes strings through unchanged", () => {
-    expect(formatPolicyValue("automatic")).toBe("automatic");
-    expect(formatPolicyValue("")).toBe("");
-  });
-});
-
 describe("labels fall back rather than hide", () => {
-  it("falls back to the stable id for an unknown module", () => {
-    expect(moduleLabel("not-a-module")).toBe("not-a-module");
-  });
-
   it("falls back to the stable id for an unknown control", () => {
     expect(controlLabel("vendor.something-new")).toBe("vendor.something-new");
   });
@@ -71,14 +43,13 @@ describe("the described profiles match what ships", () => {
   });
 
   it("keeps every label non-empty", () => {
-    for (const label of Object.values({ ...MODULE_LABELS, ...CONTROL_LABELS })) {
+    for (const label of Object.values(CONTROL_LABELS)) {
       expect(label.length).toBeGreaterThan(0);
     }
   });
 
   it("uses no em-dash in any user-visible string", () => {
     const strings = [
-      ...Object.values(MODULE_LABELS),
       ...Object.values(CONTROL_LABELS),
       ...Object.values(PROFILE_COPY).flatMap((copy) => [
         copy.purpose,

@@ -4,7 +4,7 @@ Cross-platform browser debloat/hardening tool using Chromium and Mozilla enterpr
 
 All three platforms share one multi-browser engine: `--browser brave|chrome|edge|firefox`
 (Edge is Windows/macOS only — no auditable Linux policy source) and one per-browser
-preset layout (`Presets/<Browser>/*.json`). macOS additionally carries a
+preset layout (`Presets/<Browser>/*.json`). macOS and Windows carry a
 `--detect`/`--preview-plan`/`--apply-plan` interface, Brave-only, that exists
 specifically to back this repo's `desktop/` Tauri wizard — see below.
 
@@ -44,6 +44,8 @@ python3 spiral-slim-mac.py --preview-plan ./plan.json --channels stable --format
 sudo python3 spiral-slim-mac.py --apply-plan ./plan.json --channels stable --persist on
 ```
 
+Windows uses the same flags on `slimbrave-windows.py` (Administrator for `--apply-plan` / `--reset`).
+
 ## Architecture
 
 ```
@@ -78,7 +80,7 @@ SECURITY.md          # distribution warning: scripts everywhere, one
 `Presets/<Browser>/*.json` is the TUI's world: a `Features` map of policy keys
 plus a `"Browser"` field, consumed by `--import`. `profiles/` + `modules/` is
 the schema-driven world the `browser_collection` engine resolves, consumed by
-`--preview-plan` and `--apply-plan` (macOS/Brave only).
+`--preview-plan` and `--apply-plan` (Brave only; macOS and Windows).
 
 **They are not interchangeable.** `import_settings` only applies keys that
 exist as TUI rows for the selected browser on the current platform — e.g.
@@ -109,7 +111,7 @@ plan the entrypoint accepts unchanged.
 - Verify macOS persistence behavior in `README.md` before changing `--persist` logic; profile installation requires GUI completion on modern macOS.
 - Preserve stdlib-only Python unless a dependency is deliberately introduced and documented.
 - Treat policy changes as security-sensitive: prefer explicit, readable mappings over clever abstractions.
-- The plan interface (`--detect`/`--preview-plan`/`--apply-plan`) is Brave-only and macOS-only. Don't extend it to other browsers or ship it on Linux/Windows without also building the corresponding `browser_collection` adapter — there isn't one today.
+- The plan interface (`--detect`/`--preview-plan`/`--apply-plan`) is Brave-only. macOS (`spiral-slim-mac.py`) and Windows (`slimbrave-windows.py`) already expose it. Don't extend it to other browsers or ship it on Linux without also building the corresponding `browser_collection` adapter — there isn't one today.
 
 ## Verification
 

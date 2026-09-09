@@ -11,8 +11,9 @@ product
 People on macOS or Windows who want Brave configured sensibly and do not want to read a
 policy reference to get there. They are in a one-time errand, not a workflow:
 open, pick, read what will change, confirm, done. A meaningful share are
-privacy-conscious and are here precisely because Spiral Slim makes no network
-calls and shows the exact diff before touching anything.
+privacy-conscious and are here because the wizard shows the exact diff
+before touching anything. The only network call is the named Whop license
+check on launch (`docs/licensing.md`).
 
 Second audience: people who already ran SlimBrave Neo from a terminal and want
 the same thing without `sudo` and a curses TUI.
@@ -35,8 +36,8 @@ and remove existing policies without applying anything first.
 
 Success = the user understands exactly what changed and can undo it.
 
-The app owns no policy logic. `spiral-slim-mac.py` owns every path, privilege
-check, plist, Configuration Profile, and prefs repair.
+The app owns no policy logic. The platform entrypoint owns every path and
+write (`spiral-slim-mac.py` or `slimbrave-windows.py`).
 
 ## Brand Personality
 "Complex but simple." Modern industrial: concrete floors, few walls, metal

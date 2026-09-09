@@ -75,14 +75,6 @@ export const PROFILE_COPY: Readonly<Record<string, ProfileCopy>> = {
   },
 };
 
-export const MODULE_LABELS: Readonly<Record<string, string>> = {
-  "security-foundation": "Security foundation",
-  "privacy-balanced": "Balanced privacy",
-  "performance-balanced": "Balanced performance",
-  "debloat-core": "Core debloat",
-  "quiet-web": "Quiet web",
-};
-
 export const CONTROL_LABELS: Readonly<Record<string, string>> = {
   "security.safe-browsing": "Safe Browsing",
   "security.downloads.malicious": "Malicious download blocking",
@@ -113,10 +105,6 @@ export const RISK_LABELS: Readonly<Record<string, string>> = {
   destructive: "Destructive",
 };
 
-export function moduleLabel(id: string): string {
-  return MODULE_LABELS[id] ?? id;
-}
-
 export function controlLabel(id: string): string {
   return CONTROL_LABELS[id] ?? id;
 }
@@ -127,11 +115,4 @@ export function riskLabel(risk: string): string {
 
 export function profileCopy(id: string): ProfileCopy | null {
   return PROFILE_COPY[id] ?? null;
-}
-
-/** Render a managed policy value the way Brave's policy page shows it. */
-export function formatPolicyValue(value: boolean | number | string | null): string {
-  if (value === null) return "not set";
-  if (typeof value === "boolean") return value ? "true" : "false";
-  return String(value);
 }
