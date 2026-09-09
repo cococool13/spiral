@@ -38,7 +38,6 @@ pub fn run() {
     }
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             commands::clean_scan,
             commands::clean_execute,
