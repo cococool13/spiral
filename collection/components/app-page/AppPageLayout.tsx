@@ -12,7 +12,7 @@ import { apps } from "@/lib/apps";
  *  catalogue, not from `page.cta`. Hand-typed, Slim's said "Download for
  *  macOS" and pointed at `spiral/releases` — Slim ships from `Spiral-Slim`, so
  *  that page had no Slim DMG on it. A page CTA also never OS-routed and could
- *  not respect `noWindowsBinary`. `page.cta` still carries the apps that have
+ *  not respect `noWindowsBinary`. `page.cta` is only set for apps that have
  *  nothing to download yet. */
 function Actions({ page }: { page: AppPage }) {
   const app = apps.find((a) => a.slug === page.slug);
@@ -24,11 +24,11 @@ function Actions({ page }: { page: AppPage }) {
           silently dead. Change the pill in globals.css instead. */}
       {app?.downloads ? (
         <GlassPillCTA app={app} />
-      ) : (
+      ) : page.cta ? (
         <a href={page.cta.href} className="glass-pill">
           {page.cta.label}
         </a>
-      )}
+      ) : null}
       <a href={page.secondary.href} className="glass-pill glass-pill--secondary">
         {page.secondary.label}
       </a>
@@ -54,8 +54,6 @@ export default function AppPageLayout({
       <Nav />
       <main id="content">
         <section className="mx-auto max-w-6xl px-6 pt-36 pb-16 sm:pt-44 sm:pb-20">
-          {/* No eyebrow. The nav already names the app you are reading, and
-              the headline is a whole sentence. */}
           <h1 className="type-display max-w-[680px] text-5xl text-paper sm:text-7xl">
             {page.headline.map((line) => (
               <span key={line} className="block">
