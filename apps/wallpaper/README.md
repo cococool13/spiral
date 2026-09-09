@@ -27,9 +27,6 @@ pnpm smoke                # debug-only end-to-end smoke test; restores your wall
 
 `scripts/make-dmg-background.py` and `scripts/make-nsis-images.py` regenerate
 the committed installer artwork from the brand tokens (Python 3 + Pillow).
-`src-tauri/icons/android/` is Tauri scaffolding leftover — not a shipped Android
-app. `src-tauri/icons/tray-44.png` is unused; this app has no tray (closing the
-window quits).
 
 ## Layout
 
