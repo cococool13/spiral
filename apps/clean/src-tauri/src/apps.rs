@@ -18,9 +18,6 @@
 use std::path::{Path, PathBuf};
 
 /// An application bundle found under `/Applications` or `~/Applications`.
-///
-/// Nothing outside this module's own tests constructs one yet — the
-/// commands that do are Task 5.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstalledApp {
     pub name: String,
@@ -33,9 +30,6 @@ pub struct InstalledApp {
 
 /// A reason this app must be handed off to something other than a file
 /// deletion. Never a trigger for one — see the module doc comment.
-///
-/// Nothing outside this module's own tests constructs one yet — the
-/// commands that do are Task 5.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Handoff {
     /// Installed by Homebrew Cask. Carries the cask token (e.g.
@@ -159,8 +153,6 @@ fn is_real_dir(path: &Path) -> bool {
 /// The plist is parsed with a small hand-rolled scan for these two keys
 /// rather than a real plist parser or an XML crate — this module needs
 /// exactly two string values and nothing else about the format.
-///
-/// No caller yet — Task 5 wires this into a Tauri command.
 pub fn read_bundle(path: &Path) -> Option<(String, String)> {
     let plist = plist_text(&path.join("Contents/Info.plist"))?;
     let bundle_id = extract_plist_string(&plist, "CFBundleIdentifier")?;
@@ -258,8 +250,6 @@ pub(crate) fn extract_plist_string(xml: &str, key: &str) -> Option<String> {
 /// only consequence of getting this wrong is that the user is or isn't
 /// offered the chance to quit the app first; it must never abort a caller
 /// that only wanted to know.
-///
-/// No caller yet — Task 5 wires this into a Tauri command.
 pub fn is_running(bundle_id: &str) -> bool {
     pgrep_running("pgrep", bundle_id)
 }
