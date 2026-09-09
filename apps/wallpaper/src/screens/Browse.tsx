@@ -14,20 +14,18 @@ const CHIPS = [
 // Wallhaven allows ~45 requests/minute — debounce typing well below that.
 const SEARCH_DEBOUNCE_MS = 500;
 
-type Status = "idle" | "loading" | "ready" | "error";
+type Status = "loading" | "ready" | "error";
 
 export function Browse() {
   const [query, setQuery] = useState("");
   const [chipIndex, setChipIndex] = useState(0);
-  const [status, setStatus] = useState<Status>("idle");
+  // Opening Browse is the act — search starts on mount.
+  const [status, setStatus] = useState<Status>("loading");
   const [items, setItems] = useState<Wallpaper[]>([]);
   const [pageNum, setPageNum] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
-  // First-run already said Wallhaven would be reached. Opening Browse is the
-  // act; an empty window is not the errand.
-  const [touched, setTouched] = useState(true);
   const requestId = useRef(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   // Roving tabindex: only this tile is in the tab order.
@@ -104,9 +102,8 @@ export function Browse() {
   }, [chipIndex, debouncedQuery]);
 
   useEffect(() => {
-    if (!touched) return;
     search();
-  }, [search, touched]);
+  }, [search]);
 
   useEffect(() => {
     function focusSearch(event: KeyboardEvent) {
@@ -175,10 +172,7 @@ export function Browse() {
         placeholder="search wallpapers — press /"
         spellCheck={false}
         value={query}
-        onChange={(e) => {
-          setQuery(e.currentTarget.value);
-          setTouched(true);
-        }}
+        onChange={(e) => setQuery(e.currentTarget.value)}
       />
 
       {/* Same one-of-N control as Settings' segmented group, and now stated
@@ -189,26 +183,12 @@ export function Browse() {
             key={chip.label}
             aria-pressed={i === chipIndex}
             className={i === chipIndex ? "chip chip--active" : "chip"}
-            onClick={() => {
-              setChipIndex(i);
-              setTouched(true);
-            }}
+            onClick={() => setChipIndex(i)}
           >
             {chip.label}
           </button>
         ))}
       </div>
-
-      {status === "idle" && (
-        <section className="browse__empty" aria-label="No wallpapers loaded">
-          <span className="browse__empty-eyebrow">Browse</span>
-          <h1 className="browse__empty-title">Nothing loaded yet.</h1>
-          <p className="browse__empty-copy">
-            Search, or pick a category. Wallhaven is reached only when you act.
-            A named GitHub update check may already have run on open — see Settings.
-          </p>
-        </section>
-      )}
 
       {status === "loading" && (
         <section className="browse__empty" aria-label="Loading">
