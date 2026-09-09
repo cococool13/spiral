@@ -9,7 +9,6 @@ interface Props {
    *  decided from the catalogue entry, so `noWindowsBinary` cannot be left
    *  behind at a call site. */
   app: SpiralApp;
-  secondary?: boolean;
 }
 
 /** Apple mark. Nominative use on a download control — no endorsement implied. */
@@ -54,7 +53,7 @@ export function WindowsMark() {
  * for" + glyph). The full label stays on aria-label, so assistive tech still
  * hears "Download for Mac" — the glyph is decoration, never the only signal.
  */
-export default function GlassPillCTA({ app, secondary }: Props) {
+export default function GlassPillCTA({ app }: Props) {
   const { os, ready } = useOS();
   if (!app.downloads) return null;
 
@@ -65,7 +64,7 @@ export default function GlassPillCTA({ app, secondary }: Props) {
       <a
         href={app.downloads.all}
         aria-label={`Download ${app.name}`}
-        className={`glass-pill${secondary ? " glass-pill--secondary" : ""}`}
+        className="glass-pill"
       >
         Download
       </a>
@@ -79,11 +78,7 @@ export default function GlassPillCTA({ app, secondary }: Props) {
     offer.mark === "apple" ? AppleMark : offer.mark === "windows" ? WindowsMark : null;
 
   return (
-    <a
-      href={offer.url}
-      aria-label={offer.label}
-      className={`glass-pill${secondary ? " glass-pill--secondary" : ""}`}
-    >
+    <a href={offer.url} aria-label={offer.label} className="glass-pill">
       {Mark ? "Download for" : offer.label}
       {Mark && <Mark />}
     </a>

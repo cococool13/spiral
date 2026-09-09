@@ -11,7 +11,7 @@
  * intention.
  */
 
-export interface Fact {
+interface Fact {
   label: string;
   value: string;
 }
@@ -21,11 +21,11 @@ export interface AppPage {
   name: string;
   title: string;
   description: string;
-  eyebrow: string;
   /** One line per rendered line, broken where the thought breaks. */
   headline: string[];
   sub: string;
-  cta: { label: string; href: string };
+  /** Used only when the catalogue has no downloads for this app. */
+  cta?: { label: string; href: string };
   secondary: { label: string; href: string };
   proofLine: string;
   /** The large statement further down the page. Two lines minimum. */
@@ -44,17 +44,15 @@ export interface AppPage {
 const REPO = "https://github.com/cococool13/spiral";
 const RELEASE = `${REPO}/releases`;
 
-export const appPages: AppPage[] = [
+const appPages: AppPage[] = [
   {
     slug: "resume",
     name: "Spiral Resume",
     title: "Spiral Resume — your resume, set properly",
     description:
       "A desktop resume builder. Twelve typeset layouts, PDF and Word from one source, and a mechanical gate that discards a rewrite when a digit run or capitalized name moves.",
-    eyebrow: "Spiral Resume",
     headline: ["Your resume,", "set properly."],
     sub: "Twelve typeset layouts. Your words, your facts, your file — PDF or Word, on your computer in about a second.",
-    cta: { label: "Get 0.1.1", href: `${REPO}/releases/tag/resume-v0.1.1` },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/Resume` },
     proofLine:
       "Digits and names are checked in order; a rewrite that moves one is discarded. Needs a Spiral Collection license.",
@@ -157,10 +155,8 @@ export const appPages: AppPage[] = [
     title: "Spiral Wallpaper — click a wallpaper, it applies",
     description:
       "A 4.6 MB desktop wallpaper app for macOS and Windows. No telemetry, and nothing running in the background once you close it. Unlocks with a Spiral Collection license key.",
-    eyebrow: "Spiral Wallpaper",
     headline: ["One click.", "New wallpaper."],
     sub: "Search, click, done. A 4.6 MB app that closes when you close it and leaves nothing running behind.",
-    cta: { label: "Download for macOS", href: RELEASE },
     secondary: { label: "All downloads", href: RELEASE },
     proofLine: "One license. Version 1.0.3, signed and notarised on macOS.",
     tagline: [
@@ -251,13 +247,8 @@ export const appPages: AppPage[] = [
     title: "Spiral Slim — debloat your browser, see every change first",
     description:
       "The macOS wizard sets Brave's enterprise privacy policies and shows every change first. Scripts on macOS, Windows and Linux cover Brave, Chrome, Edge and Firefox.",
-    eyebrow: "Spiral Slim",
     headline: ["Debloat your", "browser."],
     sub: "The signed macOS app configures Brave. The same policies, as scripts, cover Brave, Chrome, Edge and Firefox. No extension, no patch, nothing injected.",
-    cta: {
-      label: "Download for macOS",
-      href: "https://github.com/cococool13/Spiral-Slim/releases/latest",
-    },
     secondary: { label: "Read the source", href: `${REPO}/tree/main/apps/slim` },
     proofLine: "One license. Python standard library only, no dependencies.",
     tagline: [
@@ -348,7 +339,6 @@ export const appPages: AppPage[] = [
     title: "Spiral Clean — it asks before it deletes, and mostly it does not delete",
     description:
       "A macOS maintenance app built around one rule: it may only permanently remove things from a fixed catalogue of regenerable files. Everything else goes to the Trash.",
-    eyebrow: "Spiral Clean",
     headline: ["A cleaner", "you can trust."],
     sub: "It removes caches and uninstalls apps on macOS. What it may permanently delete is a fixed list decided before the release, not a judgement it makes about your files.",
     cta: { label: "Read the source", href: `${REPO}/tree/main/apps/clean` },

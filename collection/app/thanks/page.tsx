@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   description:
     "Download Wallpaper, Slim, and Resume. Paste your Whop license key on the Activate screen.",
+  alternates: { canonical: "/thanks/" },
+  openGraph: { url: "/thanks/" },
 };
 
 const live = apps.filter((a) => a.status === "live" && a.downloads);

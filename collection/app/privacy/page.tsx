@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: "Privacy — Spiral",
   description:
     "Spiral apps do not make accounts, do not collect telemetry, and do not upload your files. This page states what each app actually reaches.",
+  alternates: { canonical: "/privacy/" },
+  openGraph: { url: "/privacy/" },
 };
 
 export default function PrivacyPage() {

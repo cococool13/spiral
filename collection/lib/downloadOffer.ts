@@ -2,7 +2,7 @@ import type { SpiralApp } from "./apps";
 import type { OS } from "./useOS";
 
 /** What a visitor on a given machine is actually offered for one app. */
-export interface Offer {
+interface Offer {
   url: string;
   /** The full sentence, and the accessible name. Always names the platform. */
   label: string;
