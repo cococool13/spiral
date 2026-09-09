@@ -56,7 +56,6 @@ Adding these makes the shipped catalog match what `design-spec.md` decision 3 an
 
 ### Commands
 
-- **`clean_categories() -> Vec<CategorySummary>`** — the catalog's ids and labels, so rows can render before a scan finishes.
 - **`clean_scan() -> Vec<CategoryResult>`** — per category: id, label, estimated bytes, item count, and the paths behind the expansion disclosure.
 - **`clean_execute(ids: Vec<String>) -> CleanReport`** — the only destructive entry point.
 

@@ -11,20 +11,21 @@ use std::path::PathBuf;
 
 #[test]
 fn every_catalog_entry_is_summarised() {
-    let summaries = category_summaries();
-    assert_eq!(summaries.len(), crate::catalog::catalog().len());
-    assert!(summaries.iter().any(|s| s.id == "user-caches"));
-    assert!(summaries.iter().any(|s| s.id == "trash"));
+    let catalog = catalog::catalog();
+    assert!(!catalog.is_empty());
+    assert!(catalog.iter().any(|e| e.id == "user-caches"));
+    assert!(catalog.iter().any(|e| e.id == "trash"));
 }
 
 #[test]
 fn summaries_carry_the_catalog_label_verbatim() {
-    let entry = crate::catalog::find("user-caches").unwrap();
-    let summary = category_summaries()
-        .into_iter()
-        .find(|s| s.id == "user-caches")
-        .unwrap();
-    assert_eq!(summary.label, entry.label);
+    let entry = catalog::find("user-caches").unwrap();
+    let listed = catalog::catalog()
+        .iter()
+        .find(|e| e.id == "user-caches")
+        .expect("user-caches must remain in the live catalog");
+    assert_eq!(listed.label, entry.label);
+    assert_eq!(listed.label, "Application caches");
 }
 
 #[test]

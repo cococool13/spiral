@@ -5,27 +5,8 @@
 //! IPC shapes and progressive scan; `clean_execute` is a thin wrap.
 
 use crate::catalog_clean::{self, CleanReport};
-use crate::{catalog, scan};
+use crate::scan;
 use super::PATHS_PREVIEW_LIMIT;
-
-#[derive(Debug, serde::Serialize)]
-pub struct CategorySummary {
-    pub id: String,
-    pub label: String,
-}
-
-/// Testable core of `clean_categories` — no Tauri types.
-pub(crate) fn category_summaries() -> Vec<CategorySummary> {
-    catalog::catalog()
-        .iter()
-        .map(|e| CategorySummary { id: e.id.to_string(), label: e.label.to_string() })
-        .collect()
-}
-
-#[tauri::command]
-pub fn clean_categories() -> Vec<CategorySummary> {
-    category_summaries()
-}
 
 /// Cap the path preview; the true count (`items`) and total (`bytes`) stay.
 pub(crate) fn capped(mut result: scan::CategoryResult) -> scan::CategoryResult {
