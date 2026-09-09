@@ -1,6 +1,5 @@
 /**
- * `source` is shipped and usable, but distributed as source rather than as a
- * download — no status here may offer a binary that does not exist.
+ * No status here may offer a binary that does not exist.
  *
  * Spiral Slim is the case that shaped it. Its SECURITY.md draws the line by
  * platform, not by product: the policy scripts are source-only everywhere, and
@@ -8,7 +7,7 @@
  * `apps/slim/desktop`. So the Slim card offers that DMG on macOS and sends
  * Windows visitors to the source, which is what `noWindowsBinary` is for.
  */
-export type AppStatus = "live" | "source" | "coming-soon";
+export type AppStatus = "live" | "coming-soon";
 
 export interface SpiralApp {
   slug: string;
@@ -16,8 +15,6 @@ export interface SpiralApp {
   tagline: string;
   status: AppStatus;
   version?: string;
-  /** Where a `source` app is built from. Required when status is "source". */
-  source?: { url: string; note: string };
   /**
    * The app runs on Windows, but no Windows *binary* is published and none
    * ever will be — the project's SECURITY.md rules it out. Without this the
@@ -25,8 +22,6 @@ export interface SpiralApp {
    * the one thing a page about trusting binaries must not do.
    */
   noWindowsBinary?: true;
-  /** Inline SVG path data drawn in a 24x24 viewBox, stroke-based. */
-  iconPath: string;
   /** A page on this site that explains the app. Rendered as the card's link. */
   page?: string;
   /**
@@ -56,7 +51,6 @@ export const apps: SpiralApp[] = [
     version: "1.0.3",
     brewCask: "spiral-wallpaper",
     page: "/wallpaper/",
-    iconPath: "M3 5h18v13H3zM3 18h18M9 21h6M6 8l4 4M14 8l4 4M10 12l-2 3M16 12l-1.5 3",
     downloads: {
       mac: {
         url: `${RELEASE}/Spiral.Wallpaper_1.0.3_universal.dmg`,
@@ -89,9 +83,7 @@ export const apps: SpiralApp[] = [
       },
       all: "https://github.com/cococool13/Spiral-Slim/releases/latest",
     },
-    // A shield with two setting lines: policy, under protection.
     page: "/slim/",
-    iconPath: "M12 3l7 3v5.5c0 4.5-3 7.5-7 9.5-4-2-7-5-7-9.5V6zM9 11h6M9 14h4",
   },
   {
     // "Spiral Clean", never "Spiral Cleaner" — apps/clean/CONTEXT.md names the
@@ -105,13 +97,12 @@ export const apps: SpiralApp[] = [
     // existed, and undersold the thing it is actually built around.
     tagline:
       "Cleans, uninstalls, and shows what is using your disk. Proves what it won't touch.",
-    // Feature-complete, and deliberately still not "live" or "source": no
+    // Feature-complete, and deliberately still not "live": no
     // release exists, and nobody has yet opened the app. Inviting people to
     // build and run it would be offering something this project has not
     // itself looked at.
     status: "coming-soon",
     page: "/clean/",
-    iconPath: "M12 3v6M8 9h8l1 12H7zM9 13v4M12 13v4M15 13v4",
   },
   {
     slug: "resume",
@@ -121,7 +112,6 @@ export const apps: SpiralApp[] = [
     version: "0.1.1",
     brewCask: "spiral-resume",
     page: "/resume/",
-    iconPath: "M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 13h6M9 16h4",
     downloads: {
       mac: {
         url: `${RESUME_RELEASE}/Spiral.Resume_0.1.1_universal.dmg`,

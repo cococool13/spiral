@@ -12,7 +12,6 @@ const PROOF: Record<string, string> = {
 
 const STATUS_LABEL: Record<(typeof apps)[number]["status"], string> = {
   live: "Live",
-  source: "Source",
   "coming-soon": "Coming soon",
 };
 

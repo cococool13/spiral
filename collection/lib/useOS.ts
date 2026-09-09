@@ -8,7 +8,7 @@ interface UADataNavigator extends Navigator {
   userAgentData?: { platform: string };
 }
 
-export function detectOS(): OS {
+function detectOS(): OS {
   if (typeof navigator === "undefined") return "other";
   const nav = navigator as UADataNavigator;
   const platform = (
