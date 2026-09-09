@@ -22,7 +22,6 @@ the file is given — those two must not drift apart.
 | **Profile** | A named set of modules in [`profiles/`](profiles/) — Balanced Daily, Maximum Performance, Minimal Debloated — plus any overrides. What a person actually chooses. |
 | **Preset** | A browser-specific configuration under [`Presets/`](Presets/), one folder per browser. A preset is what a browser is left looking like; a profile is what the user asked for. |
 | **Risk level** | Every module and profile states one. It is shown before anything is applied, because "low risk" is a claim the user is entitled to weigh themselves. |
-| **Collection type** | What a group of changes is *for* — `debloat`, `hardening`, `optimization`, `configuration` (`src/lib/collection-types.ts`). It scopes what that group is allowed to touch. |
 | **Schema version** | Every module, profile and collection carries one. A consumer that meets a major version it does not know must refuse the file rather than guess at it. |
 
 ## Behaviour the user can see

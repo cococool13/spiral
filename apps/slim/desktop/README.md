@@ -34,8 +34,9 @@ edge and the control is there, or use the arrow keys.
 
 ## What it does not do
 
-- No network access. There is no HTTP client in the dependency tree.
 - No accounts, telemetry, background process, or browser extension.
+  The one network call is the named Whop license check on launch
+  (`docs/licensing.md`); policy work stays on this machine.
 - No password field. Elevation goes through the operating system's own
   dialog — the macOS authorisation prompt, or UAC on Windows — which the OS
   presents and the OS reads.
@@ -150,13 +151,14 @@ before it is stapled will not match what people download.
   [`SECURITY.md`](../SECURITY.md) says there never will be — do not add one
   without changing that document first. Windows users build from source, the
   same as everyone else.
-- **UAC and Brave itself are still unverified on Windows.** Everything else
-  runs on a real Windows machine in CI on every push. See below.
+- **Windows apply is unverified in CI.** Slim's per-push job is `slim` on
+  `macos-latest` (pytest, desktop typecheck/vitest/`cargo test`). The
+  `windows` job in `.github/workflows/build.yml` is Wallpaper.
 - **No auto-updater.** Spiral Wallpaper has one; Slim has no updater plugin
   and no signing key for update artifacts. Adding it means adding a second
   trust root, which is a decision, not a chore.
-- **No Linux build.** `slimbrave-linux.py` exists as a CLI, but the app has
-  no Linux detection or elevation path and `entrypoint_for` refuses the
+- **No Linux build.** `spiral-slim-linux.py` is the Linux TUI/CLI. The app
+  has no Linux detection or elevation path and `entrypoint_for` refuses the
   platform rather than guessing.
 
 ## Windows
@@ -194,30 +196,14 @@ Two smaller differences worth knowing, both of which the UI already handles:
 - **Replace, not merge**, on both platforms. Applying makes the managed set
   exactly what the plan says. The review counts the removals first.
 
-### What Windows CI proves, and what it does not
+### What CI actually runs
 
-The `windows-latest` job in `.github/workflows/build.yml` is where this code
-actually runs. Every push, on a real Windows machine, it:
+`.github/workflows/build.yml` job `slim` (`macos-latest`): Python `pytest`,
+then desktop hex/typecheck, Vite build, Vitest, and `cargo test`.
 
-- runs the Python suite, then `--detect` with no elevation;
-- exports a plan, previews it, **applies it to the real registry**, checks
-  every written value against the plan, and resets;
-- compiles the `#[cfg(target_os = "windows")]` branches and runs
-  `cargo test` — 61 tests;
-- builds `Spiral Slim_1.0.0_x64-setup.exe` and `_x64_en-US.msi`, uploaded as
-  a build artifact.
-
-Last green run: **18 policies verified in HKLM, then removed by `--reset`.**
-
-Two things CI still cannot reach, and no amount of it will:
-
-- **An interactive UAC prompt.** The runner is already elevated, so
-  `Start-Process -Verb RunAs` is never exercised the way a person exercises
-  it. The command it builds is tested; the dialog is not.
-- **Brave reading the policies.** No Brave on the runner. `brave://policy`
-  showing the expected values is still unconfirmed by anything here.
-
-Everything between those two is exercised on Windows on every push.
+There is no Slim `windows-latest` job. `release-slim.yml` publishes the
+macOS DMG only (`windows: false`, `updater: false`). UAC, the Windows
+registry, and Brave reading those policies are unverified here.
 
 
 ## How it reaches SlimBrave Neo
@@ -351,5 +337,5 @@ looks for a stored plan.
 macOS and Windows. Both have a SlimBrave Neo entrypoint that exposes the plan
 interface, and both validate a plan through the same
 `browser_collection.plan`, so `capabilityFor` admits either. Linux is gated
-off with a reason and pointed at `slimbrave-linux.py`, which has no plan
+off with a reason and pointed at `spiral-slim-linux.py`, which has no plan
 interface — a refusal that names the alternative, not a dead end.

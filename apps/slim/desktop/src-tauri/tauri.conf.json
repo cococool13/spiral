@@ -32,7 +32,7 @@
     "category": "Utility",
     "copyright": "Spiral. Source-available under the SlimBrave Neo licence.",
     "shortDescription": "Configure Brave's privacy policies, with the change shown first.",
-    "longDescription": "Spiral Slim is a local wizard over SlimBrave Neo. It reads the Brave channels installed on this Mac, shows the exact managed policies a profile would add, change or remove, and writes nothing until you confirm. No accounts, no telemetry, no network calls.",
+    "longDescription": "Spiral Slim is a local wizard over SlimBrave Neo. It reads the Brave channels installed on this Mac, shows the exact managed policies a profile would add, change or remove, and writes nothing until you confirm. No accounts, no telemetry. License validation is a named call to Spiral's validator on launch.",
     "macOS": {
       "minimumSystemVersion": "10.15",
       "hardenedRuntime": true

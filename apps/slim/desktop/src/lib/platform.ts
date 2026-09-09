@@ -50,11 +50,3 @@ export function waitingSentence(platform: Platform): string {
 export function needsProfileApproval(platform: Platform): boolean {
   return platform === "macos";
 }
-
-/** Where to look to confirm the change outside Brave itself. */
-export function policyLocation(platform: Platform): string {
-  if (platform === "windows") {
-    return "HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave";
-  }
-  return "/Library/Managed Preferences";
-}
