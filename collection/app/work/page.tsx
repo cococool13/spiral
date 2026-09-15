@@ -5,7 +5,6 @@ import OtherWork from "@/components/OtherWork";
 
 export const metadata: Metadata = {
   title: "Other work — Spiral",
-  alternates: { canonical: "/work/" },
   description: "Client and studio work outside the Spiral Collection apps.",
   alternates: { canonical: "/work/" },
   openGraph: { url: "/work/" },
