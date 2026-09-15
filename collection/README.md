@@ -37,9 +37,8 @@ would be a mistake.
 ### Carries over — non-negotiable
 
 - **Tokens.** Every colour, font, radius, and easing curve comes from `/brand`.
-  No hex outside the token file, no second display face, no in-between radius.
-  Two radii for most chrome: `0` and `--spiral-radius-ctl` (12px). Stadium
-  capsules (`--spiral-radius-pill`) are for CTAs only.
+  No hex outside the token file. Identity 03 uses `--spiral-radius-ctl: 0` and
+  no stadium CTAs. Sharp rectangles for controls and actions.
 - **The mark.** The original three-band helix. One colour at a time — red, ink,
   or paper. Never gradients, shadows, rotation, a stroke redraw, or other hues.
 - **Red discipline.** Red is the mark, interaction, and warnings. If a screen is
@@ -55,33 +54,25 @@ would be a mistake.
 | "Static only, no video" | That is the wallpaper app's product scope, not a brand rule. Video belongs here. |
 | Binary-size and idle-RAM budgets | Meaningless for a static site. The budgets that matter here are the ones below. |
 
-The home page is an observatory: void canvas, and type and hairlines in the
-same pale paper so every frame reads as drawn in light. Mono labels are tracked
-wide (0.16em). The headline is one weight and fills the viewport. The hero
-carries the site's **one** WebGL layer — the filament field in
-`components/DefenseLines.tsx` (helix red washing to paper along a single band),
-full-bleed behind the headline. It is allowed because it is budgeted: one draw
-call per frame,
-device pixel ratio capped at 2, the loop stops while the canvas is off-screen or
-the tab is hidden, and `prefers-reduced-motion` draws exactly one frame. Do not
-add a second WebGL surface.
+The website is an Instrument Utility catalogue: dark Cron palette, Control-sharp
+chrome (0° radius, mono labels, parts-sheet index), selectable real-output
+preview, ownership cells, and a license close. Lock:
+`../docs/reference/spiral-redesign-lock.md`. Sleeve informs the product selector
+only. Helix stays the sole chromatic CTA.
 
-Everything else moves once and then rests. The motion vocabulary is four
-primitives, all transform/opacity or text, each with a reduced-motion path:
+`ProductVisual` shows actual Resume exports, real Slim policy identifiers, a
+labelled illustrative wallpaper, and Clean's removal rules. Do not present
+illustrations as application screenshots. `HeroShowcase` changes only on selection;
+there is no automatic carousel, canvas, or scroll animation on the home page.
 
-- **Rise** (`.rise`, CSS) — arrival for what is on screen at load. The headline
-  rises phrase by phrase; it is the LCP element, so this stays a CSS animation.
-- **Reveal** (`components/Reveal.tsx`) — arrival on scroll, once, 16px, staggered
-  60ms. Gated on `html.js` so a blocked bundle shows the page at rest.
-- **Scramble** (`components/Scramble.tsx`) — the mono register decodes on
-  arrival: corner labels, eyebrows, the readings on the rules board. Real text
-  stays in the DOM; only the visible copy flickers.
-- **Plate drift** (`components/ParallaxPlate.tsx`) — the corridor photograph
-  moves slower than the page and dissolves into void at both edges; never a
-  hard cut between photograph and canvas. Transform only.
+`AppPageLayout` shares the product preview, split editorial sections, download
+routing, and native FAQ disclosures. Resume's template gallery retains its
+four-layout preview and explicit All 12 control. Slim's policy list remains
+expandable. Both are useful product evidence, not decorative imagery.
 
-Nothing loops except the field; nothing animates on scroll position except the
-plate drift. No word-by-word lighting.
+The main navigation has a mobile disclosure with Escape and outside-click
+closing. All four products remain reachable on narrow screens. Purchase goes
+to Whop; downloads use the catalogue's platform-aware offers.
 
 ### The budgets that do apply
 

@@ -8,10 +8,7 @@ const year = 2026;
 
 const appLinks = apps.filter((a) => a.page);
 
-/**
- * The close. Three short columns, then the mark at monumental scale — three paper bands cropped by the bottom of the page. One
- * colour, filled, never rotated; only bigger than anywhere else.
- */
+/** Product index and ownership details, followed by the collection signature. */
 export default function Footer() {
   return (
     <footer className="close">
@@ -86,8 +83,9 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="close-mark" aria-hidden="true">
-        <Mark size={720} className="close-glyph" />
+      <div className="close-signature shell" aria-hidden="true">
+        <span>Spiral.</span>
+        <Mark size={112} />
       </div>
     </footer>
   );

@@ -43,6 +43,16 @@ regexes = [
   '''^BraveP3AEnabled$''',
 ]
 
+# macOS keychain database basename used as a fixture path in Clean's remove
+# tests. generic-api-key matches the dotted token; it is a public Apple
+# filename, not a secret.
+[[allowlists]]
+description = "macOS keychain fixture filename in Clean remove tests"
+regexTarget = "secret"
+regexes = [
+  '''^keychain-2\.db$''',
+]
+
 # Generated trees, excluded by path rather than by value.
 #
 # `gitleaks detect` over history never sees these — they are all gitignored.
@@ -60,6 +70,7 @@ regexes = [
 description = "Generated and vendored trees — nothing here is authored or committed"
 paths = [
   '''(^|/)node_modules/''',
+  '''(^|/)\.pnpm-store/''',
   '''(^|/)target/''',
   '''(^|/)\.next/''',
   '''(^|/)out/''',

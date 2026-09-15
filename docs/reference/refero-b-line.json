@@ -1,0 +1,126 @@
+{
+  "dos": [
+    "Prioritize Canvas White (#ffffff) for all large background and surface areas, creating a clean, almost exhibition-like feel.",
+    "Use Ink Black (#000000) for all primary text, headings, and crucial interactive elements to ensure maximum contrast and legibility.",
+    "Employ HELVMONO font at weight 400 for all UI text, reinforcing the precise, industrial aesthetic of the brand.",
+    "Maintain a compact density, using 5px as the default elementGap and 4px for cardPadding to maximize product visibility.",
+    "Utilize a 0px border-radius for all cards and product containers to maintain a sharp, photographic presentation.",
+    "When borders are present, use 1px solid Ink Black (#000000) for a crisp, defined line.",
+    "Apply Vivid Orange (#e73b1d) sparingly for decorative accents or secondary highlights, never for primary interactive elements."
+  ],
+  "donts": [
+    "Avoid using multiple font families or excessive font weights; stick to HELVMONO 400 and helvetica-bold 400 for consistency.",
+    "Do not introduce complex shadows or gradients; rely on flat surfaces, high contrast, and photographic content for visual interest.",
+    "Refrain from using heavily saturated colors for backgrounds or large UI areas; the canvas should remain neutral.",
+    "Do not deviate from the compact spacing values; avoid expansive padding or large element gaps that would reduce content density.",
+    "Avoid decorative iconography; the visual system is focused on product display and simple typographic elements.",
+    "Do not use heavily rounded corners on cards or major content blocks; maintain a sharp, almost technical edge (0px radius).",
+    "Avoid custom button styles beyond ghost or outlined; do not introduce filled buttons with accent colors as primary actions."
+  ],
+  "theme": "light",
+  "colors": [
+    {
+      "hex": "#ffffff",
+      "name": "Canvas White",
+      "role": "Page backgrounds, button backgrounds, primary surface for product display cards",
+      "group": "neutral"
+    },
+    {
+      "hex": "#000000",
+      "name": "Ink Black",
+      "role": "Primary text, navigation links, borders, and input text – providing stark contrast on white surfaces",
+      "group": "neutral"
+    },
+    {
+      "hex": "#595959",
+      "name": "Muted Stone",
+      "role": "Dark borders and separators for elevated surfaces and inverted UI. Do not promote it to the primary CTA color",
+      "group": "neutral"
+    }
+  ],
+  "layout": "The page primarily uses a max-width contained layout section, though the header elements touch the viewport edges. The hero section is minimal, with a large brand mark and a compact horizontal navigation. The main content area features a distinct grid pattern for product display, with 4 columns of cards repeated vertically. Each product card is a visual square with the product name below it. Sections flow seamlessly without distinct visual dividers, maintaining consistent vertical spacing. The overall impression is a dense, responsive grid layout that prioritizes product visibility.",
+  "imagery": "The visual language is dominated by high-quality product photography. Products are presented as isolated objects against a neutral gray background, often with subtle lighting that highlights their form and texture. There are no lifestyle shots or human elements, focusing entirely on the design of the objects themselves. Imagery is the primary content, with UI elements acting as a frame around these product showcased items. Icons are minimal, likely single-color outlines or filled monochromes for navigation.",
+  "spacing": {
+    "radius": {
+      "cards": "0px",
+      "links": "14.4px",
+      "inputs": "0px",
+      "buttons": "4px"
+    },
+    "density": "compact",
+    "baseUnit": 4,
+    "elementGap": "5px",
+    "sectionGap": "40px",
+    "cardPadding": "4px",
+    "pageMaxWidth": null
+  },
+  "industry": "design",
+  "northStar": "Gallery Grid Aesthetics",
+  "typeScale": [
+    {
+      "role": "body-lg",
+      "size": 14,
+      "lineHeight": 1
+    }
+  ],
+  "components": [
+    {
+      "name": "Primary Ghost Button",
+      "role": "Action button with minimal styling.",
+      "description": "backgroundColor: Canvas White (#ffffff), color: Muted Stone (#595959), border: 1px solid Muted Stone (#595959), borderRadius: 4px, padding: 0px."
+    },
+    {
+      "name": "Product Display Card",
+      "role": "Container for product imagery and titles in a grid layout.",
+      "description": "backgroundColor: transparent (rgba(0, 0, 0, 0)), borderRadius: 0px, boxShadow: none, paddingRight: 4px, paddingLeft: 4px. Product titles use Ink Black text (HELVMONO, 400)."
+    },
+    {
+      "name": "Navigation Link",
+      "role": "Interactive text links in header and footer.",
+      "description": "color: Ink Black (#000000), font: HELVMONO 400. Hover/active states are implied by a rounded highlight with 14.4px border-radius, though no distinct visual change is specified beyond this."
+    },
+    {
+      "name": "Text Input (minimal)",
+      "role": "Basic text input field.",
+      "description": "backgroundColor: transparent (rgba(0, 0, 0, 0)), color: Ink Black (#000000), border: none, borderRadius: 0px, padding: 0px."
+    }
+  ],
+  "typography": [
+    {
+      "role": "Primary UI text, navigation, product titles, input fields, and all body text. Its monospaced nature lends an industrial, precise feel that complements the product design focus.",
+      "sizes": "14px",
+      "family": "HELVMONO",
+      "source": "custom",
+      "weight": "400",
+      "lineHeight": "1.00, 1.30",
+      "substitute": "Space Mono",
+      "letterSpacing": "normal"
+    },
+    {
+      "role": "Fine print, footer text, and specific link states, providing a slightly smaller and subtly bolder option for secondary information.",
+      "sizes": "12px",
+      "family": "helvetica-bold",
+      "source": "custom",
+      "weight": "400",
+      "lineHeight": "1.13, 2.50",
+      "substitute": "Helvetica Neue",
+      "letterSpacing": "normal"
+    },
+    {
+      "role": "-apple-system — detected in extracted data but not described by AI",
+      "sizes": "14px",
+      "family": "-apple-system",
+      "source": "system",
+      "weight": "700",
+      "lineHeight": "2.71"
+    }
+  ],
+  "description": "B—Line's visual system evokes a gallery of industrial design: a pristine white canvas showcases product photography and minimal UI elements. Black typography provides high contrast and a grounding presence. The density is compact, making efficient use of space to present a catalog of items with subtle interactive cues and minimal ornamentation. The entire aesthetic is about the product being the star, supported by an understated display system.",
+  "customSections": [
+    {
+      "title": "Agent Prompt Guide",
+      "content": "Quick Color Reference:\ntext: #000000\nbackground: #ffffff\nborder: #000000\naccent: #e73b1d\nprimary action: no distinct CTA color\n\nExample Component Prompts:\n1. Create a header with navigation: Background Canvas White (#ffffff). Top-left logo text 'B—Line' Ink Black (#000000), HELVMONO 400. Navigation links 'Tutti', 'Tavoli', 'Sedute' in Ink Black (#000000), HELVMONO 400, with 7px marginRight between them. Right-aligned 'IT / EN' links, also Ink Black HELVMONO 400.\n2. Design a product grid section: Main background Canvas White (#ffffff). Display products in a 4-column grid, each product card using 0px border-radius, transparent background. Below each product image, display the product name in Ink Black (#000000), HELVMONO 400, with 8px marginBottom. Cards have 4px padding on left/right.\n3. Create a minimal ghost button: Background Canvas White (#ffffff), text Muted Stone (#595959), border 1px solid Muted Stone (#595959), 4px border-radius, 0px padding. This functions as a secondary action."
+    }
+  ],
+  "title": "B—Line"
+}

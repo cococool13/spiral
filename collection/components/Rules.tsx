@@ -1,40 +1,41 @@
-import Reveal from "./Reveal";
-import Scramble from "./Scramble";
-
-/**
- * The four refusals as editorial scaffolding: four hairline cells, four
- * monumental readings, a mono label over each. They decode as the board comes
- * into view. Every value is a claim the apps already make in their READMEs
- * and the site metadata.
- */
-const READINGS: { label: string; value: string; note: string }[] = [
-  { label: "Accounts", value: "0", note: "Nothing to sign in to." },
-  { label: "Telemetry", value: "0", note: "No usage data leaves the machine." },
-  { label: "Background processes", value: "0", note: "Nothing runs once you quit." },
-  { label: "Price", value: "$0", note: "No tier, no trial, no upgrade." },
+const rules = [
+  {
+    id: "NET",
+    title: "No telemetry",
+    body: "No usage data leaves the machine. Network calls are named in each app’s privacy details.",
+  },
+  {
+    id: "PAY",
+    title: "No subscription",
+    body: "One $9.99 license for the collection. Download the apps you need and activate with your Whop key.",
+  },
+  {
+    id: "RUN",
+    title: "No lingering processes",
+    body: "Quit the app and its work stops. Nothing keeps running in the background.",
+  },
 ];
-
 export default function Rules() {
   return (
-    <section id="rules" className="board">
-      <div className="board-shell">
-        <div className="board-head">
-          <p className="obs-readout">03 / The rules</p>
-        </div>
-        <dl className="board-grid">
-          {READINGS.map((r, i) => (
-            <Reveal key={r.label} step={i} className="board-cell">
-              <dt className="board-label">{r.label}</dt>
-              <Scramble
-                as="dd"
-                text={r.value}
-                delay={i * 110}
-                className="board-value type-display"
-              />
-              <dd className="board-note">{r.note}</dd>
-            </Reveal>
-          ))}
-        </dl>
+    <section id="rules" className="ownership shell">
+      <div className="section-heading">
+        <h2>
+          Your computer.
+          <br />
+          Still yours.
+        </h2>
+        <a href="/privacy/" className="text-link">
+          Privacy details <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <div className="ownership-grid">
+        {rules.map((rule) => (
+          <article key={rule.id}>
+            <span className="meta-id">{rule.id}</span>
+            <h3>{rule.title}</h3>
+            <p>{rule.body}</p>
+          </article>
+        ))}
       </div>
     </section>
   );

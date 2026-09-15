@@ -4,6 +4,7 @@ import Nav from "@/components/Nav";
 
 export const metadata: Metadata = {
   title: "Privacy — Spiral",
+  alternates: { canonical: "/privacy/" },
   description:
     "Spiral apps do not make accounts, do not collect telemetry, and do not upload your files. This page states what each app actually reaches.",
   alternates: { canonical: "/privacy/" },
@@ -14,7 +15,7 @@ export default function PrivacyPage() {
   return (
     <>
       <Nav />
-      <main id="content" className="mx-auto max-w-2xl px-6 pt-36 pb-24 sm:pt-44">
+      <main id="content" className="information-page shell">
         <h1 className="type-display text-4xl text-paper sm:text-5xl">Privacy</h1>
         <p className="mt-8 text-lg text-gray">
           No Spiral app makes an account, sends analytics, or runs after you close the

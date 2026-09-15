@@ -1,0 +1,128 @@
+/* Real product output and labelled explanatory previews. */
+.product-visual {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: clamp(20rem, 30vw, 28rem);
+  overflow: hidden;
+  padding: 1.5rem;
+  color: var(--spiral-ink);
+  background: var(--spiral-concrete);
+}
+.visual-label,
+.visual-foot {
+  position: relative;
+  z-index: 2;
+  font-family: var(--spiral-font-mono);
+  font-size: 0.5625rem;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.visual-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.visual-label {
+  color: var(--spiral-steel);
+}
+.resume-sheets {
+  position: absolute;
+  inset: 3.75rem 1.5rem 3.75rem;
+}
+.resume-sheet {
+  position: absolute;
+  height: 112%;
+  width: auto;
+  max-width: 66%;
+  object-fit: contain;
+  object-position: top;
+  left: 33%;
+  top: 0;
+  box-shadow: 0 10px 25px color-mix(in srgb, var(--spiral-ink) 18%, transparent);
+  transform: rotate(7deg);
+}
+.resume-sheet--back {
+  left: 6%;
+  top: 0.5rem;
+  transform: rotate(-8deg);
+}
+.visual-resume .visual-foot {
+  background: var(--spiral-concrete);
+  margin: 0 -1.5rem -1.5rem;
+  padding: 1rem 1.5rem;
+}
+.visual-wallpaper {
+  background: var(--spiral-conc-03);
+  color: var(--spiral-paper);
+}
+.visual-wallpaper .visual-label {
+  color: var(--spiral-mute);
+}
+.wallpaper-picture {
+  position: absolute;
+  inset: 3.5rem 0;
+  overflow: hidden;
+}
+.wallpaper-picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.visual-slim {
+  background: var(--spiral-paper);
+}
+.policy-specimen {
+  padding-block: 1.5rem;
+}
+.policy-heading {
+  font-size: clamp(1.8rem, 3.2vw, 3rem);
+  line-height: 1.03;
+  letter-spacing: -0.04em;
+  margin-bottom: 1.5rem;
+}
+.policy-specimen-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-top: 1px solid var(--spiral-concrete);
+  padding: 0.5rem 0;
+  font-family: var(--spiral-font-mono);
+  font-size: 0.625rem;
+  overflow-wrap: anywhere;
+}
+.policy-total {
+  margin-top: 0.5rem;
+  color: var(--spiral-steel);
+  font-size: 0.625rem;
+}
+.visual-clean {
+  background: var(--spiral-concrete);
+}
+.removal-specimen {
+  display: grid;
+  gap: 1.5rem;
+  padding-block: 2rem;
+}
+.removal-specimen p {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+.removal-specimen p > span {
+  font-family: var(--spiral-font-mono);
+  font-size: 0.5625rem;
+  color: var(--spiral-steel);
+}
+.removal-specimen strong {
+  grid-column: 2;
+  font-size: clamp(1.4rem, 2.8vw, 2.75rem);
+  line-height: 1;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}

@@ -1,0 +1,379 @@
+{
+  "dos": [
+    "Use #040506 as the page canvas ground — never a warm or cool-tinted near-black, only this near-pure neutral void",
+    "Apply the keyboard key shadow stack (rgba(0,0,0,0.4) outer, rgba(255,255,255,0.2) inset top highlight) on any element meant to feel physically pressable",
+    "Keep headline letter-spacing negative at display sizes: -0.11em at 56px, -0.13em at 64px — critical to the compressed, dense headline feel",
+    "Use radial gradients (blue or violet, max 0.7 opacity core fading to transparent) as per-section atmosphere layers behind content — never flat colored sections",
+    "Badge and chip text: Inter weight 500, positive letter-spacing +0.04em to +0.073em, on #1B1C1 background — the tracking contrast with headlines is part of the two-register system",
+    "For primary CTAs use #E6E6E6 background with #2F3031 text at 8px radius — not white, not a chromatic color",
+    "Use GeistMono weight 300–400 for all code, version strings, and terminal commands at 10–14px with +0.017em to +0.05em tracking"
+  ],
+  "donts": [
+    "Do not use any colored backgrounds for section containers — all surface backgrounds must be from the #040506 → #1B1C1 neutral stack only",
+    "Do not apply border-radius above 20px to cards — the design uses 8px, 11px, 16px, 20px; rounder forms break the precision instrument aesthetic",
+    "Do not use #FF6363 as a button fill or large background — it appears only as a small status dot, icon accent, or single-word label text",
+    "Do not use white (#FFFFFF) as a button background — the primary action uses #E6E6E6 specifically; pure white reads as system/OS chrome at this scale",
+    "Do not use positive letter-spacing on headings above 24px — all display and heading text must track neutral-to-negative",
+    "Do not create dividers between sections using horizontal rules or color changes — section separation happens through 80px vertical gaps and radial gradient shifts only",
+    "Do not use drop-shadows with color tints (blue, red, etc.) — all shadows must be rgba(0,0,0,x) or rgba(255,255,255,x) only, keeping elevation monochromatic"
+  ],
+  "theme": "dark",
+  "colors": [
+    {
+      "hex": "#040506",
+      "name": "Void Black",
+      "role": "Dominant page canvas and deepest shadow color — the ground state everything floats above",
+      "group": "neutral"
+    },
+    {
+      "hex": "#07080a",
+      "name": "Deep Charcoal",
+      "role": "Primary card and section backgrounds; the first surface level above canvas",
+      "group": "neutral"
+    },
+    {
+      "hex": "#111214",
+      "name": "Graphite 700",
+      "role": "Secondary surface and elevated card backgrounds",
+      "group": "neutral"
+    },
+    {
+      "hex": "#1b1c1e",
+      "name": "Graphite 600",
+      "role": "Observed in other boxShadow, link boxShadow, badge backgroundColor. Extracted usage does not support a distinct primary control color.",
+      "group": "neutral"
+    },
+    {
+      "hex": "#363739",
+      "name": "Graphite 500",
+      "role": "Border color for dividers, shadow tones on elevated components",
+      "group": "neutral"
+    },
+    {
+      "hex": "#454647",
+      "name": "Graphite 400",
+      "role": "Subtle borders, muted button borders, body divider lines",
+      "group": "neutral"
+    },
+    {
+      "hex": "#6a6b6c",
+      "name": "Slate 300",
+      "role": "Secondary body text, icon fills, disabled states",
+      "group": "neutral"
+    },
+    {
+      "hex": "#9c9c9d",
+      "name": "Slate 200",
+      "role": "Tertiary text, muted links, placeholder-level labels",
+      "group": "neutral"
+    },
+    {
+      "hex": "#e6e6e6",
+      "name": "Ash 50",
+      "role": "Primary download/CTA button background — warm near-white on black for maximum contrast without pure white aggression",
+      "group": "neutral"
+    },
+    {
+      "hex": "#ffffff",
+      "name": "Snow",
+      "role": "Primary text on dark surfaces, nav links, headline text, icon strokes, border highlights",
+      "group": "neutral"
+    },
+    {
+      "hex": "#ff6363",
+      "name": "Ember Red",
+      "role": "Observed in body borderColor, other backgroundColor, other fill.",
+      "group": "brand"
+    },
+    {
+      "hex": "#452324",
+      "name": "Ember Dark",
+      "role": "Observed in other backgroundColor, other borderColor.",
+      "group": "brand"
+    },
+    {
+      "hex": "#59d499",
+      "name": "Mint Signal",
+      "role": "Observed in other backgroundColor. Semantic/state role was not supported by extracted badge/input evidence.",
+      "group": "accent"
+    },
+    {
+      "hex": "#56c2ff",
+      "name": "Sky Signal",
+      "role": "Observed in other backgroundColor. Semantic/state role was not supported by extracted badge/input evidence.; Hero gradient highlight — linear-gradient(135deg, #56c2ff 0%, #138af2 100%) used for product feature illustration accents",
+      "group": "accent",
+      "gradient": "linear-gradient(135deg, rgb(86, 194, 255) 0%, rgb(19, 138, 242) 100%)"
+    },
+    {
+      "hex": "#043f96",
+      "name": "Nebula Glow",
+      "role": "Radial section atmosphere gradient — low-opacity blue bloom behind hero and feature sections",
+      "group": "accent",
+      "gradient": "radial-gradient(84.6% 73.49% at 50% 26.51%, rgba(4, 63, 150, 0.7), rgba(6, 18, 37, 0.25))"
+    },
+    {
+      "hex": "#523091",
+      "name": "Violet Haze",
+      "role": "Radial section atmosphere gradient — low-opacity purple bloom for alternate feature sections",
+      "group": "accent",
+      "gradient": "radial-gradient(86.88% 75.47% at 50% 24.53%, rgba(82, 48, 145, 0.7), rgba(26, 11, 51, 0.14))"
+    }
+  ],
+  "layout": "Max-width ~1200px centered on wide viewports, but hero section is full-bleed dark with no side constraints. Navigation is a fixed top bar: ~740px wide pill-shaped container with rounded edges (11px radius), dark #1B1C1 background, logo left + nav links center + CTA right. Hero: full-viewport height with centered headline (2-line display text) over full-bleed abstract photography, CTA buttons centered below. Second section: dark background with centered 2-line heading, then a contained macOS window mockup (70% width) floating below. Section rhythm: seamless dark-to-dark flow with no visible dividers — depth changes come from radial gradient atmosphere shifts rather than alternating light/dark bands. Feature sections use 2-3 column card grids at 11–16px radius. Spacing between sections: ~80px vertical. The overall impression is vertical scrolling through a continuous dark space with distinct 'zones' of light created by radial gradients.",
+  "imagery": "Primarily abstract photography — the hero uses extreme close-up macro shots of diagonal red/pink forms on black (appear to be keyboard key edges or geometric objects) treated with deep shadow and vivid red-to-pink chromatic saturation. These fill the full viewport bleed with no containment border or radius, bleeding edge-to-edge. Product screenshots appear in the second section as contained glass-panel mockups with 12px radius and dark UI chrome, simulating a live macOS window. No lifestyle photography, no human subjects. Icons are monochromatic filled/outlined at ~16px in #6A6B6C or #9C9C9D — uniform low-contrast weight. The visual density is image-light: one full-bleed hero photograph, then a transition to text + contained product UI mockup. Decorative SVG graphics (blue/violet strokes in the color data: #02193b, #143ca3, #63a1ff) serve as background illustration layers behind feature sections at very low opacity, not visible as content.",
+  "spacing": {
+    "radius": {
+      "cards": "11px",
+      "icons": "99999px",
+      "badges": "6px",
+      "inputs": "8px",
+      "modals": "16px",
+      "buttons": "8px",
+      "cardLarge": "20px",
+      "buttonPill": "86px"
+    },
+    "density": "comfortable",
+    "baseUnit": 8,
+    "elementGap": "15px",
+    "sectionGap": "80px",
+    "cardPadding": "24px",
+    "pageMaxWidth": "1200px"
+  },
+  "industry": "productivity",
+  "surfaces": [
+    {
+      "hex": "#040506",
+      "name": "Canvas",
+      "level": 0,
+      "purpose": "Page background — the absolute ground state, near-pure black"
+    },
+    {
+      "hex": "#07080a",
+      "name": "Base Surface",
+      "level": 1,
+      "purpose": "Primary card and section backgrounds floating above canvas"
+    },
+    {
+      "hex": "#111214",
+      "name": "Raised Surface",
+      "level": 2,
+      "purpose": "Elevated cards, modals, dropdown containers"
+    },
+    {
+      "hex": "#1b1c1",
+      "name": "Overlay Surface",
+      "level": 3,
+      "purpose": "Badges, tooltip backgrounds, highest floating elements"
+    }
+  ],
+  "elevation": [
+    {
+      "style": "rgba(0,0,0,0.4) 0px 1.5px 0.5px 2.5px, rgb(0,0,0) 0px 0px 0.5px 1px, rgba(0,0,0,0.25) 0px 2px 1px 1px inset, rgba(255,255,255,0.2) 0px 1px 1px 1px inset",
+      "element": "Keyboard Key"
+    },
+    {
+      "style": "rgb(27,28,30) 0px 0px 0px 1px, rgb(7,8,10) 0px 0px 0px 1px inset",
+      "element": "Ring-Border Interactive"
+    },
+    {
+      "style": "rgba(255,255,255,0.05) 0px 1px 0px 0px inset, rgba(255,255,255,0.25) 0px 0px 0px 1px, rgba(0,0,0,0.2) 0px -1px 0px 0px inset",
+      "element": "Outlined Highlight Card"
+    },
+    {
+      "style": "rgba(215,201,175,0.05) 0px 0px 20px 5px, rgba(215,201,175,0.05) 0px 0px 16px -7px",
+      "element": "Navigation Ring Link"
+    },
+    {
+      "style": "rgba(0,0,0,0.28) 0px 1.189px 2.377px 0px",
+      "element": "Glass Product Card"
+    },
+    {
+      "style": "rgba(0,0,0,0.03) 0px 7px 3px 0px, rgba(0,0,0,0.25) 0px 4px 4px 0px",
+      "element": "Button/Dropdown"
+    }
+  ],
+  "northStar": "Obsidian command terminal — a near-black void where UI surfaces emerge like backlit glass panels, depth created by shadow layering rather than color contrast.",
+  "typeScale": [
+    {
+      "role": "caption",
+      "size": 11,
+      "lineHeight": 1.45,
+      "letterSpacing": 0.8
+    },
+    {
+      "role": "body",
+      "size": 16,
+      "lineHeight": 1.5,
+      "letterSpacing": 0.1
+    },
+    {
+      "role": "subheading",
+      "size": 18,
+      "lineHeight": 1.4,
+      "letterSpacing": 0.06
+    },
+    {
+      "role": "heading-sm",
+      "size": 24,
+      "lineHeight": 1.33,
+      "letterSpacing": -0.05
+    },
+    {
+      "role": "heading",
+      "size": 32,
+      "lineHeight": 1.2,
+      "letterSpacing": -0.06
+    },
+    {
+      "role": "heading-lg",
+      "size": 56,
+      "lineHeight": 1.1,
+      "letterSpacing": -0.11
+    },
+    {
+      "role": "display",
+      "size": 64,
+      "lineHeight": 1,
+      "letterSpacing": -0.13
+    }
+  ],
+  "components": [
+    {
+      "html": "<div style=\"--color-void-black:#040506;--color-deep-charcoal:#07080a;--color-graphite-700:#111214;--color-graphite-600:#1b1c1e;--color-graphite-500:#363739;--color-graphite-400:#454647;--color-slate-300:#6a6b6c;--color-slate-200:#9c9c9d;--color-ash-50:#e6e6e6;--color-snow:#ffffff;--color-ember-red:#ff6363;--color-ember-dark:#452324;--color-mint-signal:#59d499;--font-inter:'Inter',system-ui,sans-serif;--font-geistmono:'JetBrains Mono','IBM Plex Mono',monospace;background:var(--color-void-black);padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:20px;font-family:var(--font-inter);border-radius:16px;\"><div style=\"display:flex;flex-direction:row;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;\"><a href=\"#\" style=\"display:inline-flex;align-items:center;gap:8px;background:var(--color-ash-50);color:#2f3031;font-family:var(--font-inter);font-size:14px;font-weight:500;padding:10px 18px;border-radius:8px;text-decoration:none;border:none;letter-spacing:0.01em;box-shadow:rgba(0,0,0,0.03) 0px 7px 3px 0px,rgba(0,0,0,0.25) 0px 4px 4px 0px;transition:background 0.15s;\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 814 1000\" fill=\"#2f3031\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-43.4-150.3-109.7C45.1 734.3 0 651.3 0 571.8c0-141.7 92.5-216.7 183.3-216.7 49.7 0 91.1 32.5 121.5 32.5 29 0 74.7-34.7 131.8-34.7 21.4 0 108.2 1.9 166.3 81.8zm-106.5-189.9c24.4-28.8 41.2-68.9 41.2-109 0-5.8-.5-11.6-1.5-17.4-38.9 1.6-85.5 26-114.3 57.5-21.6 23.5-41.8 63.3-41.8 104.1 0 6.4 1 12.8 1.5 14.7 2.5.4 6.6 1 10.6 1 35.1 0 79.2-23.5 104.3-51z\"/></svg>Download for Mac</a><a href=\"#\" style=\"display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--color-snow);font-family:var(--font-inter);font-size:14px;font-weight:500;padding:10px 18px;border-radius:8px;text-decoration:none;border:1px solid var(--color-graphite-500);letter-spacing:0.01em;box-shadow:rgba(255,255,255,0.05) 0px 1px 0px 0px inset;\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 3h9v9H3zm9 9h9v9h-9zM3 15h9v9H3zM15 3h9v9h-9z\" fill=\"var(--color-snow)\" opacity=\"0.9\"/></svg>Download for Windows (beta)</a></div><div style=\"display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;\"><span style=\"font-family:var(--font-geistmono);font-size:11px;font-weight:300;color:var(--color-slate-300);letter-spacing:0.04em;\">v1.104.14</span><span style=\"color:var(--color-graphite-500);font-size:12px;\">|</span><span style=\"font-family:var(--font-geistmono);font-size:11px;font-weight:300;color:var(--color-slate-300);letter-spacing:0.04em;\">macOS 13+</span><span style=\"color:var(--color-graphite-500);font-size:12px;\">|</span><a href=\"#\" style=\"font-family:var(--font-geistmono);font-size:11px;font-weight:300;color:var(--color-slate-300);letter-spacing:0.04em;text-decoration:none;border-bottom:1px solid var(--color-slate-300);padding-bottom:1px;\">Install via homebrew</a></div></div>",
+      "name": "Download Button Group",
+      "role": "",
+      "description": ""
+    },
+    {
+      "html": "<div style=\"--color-void-black:#040506;--color-deep-charcoal:#07080a;--color-graphite-700:#111214;--color-graphite-600:#1b1c1e;--color-graphite-500:#363739;--color-graphite-400:#454647;--color-slate-300:#6a6b6c;--color-slate-200:#9c9c9d;--color-ash-50:#e6e6e6;--color-snow:#ffffff;--color-ember-red:#ff6363;--color-ember-dark:#452324;--color-mint-signal:#59d499;--font-inter:'Inter',system-ui,sans-serif;--font-geistmono:'JetBrains Mono','IBM Plex Mono',monospace;background:var(--color-void-black);padding:40px 32px;font-family:var(--font-inter);border-radius:16px;display:flex;flex-direction:column;gap:32px;\"><div style=\"display:flex;flex-direction:column;gap:10px;\"><p style=\"font-family:var(--font-inter);font-size:11px;font-weight:500;color:var(--color-slate-300);letter-spacing:0.073em;text-transform:uppercase;margin:0;\">Category Badges</p><div style=\"display:flex;flex-wrap:wrap;gap:8px;\"><span style=\"background:var(--color-graphite-600);color:var(--color-snow);font-family:var(--font-inter);font-size:12px;font-weight:500;letter-spacing:0.04em;padding:3px 8px;border-radius:6px;border:1px solid var(--color-graphite-500);\">Productivity</span><span style=\"background:var(--color-graphite-600);color:var(--color-snow);font-family:var(--font-inter);font-size:12px;font-weight:500;letter-spacing:0.04em;padding:3px 8px;border-radius:6px;border:1px solid var(--color-graphite-500);\">Developer Tools</span><span style=\"background:var(--color-graphite-600);color:var(--color-snow);font-family:var(--font-inter);font-size:12px;font-weight:500;letter-spacing:0.04em;padding:3px 8px;border-radius:6px;border:1px solid var(--color-graphite-500);\">AI</span><span style=\"background:var(--color-graphite-600);color:var(--color-snow);font-family:var(--font-inter);font-size:12px;font-weight:500;letter-spacing:0.04em;padding:3px 8px;border-radius:6px;border:1px solid var(--color-graphite-500);\">Design</span><span style=\"background:var(--color-graphite-600);color:var(--color-snow);font-family:var(--font-inter);font-size:12px;font-weight:500;letter-spacing:0.04em;padding:3px 8px;border-radius:6px;border:1px solid var(--color-graphite-500);\">Communication</span><span style=\"background:var(--color-graphite-600);color:var(--color-snow);font-family:var(--font-inter);font-size:12px;font-weight:500;letter-spacing:0.04em;padding:3px 8px;border-radius:6px;border:1px solid var(--color-graphite-500);\">Media</span></div></div><div style=\"display:flex;flex-direction:column;gap:10px;\"><p style=\"font-family:var(--font-inter);font-size:11px;font-weight:500;color:var(--color-slate-300);letter-spacing:0.073em;text-transform:uppercase;margin:0;\">Status Indicators</p><div style=\"display:flex;flex-wrap:wrap;gap:16px;align-items:center;\"><div style=\"display:flex;align-items:center;gap:7px;\"><span style=\"width:8px;height:8px;border-radius:99999px;background:var(--color-mint-signal);display:inline-block;box-shadow:0 0 6px rgba(89,212,153,0.5);\"></span><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-200);\">Online</span></div><div style=\"display:flex;align-items:center;gap:7px;\"><span style=\"width:8px;height:8px;border-radius:99999px;background:var(--color-ember-red);display:inline-block;box-shadow:0 0 6px rgba(255,99,99,0.4);\"></span><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-200);\">Error</span></div><div style=\"display:flex;align-items:center;gap:7px;\"><span style=\"width:8px;height:8px;border-radius:99999px;background:#56c2ff;display:inline-block;box-shadow:0 0 6px rgba(86,194,255,0.4);\"></span><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-200);\">Info</span></div><div style=\"display:flex;align-items:center;gap:7px;\"><span style=\"width:8px;height:8px;border-radius:99999px;background:var(--color-slate-300);display:inline-block;\"></span><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-200);\">Inactive</span></div></div></div><div style=\"display:flex;flex-direction:column;gap:10px;\"><p style=\"font-family:var(--font-inter);font-size:11px;font-weight:500;color:var(--color-slate-300);letter-spacing:0.073em;text-transform:uppercase;margin:0;\">Version Tag</p><div style=\"display:flex;align-items:center;gap:10px;\"><span style=\"background:var(--color-graphite-600);border:1px solid var(--color-graphite-500);color:var(--color-snow);font-family:var(--font-geistmono);font-size:11px;font-weight:400;letter-spacing:0.05em;padding:2px 8px;border-radius:6px;\">v1.104.14</span><span style=\"background:rgba(255,99,99,0.12);border:1px solid var(--color-ember-dark);color:var(--color-ember-red);font-family:var(--font-inter);font-size:11px;font-weight:500;letter-spacing:0.05em;padding:2px 8px;border-radius:6px;\">Pro</span><span style=\"background:rgba(89,212,153,0.1);border:1px solid rgba(89,212,153,0.2);color:var(--color-mint-signal);font-family:var(--font-inter);font-size:11px;font-weight:500;letter-spacing:0.05em;padding:2px 8px;border-radius:6px;\">New</span></div></div></div>",
+      "name": "Dark Badge / Status Indicator Collection",
+      "role": "",
+      "description": ""
+    },
+    {
+      "html": "<div style=\"--color-void-black:#040506;--color-deep-charcoal:#07080a;--color-graphite-700:#111214;--color-graphite-600:#1b1c1e;--color-graphite-500:#363739;--color-graphite-400:#454647;--color-slate-300:#6a6b6c;--color-slate-200:#9c9c9d;--color-ash-50:#e6e6e6;--color-snow:#ffffff;--color-ember-red:#ff6363;--color-mint-signal:#59d499;--font-inter:'Inter',system-ui,sans-serif;--font-geistmono:'JetBrains Mono','IBM Plex Mono',monospace;background:var(--color-void-black);padding:40px 32px;font-family:var(--font-inter);border-radius:16px;display:flex;flex-direction:column;gap:0;\"><div style=\"background:var(--color-graphite-700);border-radius:12px;overflow:hidden;box-shadow:rgba(0,0,0,0.28) 0px 1.189px 2.377px 0px,rgba(0,0,0,0.5) 0px 8px 32px 0px;border:1px solid rgba(255,255,255,0.07);\"><div style=\"background:var(--color-graphite-600);padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--color-graphite-500);\"><span style=\"width:10px;height:10px;border-radius:99999px;background:#ff5f57;display:inline-block;\"></span><span style=\"width:10px;height:10px;border-radius:99999px;background:#ffbd2e;display:inline-block;\"></span><span style=\"width:10px;height:10px;border-radius:99999px;background:#27c840;display:inline-block;\"></span></div><div style=\"padding:16px 16px 0 16px;\"><div style=\"display:flex;align-items:center;gap:8px;\"><div style=\"display:flex;align-items:center;gap:10px;flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:9px 14px;\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"8.5\" cy=\"8.5\" r=\"5.5\" stroke=\"#6a6b6c\" stroke-width=\"1.5\"/><path d=\"M13 13l3.5 3.5\" stroke=\"#6a6b6c\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg><span style=\"font-family:var(--font-inter);font-size:14px;font-weight:400;color:var(--color-slate-300);letter-spacing:0.01em;\">Type to filter entries...</span></div><div style=\"display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;cursor:pointer;\"><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-200);\">All Types</span><svg width=\"12\" height=\"12\" viewBox=\"0 0 12 12\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 4.5L6 7.5L9 4.5\" stroke=\"#9c9c9d\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></div></div></div><div style=\"padding:8px 0;\"><div style=\"padding:6px 16px;\"><span style=\"font-family:var(--font-inter);font-size:11px;font-weight:500;color:var(--color-slate-300);letter-spacing:0.07em;text-transform:uppercase;\">Today</span></div><div style=\"padding:8px 16px;display:flex;align-items:center;gap:10px;border-radius:0;\"><div style=\"width:7px;height:7px;border-radius:99999px;background:var(--color-slate-300);flex-shrink:0;\"></div><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-200);\">Image (1200 × 1000)</span></div><div style=\"margin:0 8px;padding:8px 10px;display:flex;align-items:center;gap:10px;background:rgba(255,99,99,0.15);border-radius:6px;\"><div style=\"width:8px;height:8px;border-radius:99999px;background:var(--color-ember-red);flex-shrink:0;box-shadow:0 0 5px rgba(255,99,99,0.5);\"></div><span style=\"font-family:var(--font-geistmono);font-size:13px;font-weight:400;color:var(--color-snow);letter-spacing:0.03em;\">#FF6363</span></div><div style=\"margin:0 8px 8px;padding:8px 10px;display:flex;align-items:center;gap:10px;border-radius:6px;\"><div style=\"width:8px;height:8px;border-radius:99999px;background:var(--color-mint-signal);flex-shrink:0;box-shadow:0 0 5px rgba(89,212,153,0.4);\"></div><span style=\"font-family:var(--font-geistmono);font-size:13px;font-weight:400;color:var(--color-slate-200);letter-spacing:0.03em;\">#59D499</span></div><div style=\"padding:6px 16px 4px;\"><span style=\"font-family:var(--font-inter);font-size:11px;font-weight:500;color:var(--color-slate-300);letter-spacing:0.07em;text-transform:uppercase;\">Yesterday</span></div><div style=\"padding:8px 16px;display:flex;align-items:center;gap:10px;\"><div style=\"width:7px;height:7px;border-radius:99999px;background:var(--color-slate-300);flex-shrink:0;\"></div><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-300);\">Raycast Extensions.zip</span></div><div style=\"padding:6px 16px 12px;display:flex;align-items:center;gap:10px;\"><div style=\"width:7px;height:7px;border-radius:99999px;background:var(--color-slate-300);flex-shrink:0;\"></div><span style=\"font-family:var(--font-inter);font-size:13px;font-weight:400;color:var(--color-slate-300);\">design-system-tokens.json</span></div></div></div></div>",
+      "name": "Raycast Search Input — App Filter UI",
+      "role": "",
+      "description": ""
+    },
+    {
+      "name": "Primary Download Button",
+      "role": "Main CTA for app download",
+      "description": "Background #E6E6E6, text #2F3031, border-radius 8px, padding 8px 12px. Carries an Apple logo icon inline. On the dark canvas this near-white button reads as the highest-contrast interactive element without being a harsh pure white. Font Inter 14px weight 500."
+    },
+    {
+      "name": "Ghost Navigation Link",
+      "role": "Top navigation items",
+      "description": "Transparent background, text #9C9C9D at 14px Inter weight 400, no border. Zero padding on top/bottom. On hover text shifts toward #FFFFFF. The muted gray-on-black keeps nav from competing with hero content — links recede until needed."
+    },
+    {
+      "name": "Keyboard Key Element",
+      "role": "Interactive keyboard shortcut visualizer",
+      "description": "Transparent background, border-radius 86px (oval pill shape for key tops), padding 20px all sides. Shadow stack: `rgba(0,0,0,0.4) 0px 1.5px 0.5px 2.5px, rgb(0,0,0) 0px 0px 0.5px 1px, rgba(0,0,0,0.25) 0px 2px 1px 1px inset, rgba(255,255,255,0.2) 0px 1px 1px 1px inset` — the inset white/black pair creates a physical bevel. Text #6A6B6C. Animates --key-bg-start-color and --key-bg-end-color on interaction."
+    },
+    {
+      "name": "Feature Card",
+      "role": "Marketing feature section cards",
+      "description": "Background transparent (inherits surface), border-radius 16px, padding 24px all sides, no box-shadow. Used in 2–3 column grid layouts. Inner content arranged with 15px element gap. Border defined by 1px solid #222225 or the layered inset white shadow system."
+    },
+    {
+      "name": "Glass Product Card",
+      "role": "Product screenshot / app UI demo containers",
+      "description": "Background transparent, border-radius 12px, shadow `rgba(0,0,0,0.28) 0px 1.189px 2.377px 0px`. Backdrop filter blur(36px) to blur(48px) creates frosted glass effect behind app window mockups. Border 1px solid rgba(255,255,255,0.1)."
+    },
+    {
+      "name": "Outlined Highlight Card",
+      "role": "Extension/store item cards with white ring",
+      "description": "Background transparent, border-radius 8px, padding 8px, shadow `rgba(255,255,255,0.05) 0px 1px 0px 0px inset, rgba(255,255,255,0.25) 0px 0px 0px 1px, rgba(0,0,0,0.2) 0px -1px 0px 0px inset`. The white 0.25 opacity outer ring makes cards appear to glow on the dark background — used to highlight selected/featured extensions."
+    },
+    {
+      "name": "Dark Badge",
+      "role": "Version numbers, category labels, status chips",
+      "description": "Background #1B1C1, text #FFFFFF, border-radius 6px, padding 0px 6px. Inter 12px weight 500, letter-spacing +0.04em. Used for version strings like 'v1.104.14' and feature category chips. The near-black background barely distinguishes from the canvas — a whisper label."
+    },
+    {
+      "name": "Search Input",
+      "role": "In-app filter/search within product demo",
+      "description": "Background rgba(255,255,255,0.05), text #FFFFFF, border rgba(255,255,255,0.05), border-radius 8px, padding 8px 12px. The 5% white background is nearly invisible against dark surfaces — maintains the low-contrast dark-mode aesthetic while still signaling an editable field."
+    },
+    {
+      "name": "Muted Inline Button",
+      "role": "Secondary text actions and version badges",
+      "description": "Transparent background, text #9C9C9D at 13px Inter, border-radius 0px, padding 1px 6px, border #9C9C9D. Used for subsidiary CTAs like 'Install via homebrew' that should not compete with primary download buttons."
+    },
+    {
+      "name": "Navigation Ring Link",
+      "role": "Circular icon links in nav or social areas",
+      "description": "Transparent background, border-radius 86px (full oval), padding 20px, border rgba(255,255,255,0.06). Shadow `rgba(215,201,175,0.05) 0px 0px 20px 5px, rgba(215,201,175,0.05) 0px 0px 16px -7px` — a barely-perceptible warm bloom. Text #6A6B6C."
+    },
+    {
+      "name": "Ember Status Indicator",
+      "role": "Colored dot or label for status signals inside product UI",
+      "description": "Background #FF6363 for red states, #59D499 for green online, #56C2FF for blue info. Border-radius 99999px (circular). 8px diameter. These appear inside the simulated app UI screenshots to represent clipboard colors, status dots, or category tags."
+    },
+    {
+      "name": "Section Atmosphere Backdrop",
+      "role": "Per-section colored radial glow behind content",
+      "description": "Full-bleed radial gradient positioned at top-center: `radial-gradient(84.6% 73.49% at 50% 26.51%, rgba(4,63,150,0.7), rgba(6,18,37,0.25))` for blue sections, or the purple variant for alternate sections. Sits behind all content at z-index 0. No border, no radius. Creates the impression of a distant colored light source without any surface color change."
+    }
+  ],
+  "typography": [
+    {
+      "role": "Universal UI font covering everything from 11px badge labels to 64px hero headlines. The negative tracking at display sizes (-0.11em at 56px) is the anti-convention choice — most launcher/productivity tools use neutral tracking, but Raycast's headlines contract inward, creating pressure and density. Feature settings 'ss03' (alternate 'a') distinguish it from default Inter. At small sizes (11–13px), tracking goes strongly positive (up to +0.073em) making metadata scannable at tiny scales.",
+      "sizes": "11px, 12px, 13px, 14px, 16px, 18px, 20px, 22px, 24px, 32px, 56px, 64px",
+      "family": "Inter",
+      "source": "google",
+      "weight": "400, 500, 600",
+      "lineHeight": "1.0–1.71 depending on size (tighter at display, looser at body)",
+      "substitute": "Inter (Google Fonts) — identical; this is the Google-hosted version",
+      "letterSpacing": "-0.112px at 56px (≈-0.002em), up to +4.088px at 56px positive range; small sizes use +0.004em to +0.073em",
+      "fontFeatureSettings": "\"calt\", \"kern\", \"liga\", \"ss03\"; alternately \"liga\" 0, \"ss02\", \"ss08\""
+    },
+    {
+      "role": "Monospaced font for version strings (v1.104.14), code snippets, homebrew install commands, and keyboard shortcut labels. Weight 300 at 10px for ultra-minimal metadata; weight 500 at 14px for readable code. Positive tracking (+0.017em to +0.05em) keeps characters from colliding at small sizes.",
+      "sizes": "10px, 12px, 14px",
+      "family": "GeistMono",
+      "source": "custom",
+      "weight": "300, 400, 500",
+      "lineHeight": "1.0–1.6",
+      "substitute": "JetBrains Mono or IBM Plex Mono",
+      "letterSpacing": "+0.017em to +0.05em across all sizes",
+      "fontFeatureSettings": "\"calt\", \"kern\", \"liga\", \"ss03\", \"ss09\""
+    },
+    {
+      "role": "System font fallback appearing in macOS-rendered product screenshots and simulated app UI within the page. Not a deliberate web font choice — appears in contexts where the browser renders macOS system UI.",
+      "sizes": "16px, 24px, 32px",
+      "family": "SF Pro Text",
+      "source": "system",
+      "weight": "500, 700",
+      "lineHeight": "1.15",
+      "substitute": "Inter weight 500/700",
+      "fontFeatureSettings": "\"calt\", \"kern\", \"liga\", \"ss03\""
+    },
+    {
+      "role": "SF Pro — detected in extracted data but not described by AI",
+      "sizes": "13px",
+      "family": "SF Pro",
+      "source": "system",
+      "weight": "700",
+      "lineHeight": "1.23",
+      "fontFeatureSettings": "\"calt\", \"kern\", \"liga\", \"ss03\""
+    }
+  ],
+  "description": "Raycast lives in near-total darkness — a #040506 void where UI surfaces emerge as barely-lighter charcoal strata rather than conventional cards. The signature move is depth through shadow layering: the keyboard-key shadow `rgba(0,0,0,0.4) 0px 1.5px 0.5px 2.5px, rgb(0,0,0) 0px 0px 0.5px 1px, rgba(0,0,0,0.25) 0px 2px 1px 1px inset, rgba(255,255,255,0.2) 0px 1px 1px 1px inset` makes interactive elements feel physically pressable — a tactile metaphor for keyboard shortcuts. The brand red (#FF6363) appears sparingly as a status signal and logo accent rather than a CTA color; primary download buttons are a near-white #E6E6E6 pill on black — inverted convention. Radial gradients with blue and purple cores bleed into the dark canvas at very low opacity, creating the impression of colored light sources behind frosted obsidian. Type is Inter with tight negative tracking at display sizes, shifting to loose positive tracking on micro labels and badges — creating a two-register system where headlines contract and metadata breathes.",
+  "customSections": [
+    {
+      "title": "Agent Prompt Guide",
+      "content": "**Quick Color Reference**\n- text primary: #FFFFFF\n- text secondary: #9C9C9D\n- text tertiary: #6A6B6C\n- background (canvas): #040506\n- surface (card): #07080a\n- border: #363739 (or rgba(255,255,255,0.06) for subtle)\n- accent/brand: #FF6363 (status and logo only)\n- primary action: #e6e6e6 (filled action)\n\n**Example Component Prompts**\n\n1. **Hero Section**: Full-viewport dark section, background #040506 with radial-gradient(84.6% 73.49% at 50% 26.51%, rgba(4,63,150,0.7), rgba(6,18,37,0.25)) layered behind. Full-bleed abstract photography at top 60% of viewport. Centered headline at 64px Inter weight 600, #FFFFFF, letter-spacing -0.13em, line-height 1.0. Subheadline at 18px Inter weight 400, #9C9C9D, line-height 1.4. Two side-by-side buttons below: #E6E6E6 background, #2F3031 text, 8px radius, 8px 12px padding; second button transparent, #9C9C9D text, 8px radius, 1px solid #454647 border.\n\n2. **Feature Card Grid**: 3-column grid with 15px gap. Each card: transparent background, border-radius 16px, padding 24px, border 1px solid #222225. Icon area 32px × 32px, icon color #6A6B6C. Card title at 20px Inter weight 600, #FFFFFF. Body text at 14px Inter weight 400, #6A6B6C, line-height 1.57.\n\n3. **Navigation Bar**: Fixed top, background #07080a, border-bottom 1px solid #1b1c1e, max-width 1200px centered, height 52px. Logo left (red flame icon #FF6363 + 'Raycast' text #FFFFFF Inter 14px weight 600). Center nav links at 14px Inter weight 400, #9C9C9D, gap 24px. Right: 'Log in' text link #9C9C9D + Download button #E6E6E6 bg, #2F3031 text, 8px radius, 8px 12px padding.\n\n4. **Dark Badge / Version Chip**: Background #1b1c1e, text #FFFFFF, border-radius 6px, padding 0px 6px, Inter 12px weight 500, letter-spacing +0.048px. Use for 'v1.104.14', 'macOS 13+', category labels.\n\n5. **Product Screenshot Section**: Centered heading at 32px Inter weight 600, #FFFFFF, letter-spacing -0.06em. Subheading 16px Inter weight 400, #9C9C9D, 8px below. Below: contained app window mockup at 70% page width, border-radius 12px, shadow rgba(0,0,0,0.28) 0px 1.189px 2.377px 0px, backdrop-filter blur(36px), border 1px solid rgba(255,255,255,0.1). Background of mockup #111214."
+    },
+    {
+      "title": "Animation Philosophy",
+      "content": "Transitions default to `ease` (not ease-in-out) at 200ms for micro-interactions (color, opacity, box-shadow) and 400ms for transforms. The custom easing `cubic-bezier(0.23, 1, 0.32, 1)` (outQuint) is used for entrances — fast attack, long settle — giving UI elements a snap-in character rather than a float-in. Keyboard key elements animate `--key-bg-start-color` and `--key-bg-end-color` CSS custom properties at 200ms, enabling per-key gradient transitions without class toggling. Named animations `page_fade-in-up` use upward translate + opacity for section reveals. Motion is expressive but never decorative-slow — nothing exceeds 700ms."
+    },
+    {
+      "title": "Gradient System",
+      "content": "Three gradient types serve distinct functions:\n\n1. **Section Atmosphere Radials** (blue, violet, steel variants): Positioned at top-center of each marketing section, covering ~85% width × ~75% height, fading from 0.7 opacity core to transparent edges. Color-codes sections: blue = AI/productivity, violet = Pro/premium, steel-gray = general features.\n\n2. **Product Feature Linear**: `linear-gradient(135deg, rgb(86,194,255) 0%, rgb(19,138,242) 100%)` used inside product UI illustration elements — a vivid sky-to-blue for chart/icon accents.\n\n3. **Hero Announcement Conic**: `conic-gradient(from 100deg at 113.455px 15px, rgba(0,0,0,0) 0deg, rgb(236,165,167) 20%, rgba(0,0,0,0) 25%)` — single-use rotating effect for the 'Introducing Glaze' announcement badge sweep animation.\n\nRule: All section backgrounds must use transparent-to-transparent radial gradients only. Never use opaque gradient fills as section backgrounds."
+    }
+  ],
+  "title": "Raycast"
+}

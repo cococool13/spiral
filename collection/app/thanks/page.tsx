@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Footer from "@/components/Footer";
+import GlassPillCTA from "@/components/GlassPillCTA";
 import Nav from "@/components/Nav";
 import { apps } from "@/lib/apps";
 
@@ -18,7 +19,7 @@ export default function ThanksPage() {
   return (
     <>
       <Nav />
-      <main id="content" className="mx-auto max-w-2xl px-6 pt-36 pb-24 sm:pt-44">
+      <main id="content" className="information-page setup-page shell">
         <h1 className="type-display text-4xl text-paper sm:text-5xl">You are in.</h1>
         <p className="mt-8 text-lg text-gray">
           One $9.99 license unlocks the shipping apps. Open each app, paste the key from
@@ -28,7 +29,8 @@ export default function ThanksPage() {
 
         <ol className="mt-10 list-decimal space-y-3 pl-5 text-gray">
           <li>
-            Download the Mac disk image (or the Windows installer where one exists).
+            Download the build for this machine (Mac disk image or Windows installer where
+            one exists).
           </li>
           <li>
             Mac: drag the app to Applications, then open it from there. Windows: More info
@@ -40,27 +42,13 @@ export default function ThanksPage() {
           </li>
         </ol>
 
-        <ul className="mt-12 space-y-4">
+        <ul className="setup-downloads">
           {live.map((app) => (
             <li key={app.slug} className="border-t border-gray/25 pt-4">
               <p className="text-paper">{app.name}</p>
               <p className="mt-1 text-sm text-gray">{app.tagline}</p>
               <div className="mt-3 flex flex-wrap gap-3">
-                {app.downloads ? (
-                  <>
-                    <a href={app.downloads.mac.url} className="glass-pill">
-                      {app.downloads.mac.label}
-                    </a>
-                    {app.noWindowsBinary ? null : (
-                      <a
-                        href={app.downloads.windows.url}
-                        className="glass-pill glass-pill--secondary"
-                      >
-                        {app.downloads.windows.label}
-                      </a>
-                    )}
-                  </>
-                ) : null}
+                <GlassPillCTA app={app} />
               </div>
             </li>
           ))}

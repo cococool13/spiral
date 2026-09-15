@@ -1,22 +1,12 @@
-import type { Metadata } from "next";
 import AppPageLayout from "@/components/app-page/AppPageLayout";
 import HeroProof from "@/components/app-page/HeroProof";
 import RemovalRules from "@/components/app-page/RemovalRules";
+import { appMetadata } from "@/lib/appMetadata";
 import { appPage } from "@/lib/appPages";
 
 const page = appPage("clean");
 
-export const metadata: Metadata = {
-  title: page.title,
-  description: page.description,
-  alternates: { canonical: `/${page.slug}/` },
-  openGraph: {
-    title: page.title,
-    description: page.description,
-    type: "website",
-    url: `/${page.slug}/`,
-  },
-};
+export const metadata = appMetadata(page);
 
 export default function CleanPage() {
   return (

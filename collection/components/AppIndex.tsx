@@ -1,65 +1,77 @@
 import { apps } from "@/lib/apps";
-import Mark from "./Mark";
-import Reveal from "./Reveal";
+import ProductVisual from "./ProductVisual";
 
-/** One measured fact per app — not a slogan. */
-const PROOF: Record<string, string> = {
-  wallpaper: "4.6 MB. Click, it applies.",
-  slim: "Brave on Mac. Scripts for four browsers.",
-  clean: "Not released. Delete, Trash, or never touch.",
-  resume: "Twelve layouts. A moved digit or name is discarded.",
+const descriptions: Record<string, string> = {
+  wallpaper:
+    "Find a wallpaper on Wallhaven. Click it. It downloads and applies to your desktop.",
+  slim: "Review the policies. Choose what changes. A Brave wizard on Mac, with scripts for four browsers.",
+  resume:
+    "Twelve typeset layouts. Export PDF and Word from one source, with your facts kept in place.",
+  clean:
+    "Three rules for what can be deleted, what goes to Trash, and what must never be touched.",
+};
+const platforms: Record<string, string> = {
+  wallpaper: "macOS + Windows",
+  slim: "macOS wizard · cross-platform scripts",
+  resume: "macOS + Windows",
+  clean: "In development · no download",
 };
 
-const STATUS_LABEL: Record<(typeof apps)[number]["status"], string> = {
-  live: "Live",
-  "coming-soon": "Coming soon",
-};
-
-/**
- * Four frames drawn in light. Each is set the way the app's own bar is set —
- * the mark, "Spiral" receding, the app's word carrying the line — with one
- * mono status line at the top and one proof line at the foot. Nothing else.
- * On hover the frame brightens and the mark turns helix.
- */
 export default function AppIndex() {
-  const listed = apps.filter((app) => app.page);
-
+  const listed = apps
+    .filter((app) => app.page)
+    .toSorted(
+      (a, b) => Number(a.status === "coming-soon") - Number(b.status === "coming-soon"),
+    );
   return (
-    <section id="apps" className="frames">
-      <div className="frames-shell">
-        <div className="frames-head">
-          <p className="obs-readout">02 / The apps</p>
-          <Reveal as="h2" className="type-display frames-title">
+    <section id="apps" className="parts-sheet">
+      <div className="shell">
+        <div className="section-heading">
+          <h2>
+            Parts list.
+            <br />
             One job each.
-          </Reveal>
+          </h2>
+          <p>
+            Real output in the frame.
+            <br />
+            Pick an app and open its page.
+          </p>
         </div>
-
-        <ul className="frames-grid">
-          {listed.map((app, i) => {
-            const short = app.name.replace("Spiral ", "");
-            const live = app.status === "live";
-            return (
-              <Reveal as="li" step={i} key={app.slug}>
-                <a href={app.page} className="frame">
-                  <span className={`frame-status${live ? " frame-status--live" : ""}`}>
-                    {STATUS_LABEL[app.status]}
-                    {app.version ? ` · ${app.version}` : ""}
-                  </span>
-
-                  <span className="frame-name">
-                    <Mark size={28} className="frame-mark" />
-                    <h3 className="type-heading frame-lockup">
-                      <span className="frame-lockup-collection">Spiral</span>
-                      <span className="frame-lockup-app">{short}</span>
-                    </h3>
-                  </span>
-
-                  <span className="frame-proof">{PROOF[app.slug] ?? app.tagline}</span>
+        <div className="product-grid">
+          {listed.map((app, i) => (
+            <article className="product-entry" key={app.slug}>
+              <a
+                className="product-entry-visual"
+                href={app.page}
+                aria-label={`Explore ${app.name}`}
+              >
+                <ProductVisual slug={app.slug} />
+              </a>
+              <div className="product-entry-title">
+                <span className="meta-id">
+                  {String(i + 1).padStart(2, "0")} / {app.slug.toUpperCase()}
+                </span>
+                <h3>
+                  <a href={app.page}>{app.name.replace("Spiral ", "")}</a>
+                </h3>
+                <span className="product-status">
+                  {app.status === "live" ? `v${app.version}` : "In development"}
+                </span>
+              </div>
+              <p className="product-description">
+                {descriptions[app.slug] ?? app.tagline}
+              </p>
+              <div className="product-entry-foot">
+                <span>{platforms[app.slug]}</span>
+                <a href={app.page}>
+                  {app.status === "live" ? "Open app page" : "See the approach"}{" "}
+                  <span aria-hidden="true">↗</span>
                 </a>
-              </Reveal>
-            );
-          })}
-        </ul>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -1,21 +1,11 @@
-import type { Metadata } from "next";
 import AppPageLayout from "@/components/app-page/AppPageLayout";
 import TemplateSequence from "@/components/resume/TemplateSequence";
+import { appMetadata } from "@/lib/appMetadata";
 import { appPage } from "@/lib/appPages";
 
 const page = appPage("resume");
 
-export const metadata: Metadata = {
-  title: page.title,
-  description: page.description,
-  alternates: { canonical: `/${page.slug}/` },
-  openGraph: {
-    title: page.title,
-    description: page.description,
-    type: "website",
-    url: `/${page.slug}/`,
-  },
-};
+export const metadata = appMetadata(page);
 
 /** The one claim on this page that is worth showing rather than stating: two
  *  rewrites that came back from a model, and what happened to each. */

@@ -51,12 +51,10 @@ export default function OtherWork() {
 
   return (
     <section id="other-work" className="bg-paper text-ink">
-      <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+      <div className="shell work-content">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-xl">
-            <h2 className="type-display text-4xl text-ink sm:text-5xl">
-              Outside the Collection
-            </h2>
+            <h1 className="work-title">Outside the Collection</h1>
             <p className="mt-4 text-sm text-steel" aria-live="polite">
               {countLine(kind, filtered.length)}
             </p>

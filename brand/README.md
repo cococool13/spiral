@@ -3,8 +3,8 @@
 Every colour, font, and mark used anywhere in this repo originates here.
 Nothing in `apps/` or `collection/` may define its own brand values.
 
-Materials are Identity 02: void, paper, helix red, Host Grotesk, 12px controls.
-The mark is the original filled helix — three bands, not the Identity 02 stroke.
+Materials are Identity 03: warm void, paper, helix red, Host Grotesk, sharp (0°) controls.
+The mark is the original filled helix — three bands, not a stroke redraw.
 
 ## What's here
 
@@ -51,8 +51,10 @@ Edit the file here instead.
 
 ## The rules that outlive any one file
 
-- Five colours. One grotesque (display and UI). System mono for data. Two radii for most chrome: `0` and `--spiral-radius-ctl` (12px). Stadium capsules (`--spiral-radius-pill`) are CTAs only.
+- Five colours. One grotesque (display and UI). System mono for data. Radius `0`
+  for surfaces and controls (Identity 03). Helix is CTA/mark/warning only.
 - All spacing is a multiple of 8px.
 - Red (`--spiral-red` / `--spiral-helix`) is for the mark, the one action, and warnings. Never a page fill. Never body text.
 - The mark is three filled bands, one colour at a time — helix, paper, or void. Never gradients, shadows, rotation, or other hues. Do not redraw it as a stroke.
-- The collection home is void with paper type and paper hairlines — frames drawn in light. The hero is the filament field (helix red rising, washing to paper along one band) full-bleed behind a one-weight headline; the one refused word is set in helix, as a warning is. The photograph dissolves into void at both edges. The hero does not carry the mark; the nav bar and the footer do — the footer at monumental scale, in paper.
+- The collection home is an Instrument Utility catalogue: warm void, paper type,
+  sharp frames, mono parts-sheet metadata, helix for Buy only.

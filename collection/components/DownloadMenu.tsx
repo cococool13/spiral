@@ -8,7 +8,7 @@ import { AppleMark, WindowsMark } from "./GlassPillCTA";
 
 interface Props {
   /** Hero is the page's one first-screen download. Nav is the same list, compact. */
-  variant?: "hero" | "nav";
+  variant?: "hero" | "nav" | "purchase";
 }
 
 /**
@@ -71,7 +71,9 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
         aria-controls={panelId}
         aria-label="Download — choose an app"
         onClick={() => setOpen((v) => !v)}
-        className={hero ? "glass-pill" : "glass-pill glass-pill--nav"}
+        className={
+          hero ? "glass-pill glass-pill--secondary" : "glass-pill glass-pill--nav"
+        }
       >
         {Mark ? "Download for" : "Download"}
         {Mark ? <Mark /> : null}
@@ -86,7 +88,9 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
           "download-panel absolute z-20 w-[min(16rem,calc(100vw-2rem))] overflow-hidden border border-paper/15 bg-black/95 text-left shadow-2xl backdrop-blur",
           hero
             ? "bottom-full left-1/2 mb-3 -translate-x-1/2"
-            : "top-full left-1/2 mt-2 -translate-x-1/2",
+            : variant === "purchase"
+              ? "top-full right-0 mt-2"
+              : "top-full left-1/2 mt-2 -translate-x-1/2",
           open ? "download-panel--open" : "",
         ].join(" ")}
       >
