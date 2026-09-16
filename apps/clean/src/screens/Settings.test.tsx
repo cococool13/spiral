@@ -133,10 +133,14 @@ describe("Exclusions", () => {
 });
 
 describe("About", () => {
-  it("states that the app makes no network connections", async () => {
+  it("names the license check and states there is no updater or telemetry", async () => {
     wire();
     render(<Settings />);
-    expect(await screen.findByText(/no network connections of any kind/)).toBeTruthy();
+    const copy = await screen.findByText(
+      /License validation is a named call to spiral-license\.cohencool\.workers\.dev on launch/,
+    );
+    expect(copy.textContent).toMatch(/does not check for updates yet/);
+    expect(copy.textContent).toMatch(/no telemetry/);
   });
 
   it("shows the version", async () => {

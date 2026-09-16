@@ -33,7 +33,7 @@ Most cleaners ask you to trust them. This one is built so that trust is not the 
 
 **Every guard is proven by mutation, not coverage** ([ADR-0012](docs/adr/0012-guards-are-proven-by-mutation.md)). Stub the guard to `true`, name the tests that then fail. Four guards carry that proof today. Browser caches and Trash are catalog entries ([ADR-0001](docs/adr/0001-cleanup-retention-policy.md), [ADR-0006](docs/adr/0006-safe-categories-are-a-shipped-catalog.md)) — data, not guards — so they do not get their own ADR-0012 mutation rows; they delete only through the Catalog justification on the remove boundary.
 
-**Nothing leaves the Mac.** No telemetry, no accounts, no network call of any kind — not even an update check, because there is no updater yet.
+**Nothing leaves the Mac except the named license check.** No telemetry, no accounts, no updater. License validation is a named call to Spiral's validator on launch (`docs/licensing.md`).
 
 ## Two things worth knowing before you use it
 
@@ -94,4 +94,4 @@ src-tauri/src/
 3. **Notarization** — needs the Apple ID and an app-specific password.
 4. **The updater cannot be written yet** — the Tauri plugin reads `plugins.updater.pubkey` at init and panics without it, so the key has to exist before any updater code does.
 
-Deliberately out of scope for v1: a menu bar HUD or anything resident, scheduled cleaning, duplicate and large-old-file finders, `node_modules` and Docker, `.lproj` stripping, and any network call whatsoever.
+Deliberately out of scope for v1: a menu bar HUD or anything resident, scheduled cleaning, duplicate and large-old-file finders, `node_modules` and Docker, `.lproj` stripping, and any network call other than the named license check on launch.

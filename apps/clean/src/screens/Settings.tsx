@@ -115,7 +115,7 @@ export default function Settings() {
 
       <h2>Updates</h2>
       <p>
-        Spiral Clean does not check for updates yet, and makes no network connections of any kind.
+        Spiral Clean does not check for updates yet. License validation is a named call to spiral-license.cohencool.workers.dev on launch. There is no telemetry.
       </p>
 
       <h2>About</h2>

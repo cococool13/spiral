@@ -26,7 +26,7 @@ Settings now lists, adds and removes entries. Three properties carried over from
 - **Removing is exact.** Un-excluding "everything beneath this" would drop entries the user never named — the direction where being clever costs protection.
 - **A malformed entry never reaches disk.** `save` refuses it, and `load` refuses to interpret one. While that file is unreadable `remove.rs` denies every removal, so this is the one piece of state whose corruption silently disables the whole product — and it must never be this app that wrote it.
 
-Settings also shows Full Disk Access status with the deep link, the version, and states plainly that the app makes no network connections of any kind.
+Settings also shows Full Disk Access status with the deep link, the version, and states plainly that license validation is a named call to Spiral's validator on launch — no telemetry, no updater.
 
 ### The smoke gate
 

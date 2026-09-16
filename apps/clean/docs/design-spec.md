@@ -143,7 +143,7 @@ Native behavior (wallpaper-equivalent operations: actual deletion, admin escalat
 - Unused language file (`.lproj`) stripping — breaks code signatures on some apps with no local recovery.
 - Xcode simulator runtimes.
 - Duplicate-file and large-old-file finders — both require scanning user content.
-- Telemetry, accounts, and any network call other than the updater check — and until M7 registers the updater, no network call at all.
+- Telemetry, accounts, and any network call other than the named license check on launch. There is no updater yet.
 - Windows and Linux.
 
 ## Build order
