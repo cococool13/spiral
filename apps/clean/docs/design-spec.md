@@ -48,6 +48,8 @@ Each numbered item was a distinct decision. Where the choice went against the re
 17. **Startup items live inside Optimize** as a section, not a fourth rail verb.
 18. **Startup depth:** classic launch agents and daemons get a reversible `launchctl` disable, with Remove as a separate deliberate action. Background Task Management login items are inventoried read-only with a System Settings deep link, because macOS 13+ forbids third-party toggling. No control is shown that cannot work.
 19. **Bluetooth reset is blocked outright** when the active keyboard or pointing device is Bluetooth-transported. Launchpad reset is labeled as permanently discarding a custom arrangement.
+
+    **Amended 2026-09-16.** Launchpad reset was cut with the other two M5b cuts — `Launchpad.app` is gone, so the label never shipped. Decision 10 records why. The Bluetooth block is unchanged.
 20. **Optimize carries a full Health section** — free space breakdown, SMART status, battery health and cycle count on laptops, uptime, macOS version and model. *(Against recommendation of a compact action-linked strip.)*
 21. **Competitor parity:** App Lipo, disk analyzer, PKG receipts, and drag-and-drop uninstall are all in v1.
 
@@ -63,7 +65,7 @@ Each numbered item was a distinct decision. Where the choice went against the re
 | --- | --- | --- |
 | **Clean** | Delete regenerable junk | Always permanent |
 | **Storage** | Disk analyzer · App Lipo · iOS device backups | Lipo irreversible · backups → Trash |
-| **Optimize** | Health · Startup Items · 14 maintenance actions | N/A |
+| **Optimize** | Health · Startup Items · 11 maintenance actions | N/A |
 | **Uninstall** | Installed apps · Leftovers · PKG receipts · drag-and-drop | Apps permanent · rest → Trash |
 | History | Past runs and disk usage trend | — |
 | Settings | FDA status · exclusion list · history retention · updates (M7) · version | — |
@@ -83,20 +85,24 @@ Each numbered item was a distinct decision. Where the choice went against the re
 | `analyze` | Read-only space tree for the disk analyzer |
 | `backups` | iOS device backup enumeration |
 | `optimize` | Named maintenance actions, `requires_admin`, admin escalation |
-| `health` | SMART, battery, memory pressure, uptime, volume stats |
+| `health` | SMART, battery, local snapshots, uptime, volume stats, model and macOS version |
 | `startup` | launchd enumeration plus `sfltool dumpbtm` |
 | `history` | Capped JSON run log |
 | `smoke` | Native end-to-end smoke, exits non-zero on failure |
 
 `health`, `analyze`, and `startup`'s inventory path are read-only and never route through `remove`.
 
+**Amended 2026-09-16.** `HealthReport` has no memory-pressure field. The shipped fields are storage, SMART, battery, local snapshot count, uptime, model and macOS version.
+
 ### Optimize action list
 
 | Group | Checked by default | Unchecked (opt-in) |
 | --- | --- | --- |
-| Caches & indexes | font caches · QuickLook thumbnails · icon services · Launch Services rebuild | Spotlight reindex · Mail envelope index |
-| System & storage | periodic maintenance scripts · restart Finder & Dock | snapshot thinning · verify startup volume · Launchpad reset |
+| Caches & indexes | font caches · QuickLook thumbnails · icon services · Launch Services rebuild | Spotlight reindex |
+| System & storage | restart Finder & Dock | snapshot thinning · verify startup volume |
 | Network & devices | DNS flush | DHCP lease renewal · Bluetooth reset |
+
+**Amended 2026-09-16, to the eleven M5b actually shipped.** Mail envelope index, periodic maintenance scripts, and Launchpad reset were cut. Decision 10 records why.
 
 One admin prompt per run, raised only if the selected set contains a privileged action. Actions run sequentially; each reports success, skip, or failure independently.
 
@@ -155,6 +161,8 @@ Re-cut from the original five milestones to reflect the final scope.
 3. **M3 — Clean.** Category screen, expansion, confirm flow, estimate-then-measured reporting.
 4. **M4 — Uninstall.** Discovery, association, review sheet, Homebrew and system-extension handoffs, leftovers, PKG receipts, drag-and-drop.
 5. **M5 — Optimize.** Health, startup items, the 14 actions, admin escalation, Bluetooth guard.
+
+    **Amended 2026-09-16.** M5b shipped eleven actions, not fourteen. Decision 10 records the three that were cut.
 6. **M6 — Storage.** Disk analyzer, App Lipo, iOS device backups.
 7. **M7 — Release.** History trend view, smoke suite, signing, notarization, updater manifest, website entry.
 
