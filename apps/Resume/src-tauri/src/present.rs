@@ -41,16 +41,6 @@ pub fn contact_line(doc: &ResumeDoc) -> String {
         .join(" · ")
 }
 
-/// Matches `prelude.typ`'s `when-and-where`.
-pub fn when_and_where(dates: &str, location: &str) -> String {
-    [dates, location]
-        .iter()
-        .filter(|part| !part.is_empty())
-        .copied()
-        .collect::<Vec<_>>()
-        .join(" · ")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,15 +51,5 @@ mod tests {
         assert_eq!(date_range("2016", "2019", false), "2016 — 2019");
         assert_eq!(date_range("", "", false), "");
         assert_eq!(date_range("2019", "", false), "2019");
-    }
-
-    #[test]
-    fn when_and_where_joins_the_parts_the_prelude_joins() {
-        assert_eq!(
-            when_and_where("Jan 2021 — Present", "Portsmouth"),
-            "Jan 2021 — Present · Portsmouth"
-        );
-        assert_eq!(when_and_where("Jan 2021 — Present", ""), "Jan 2021 — Present");
-        assert_eq!(when_and_where("", "Portsmouth"), "Portsmouth");
     }
 }

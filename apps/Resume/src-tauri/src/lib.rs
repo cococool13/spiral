@@ -1,10 +1,13 @@
 pub mod accent;
 pub mod build;
+#[cfg(test)]
 pub mod engine_bench;
 pub mod engine_run;
+#[cfg(test)]
 pub mod export_cards;
 pub mod commands;
 pub mod docx;
+#[cfg(test)]
 pub mod fixtures;
 pub mod gate;
 pub mod import;
