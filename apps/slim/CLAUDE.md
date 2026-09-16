@@ -63,9 +63,10 @@ browser_collection.py# read-only CLI over that engine
 modules/ profiles/   # the schema-driven policy sources the engine resolves
 desktop/             # Spiral Slim — the Tauri 2 wizard. See desktop/README.md
                      # Carries its own PRODUCT.md and DESIGN.md. Its DESIGN.md
-                     # records three deliberate divergences from docs/DESIGN.md
-                     # (a card radius, a glow, an animated red edge) — read it
-                     # before "fixing" them back to the brand default.
+                     # records four deliberate divergences from docs/DESIGN.md
+                     # (a card radius, a glow, an animated red edge, and red
+                     # display type for card names) — read it before
+                     # "fixing" them back to the brand default.
 Presets/<Browser>/   # per-browser preset JSON (Brave/Chrome/Edge/Firefox),
                      # shared by all three scripts. See "Two policy sources"
                      # below for how this relates to profiles/+modules/.

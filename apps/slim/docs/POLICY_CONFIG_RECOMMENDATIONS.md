@@ -4,7 +4,7 @@ Research date: 2026-07-22
 
 ## Scope and compatibility
 
-This review compares the policy keys currently exposed by `slimbrave-mac.py`
+This review compares the policy keys currently exposed by `spiral-slim-mac.py`
 against the current official Brave policy guide and Chromium policy templates.
 Brave states that it supports Chromium policies in addition to Brave-specific
 policies. Desktop support below means Windows, macOS, and Linux unless noted.
@@ -18,7 +18,7 @@ and Chrome Enterprise policy pages linked per row.
 
 ## Recommended top ten
 
-These do not duplicate the existing keys in `slimbrave-mac.py`.
+These do not duplicate the existing keys in `spiral-slim-mac.py`.
 
 | Priority | Policy and suggested value | Config use | Desktop support | Risk | Why / caveat |
 |---:|---|---|---|---|---|

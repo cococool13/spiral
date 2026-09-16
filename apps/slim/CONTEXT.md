@@ -31,4 +31,4 @@ the file is given — those two must not drift apart.
 | **Shown before it is made** | Every change is listed before it is written. This is the app's whole posture: the user is not asked to trust a summary of what a script did afterwards. |
 | **Brave is the default** | The browser assumed when none is named. The others are chosen explicitly — `--browser chrome`, `--browser edge`, `--browser firefox`, or `-Browser` on Windows. |
 | **Reversible** | A policy this tool wrote can be removed by the same tool. Nothing it does requires reinstalling a browser to undo. |
-| **DNS mode** | How name resolution is left configured: `default`, `strict`, `quad9`, `opendns`, or `custom`. Named because it is the one setting that changes who sees the user's traffic. |
+| **DNS mode** | How name resolution is left configured: `unmanaged`, `automatic`, `off`, `secure`, or `custom`. Named because it is the one setting that changes who sees the user's traffic. |
