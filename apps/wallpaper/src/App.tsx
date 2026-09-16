@@ -8,7 +8,7 @@ import { FirstRun } from "./screens/FirstRun";
 import { Settings, type AppSettings } from "./screens/Settings";
 
 type Screen = "browse" | "settings";
-type LicenseBoot = "loading" | "locked" | "ok" | "error";
+type LicenseBoot = "loading" | "locked" | "ok";
 
 function App() {
   const [screen, setScreen] = useState<Screen>("browse");

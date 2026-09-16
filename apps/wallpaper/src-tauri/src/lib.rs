@@ -88,7 +88,6 @@ fn clear_thumb_cache(app: AppHandle) -> Result<(), String> {
     cache::clear_thumb_cache(&app)
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let client = reqwest::Client::builder()
         .user_agent(concat!("SpiralWallpaper/", env!("CARGO_PKG_VERSION")))
