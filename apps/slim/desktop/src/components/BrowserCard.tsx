@@ -12,7 +12,7 @@ export function BrowserCard({
 }) {
   const inputId = `channel-${channel.id}`;
   return (
-    <label className="card card--browser" htmlFor={inputId} data-selected={selected}>
+    <label className="card" htmlFor={inputId} data-selected={selected}>
       <input
         id={inputId}
         type="checkbox"

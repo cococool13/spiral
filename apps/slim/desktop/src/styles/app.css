@@ -713,106 +713,11 @@ li {
 
 /* --------------------------------------------------------------- choice */
 
-fieldset {
-  margin: 0 0 calc(var(--unit) * 2);
-  padding: 0;
-  border: 0;
-}
-
-legend {
-  padding: 0;
-  margin-bottom: var(--unit);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.choices {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--unit) * 1.5);
-}
-
-.choice {
-  display: grid;
-  grid-template-columns: 20px 1fr;
-  gap: calc(var(--unit) * 2);
-  padding: calc(var(--unit) * 2);
-  border: 1px solid var(--conc-03);
-  background: var(--conc-02);
-  cursor: pointer;
-  /* Selection changes the border AND the red inset bar; transition both or
-     the bar snaps while the border eases. */
-  transition:
-    border-color var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
-}
-
-.choice:hover {
-  border-color: var(--ink-02);
-}
-
-.choice:active {
-  transform: scale(0.99);
-}
-
-.choice:has(input:checked) {
-  border-color: var(--paper);
-  box-shadow: inset 3px 0 0 var(--hlx-01);
-}
-
-.choice:has(input:focus-visible) {
-  outline: 2px solid var(--hlx-01);
-  outline-offset: 2px;
-}
-
-.choice:has(input:disabled) {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-/* Optically centred on the cap-height of the 15px heading-weight title, not
-   on its line box. Geometric centring sits a pixel high here. */
-.choice input {
-  width: 16px;
-  height: 16px;
-  margin: 4px 0 0;
-  accent-color: var(--hlx-01);
-}
-
-.choice__title {
-  font-weight: 600;
-}
-
 .choice__meta {
   margin-top: 2px;
   color: var(--ink-02);
   font-family: var(--font-mono);
   font-size: 12px;
-}
-
-.choice__body {
-  margin: var(--unit) 0 0;
-  color: var(--ink-02);
-  font-size: 14px;
-}
-
-/* The browser's own icon, read from its app bundle. Square, never masked —
-   a vendor mark is theirs to shape. */
-.choice--logo {
-  grid-template-columns: 20px 32px 1fr;
-}
-
-.logo {
-  width: 32px;
-  height: 32px;
-  align-self: start;
-  object-fit: contain;
-}
-
-.logo--absent {
-  border: 1px solid var(--conc-03);
-  background: var(--conc-01);
 }
 
 /* ------------------------------------------------------ custom builder */
