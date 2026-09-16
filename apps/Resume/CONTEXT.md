@@ -44,7 +44,7 @@ the file is given — those two must not drift apart.
 
 | Term | Meaning |
 | --- | --- |
-| **Template** | One of twelve layouts. Each exists **twice** — a Typst source for the PDF and the thumbnails, and a DOCX builder for Word — and the two must carry the same facts. `FACTS` in `docx.rs` is the list that proves it. |
+| **Template** | One of twelve layouts. Each exists **twice** — a Typst source for the PDF and the thumbnails, and a DOCX builder for Word — and the two must carry the same facts. `FACTS` in `fixtures.rs` is the list that proves it. |
 | **Accent** | The single colour the user chooses. Validated against a closed set in `accent.rs` before it reaches a template; a template never writes a colour of its own. |
 | **Thumbnail** | A style-picker card. Drawn from the user's own resume, at page scale, so choosing a style is choosing how this document looks. |
 | **Engine tier** | What rewrites the wording: **deterministic** (default, always available), the **offline model** (an optional local download), or **your key** (the user's own API key). First launch asks once; after that it lives in Settings. The rest of the flow never asks and never upsells. |
