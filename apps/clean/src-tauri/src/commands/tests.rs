@@ -930,7 +930,7 @@ fn leftover_items_sort_by_size_descending_first() {
     // biggest reclaim first), "com.a" (the smaller item) would still
     // come first, same as it does alphabetically, and this test would
     // not notice. Mutation-proven: reversing the comparator to
-    // `a.bytes.cmp(&b.bytes)` makes this fail (see task-4-report.md).
+    // `a.bytes.cmp(&b.bytes)` makes this fail.
     let items = vec![
         LeftoverItem { bundle_id: "com.a".into(), paths: vec![], bytes: 10 },
         LeftoverItem { bundle_id: "com.b".into(), paths: vec![], bytes: 100 },

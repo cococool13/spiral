@@ -137,8 +137,8 @@ pub(crate) fn is_apple_bundle_id(bundle_id: &str) -> bool {
 /// uncanonicalized, would make this function's own paths disagree with
 /// itself the moment `home` sits under a symlinked ancestor (macOS resolves
 /// `/var` to `/private/var`, which is exactly where `tempfile::tempdir`
-/// places its directories). See task-4-report.md for the full trace through
-/// `Roots::new` and `is_within_app_bundle_scope` and why the fix belongs at
+/// places its directories). The full trace through
+/// `Roots::new` and `is_within_app_bundle_scope` shows why the fix belongs at
 /// the call site that hands the *same* `home` to both this function and
 /// `remove::execute`, not inside either one alone.
 pub fn associate(bundle_id: &str, app_name: &str, home: &Path) -> Vec<Associated> {

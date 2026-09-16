@@ -207,22 +207,6 @@ impl ExclusionList {
         })
     }
 
-    /// Write the list atomically: a full temp file, flushed to disk, then
-    /// renamed over the real one. `rename(2)` is atomic within a directory,
-    /// so a crash leaves either the old list or the new one — never a
-    /// half-written file.
-    ///
-    /// This used to be a plain `fs::write`, which truncates first and writes
-    /// second. A crash in that window left a truncated file, and the old
-    /// `load` turned that into an empty list without a word — every path the
-    /// user had protected silently became deletable. The two halves of that
-    /// defect are fixed together: this writes atomically, and `load` refuses
-    /// to interpret a file it cannot parse.
-    // The writer for the exclusion list in Settings (design spec, decision 23),
-    // which lands with M5. Kept rather than deleted because `load` on the
-    // reading side already refuses anything this would not write — the two
-    // halves of the truncation defect were fixed together, and splitting them
-    // across milestones would leave the reader guarding against a writer that
     /// The excluded paths, in the order they were added.
     pub fn entries(&self) -> &[PathBuf] {
         &self.paths
@@ -254,7 +238,17 @@ impl ExclusionList {
         self.paths.len() != before
     }
 
-    // no longer exists.
+    /// Write the list atomically: a full temp file, flushed to disk, then
+    /// renamed over the real one. `rename(2)` is atomic within a directory,
+    /// so a crash leaves either the old list or the new one — never a
+    /// half-written file.
+    ///
+    /// This used to be a plain `fs::write`, which truncates first and writes
+    /// second. A crash in that window left a truncated file, and the old
+    /// `load` turned that into an empty list without a word — every path the
+    /// user had protected silently became deletable. The two halves of that
+    /// defect are fixed together: this writes atomically, and `load` refuses
+    /// to interpret a file it cannot parse.
     pub fn save(&self, dir: &Path) -> std::io::Result<()> {
         // Refused here as well as in `load`, so a malformed entry cannot
         // reach disk in the first place. Catching it only on the way back in
