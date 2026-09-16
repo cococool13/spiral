@@ -20,9 +20,6 @@
   text-transform: uppercase;
   color: var(--spiral-mute);
 }
-.signal {
-  display: none;
-}
 .text-link {
   display: inline-flex;
   align-items: center;
