@@ -7,12 +7,10 @@ import { Notice } from "../components/Notice";
  *  floor. Spec: do not pad stage display time. */
 export function Build({
   draft,
-  aim = "",
   onDone,
   onBack,
 }: {
   draft: Draft;
-  aim?: string;
   onDone: (result: BuildResult) => void;
   onBack: () => void;
 }) {
@@ -22,13 +20,9 @@ export function Build({
   useEffect(() => {
     let current = true;
 
-    buildDocument(
-      draft,
-      (next) => {
-        if (current) setProgress(next);
-      },
-      aim,
-    )
+    buildDocument(draft, (next) => {
+      if (current) setProgress(next);
+    })
       .then((result) => {
         if (current) onDone(result);
       })
