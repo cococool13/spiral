@@ -28,6 +28,7 @@ import os
 import shutil
 import subprocess
 import sys
+from urllib.parse import urlsplit
 import tempfile
 
 IS_MAC = sys.platform == "darwin"
@@ -1384,6 +1385,34 @@ def load_existing_policy(installations=None):
     return {}
 
 
+def _validate_doh_template(raw):
+    """Return (ok, cleaned, reason) for a DoH template that will be written."""
+    cleaned = "".join(
+        ch for ch in (raw or "") if ch >= " " and ch != "\x7f"
+    ).strip()
+    if not cleaned:
+        return False, "", "The template is empty."
+    if len(cleaned) > 2048:
+        return False, cleaned, (
+            "The template is unreasonably long (over 2048 characters)."
+        )
+    parts = urlsplit(cleaned)
+    if not parts.scheme or not parts.netloc:
+        return False, cleaned, (
+            "That is not a complete URL. A DoH template looks like "
+            "https://cloudflare-dns.com/dns-query."
+        )
+    if parts.scheme.lower() != "https":
+        return False, cleaned, (
+            f"DoH templates must use https. Chromium rejects "
+            f"'{parts.scheme}', which would leave secure DNS with no "
+            f"working resolver."
+        )
+    if not parts.hostname:
+        return False, cleaned, "The URL has no hostname."
+    return True, cleaned, ""
+
+
 def _build_policy(rows):
     """Translate row state into a {key: value} policy dict.
 
@@ -1405,6 +1434,12 @@ def _build_policy(rows):
     # breaking DNS resolution in Brave.
     if dns_mode == "custom" and not dns_template:
         return None, "Custom DNS requires a DoH template URL."
+
+    if dns_template and dns_mode in ("custom", "secure", "automatic"):
+        ok, cleaned, reason = _validate_doh_template(dns_template)
+        if not ok:
+            return None, reason
+        dns_template = cleaned
 
     # "unmanaged" writes no DNS keys at all; since Apply fully overwrites
     # the policy file, any previously-managed DNS policy is removed.

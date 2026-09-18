@@ -86,6 +86,14 @@ def test_build_policy_collects_checked_features(mod):
     assert "DnsOverHttpsMode" not in policy  # DNS defaults to unmanaged
 
 
+def test_build_policy_rejects_http_doh_template(mod):
+    rows = mod.build_rows()
+    _set_dns(mod, rows, "custom", "http://dns.example/dns-query")
+    policy, err = mod._build_policy(rows)
+    assert policy is None
+    assert "https" in err.lower()
+
+
 def test_build_policy_custom_dns_requires_template(mod):
     rows = mod.build_rows()
     _set_dns(mod, rows, "custom", "")
