@@ -7,11 +7,15 @@ on:
       - "workers/license/**"
       - "crates/spiral-license/**"
       - "scripts/check-whop.mjs"
+      - "scripts/sync-whop.mjs"
+      - "collection/lib/whop.ts"
   pull_request:
     paths:
       - "workers/license/**"
       - "crates/spiral-license/**"
       - "scripts/check-whop.mjs"
+      - "scripts/sync-whop.mjs"
+      - "collection/lib/whop.ts"
   workflow_dispatch:
 
 concurrency:

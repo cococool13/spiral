@@ -413,7 +413,12 @@ fn service_target(tier: Tier, uid: u32, label: &str) -> String {
 /// because `launchctl … system/<label>` needs root. The password prompt is
 /// therefore raised only for the tier that genuinely requires it.
 #[tauri::command]
-pub fn startup_set_enabled(label: String, enabled: bool) -> Result<(), String> {
+pub fn startup_set_enabled(
+    app: tauri::AppHandle,
+    label: String,
+    enabled: bool,
+) -> Result<(), String> {
+    crate::license::require(&app)?;
     let home = dirs::home_dir().ok_or(
         "Could not find your home folder, so Spiral Clean cannot tell which login items are yours.",
     )?;
@@ -480,6 +485,7 @@ pub fn startup_remove(
     label: String,
     started_at: String,
 ) -> Result<(), String> {
+    crate::license::require(&app)?;
     use tauri::Manager;
     let config_dir = app
         .path()

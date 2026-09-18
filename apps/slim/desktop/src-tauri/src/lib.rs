@@ -72,6 +72,16 @@ fn project(app: &tauri::AppHandle) -> SlimResult<Project> {
     Project::locate(resource_dir)
 }
 
+fn require_license(app: &tauri::AppHandle) -> SlimResult<()> {
+    license::require(app).map_err(|detail| {
+        SlimError::new(
+            "License required",
+            detail,
+            "Activate Spiral Slim with your Whop license key, then try again.",
+        )
+    })
+}
+
 /* ---------------------------------------------------------------- *
  * Read-only commands. None of these elevate or write anything.
  * ---------------------------------------------------------------- */
@@ -148,13 +158,7 @@ fn apply_profile(
     plan_hash: String,
     confirmed: bool,
 ) -> Result<ApplyOutcome, SlimError> {
-    license::require(&app).map_err(|detail| {
-        SlimError::new(
-            "License required",
-            detail,
-            "Activate Spiral Slim with your Whop license key, then try again.",
-        )
-    })?;
+    require_license(&app)?;
     let mut guard = session.plan.lock().map_err(|_| poisoned())?;
     let plan = authorise(guard.as_ref(), &plan_hash, confirmed)?;
     if plan.report.blocked {
@@ -181,6 +185,7 @@ fn reset_policies(
     channel_ids: Vec<String>,
     confirmed: bool,
 ) -> Result<ResetOutcome, SlimError> {
+    require_license(&app)?;
     if !confirmed {
         return Err(SlimError::new(
             "Not confirmed",

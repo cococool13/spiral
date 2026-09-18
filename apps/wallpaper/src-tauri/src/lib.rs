@@ -92,6 +92,7 @@ fn clear_thumb_cache(app: AppHandle) -> Result<(), String> {
 pub fn run() {
     let client = reqwest::Client::builder()
         .user_agent(concat!("SpiralWallpaper/", env!("CARGO_PKG_VERSION")))
+        .timeout(std::time::Duration::from_secs(60))
         .build()
         .expect("failed to build HTTP client");
 

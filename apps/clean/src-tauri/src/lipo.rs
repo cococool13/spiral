@@ -380,6 +380,7 @@ pub fn lipo_strip(
     bundle_id: String,
     started_at: String,
 ) -> Result<StripReport, String> {
+    crate::license::require(&app)?;
     use tauri::Manager;
     let home = dirs::home_dir().ok_or("Could not find your home folder, so nothing was changed.")?;
     // Loaded here, immediately before the rewrite — same discipline as

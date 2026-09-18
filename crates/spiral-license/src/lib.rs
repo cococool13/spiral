@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// Public validator. Override at build time with `SPIRAL_LICENSE_URL` if needed.
-pub const DEFAULT_VALIDATOR_URL: &str =
-    "https://spiral-license.cohencool.workers.dev/validate";
+pub const DEFAULT_VALIDATOR_URL: &str = "https://spiral-license.cohencool.workers.dev/validate";
 
 const GRACE_SECS: u64 = 72 * 60 * 60;
 
@@ -154,6 +153,13 @@ fn save_status(app: AppId, key: &str, hwid: &str) -> Result<(), LicenseError> {
         .map_err(|e| LicenseError::Keychain(e.to_string()))
 }
 
+fn cached_status_covers(status: &CachedStatus, key: &str, hwid: &str, now: u64) -> bool {
+    if status.key_hash != hash_hex(key) || status.hwid_hash != hash_hex(hwid) {
+        return false;
+    }
+    now.saturating_sub(status.validated_at) <= GRACE_SECS
+}
+
 fn grace_ok(app: AppId, key: &str, hwid: &str) -> bool {
     let Ok(entry) = entry(app, STATUS_ACCOUNT) else {
         return false;
@@ -164,10 +170,7 @@ fn grace_ok(app: AppId, key: &str, hwid: &str) -> bool {
     let Ok(status) = serde_json::from_str::<CachedStatus>(&raw) else {
         return false;
     };
-    if status.key_hash != hash_hex(key) || status.hwid_hash != hash_hex(hwid) {
-        return false;
-    }
-    now_secs().saturating_sub(status.validated_at) <= GRACE_SECS
+    cached_status_covers(&status, key, hwid, now_secs())
 }
 
 /// Stable-enough machine id for Whop metadata binding. Not a secret.
@@ -220,21 +223,48 @@ pub fn machine_id() -> String {
     hash_hex(&format!("{host}:{user}"))
 }
 
-fn map_api_error(code: &str) -> LicenseError {
-    match code {
-        "invalid_key" => LicenseError::InvalidKey,
-        "no_access" => LicenseError::NoAccess,
-        "device_mismatch" => LicenseError::DeviceMismatch,
-        "validator_not_configured" => LicenseError::ValidatorNotConfigured,
-        other => LicenseError::Other(format!("License check failed ({other}).")),
-    }
-}
-
 fn http_client() -> Result<reqwest::Client, LicenseError> {
     reqwest::Client::builder()
         .user_agent(concat!("SpiralLicense/", env!("CARGO_PKG_VERSION")))
+        .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| LicenseError::Network(e.to_string()))
+}
+
+/// Fail closed on known auth errors; treat validator/Whop outages as network
+/// so `ensure_licensed` can use the 72h grace instead of locking a paid user out.
+fn classify_validator(
+    ok: bool,
+    http_success: bool,
+    http_server_error: bool,
+    http_429: bool,
+    error: Option<&str>,
+) -> Result<(), LicenseError> {
+    if ok && http_success {
+        return Ok(());
+    }
+    let code = error.unwrap_or("unknown");
+    match code {
+        "invalid_key" => Err(LicenseError::InvalidKey),
+        "no_access" => Err(LicenseError::NoAccess),
+        "device_mismatch" => Err(LicenseError::DeviceMismatch),
+        "validator_not_configured" => Err(LicenseError::ValidatorNotConfigured),
+        "missing_fields" | "bad_json" => Err(LicenseError::Other(format!(
+            "License check failed ({code})."
+        ))),
+        "whop_unavailable" | "rate_limited" => Err(LicenseError::Network(code.into())),
+        other if http_server_error || http_429 => Err(LicenseError::Network(other.into())),
+        other => Err(LicenseError::Other(format!(
+            "License check failed ({other})."
+        ))),
+    }
+}
+
+fn grace_eligible(e: &LicenseError) -> bool {
+    matches!(
+        e,
+        LicenseError::Network(_) | LicenseError::ValidatorNotConfigured
+    )
 }
 
 /// Activate: store key, validate online, refuse on failure.
@@ -259,7 +289,7 @@ pub async fn ensure_licensed(app: AppId, validator_url: &str) -> Result<(), Lice
             let _ = save_status(app, &key, &hwid);
             Ok(())
         }
-        Err(LicenseError::Network(_)) if grace_ok(app, &key, &hwid) => Ok(()),
+        Err(e) if grace_eligible(&e) && grace_ok(app, &key, &hwid) => Ok(()),
         Err(e) => Err(e),
     }
 }
@@ -288,11 +318,13 @@ async fn validate_online(
         .await
         .map_err(|e| LicenseError::Network(e.to_string()))?;
 
-    if body.ok && status.is_success() {
-        return Ok(());
-    }
-
-    Err(map_api_error(body.error.as_deref().unwrap_or("unknown")))
+    classify_validator(
+        body.ok,
+        status.is_success(),
+        status.is_server_error(),
+        status.as_u16() == 429,
+        body.error.as_deref(),
+    )
 }
 
 /// Tauri license commands for one app. Expand in `src-tauri/src/license.rs`.
@@ -361,12 +393,83 @@ mod tests {
     }
 
     #[test]
-    fn map_api_error_known_codes() {
-        assert_eq!(map_api_error("invalid_key"), LicenseError::InvalidKey);
-        assert_eq!(map_api_error("no_access"), LicenseError::NoAccess);
+    fn classify_validator_fails_closed_on_auth() {
         assert_eq!(
-            map_api_error("device_mismatch"),
-            LicenseError::DeviceMismatch
+            classify_validator(false, false, false, false, Some("invalid_key")),
+            Err(LicenseError::InvalidKey)
+        );
+        assert_eq!(
+            classify_validator(false, false, false, false, Some("no_access")),
+            Err(LicenseError::NoAccess)
+        );
+        assert_eq!(
+            classify_validator(false, false, false, false, Some("device_mismatch")),
+            Err(LicenseError::DeviceMismatch)
+        );
+    }
+
+    #[test]
+    fn classify_validator_treats_outages_as_network() {
+        assert!(matches!(
+            classify_validator(false, false, true, false, Some("whop_unavailable")),
+            Err(LicenseError::Network(_))
+        ));
+        assert!(matches!(
+            classify_validator(false, false, false, true, Some("rate_limited")),
+            Err(LicenseError::Network(_))
+        ));
+        assert!(matches!(
+            classify_validator(false, false, true, false, Some("unknown")),
+            Err(LicenseError::Network(_))
+        ));
+        assert_eq!(
+            classify_validator(false, false, true, false, Some("validator_not_configured")),
+            Err(LicenseError::ValidatorNotConfigured)
+        );
+    }
+
+    #[test]
+    fn classify_validator_accepts_ok() {
+        assert_eq!(classify_validator(true, true, false, false, None), Ok(()));
+    }
+
+    #[test]
+    fn grace_eligible_covers_outages_not_auth() {
+        assert!(grace_eligible(&LicenseError::Network("down".into())));
+        assert!(grace_eligible(&LicenseError::ValidatorNotConfigured));
+        assert!(!grace_eligible(&LicenseError::InvalidKey));
+        assert!(!grace_eligible(&LicenseError::NoAccess));
+        assert!(!grace_eligible(&LicenseError::DeviceMismatch));
+    }
+
+    #[test]
+    fn cached_status_covers_matching_key_within_window() {
+        let status = CachedStatus {
+            key_hash: hash_hex("key"),
+            hwid_hash: hash_hex("hw"),
+            validated_at: 1_000,
+        };
+        assert!(cached_status_covers(
+            &status,
+            "key",
+            "hw",
+            1_000 + GRACE_SECS
+        ));
+        assert!(!cached_status_covers(
+            &status,
+            "key",
+            "hw",
+            1_000 + GRACE_SECS + 1
+        ));
+        assert!(!cached_status_covers(&status, "other", "hw", 1_000));
+        assert!(!cached_status_covers(&status, "key", "other", 1_000));
+    }
+
+    #[test]
+    fn store_key_rejects_empty() {
+        assert_eq!(
+            store_key(AppId::Wallpaper, "  ").unwrap_err(),
+            LicenseError::EmptyKey
         );
     }
 
@@ -380,8 +483,6 @@ mod tests {
 
     #[test]
     fn empty_key_user_message() {
-        assert!(LicenseError::EmptyKey
-            .user_message()
-            .contains("Whop"));
+        assert!(LicenseError::EmptyKey.user_message().contains("Whop"));
     }
 }

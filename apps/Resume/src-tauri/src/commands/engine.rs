@@ -151,6 +151,7 @@ pub async fn download_offline_model(
     id: String,
     on_progress: Channel<crate::local::DownloadProgress>,
 ) -> Result<crate::local::ModelList, String> {
+    crate::license::require(&app)?;
     let root = store_for(&app)?.path().to_path_buf();
     let entry = crate::local::find(&id).ok_or_else(|| {
         "This build does not offer that model. Use your own API key, or the free rule-based pass."

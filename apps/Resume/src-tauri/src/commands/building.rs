@@ -236,6 +236,7 @@ pub async fn save_built_document(
     app: tauri::AppHandle,
     built: State<'_, BuiltFile>,
 ) -> Result<Option<String>, String> {
+    crate::license::require(&app)?;
     let (bytes, suggested, extension) = {
         let guard = built
             .0

@@ -6,19 +6,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CANONICAL, KEYS, MIRRORS } from "./sync-whop.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-
-const CANONICAL = join(ROOT, "collection/lib/whop.ts");
-
-const MIRRORS = [
-  "apps/wallpaper/src/lib/whop.ts",
-  "apps/clean/src/lib/whop.ts",
-  "apps/Resume/src/lib/whop.ts",
-  "apps/slim/desktop/src/lib/whop.ts",
-];
-
-const KEYS = ["WHOP_CHECKOUT_URL", "WHOP_PRODUCT_URL", "WHOP_MANAGE_URL"];
 
 function parseExports(path) {
   const text = readFileSync(path, "utf8");
