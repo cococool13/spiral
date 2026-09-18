@@ -116,7 +116,7 @@ export const otherWork: OtherProject[] = [
     kind: "Website",
     cover: "/work/jcc-secure.webp",
     coverAlt: "The case study landing page with a headline and summary figures.",
-    href: "https://jcc--case-study.web.app",
+    href: "https://jcc-secure.cohencool.workers.dev",
     where: "JCC",
   },
   {
