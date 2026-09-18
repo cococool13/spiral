@@ -79,13 +79,11 @@ to Whop; downloads use the catalogue's platform-aware offers.
 These exist so it stays fast.
 
 - **`prefers-reduced-motion` is not optional.** Every animation needs a
-  reduced path. `useReducedMotion()` on the JS side, the media query on the CSS
-  side. This is an accessibility requirement, not a preference.
+  reduced path. This is an accessibility requirement, not a preference.
 - **Nothing animates the LCP element on arrival.** The headline may enter, but
   it must not be what the browser is waiting on.
-- **Video is muted, `playsinline`, `preload="none"`, behind a poster, and pauses
-  off-screen.** No component uses video today — the app-card demo player was
-  removed. Video files live in `/brand/media` and are served from `/brand/media/…`.
+- **No video on the site today.** If one returns, it is muted, `playsinline`,
+  `preload="none"`, behind a poster, and pauses off-screen.
 - **Watch the first-load number.** Current baseline: **~138 kB** first load, ~102
   kB shared. If a change pushes that meaningfully, it should be buying something
   a visitor can see.

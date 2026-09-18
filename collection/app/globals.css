@@ -245,55 +245,6 @@ p {
   }
 }
 
-/* Rise — the arrival entrance, for things already on screen at load.
-   In CSS rather than in JavaScript: the headline is the LCP element, and
-   shipping it as `opacity: 0` made the largest paint wait on a framer chunk.
-   A CSS animation runs whether or not script does. */
-.rise {
-  animation: rise-in 1100ms var(--spiral-ease) both;
-  animation-delay: calc(var(--rise-step, 0) * 130ms);
-}
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-    filter: blur(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    filter: blur(0);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .rise {
-    animation: none;
-  }
-}
-
-/* Reveal — arrival on scroll, once. Only the hidden start state is gated on
-   html.js (set inline in layout.tsx): with scripts blocked, everything is at
-   rest. Transform + opacity only. */
-.js .reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  transition:
-    opacity 1100ms var(--spiral-ease),
-    transform 1100ms var(--spiral-ease);
-  transition-delay: calc(var(--reveal-step, 0) * 110ms);
-}
-.js .reveal.is-in {
-  opacity: 1;
-  transform: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .js .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
 /* Other work — editorial index. Always on the page; the cover follows
    the active row. Kind chips and rows share the control radius. */
 .work-cover {

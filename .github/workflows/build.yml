@@ -30,8 +30,8 @@ concurrency:
 
 jobs:
   # Builds the website on every push and pull request, and deploys it when the
-  # push is to main. It used to only build: deploying was `netlify deploy` run
-  # by hand, which meant main could be green and correct for days while the
+  # push is to main. It used to only build: deploying was a manual Pages
+  # upload, which meant main could be green and correct for days while the
   # live site served something older, with nothing anywhere saying so.
   #
   # The deploy reuses this job's own `out/` rather than living in a job of its

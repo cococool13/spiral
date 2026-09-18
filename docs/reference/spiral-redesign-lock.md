@@ -23,8 +23,6 @@ real product evidence, make the $9.99 one-time license obvious.
 - **B—Line / mono / INK** — researched; not primary for this lock.
 - Previews archived under `docs/reference/redesign-previews/`.
 
-Inspo MCP was unavailable this session; research is Refero-only.
-
 ## Reference lock
 
 ```text

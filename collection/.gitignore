@@ -10,8 +10,8 @@ lib/brand-tokens.json
 # wrangler local state
 .wrangler/
 
-# Uizze live session output
-.uizze/live/
+# Agent UI session output
+.uizze/
 
 # Written by `next dev`. Not project instructions.
 AGENTS.md
