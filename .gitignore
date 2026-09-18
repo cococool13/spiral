@@ -11,6 +11,7 @@ apps/wallpaper/src-tauri/gen/
 
 # Local agent settings
 .claude/settings.local.json
+.cursor/
 
 # wrangler local state
 .wrangler
