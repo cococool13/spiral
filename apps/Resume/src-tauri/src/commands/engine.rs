@@ -79,6 +79,7 @@ pub fn save_engine(
     model: String,
     base_url: String,
 ) -> Result<EngineInfo, String> {
+    crate::license::require_sync(&app)?;
     // Validate before writing, so a bad base URL is refused rather than stored.
     Provider::parse(&provider, &base_url)?;
     let root = store_for(&app)?.path().to_path_buf();
@@ -106,6 +107,7 @@ pub fn save_engine(
 /// written to the app data folder.
 #[tauri::command]
 pub fn save_api_key(app: tauri::AppHandle, key: String) -> Result<EngineInfo, String> {
+    crate::license::require_sync(&app)?;
     let (_, provider) = engine_of(&app)?;
     if !provider.needs_key() {
         return Err("The offline engine runs on this computer and needs no key.".to_string());
@@ -151,7 +153,7 @@ pub async fn download_offline_model(
     id: String,
     on_progress: Channel<crate::local::DownloadProgress>,
 ) -> Result<crate::local::ModelList, String> {
-    crate::license::require(&app)?;
+    crate::license::require(&app).await?;
     let root = store_for(&app)?.path().to_path_buf();
     let entry = crate::local::find(&id).ok_or_else(|| {
         "This build does not offer that model. Use your own API key, or the free rule-based pass."

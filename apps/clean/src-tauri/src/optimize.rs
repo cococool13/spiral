@@ -657,8 +657,9 @@ fn run_plain(commands: &[&[&str]]) -> ActionOutcome {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn optimize_plan() -> Vec<ActionSummary> {
-    plan()
+pub fn optimize_plan(app: tauri::AppHandle) -> Result<Vec<ActionSummary>, String> {
+    crate::license::require_sync(&app)?;
+    Ok(plan())
 }
 
 #[tauri::command]
@@ -667,7 +668,7 @@ pub fn optimize_execute(
     ids: Vec<String>,
     started_at: String,
 ) -> Result<OptimizeReport, String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     use tauri::Manager;
     let dir = app.path().app_config_dir().map_err(|e| {
         format!("Could not locate Spiral Clean's settings folder: {e}. Reopen the app.")

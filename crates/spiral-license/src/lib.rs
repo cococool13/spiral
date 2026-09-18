@@ -280,18 +280,35 @@ pub async fn activate(app: AppId, key: &str, validator_url: &str) -> Result<(), 
     Ok(())
 }
 
-/// Launch check: require a stored key; revalidate online; allow 72h grace offline.
-pub async fn ensure_licensed(app: AppId, validator_url: &str) -> Result<(), LicenseError> {
-    let key = read_key(app).ok_or(LicenseError::EmptyKey)?;
-    let hwid = machine_id();
-    match validate_online(app, &key, &hwid, validator_url).await {
-        Ok(()) => {
-            let _ = save_status(app, &key, &hwid);
-            Ok(())
-        }
-        Err(e) if grace_eligible(&e) && grace_ok(app, &key, &hwid) => Ok(()),
+/// Shared by launch and IPC: a stored key that currently validates.
+/// Online success wins; a revoked/invalid key is refused even with grace;
+/// only outages may use the 72h window from a previous successful check.
+fn current_validity(
+    stored_key: bool,
+    online: Result<(), LicenseError>,
+    grace: bool,
+) -> Result<(), LicenseError> {
+    if !stored_key {
+        return Err(LicenseError::EmptyKey);
+    }
+    match online {
+        Ok(()) => Ok(()),
+        Err(e) if grace_eligible(&e) && grace => Ok(()),
         Err(e) => Err(e),
     }
+}
+
+/// Launch check: require a stored key; revalidate online; allow 72h grace offline.
+pub async fn ensure_licensed(app: AppId, validator_url: &str) -> Result<(), LicenseError> {
+    let Some(key) = read_key(app) else {
+        return current_validity(false, Ok(()), false);
+    };
+    let hwid = machine_id();
+    let online = validate_online(app, &key, &hwid, validator_url).await;
+    if online.is_ok() {
+        let _ = save_status(app, &key, &hwid);
+    }
+    current_validity(true, online, grace_ok(app, &key, &hwid))
 }
 
 async fn validate_online(
@@ -370,12 +387,17 @@ macro_rules! license_commands {
             $crate::clear_key(APP).map_err(map_err)
         }
 
-        /// Refuse product commands until a key is present.
-        pub fn require(_app: &tauri::AppHandle) -> Result<(), String> {
-            if !$crate::has_key(APP) {
-                return Err($crate::LicenseError::EmptyKey.user_message());
-            }
-            Ok(())
+        /// Refuse product commands unless the key is currently valid —
+        /// same check as launch: online, or 72h grace on outage.
+        pub async fn require(_app: &tauri::AppHandle) -> Result<(), String> {
+            $crate::ensure_licensed(APP, &validator_url())
+                .await
+                .map_err(map_err)
+        }
+
+        /// For sync Tauri commands (blocking thread pool). Do not call from `async fn`.
+        pub fn require_sync(app: &tauri::AppHandle) -> Result<(), String> {
+            tauri::async_runtime::block_on(require(app))
         }
     };
 }
@@ -484,5 +506,126 @@ mod tests {
     #[test]
     fn empty_key_user_message() {
         assert!(LicenseError::EmptyKey.user_message().contains("Whop"));
+    }
+
+    #[test]
+    fn current_validity_refuses_a_stored_but_revoked_key() {
+        assert_eq!(
+            current_validity(true, Err(LicenseError::InvalidKey), true),
+            Err(LicenseError::InvalidKey)
+        );
+        assert_eq!(
+            current_validity(true, Err(LicenseError::NoAccess), true),
+            Err(LicenseError::NoAccess)
+        );
+        assert_eq!(
+            current_validity(true, Err(LicenseError::DeviceMismatch), false),
+            Err(LicenseError::DeviceMismatch)
+        );
+    }
+
+    #[test]
+    fn current_validity_matches_launch() {
+        assert_eq!(
+            current_validity(false, Ok(()), true),
+            Err(LicenseError::EmptyKey)
+        );
+        assert_eq!(current_validity(true, Ok(()), false), Ok(()));
+        assert_eq!(
+            current_validity(true, Err(LicenseError::Network("down".into())), true),
+            Ok(())
+        );
+        assert!(matches!(
+            current_validity(true, Err(LicenseError::Network("down".into())), false),
+            Err(LicenseError::Network(_))
+        ));
+        assert_eq!(
+            current_validity(
+                true,
+                Err(LicenseError::ValidatorNotConfigured),
+                true
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn require_macro_revalidates_like_launch() {
+        let src = include_str!("lib.rs");
+        let require = src
+            .split("pub async fn require")
+            .nth(1)
+            .expect("async require");
+        let body = require
+            .split("pub fn require_sync")
+            .next()
+            .expect("require body");
+        assert!(
+            body.contains("ensure_licensed"),
+            "require must use the launch check, not a stored-key probe"
+        );
+        assert!(
+            !body.contains("has_key"),
+            "require must not stop at a stored key: {body}"
+        );
+    }
+
+    fn spawn_json_once(status: u16, body: &'static str) -> String {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
+            let mut buf = [0u8; 512];
+            let mut total = Vec::new();
+            loop {
+                match stream.read(&mut buf) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        total.extend_from_slice(&buf[..n]);
+                        if total.windows(4).any(|w| w == b"\r\n\r\n") {
+                            break;
+                        }
+                    }
+                    Err(_) => break,
+                }
+                if total.len() > 16_384 {
+                    break;
+                }
+            }
+            let header = format!(
+                "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = stream.write_all(header.as_bytes());
+            let _ = stream.write_all(body.as_bytes());
+        });
+        format!("http://{addr}/validate")
+    }
+
+    #[tokio::test]
+    async fn validate_online_refuses_a_revoked_key() {
+        let url = spawn_json_once(403, r#"{"ok":false,"error":"invalid_key"}"#);
+        let err = validate_online(AppId::Wallpaper, "mem_revoked", "hw", &url)
+            .await
+            .unwrap_err();
+        assert_eq!(err, LicenseError::InvalidKey);
+        assert_eq!(
+            current_validity(true, Err(err), true),
+            Err(LicenseError::InvalidKey)
+        );
+    }
+
+    #[tokio::test]
+    async fn validate_online_treats_validator_outage_as_network() {
+        let url = spawn_json_once(502, r#"{"ok":false,"error":"whop_unavailable"}"#);
+        let err = validate_online(AppId::Clean, "mem_paid", "hw", &url)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, LicenseError::Network(_)));
+        assert_eq!(current_validity(true, Err(err.clone()), true), Ok(()));
+        assert!(current_validity(true, Err(err), false).is_err());
     }
 }

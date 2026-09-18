@@ -80,13 +80,14 @@ pub(crate) fn list_apps_within(home: &Path) -> Vec<AppSummary> {
 }
 
 #[tauri::command]
-pub fn uninstall_list() -> Vec<AppSummary> {
-    match dirs::home_dir() {
+pub fn uninstall_list(app: tauri::AppHandle) -> Result<Vec<AppSummary>, String> {
+    crate::license::require_sync(&app)?;
+    Ok(match dirs::home_dir() {
         Some(home) => list_apps_within(&home),
         // No home to resolve means nothing can be reported — an empty list,
         // not a panic or a guess at where to look instead.
         None => Vec::new(),
-    }
+    })
 }
 
 /// Deterministic order. Task 6 addresses items by index into this list, so a
@@ -358,7 +359,7 @@ pub fn uninstall_execute(
     deselected: Vec<usize>,
     displayed: Vec<String>,
 ) -> Result<UninstallReport, String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     use tauri::Manager;
     let dir = app
         .path()

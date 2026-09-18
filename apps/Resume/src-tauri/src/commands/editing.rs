@@ -31,7 +31,7 @@ pub fn list_accents() -> Vec<Accent> {
 /// picker, which is not a failure.
 #[tauri::command]
 pub async fn import_resume_file(app: tauri::AppHandle) -> Result<Option<ResumeDoc>, String> {
-    crate::license::require(&app)?;
+    crate::license::require(&app).await?;
     let Some(chosen) = app
         .dialog()
         .file()
@@ -55,7 +55,7 @@ pub async fn import_resume_file(app: tauri::AppHandle) -> Result<Option<ResumeDo
 /// same extension check as everything else.
 #[tauri::command]
 pub fn import_dropped_file(app: tauri::AppHandle, path: String) -> Result<ResumeDoc, String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     import_from(std::path::Path::new(&path))
 }
 
@@ -83,7 +83,7 @@ pub struct BulletReview {
 
 #[tauri::command]
 pub fn review_wording(app: tauri::AppHandle, doc: ResumeDoc) -> Result<Vec<BulletReview>, String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     // Check previews the free pass. A ready model replaces that pass at Build,
     // so showing a tighten preview would promise wording the page will not get.
     if let (Ok(store), Ok((_, provider))) = (super::store_for(&app), super::engine::engine_of(&app))
@@ -114,7 +114,7 @@ pub fn review_wording(app: tauri::AppHandle, doc: ResumeDoc) -> Result<Vec<Bulle
 
 #[tauri::command]
 pub fn parse_pasted_text(app: tauri::AppHandle, text: String) -> Result<ResumeDoc, String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     Ok(parse_text::parse_text(&text))
 }
 

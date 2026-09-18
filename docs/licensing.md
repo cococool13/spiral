@@ -58,7 +58,9 @@ app's `src-tauri/src/license.rs` exposes Tauri commands:
 - `license_ensure` — launch gate (online or grace)
 - `license_clear` — remove key (dev/support)
 
-Gated commands call `license::require(&app)` before doing work.
+Gated commands call `license::require` (async) or `license::require_sync`
+(blocking commands) before doing work. Both revalidate like launch: online,
+or 72h grace on outage. A stored-but-revoked key is refused.
 
 ## Privacy
 

@@ -104,7 +104,7 @@ pub fn backups_remove(
     id: String,
     started_at: String,
 ) -> Result<(), String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     use tauri::Manager;
     let config_dir = app
         .path()

@@ -61,6 +61,7 @@ fn store_for(app: &tauri::AppHandle) -> Result<Store, String> {
 /// assembled here, so nothing here can assemble it wrongly.
 #[tauri::command]
 pub fn save_document(app: tauri::AppHandle, stored: StoredDoc) -> Result<(), String> {
+    crate::license::require_sync(&app)?;
     save_into(&store_for(&app)?, &stored)
 }
 

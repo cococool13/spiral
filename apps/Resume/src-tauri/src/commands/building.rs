@@ -93,7 +93,7 @@ pub async fn render_thumbnails(
     accent: String,
     doc: ResumeDoc,
 ) -> Result<Vec<Thumbnail>, String> {
-    crate::license::require(&app)?;
+    crate::license::require(&app).await?;
     {
         let cache = THUMBNAIL_CACHE.lock().unwrap_or_else(|p| p.into_inner());
         if let Some((cached_accent, cached_doc, thumbs)) = cache.as_ref() {
@@ -159,7 +159,7 @@ pub async fn build_document(
     built: State<'_, BuiltFile>,
     on_progress: Channel<Progress>,
 ) -> Result<BuildResult, String> {
-    crate::license::require(&app)?;
+    crate::license::require(&app).await?;
     let BuildRequest {
         doc,
         template,
@@ -236,7 +236,7 @@ pub async fn save_built_document(
     app: tauri::AppHandle,
     built: State<'_, BuiltFile>,
 ) -> Result<Option<String>, String> {
-    crate::license::require(&app)?;
+    crate::license::require(&app).await?;
     let (bytes, suggested, extension) = {
         let guard = built
             .0

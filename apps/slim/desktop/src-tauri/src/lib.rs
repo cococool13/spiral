@@ -73,7 +73,7 @@ fn project(app: &tauri::AppHandle) -> SlimResult<Project> {
 }
 
 fn require_license(app: &tauri::AppHandle) -> SlimResult<()> {
-    license::require(app).map_err(|detail| {
+    license::require_sync(app).map_err(|detail| {
         SlimError::new(
             "License required",
             detail,

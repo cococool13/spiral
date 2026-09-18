@@ -22,7 +22,7 @@ async fn search_wallpapers(
     sorting: String,
     page: u32,
 ) -> Result<net::SearchPage, String> {
-    license::require(&app)?;
+    license::require(&app).await?;
     wallhaven::search(&http.0, &query, &categories, &sorting, page).await
 }
 
@@ -33,7 +33,7 @@ async fn cache_thumb(
     id: String,
     url: String,
 ) -> Result<String, String> {
-    license::require(&app)?;
+    license::require(&app).await?;
     cache::cache_thumb(&app, &http.0, &id, &url).await
 }
 
@@ -44,7 +44,7 @@ async fn apply_wallpaper(
     id: String,
     url: String,
 ) -> Result<(), String> {
-    license::require(&app)?;
+    license::require(&app).await?;
     let fit = app.state::<SettingsState>().0.lock().unwrap().fit_mode;
     let path = cache::download_full(&app, &http.0, &id, &url).await?;
     setter::set_wallpaper(&app, path.clone(), fit)?;

@@ -81,11 +81,14 @@ pub(crate) fn leftovers_for_display(home: &Path) -> Result<Vec<LeftoverItem>, St
 }
 
 #[tauri::command]
-pub fn leftovers_scan() -> Vec<LeftoverItem> {
+pub fn leftovers_scan(app: tauri::AppHandle) -> Result<Vec<LeftoverItem>, String> {
+    crate::license::require_sync(&app)?;
     // No home to resolve, or a home that does not resolve, means nothing
     // can be reported — an empty list, not a panic or a guess at where to
     // look instead.
-    dirs::home_dir().and_then(|home| leftovers_for_display(&home).ok()).unwrap_or_default()
+    Ok(dirs::home_dir()
+        .and_then(|home| leftovers_for_display(&home).ok())
+        .unwrap_or_default())
 }
 
 /// Every candidate carries the Orphan justification of the leftover it came
@@ -254,7 +257,7 @@ pub fn leftovers_remove(
     deselected: Vec<usize>,
     displayed: Vec<String>,
 ) -> Result<UninstallReport, String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     use tauri::Manager;
     let dir = app
         .path()

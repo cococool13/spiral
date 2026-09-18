@@ -366,12 +366,13 @@ fn load_exclusions(app: &tauri::AppHandle) -> Result<ExclusionList, String> {
 }
 
 #[tauri::command]
-pub fn lipo_candidates(app: tauri::AppHandle) -> Vec<Candidate> {
+pub fn lipo_candidates(app: tauri::AppHandle) -> Result<Vec<Candidate>, String> {
+    crate::license::require_sync(&app)?;
     let excl = load_exclusions(&app);
-    match dirs::home_dir() {
+    Ok(match dirs::home_dir() {
         Some(home) => candidates(&home, &real_effects(), &excl),
         None => Vec::new(),
-    }
+    })
 }
 
 #[tauri::command]
@@ -380,7 +381,7 @@ pub fn lipo_strip(
     bundle_id: String,
     started_at: String,
 ) -> Result<StripReport, String> {
-    crate::license::require(&app)?;
+    crate::license::require_sync(&app)?;
     use tauri::Manager;
     let home = dirs::home_dir().ok_or("Could not find your home folder, so nothing was changed.")?;
     // Loaded here, immediately before the rewrite — same discipline as
