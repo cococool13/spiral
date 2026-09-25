@@ -34,7 +34,7 @@ pub fn set_wallpaper(app: &AppHandle, path: PathBuf, fit: FitMode) -> Result<(),
 }
 
 /// Current wallpaper of the primary screen, if readable (used to verify/restore).
-#[allow(dead_code)]
+#[cfg(debug_assertions)]
 pub fn current_wallpaper(app: &AppHandle) -> Result<Option<PathBuf>, String> {
     #[cfg(target_os = "macos")]
     {
@@ -63,7 +63,9 @@ mod macos {
         NSWorkspaceDesktopImageScalingKey,
     };
     use objc2_foundation::{NSDictionary, NSNumber, NSString, NSURL};
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
+    #[cfg(debug_assertions)]
+    use std::path::PathBuf;
 
     pub fn set(path: &Path, fit: FitMode) -> Result<(), String> {
         let mtm =
@@ -94,6 +96,7 @@ mod macos {
         Ok(())
     }
 
+    #[cfg(debug_assertions)]
     pub fn current() -> Result<Option<PathBuf>, String> {
         let mtm =
             MainThreadMarker::new().ok_or_else(|| "apply_failed:not main thread".to_string())?;
