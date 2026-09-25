@@ -6,10 +6,11 @@ close the window; nothing keeps running in the background. Unlocks with a Spiral
 Collection license key (buy on Whop via spiralcc.tech or the Activate screen).
 
 - **Source:** Wallhaven, no key needed. A second source needs product approval.
-- **Privacy:** no account, no analytics, no telemetry. Wallhaven is reached
-  only when you search or apply. On open the app may ask GitHub once for a
-  newer build — named in Settings and switchable off. All network calls happen
-  in the Rust core, never the webview.
+- **Privacy:** no account, no analytics, no telemetry. On open the app calls
+  `license_ensure` (Spiral's validator; 72h offline grace). Wallhaven is
+  reached only when you search or apply. The app may also ask GitHub once for
+  a newer build — named in Settings and switchable off. All network calls
+  happen in the Rust core, never the webview.
 - **Lightweight:** ~4.6 MB binary, ~95 MB idle RAM, window on screen in under
   a second (measured on Apple Silicon).
 

@@ -172,8 +172,8 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
           <h2 className="settings__label">Automatic update check</h2>
           <p className="settings__desc">
             {settings.autoUpdateCheck
-              ? "When Spiral opens, it asks GitHub once whether a newer version exists. Nothing else is sent."
-              : "Off. Spiral never checks on its own. Use the button below."}
+              ? "When Spiral opens, it calls license_ensure (Spiral’s validator) and asks GitHub once whether a newer version exists. Nothing else is sent."
+              : "Off. Spiral never asks GitHub on its own. On open it still calls license_ensure (Spiral’s validator). Use the button below."}
           </p>
         </div>
         <Toggle
