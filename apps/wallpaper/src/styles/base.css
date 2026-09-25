@@ -8,13 +8,6 @@
 }
 @font-face {
   font-family: "Host Grotesk";
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../assets/fonts/host-grotesk-400-italic.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Host Grotesk";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
@@ -41,10 +34,6 @@
   --hlx-01-ink: var(--spiral-red-fill);
   --font-ui: var(--spiral-font-sans);
   --font-mono: var(--spiral-font-mono);
-  --wdth-display: 100;
-  --wght-display: 400;
-  --wdth-heading: 100;
-  --wght-heading: 600;
   --unit: var(--spiral-unit);
   --ease: var(--spiral-ease);
   --dur-fast: var(--spiral-dur-fast);
@@ -52,7 +41,6 @@
   --radius-ctl: var(--spiral-radius-ctl);
   --glass-blur: var(--spiral-glass-blur);
   --glass-edge: var(--spiral-glass-edge);
-  --glass-sheen: var(--spiral-glass-sheen);
 }
 
 *,
