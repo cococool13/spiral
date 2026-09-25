@@ -1,5 +1,5 @@
 import type { ApplyOutcome, Platform, ResetOutcome } from "../lib/contract";
-import { deviceNoun } from "../lib/platform";
+import { deviceNoun, undoCopy } from "../lib/platform";
 
 interface Props {
   readonly outcome: ApplyOutcome | null;
@@ -25,6 +25,8 @@ export function Done({
   canReset,
   onOpenPolicyPage,
 }: Props) {
+  const undo = undoCopy(platform);
+
   if (resetOutcome !== null) {
     return (
       <div className="pane__inner">
@@ -134,11 +136,7 @@ export function Done({
       )}
 
       <h2>Undo</h2>
-      <p>
-        Removing the policies puts Brave back to its own defaults. It deletes the
-        managed policy files, removes the Configuration Profile, and repairs the
-        per-site exceptions SlimBrave writes into your Brave profile.
-      </p>
+      <p>{undo.summary}</p>
 
       {canReset ? (
         <>
@@ -151,10 +149,7 @@ export function Done({
                 onResetConfirmChange(event.currentTarget.checked)
               }
             />
-            <span>
-              I want Spiral Slim to remove every policy it wrote and the
-              Configuration Profile with it.
-            </span>
+            <span>{undo.confirm}</span>
           </label>
           <p className="done__action done__action--spaced">
             <button
@@ -169,8 +164,7 @@ export function Done({
       ) : (
         <p className="warn">
           Undo is unavailable because Spiral Slim cannot reach the SlimBrave Neo
-          scripts. You can remove the policies from Terminal with{" "}
-          <code>sudo python3 spiral-slim-mac.py --reset</code>.
+          scripts. {undo.fallbackLead} <code>{undo.fallbackCommand}</code>.
         </p>
       )}
     </div>

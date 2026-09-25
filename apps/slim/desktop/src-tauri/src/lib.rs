@@ -164,8 +164,7 @@ fn apply_profile(
     if plan.report.blocked {
         return Err(SlimError::new(
             "This profile cannot be applied here",
-            "It requires a policy Brave does not support on this Mac."
-                .to_string(),
+            blocked_apply_detail(std::env::consts::OS).to_string(),
             "Choose a different profile.",
         ));
     }
@@ -231,6 +230,17 @@ fn export_plan(
 fn open_policy_page(app: tauri::AppHandle, app_path: String) -> Result<(), SlimError> {
     let _ = project(&app)?;
     bridge::open_policy_page(&app_path)
+}
+
+/// Why a blocked plan is refused, named for the machine the build runs on.
+///
+/// "on this Mac" is wrong on Windows. The unsupported policy is the same
+/// fact; the machine is a PC.
+fn blocked_apply_detail(os: &str) -> &'static str {
+    match os {
+        "windows" => "It requires a policy Brave does not support on this PC.",
+        _ => "It requires a policy Brave does not support on this Mac.",
+    }
 }
 
 fn poisoned() -> SlimError {
@@ -341,6 +351,19 @@ mod tests {
         let plan = prepared(HASH, false);
         let authorised = authorise(Some(&plan), HASH, true).unwrap();
         assert_eq!(authorised.document.plan_hash, HASH);
+    }
+
+    #[test]
+    fn a_blocked_plan_names_the_machine_for_that_platform() {
+        assert_eq!(
+            blocked_apply_detail("macos"),
+            "It requires a policy Brave does not support on this Mac."
+        );
+        assert_eq!(
+            blocked_apply_detail("windows"),
+            "It requires a policy Brave does not support on this PC."
+        );
+        assert!(!blocked_apply_detail("windows").contains("Mac"));
     }
 
     #[test]
