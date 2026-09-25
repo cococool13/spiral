@@ -281,8 +281,8 @@ than failing detection.
 ## Design divergences
 
 This app departs from `docs/DESIGN.md` in four recorded places: a third
-corner radius (`--radius-card: 16px`), a coloured glow on the focused card,
-an animated red edge, and red display type for card names. All three are documented with their reasons in
+corner radius (`--radius-card: 12px`), a coloured glow on the focused card
+(`0 0 70px -28px`), an animated red edge, and red display type for card names. All four are documented with their reasons in
 `DESIGN.md`. No new colour is declared outside the token mirror, and
 `pnpm check:hex` still passes.
 

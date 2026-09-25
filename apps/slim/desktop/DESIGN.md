@@ -21,12 +21,12 @@ occurs.
 | Radius | Where | Note |
 | --- | --- | --- |
 | `0` | header, footer, panels, module rows | the brand default |
-| `--radius-card: 16px` | the portrait cards | **divergence** |
+| `--radius-card: 12px` | the portrait cards | **divergence** |
 | `--radius-ctl: 999px` | buttons, edge controls, dots | the brand pill |
 | `calc(radius-card / 2)` | review notes, module rows | nested, so half |
 
 **Why the third radius.** A square corner read as an unstyled container rather
-than an object, which is what prompted the rebuild. 16px is large enough to
+than an object, which is what prompted the rebuild. 12px is large enough to
 register at 380px wide and small enough not to become the card's personality. `brand/tokens.css` does not carry
 this value; it lives in the app's token mirror and is flagged there.
 
@@ -65,7 +65,7 @@ is still never a background fill. It also draws:
 - a 1px card border,
 - a masked conic gradient travelling around that border (`--aura-near`,
   `--aura-far`, both `color-mix` derivations of `--hlx-01`),
-- a soft `0 0 60px -24px` glow on the focused card.
+- a soft `0 0 70px -28px` glow on the focused card.
 
 **Why this is a divergence.** `docs/DESIGN.md` says depth comes from material,
 never decoration, and lists no shadows. The glow is decoration. It is here
@@ -158,7 +158,7 @@ rather than a mono counter, so it is read rather than computed.
 
 ## Components
 
-- **Card** — portrait, 380px wide, 16px radius. The name is set in
+- **Card** — portrait, 380px wide, 12px radius. The name is set in
   `--hlx-01` display caps: it is the one element that has to carry. Below it a
   short lede, then scannable highlights on hairline rules with a red dot, then
   a mono footer (risk, or selection state). A `<label>` wrapping a
