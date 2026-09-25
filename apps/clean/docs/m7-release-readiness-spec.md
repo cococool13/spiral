@@ -91,4 +91,4 @@ Removing a plist alone left the job loaded and running until the next logout, so
 
 ## Out of scope
 
-- **`remove.rs` at 3,148 lines and `commands.rs` at 2,246**, against the 200–400 target. Splitting them is a refactor with no behavioural change and real regression risk; it does not belong in the same commit as a release gate.
+- **`remove.rs` at 3,148 lines and `commands.rs` at 2,246**, against the 200–400 target. **Done.** The removal boundary is `src-tauri/src/remove/` (`delete_permanent` in `remove/delete.rs`); the command layer is `src-tauri/src/commands/`.
