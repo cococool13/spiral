@@ -139,7 +139,6 @@ pub fn backups_remove(
                 partially_removed: 0,
                 estimated_bytes: backup.bytes,
                 measured_bytes: backup.bytes,
-                interrupted: false,
             },
         );
     }

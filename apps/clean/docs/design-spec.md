@@ -44,7 +44,7 @@ Each numbered item was a distinct decision. Where the choice went against the re
 13. **Sizing:** scan shows logical size as a labeled estimate; the result reports measured volume free-space delta. When they disagree materially, the app says why (usually a local snapshot still holding the blocks).
 14. **FDA gate:** probes a TCC-protected path to detect access, deep-links the exact System Settings pane, and states up front that macOS will terminate the app when access is granted — so the forced relaunch reads as expected rather than as a crash.
 15. **Sidebar:** four verbs grouped at the top, History and Settings pinned below a hairline rule.
-16. **Lifecycle:** closing quits, matching Wallpaper. A scan cancels silently. A removal in progress raises one confirmation; quitting anyway records the run as interrupted with the count actually removed.
+16. **Lifecycle:** closing quits, matching Wallpaper. A scan cancels silently.
 17. **Startup items live inside Optimize** as a section, not a fourth rail verb.
 18. **Startup depth:** classic launch agents and daemons get a reversible `launchctl` disable, with Remove as a separate deliberate action. Background Task Management login items are inventoried read-only with a System Settings deep link, because macOS 13+ forbids third-party toggling. No control is shown that cannot work.
 19. **Bluetooth reset is blocked outright** when the active keyboard or pointing device is Bluetooth-transported. Launchpad reset is labeled as permanently discarding a custom arrangement.
