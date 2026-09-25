@@ -23,8 +23,6 @@ pub struct RunRecord {
     pub estimated_bytes: u64,
     /// Actual volume free-space delta after the run.
     pub measured_bytes: u64,
-    /// True when the user quit mid-removal.
-    pub interrupted: bool,
 }
 
 /// Read the log, distinguishing "not there yet" from "there and unreadable".
@@ -158,7 +156,6 @@ mod tests {
             partially_removed: 0,
             estimated_bytes: 100,
             measured_bytes: 80,
-            interrupted: false,
         }
     }
 
@@ -201,15 +198,6 @@ mod tests {
         // The normal first run. This is the one case that may be silent.
         let dir = tempfile::tempdir().unwrap();
         assert!(read(dir.path()).unwrap().is_empty());
-    }
-
-    #[test]
-    fn records_an_interrupted_run() {
-        let dir = tempfile::tempdir().unwrap();
-        let mut r = record(3);
-        r.interrupted = true;
-        append(dir.path(), r).unwrap();
-        assert!(read(dir.path()).unwrap()[0].interrupted);
     }
 
     #[test]

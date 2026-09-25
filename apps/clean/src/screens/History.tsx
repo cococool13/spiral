@@ -9,7 +9,6 @@ export interface RunRecord {
   partially_removed: number;
   estimated_bytes: number;
   measured_bytes: number;
-  interrupted: boolean;
 }
 
 const SCREEN_LABELS: Record<string, string> = {
@@ -158,7 +157,6 @@ export default function History() {
                 {run.partially_removed > 0 && (
                   <span>{run.partially_removed} only partly removed</span>
                 )}
-                {run.interrupted && <span>Interrupted</span>}
               </li>
             ))}
           </ul>

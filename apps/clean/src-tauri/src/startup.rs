@@ -549,7 +549,6 @@ pub fn startup_remove(
                 partially_removed: 0,
                 estimated_bytes: size,
                 measured_bytes: size,
-                interrupted: false,
             },
         );
     }

@@ -404,7 +404,6 @@ pub fn lipo_strip(
                     partially_removed: 0,
                     estimated_bytes: report.freed,
                     measured_bytes: report.freed,
-                    interrupted: false,
                 },
             );
         }

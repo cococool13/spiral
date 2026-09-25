@@ -345,7 +345,6 @@ pub(crate) fn run_uninstall(
             partially_removed: partially_removed.len(),
             estimated_bytes,
             measured_bytes,
-            interrupted: false,
         },
     );
 
