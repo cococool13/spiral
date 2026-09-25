@@ -2,43 +2,22 @@ import { useState } from "react";
 import { saveBuiltDocument } from "../lib/ipc";
 import type { BuiltVersion, ExportFormat } from "../lib/types";
 import { Notice } from "../components/Notice";
-import { useRadioGroup } from "../lib/useRadioGroup";
 
 const FORMAT_NAME: Record<ExportFormat, string> = { pdf: "PDF", docx: "Word file" };
 
-function styleLabels(versions: BuiltVersion[]): string[] {
-  const totals = new Map<string, number>();
-  for (const version of versions) {
-    totals.set(version.style, (totals.get(version.style) ?? 0) + 1);
-  }
-  const seen = new Map<string, number>();
-  return versions.map((version) => {
-    const n = (seen.get(version.style) ?? 0) + 1;
-    seen.set(version.style, n);
-    return (totals.get(version.style) ?? 1) > 1 ? `${version.style} (${n})` : version.style;
-  });
-}
-
 export function Result({
   versions,
-  showing,
   format,
-  onShow,
   onAnotherStyle,
 }: {
   versions: BuiltVersion[];
-  showing: number;
   format: ExportFormat;
-  onShow: (index: number) => void;
   onAnotherStyle: () => void;
 }) {
   const [savedTo, setSavedTo] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const result = versions[showing];
-  const labels = styleLabels(versions);
-  const keys = versions.map((_, index) => String(index));
-  const versionProps = useRadioGroup(keys, keys[showing] ?? "", (key) => onShow(Number(key)));
+  const result = versions[versions.length - 1];
 
   async function save() {
     setBusy(true);
@@ -59,16 +38,6 @@ export function Result({
     <section className="stage stage--result">
       <h2 className="visually-hidden">Your resume</h2>
       <p className="panel__lede">{result.engine}</p>
-
-      {versions.length > 1 ? (
-        <div className="versions" role="radiogroup" aria-label="Styles">
-          {keys.map((key, index) => (
-            <button key={key} type="button" className="btn" {...versionProps(key)}>
-              {labels[index]}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       {/* Drawn as glyph outlines, so there is no text in it to read. Naming the
           region and saying where the words are beats a silent unlabelled blob. */}
