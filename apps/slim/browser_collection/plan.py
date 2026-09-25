@@ -75,7 +75,7 @@ def allowed_policy_values(evidence_path=EVIDENCE_FILE):
     except ImportError as error:
         raise PlanError(
             "browser_collection is required for plan mode. Run this script "
-            "from the SlimBrave Neo project directory."
+            "from the Spiral Slim project directory."
         ) from error
     try:
         mappings = load_evidence(evidence_path)
