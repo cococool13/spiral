@@ -168,24 +168,6 @@ fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-pub fn hash_of(path: &Path) -> Result<String, String> {
-    use std::io::Read;
-    let mut file = std::fs::File::open(path)
-        .map_err(|e| format!("Could not read the downloaded file: {e}."))?;
-    let mut hasher = Sha256::new();
-    let mut buffer = vec![0u8; 1 << 20];
-    loop {
-        let read = file
-            .read(&mut buffer)
-            .map_err(|e| format!("Could not read the downloaded file: {e}."))?;
-        if read == 0 {
-            break;
-        }
-        hasher.update(&buffer[..read]);
-    }
-    Ok(to_hex(&hasher.finalize()))
-}
-
 /// Bytes fetched so far, for the progress bar. Real bytes — this bar measures
 /// a download, so there is nothing to estimate.
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -349,17 +331,6 @@ mod tests {
         );
         // A choice that is not installed does not override one that is.
         assert!(chosen(dir.path(), "nonesuch").is_none());
-    }
-
-    #[test]
-    fn hashing_matches_a_known_value() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("x");
-        std::fs::write(&path, b"abc").unwrap();
-        assert_eq!(
-            hash_of(&path).unwrap(),
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-        );
     }
 
     #[test]
