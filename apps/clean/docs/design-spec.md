@@ -26,7 +26,7 @@ Each numbered item was a distinct decision. Where the choice went against the re
 5. **Disposition split:** caches, logs, browser caches and dev artifacts delete permanently. Orphaned app leftovers go to Trash, because they can hold licenses or settings. Without this split the recoverable tier would be dead code in v1.
 6. **Clean screen:** category rows with size and item count, all preselected, each expandable to the actual paths.
 7. **App discovery:** `/Applications` and `~/Applications`. `/System/Applications` excluded — SIP-protected, always fails. Homebrew casks are detected via `/opt/homebrew/Caskroom/<token>` and are never deleted directly; the review shows the `brew uninstall --cask` command instead.
-8. **Uninstall depth:** offers to quit a running app; unloads launch agents/daemons and removes login items before deleting; detects system extensions and stops with instructions rather than half-removing them. Admin prompt only when `/Library/LaunchDaemons` is involved.
+8. **Uninstall depth:** when an app is running, the review says to quit it and offers Recheck. Uninstall stays disabled until that recheck shows it has quit. System extensions are detected and the review stops with instructions rather than half-removing them. Uninstall does not unload launch agents or daemons, does not call `launchctl` or `osascript`, and does not raise an administrator prompt.
 9. **Orphan leftovers live in Uninstall, not Clean.** Clean becomes one sentence — regenerable junk, always permanent. Uninstall owns all app removal, installed or not.
 10. **Optimize actions:** 14 total, in three groups. *(Against recommendation of five; Spotlight reindex, snapshot thinning, Bluetooth reset and Launchpad reset were all added at Cohen's direction.)*
 
@@ -43,7 +43,7 @@ Each numbered item was a distinct decision. Where the choice went against the re
 12. **History:** local capped JSON log of every removal — path, size, disposition, timestamp — with an in-app History view and a visible clear control. Never transmitted.
 13. **Sizing:** scan shows logical size as a labeled estimate; the result reports measured volume free-space delta. When they disagree materially, the app says why (usually a local snapshot still holding the blocks).
 14. **FDA gate:** probes a TCC-protected path to detect access, deep-links the exact System Settings pane, and states up front that macOS will terminate the app when access is granted — so the forced relaunch reads as expected rather than as a crash.
-15. **Sidebar:** four verbs grouped at the top, History and Settings pinned below a hairline rule.
+15. **AppBar:** one menu in the header, not a sidebar. It lists Clean, Storage, Optimize, Uninstall, History, and Settings.
 16. **Lifecycle:** closing quits, matching Wallpaper. A scan cancels silently. A removal in progress raises one confirmation; quitting anyway records the run as interrupted with the count actually removed.
 17. **Startup items live inside Optimize** as a section, not a fourth rail verb.
 18. **Startup depth:** classic launch agents and daemons get a reversible `launchctl` disable, with Remove as a separate deliberate action. Background Task Management login items are inventoried read-only with a System Settings deep link, because macOS 13+ forbids third-party toggling. No control is shown that cannot work.
@@ -65,8 +65,8 @@ Each numbered item was a distinct decision. Where the choice went against the re
 | **Storage** | Disk analyzer · App Lipo · iOS device backups | Lipo irreversible · backups → Trash |
 | **Optimize** | Health · Startup Items · 14 maintenance actions | N/A |
 | **Uninstall** | Installed apps · Leftovers · PKG receipts · drag-and-drop | Apps permanent · rest → Trash |
-| History | Past runs and disk usage trend | — |
-| Settings | FDA status · exclusion list · history retention · updates (M7) · version | — |
+| History | Past runs · disk usage trend · clear control | — |
+| Settings | FDA status · exclusion list · updates (M7) · version | — |
 
 ### Rust modules (`apps/clean/src-tauri/src/`)
 
@@ -78,7 +78,7 @@ Each numbered item was a distinct decision. Where the choice went against the re
 | `remove` | **The only module that destroys anything.** Takes a typed plan plus disposition |
 | `exclude` | The exclusion list, applied inside `remove` |
 | `apps` / `associate` | App discovery; verified vs likely association |
-| `receipts` | `/var/db/receipts` inventory and dead-receipt removal |
+| `receipts` | Read-only `pkgutil` inventory; shows `pkgutil --forget` and never runs it |
 | `lipo` | Universal binary architecture stripping |
 | `analyze` | Read-only space tree for the disk analyzer |
 | `backups` | iOS device backup enumeration |
@@ -115,7 +115,7 @@ Enforced in Rust, not in the UI. The frontend cannot construct an operation the 
 
 **Clean.** FDA gate → `scan` streams category results progressively over Tauri events → user selects → confirm → `remove` streams per-item results → report: reclaimed, skipped, failed with reason.
 
-**Uninstall.** `apps::list_installed()` (or a dropped bundle) → `associate::find(bundle_id)` → verified and likely items → mandatory review sheet showing every item, its size, and its evidence level → `remove`.
+**Uninstall.** `apps::discover` (or a dropped bundle) → `associate::associate` → verified and likely items → mandatory review sheet showing every item, its size, and its evidence level → `remove`.
 
 **Optimize.** `health` and `startup` populate on entry → `optimize::plan()` returns named actions with `requires_admin` → user deselects → single admin prompt if needed → sequential execution with streamed per-action results.
 
