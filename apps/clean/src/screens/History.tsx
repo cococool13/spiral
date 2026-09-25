@@ -78,7 +78,6 @@ function Trend({ runs }: TrendProps) {
               comparison is the whole content, and the real number sits
               beside it for anyone who wants it. */}
           <span
-            className="bar"
             style={{ width: `${Math.round((day.bytes / peak) * 100)}%` }}
             aria-hidden="true"
           />
