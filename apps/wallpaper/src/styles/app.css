@@ -652,7 +652,7 @@
   padding: calc(var(--unit) * 2) calc(var(--unit) * 2.5);
   border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent);
   border-radius: calc(var(--unit) * 1.5);
-  background: color-mix(in srgb, var(--ink) 40%, transparent);
+  background: color-mix(in srgb, var(--ink-01) 40%, transparent);
   color: var(--paper);
 }
 
