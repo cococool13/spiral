@@ -2897,16 +2897,10 @@ def cli_catalog(output_format="text"):
 # not, and a missing package must stay a clear message from the plan path
 # rather than a traceback at startup.
 try:
-    from browser_collection.plan import (  # noqa: F401
-        EVIDENCE_FILE,
-        PLAN_FIELDS,
+    from browser_collection.plan import (
         PLAN_SCHEMA_VERSION,
         PlanError,
-        allowed_policy_values as _allowed_policy_values,
-        is_sha256_hex as _is_sha256_hex,
-        is_stable_id as _is_stable_id,
         load_plan,
-        typed_value as _typed_value,
     )
 except ImportError:  # pragma: no cover - exercised only without the package
     PLAN_SCHEMA_VERSION = 1
