@@ -27,7 +27,7 @@ export function Done({
 }: Props) {
   if (resetOutcome !== null) {
     return (
-      <div className="pane__inner">
+      <div>
         <h1>Policies removed</h1>
         <p className="lede">
           Brave is back to its own defaults on this {deviceNoun(platform)}.
@@ -47,7 +47,7 @@ export function Done({
 
   if (outcome === null) {
     return (
-      <div className="pane__inner">
+      <div>
         <h1>All set</h1>
         <p className="lede">Nothing to report yet.</p>
       </div>
@@ -55,7 +55,7 @@ export function Done({
   }
 
   return (
-    <div className="pane__inner">
+    <div>
       <h1>
         {outcome.profileApprovalPending ? "One step left" : "All set"}
       </h1>
