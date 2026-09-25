@@ -23,6 +23,7 @@ function App() {
       .catch(() => setBoot("error"));
   }, []);
 
+  // On boot: license_ensure (Spiral's validator, or 72h offline grace).
   useEffect(() => {
     if (boot === "error" || !boot) return;
     invoke("license_ensure")
@@ -33,8 +34,8 @@ function App() {
       });
   }, [boot]);
 
-  // The one automatic network request Spiral makes, and only when the
-  // Settings toggle says so: a version check against GitHub on open.
+  // Separate from license_ensure: a version check against GitHub on open,
+  // and only when the Settings toggle says so.
   useEffect(() => {
     if (boot === "error" || !boot?.firstRunCompleted || !boot.autoUpdateCheck) return;
     if (license !== "ok") return;
