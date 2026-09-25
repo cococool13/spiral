@@ -10,7 +10,7 @@ const SITE = "https://spiralcc.tech";
 
 /** Same sentence as `app/layout.tsx` metadata.description. */
 const COLLECTION_DESCRIPTION =
-  "Spiral Collection — Wallpaper, Slim, and Resume. One $9.99 license. No telemetry, no background processes. Mac, and Windows where each app ships.";
+  "Spiral Collection — Wallpaper, Slim, Resume, and Clean. One $9.99 license. No telemetry, no background processes. Mac, and Windows where each app ships.";
 
 /**
  * Live apps the home page and checkout actually sell. Clean has a page but
@@ -21,7 +21,7 @@ const LISTED = ["wallpaper", "slim", "resume"] as const;
 const OFFER = {
   "@type": "Offer",
   name: "Spiral Collection license",
-  description: "One $9.99 license. Unlocks Wallpaper, Slim, and Resume.",
+  description: "One $9.99 license. Unlocks Wallpaper, Slim, Resume, and Clean.",
   price: "9.99",
   priceCurrency: "USD",
   url: WHOP_CHECKOUT_URL,
