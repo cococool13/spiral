@@ -21,10 +21,6 @@ pub struct EngineInfo {
     pub model: String,
     pub base_url: String,
     pub has_key: bool,
-    /// Whether a model tier would actually run. Not the same question as
-    /// `has_key` — the offline tier needs no key and reports `false` for one —
-    /// and this is what "another version" hangs on.
-    pub uses_model: bool,
     /// The exact hostname the key would be sent to, shown before anything is.
     pub host: String,
     /// Where this provider issues keys, or empty when there is nowhere to send
@@ -62,7 +58,6 @@ pub fn engine_info(app: tauri::AppHandle) -> Result<EngineInfo, String> {
     Ok(EngineInfo {
         // An engine that needs no credential never reports one.
         has_key: provider.needs_key() && keys::has(provider.id()),
-        uses_model: model_ready(&root, &provider),
         host: provider.host(),
         key_url: provider.key_url().to_string(),
         provider: stored.provider,
