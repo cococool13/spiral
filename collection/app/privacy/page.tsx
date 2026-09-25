@@ -48,8 +48,8 @@ export default function PrivacyPage() {
           <h2 className="type-heading text-xl text-paper">Clean</h2>
           <p className="mt-3 text-gray">
             Removals go to Trash. Nothing is scanned off-device. On launch it calls
-            license_ensure against the spiral-license worker. There is no update check
-            and no updater in the builds that exist today.
+            license_ensure against the spiral-license worker. There is no update check and
+            no updater in the builds that exist today.
           </p>
         </section>
 
