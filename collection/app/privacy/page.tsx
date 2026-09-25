@@ -38,16 +38,18 @@ export default function PrivacyPage() {
           <h2 className="type-heading text-xl text-paper">Slim</h2>
           <p className="mt-3 text-gray">
             Writes browser enterprise policy files on this machine and shows each change
-            first. It does not phone home. On Windows and Linux it runs from the scripts
-            in the repository — there is no shipped Windows installer.
+            first. On launch the shipped app calls license_ensure against the
+            spiral-license worker. On Windows and Linux it runs from the scripts in the
+            repository — there is no shipped Windows installer.
           </p>
         </section>
 
         <section className="mt-10 border-t border-gray/25 pt-10">
           <h2 className="type-heading text-xl text-paper">Clean</h2>
           <p className="mt-3 text-gray">
-            Never leaves the machine. Removals go to Trash. Nothing is scanned off-device.
-            There is no update check and no updater in the builds that exist today.
+            Removals go to Trash. Nothing is scanned off-device. On launch it calls
+            license_ensure against the spiral-license worker. There is no update check
+            and no updater in the builds that exist today.
           </p>
         </section>
 
