@@ -94,9 +94,6 @@ computed itself, so a substituted file fails to install.
 
 ## 1. Pin the model
 
-`assets/model-catalogue.json` ships with `url`, `sha256` and `bytes` empty.
-`local::catalogue()` treats that as "no model in this build".
-
 To pin one:
 
 1. Choose a 4B-class instruct model in GGUF, Q4_K_M — the intended one is
@@ -153,11 +150,3 @@ engine bundled"* — a sentence, not a crash.
 - **The fact gate is unchanged.** The offline model gets exactly the same
   scrutiny as a paid API: numbers and proper nouns are compared, and a rewrite
   that moved one is discarded.
-
-## What is not verified
-
-No binary and no model have been run. Every code path around them is tested —
-catalogue parsing, size formatting, hashing, checksum failure, progress
-reporting, argument construction, loopback binding, missing-prerequisite
-messages — but the app has never actually generated a token locally. That is the
-milestone gate, and it needs the two artifacts above.
