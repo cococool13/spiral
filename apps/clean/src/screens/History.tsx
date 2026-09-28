@@ -9,7 +9,6 @@ export interface RunRecord {
   partially_removed: number;
   estimated_bytes: number;
   measured_bytes: number;
-  interrupted: boolean;
 }
 
 const SCREEN_LABELS: Record<string, string> = {
@@ -78,7 +77,6 @@ function Trend({ runs }: TrendProps) {
               comparison is the whole content, and the real number sits
               beside it for anyone who wants it. */}
           <span
-            className="bar"
             style={{ width: `${Math.round((day.bytes / peak) * 100)}%` }}
             aria-hidden="true"
           />
@@ -158,7 +156,6 @@ export default function History() {
                 {run.partially_removed > 0 && (
                   <span>{run.partially_removed} only partly removed</span>
                 )}
-                {run.interrupted && <span>Interrupted</span>}
               </li>
             ))}
           </ul>
