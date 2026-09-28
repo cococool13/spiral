@@ -244,7 +244,6 @@ pub(crate) fn run_leftovers(
             partially_removed: partially_removed.len(),
             estimated_bytes,
             measured_bytes,
-            interrupted: false,
         },
     );
 
