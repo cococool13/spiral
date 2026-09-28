@@ -26,8 +26,7 @@ A collection adapter should use this order:
 
 1. Read the catalog and filter capabilities for the current platform.
 2. Let the user select a preset by stable ID.
-3. Run the platform entrypoint with `--preview PATH --format json` when preview
-   is supported.
+3. On macOS, run `spiral-slim-mac.py --preview PATH --format json`.
 4. Show additions, changes, and removals before requesting elevation.
 5. Apply only after explicit confirmation.
 6. Tell the user how to verify and undo the change.
