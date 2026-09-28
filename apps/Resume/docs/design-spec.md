@@ -62,7 +62,7 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 
 | Tier | Does | Network | Time |
 | --- | --- | --- | --- |
-| Deterministic (default) | Parse, typeset, rule-based cleanup: weak-verb swaps, tense consistency, filler removal, date normalisation, "this bullet has no number" flags | none | ~0.3 s |
+| Deterministic (default) | Parse, typeset, rule-based cleanup: weak-verb swaps, tense consistency, filler removal, "this bullet has no number" flags | none | ~0.3 s |
 | Local model (opt-in, ~2.5 GB) | Rewrites bullet phrasing offline | download only, host named | ~40 s |
 | Your API key | Same rewriting, faster | the one named host | ~3–8 s |
 
