@@ -69,7 +69,7 @@ const appPages: AppPage[] = [
       },
       {
         title: "Twelve layouts, shown as they set",
-        body: "The style screen draws a sample resume, so picking a layout is instant. Your facts are typeset when you build, in the layout you chose.",
+        body: "The style screen draws your document in each layout. Your facts are typeset when you build, in the layout you chose.",
       },
       {
         title: "PDF and Word from one source",
@@ -102,7 +102,7 @@ const appPages: AppPage[] = [
     factsNote: "Timings from an Apple silicon laptop, taken while building it.",
     facts: [
       { label: "Layouts", value: "12" },
-      { label: "Style cards", value: "A sample resume" },
+      { label: "Style cards", value: "Your document" },
       { label: "Offline model", value: "1.3–5.7 GB, optional" },
       { label: "Accounts required", value: "None" },
     ],

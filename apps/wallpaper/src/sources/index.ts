@@ -22,7 +22,8 @@ export function apply(wallpaper: Wallpaper): Promise<void> {
   return invoke("apply_wallpaper", { id: wallpaper.id, url: wallpaper.fullUrl });
 }
 
-/** Backend error codes → brand-voice copy. Each names the problem and the fix. */
+/** Backend error codes → brand-voice copy. Each names the problem and the fix.
+ *  `cache_failed` never reaches this map — Settings writes that sentence. */
 export function errorCopy(error: unknown): string {
   const code = String(error).split(":")[0];
   const copy: Record<string, string> = {
