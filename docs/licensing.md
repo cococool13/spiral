@@ -25,9 +25,6 @@ shown on first launch when no key is stored.
 Post-checkout redirects to `https://spiralcc.tech/thanks` (download links plus
 how to paste the `mem_` key). Checkout URL is canonical in `collection/lib/whop.ts`.
 
-Portfolio footer links both stores: https://cohencool.com → Whop
-(https://whop.com/@cococool13).
-
 ## Activate
 
 1. User buys on Whop and receives a license key.

@@ -8,7 +8,6 @@ const base: EngineInfo = {
   model: "claude-opus-5",
   baseUrl: "",
   hasKey: false,
-  usesModel: false,
   host: "api.anthropic.com",
   keyUrl: "https://console.anthropic.com/settings/keys",
   needsSetup: false,
