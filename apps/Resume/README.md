@@ -44,8 +44,8 @@ pnpm tauri dev
 
 | Command | What it does |
 | --- | --- |
-| `pnpm build` | hex-token guard → typecheck → Vite build |
-| `pnpm test` | frontend Vitest suite |
+| `pnpm build` | hex-token guard → `check-model-mirror.mjs` → typecheck → Vite build |
+| `pnpm test` | `check-model-mirror.mjs` → frontend Vitest suite |
 | `cargo test` | parser, fact gate, templates, export (from `src-tauri`) |
 | `cargo clippy --all-targets` | must stay warning-free |
 
