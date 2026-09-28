@@ -12,10 +12,10 @@ Multi-channel handling on Linux:
   to detect which Brave processes are currently running.
 
 Supports interactive curses TUI and non-interactive CLI usage:
-  sudo python3 spiral-slim.py                        # TUI
-  sudo python3 spiral-slim.py --import preset.json   # CLI import
-  sudo python3 spiral-slim.py --export out.json      # CLI export
-  sudo python3 spiral-slim.py --reset                # CLI reset
+  sudo python3 spiral-slim-linux.py                      # TUI
+  sudo python3 spiral-slim-linux.py --import preset.json # CLI import
+  sudo python3 spiral-slim-linux.py --export out.json    # CLI export
+  sudo python3 spiral-slim-linux.py --reset              # CLI reset
 """
 
 import argparse
@@ -1886,9 +1886,9 @@ if __name__ == "__main__":
     if os.geteuid() != 0:
         print("Spiral Slim must be run as root.")
         if is_cli:
-            print("Usage: sudo python3 spiral-slim.py --import preset.json")
+            print("Usage: sudo python3 spiral-slim-linux.py --import preset.json")
         else:
-            print("Usage: sudo python3 spiral-slim.py")
+            print("Usage: sudo python3 spiral-slim-linux.py")
         sys.exit(1)
 
     if is_cli:

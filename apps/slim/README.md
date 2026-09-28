@@ -4,7 +4,7 @@
 
 <img src="https://github.com/user-attachments/assets/3e90a996-a74a-4ca1-bea6-0869275bab58" width="160" height="240">
 
-**Debloat and harden Brave, Chrome, Edge, and Firefox on Linux, macOS, and Windows.**
+**Debloat and harden Brave, Chrome, and Firefox on Linux, macOS, and Windows. Edge on macOS and Windows.**
 
 *Part of the [Spiral collection](../../README.md).*
 
@@ -15,7 +15,7 @@
 [![macOS](https://img.shields.io/badge/macOS-Supported-000000?logo=apple&logoColor=white)]()
 [![Windows](https://img.shields.io/badge/Windows-Supported-0078D6?logo=windows&logoColor=white)]()
 
-Spiral Slim uses enterprise managed policies to disable telemetry, bloat, and unwanted features. No browser extensions, no hacks, just clean policy enforcement the browsers respect natively. Brave stays the default everywhere; pass `--browser chrome` / `--browser edge` / `--browser firefox` (or `-Browser` on Windows) to manage the others.
+Spiral Slim uses enterprise managed policies to disable telemetry, bloat, and unwanted features. No browser extensions, no hacks, just clean policy enforcement the browsers respect natively. Brave stays the default everywhere; pass `--browser chrome` / `--browser firefox`, or `--browser edge` on macOS and Windows (or `-Browser` on Windows) to manage the others.
 
 </div>
 
@@ -204,7 +204,7 @@ Import/export uses the same JSON format across every platform. A preset's `"Brow
 
 ### macOS-only flags (drive `desktop/`, the native GUI wizard)
 
-`spiral-slim-mac.py` carries a handful of extra, Brave-only, read-mostly flags that exist to back the in-progress Tauri desktop app rather than for everyday manual use:
+`spiral-slim-mac.py` carries a handful of extra, Brave-only, read-mostly flags that back the shipped v1.0.0 Tauri desktop app rather than everyday manual use:
 
 | Flag | Description |
 |------|-------------|
@@ -344,7 +344,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 - [x] CLI mode for scripting and automation
 - [x] macOS support via managed plist policies
 - [x] Multi-channel support on macOS (Stable / Beta / Nightly)
-- [x] Chrome, Edge, and Firefox support on all three platforms
+- [x] Chrome and Firefox on Linux, macOS, and Windows; Edge on macOS and Windows
 
 ---
 

@@ -14,11 +14,11 @@ Multi-channel support:
     user-data directory and to detect running channels.
 
 Supports interactive curses TUI and non-interactive CLI usage:
-  sudo python3 spiral-slim.py                              # TUI
-  sudo python3 spiral-slim.py --import preset.json         # CLI import
-  sudo python3 spiral-slim.py --export out.json            # CLI export
-  sudo python3 spiral-slim.py --reset                      # CLI reset
-  sudo python3 spiral-slim.py --channels stable,beta ...   # restrict (macOS)
+  sudo python3 spiral-slim-mac.py                              # TUI
+  sudo python3 spiral-slim-mac.py --import preset.json         # CLI import
+  sudo python3 spiral-slim-mac.py --export out.json            # CLI export
+  sudo python3 spiral-slim-mac.py --reset                      # CLI reset
+  sudo python3 spiral-slim-mac.py --channels stable,beta ...   # restrict (macOS)
 """
 
 import argparse
@@ -2897,16 +2897,10 @@ def cli_catalog(output_format="text"):
 # not, and a missing package must stay a clear message from the plan path
 # rather than a traceback at startup.
 try:
-    from browser_collection.plan import (  # noqa: F401
-        EVIDENCE_FILE,
-        PLAN_FIELDS,
+    from browser_collection.plan import (
         PLAN_SCHEMA_VERSION,
         PlanError,
-        allowed_policy_values as _allowed_policy_values,
-        is_sha256_hex as _is_sha256_hex,
-        is_stable_id as _is_stable_id,
         load_plan,
-        typed_value as _typed_value,
     )
 except ImportError:  # pragma: no cover - exercised only without the package
     PLAN_SCHEMA_VERSION = 1
@@ -3242,9 +3236,9 @@ if __name__ == "__main__":
     if os.geteuid() != 0:
         print("Spiral Slim must be run as root.")
         if is_cli:
-            print("Usage: sudo python3 spiral-slim.py --import preset.json")
+            print("Usage: sudo python3 spiral-slim-mac.py --import preset.json")
         else:
-            print("Usage: sudo python3 spiral-slim.py")
+            print("Usage: sudo python3 spiral-slim-mac.py")
         sys.exit(1)
 
     if is_cli:

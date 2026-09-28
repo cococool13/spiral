@@ -7,7 +7,6 @@ const completeSetup = vi.fn(async () => ({
   model: "",
   baseUrl: "",
   hasKey: false,
-  usesModel: false,
   host: "api.anthropic.com",
   keyUrl: "",
   needsSetup: false,

@@ -24,9 +24,7 @@ function show(overrides: Partial<Parameters<typeof Result>[0]> = {}) {
   return render(
     <Result
       versions={[version()]}
-      showing={0}
       format="pdf"
-      onShow={vi.fn()}
       onAnotherStyle={vi.fn()}
       {...overrides}
     />,
@@ -63,28 +61,6 @@ describe("Result", () => {
   it("does not offer a tweak after the build", () => {
     show();
     expect(screen.queryByRole("button", { name: "Tweak" })).toBeNull();
-  });
-
-  it("shows a version strip once there is more than one build", () => {
-    const onShow = vi.fn();
-    show({
-      versions: [version({ style: "Column" }), version({ style: "Sheet" })],
-      showing: 1,
-      onShow,
-    });
-    expect(screen.getByRole("radio", { name: "Column" })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "Sheet" }).getAttribute("aria-checked")).toBe("true");
-    fireEvent.click(screen.getByRole("radio", { name: "Column" }));
-    expect(onShow).toHaveBeenCalledWith(0);
-  });
-
-  it("numbers two builds of the same style", () => {
-    show({
-      versions: [version({ style: "Column" }), version({ style: "Column" })],
-      showing: 0,
-    });
-    expect(screen.getByRole("radio", { name: "Column (1)" })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "Column (2)" })).toBeTruthy();
   });
 
   it("shows no version strip for a single build", () => {

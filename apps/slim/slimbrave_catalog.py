@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only discovery interface for SlimBrave Neo and future tool collections."""
+"""Read-only discovery interface for Spiral Slim and future tool collections."""
 
 import argparse
 import json
@@ -86,7 +86,7 @@ def build_catalog(project_dir=None):
         },
         "capabilities": ["catalog", "preview", "apply", "export", "reset"],
         "platform_capabilities": {
-            "linux": ["catalog", "preview", "apply", "export", "reset"],
+            "linux": ["catalog", "apply", "export", "reset"],
             "macos": ["catalog", "preview", "apply", "export", "reset"],
             "windows": ["apply", "export", "reset"],
         },
@@ -123,7 +123,7 @@ def print_catalog(output_format="text", project_dir=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Inspect SlimBrave Neo without changing the system.",
+        description="Inspect Spiral Slim without changing the system.",
     )
     parser.add_argument("--format", choices=("text", "json"), default="text")
     args = parser.parse_args()

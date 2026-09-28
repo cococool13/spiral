@@ -40,7 +40,6 @@ function run(over: Partial<RunRecord> = {}): RunRecord {
     partially_removed: 0,
     estimated_bytes: 5_000_000,
     measured_bytes: 4_000_000,
-    interrupted: false,
     ...over,
   };
 }

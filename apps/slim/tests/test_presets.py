@@ -224,6 +224,7 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual("spiral-slim", catalog["tool"]["id"])
         self.assertTrue(catalog["tool"]["requires_elevation_for_changes"])
         self.assertIn("preview", catalog["platform_capabilities"]["macos"])
+        self.assertNotIn("preview", catalog["platform_capabilities"]["linux"])
         self.assertNotIn("preview", catalog["platform_capabilities"]["windows"])
         self.assertEqual(preset_files, sorted(Path(item["file"]).name for item in catalog["presets"]))
         self.assertEqual(

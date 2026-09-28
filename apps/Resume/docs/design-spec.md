@@ -62,7 +62,7 @@ Each numbered item was a distinct decision in the grilling session. Where the ch
 
 | Tier | Does | Network | Time |
 | --- | --- | --- | --- |
-| Deterministic (default) | Parse, typeset, rule-based cleanup: weak-verb swaps, tense consistency, filler removal, date normalisation, "this bullet has no number" flags | none | ~0.3 s |
+| Deterministic (default) | Parse, typeset, rule-based cleanup: weak-verb swaps, tense consistency, filler removal, "this bullet has no number" flags | none | ~0.3 s |
 | Local model (opt-in, ~2.5 GB) | Rewrites bullet phrasing offline | download only, host named | ~40 s |
 | Your API key | Same rewriting, faster | the one named host | ~3–8 s |
 
@@ -109,7 +109,7 @@ Each produces working, testable software on its own.
 | **M4** | File import — DOCX, then PDF | Drop your existing resume in |
 | **M5** | Deterministic tightening engine | The free tier's wording pass |
 | **M6** | BYO API key, fact-freeze diff gate, rewrite-again, version strip | The paid tier |
-| **M7** | Optional local model download and sidecar | The offline model tier — built; needs two release-time artifacts, see `docs/offline-model.md` |
+| **M7** | Optional local model download and sidecar | The offline model tier |
 
 ## Risks, accepted
 
@@ -125,8 +125,8 @@ Per the repo rule, plus this app's own:
 ```bash
 cd apps/Resume
 pnpm check:hex     # no hex outside tokens.css
-pnpm build         # token check + tsc + vite build
-pnpm test          # frontend suite (Vitest)
+pnpm build         # token check + check-model-mirror.mjs + tsc + vite build
+pnpm test          # check-model-mirror.mjs, then frontend suite (Vitest)
 cd src-tauri && cargo test && cargo clippy --all-targets
 ```
 
