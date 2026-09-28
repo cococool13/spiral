@@ -86,7 +86,7 @@ def build_catalog(project_dir=None):
         },
         "capabilities": ["catalog", "preview", "apply", "export", "reset"],
         "platform_capabilities": {
-            "linux": ["catalog", "preview", "apply", "export", "reset"],
+            "linux": ["catalog", "apply", "export", "reset"],
             "macos": ["catalog", "preview", "apply", "export", "reset"],
             "windows": ["apply", "export", "reset"],
         },
