@@ -85,7 +85,7 @@ Gains `total_bytes`, alongside the existing `available_bytes`, from the same `st
 
 ### Commands
 
-Declared in `health.rs` and `startup.rs` as `#[tauri::command]`, following `permissions.rs` — **not** added to `commands.rs`. That file is at 2241 lines against the 200–400 target recorded as a deferred minor, and this milestone should not make it worse.
+Declared in `health.rs` and `startup.rs` as `#[tauri::command]`, following `permissions.rs` — **not** added to `commands.rs`. That file was at 2241 lines against the 200–400 target, a deferred minor this milestone was not to worsen. **Done:** the command layer is `src-tauri/src/commands/`.
 
 - **`health_report() -> HealthReport`** — every field an `Option` or an explicit unavailable variant.
 - **`startup_list() -> StartupInventory`** — the three tiers, each item carrying label, source path, tier, enabled state, and whether a control is offered.
