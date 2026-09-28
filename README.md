@@ -21,8 +21,6 @@ brew install --cask cococool13/spiral/spiral-wallpaper
 ![platforms](https://img.shields.io/badge/macOS%2013%2B%20·%20Windows%2010%2B-10181B?label=runs%20on)
 [![license](https://img.shields.io/badge/license-MIT-666863)](LICENSE)
 
-<img src="docs/screenshot-site.png" alt="The Spiral website: the Spiral wordmark over the line Small tools. No bloat. Your data stays yours." width="820" />
-
 </div>
 
 Three promises, kept the same way in every app:
@@ -115,14 +113,6 @@ shasum -a 256 ~/Downloads/Spiral.Wallpaper_1.0.3_universal.dmg
 ```
 
 If the line matches, the file is byte-for-byte what was published here.
-
-<div align="center">
-
-<img src="docs/screenshot-browse.png" alt="Spiral Wallpaper browse screen: a thumbnail grid with a glass Apply wallpaper button on the hovered tile" width="820" />
-
-<sub>The Browse screen. Thumbnails above are dev-preview placeholders; the app browses Wallhaven.</sub>
-
-</div>
 
 Everything the app does is stated on-screen before it happens. Downloaded
 files are verified to actually be images before they touch disk. The

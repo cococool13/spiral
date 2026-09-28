@@ -12,7 +12,6 @@ vi.mock("../lib/ipc", () => ({
     model: "claude-opus-5",
     baseUrl: "",
     hasKey: false,
-    usesModel: false,
     host: "api.anthropic.com",
     keyUrl: "",
     needsSetup: false,
