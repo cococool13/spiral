@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-/** One destination in the menu. `dot` marks it as wanting attention. */
+/** One destination in the menu. */
 export interface BarItem {
   readonly id: string;
   readonly label: string;
-  readonly dot?: boolean;
   readonly onSelect: () => void;
 }
 
@@ -34,7 +33,6 @@ export default function AppBar({
   const [open, setOpen] = useState(false);
   const bar = useRef<HTMLElement>(null);
   const button = useRef<HTMLButtonElement | null>(null);
-  const attention = items.some((item) => item.dot);
 
   // Escape closes and gives the button its focus back; a click anywhere else
   // closes without stealing focus from wherever the person went.
@@ -79,12 +77,6 @@ export default function AppBar({
         onClick={() => setOpen((was) => !was)}
       >
         <span className="bar__bars" aria-hidden="true" />
-        {attention && (
-          <>
-            <span className="bar__dot" aria-hidden="true" />
-            <span className="visually-hidden"> — something needs attention</span>
-          </>
-        )}
       </button>
 
       {open && (
@@ -101,12 +93,6 @@ export default function AppBar({
               }}
             >
               {item.label}
-              {item.dot && (
-                <>
-                  <span className="bar__dot" aria-hidden="true" />
-                  <span className="visually-hidden"> — update available</span>
-                </>
-              )}
             </button>
           ))}
         </nav>
