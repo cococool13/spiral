@@ -10,7 +10,8 @@ use settings::{Settings, SettingsState};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
-/// Shared HTTP client — the only place Spiral touches the network.
+/// Shared HTTP client for Wallhaven. `license_ensure` on boot uses
+/// spiral-license's own client to reach Spiral's validator.
 pub struct Http(pub reqwest::Client);
 
 #[tauri::command]

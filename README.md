@@ -21,8 +21,6 @@ brew install --cask cococool13/spiral/spiral-wallpaper
 ![platforms](https://img.shields.io/badge/macOS%2013%2B%20·%20Windows%2010%2B-10181B?label=runs%20on)
 [![license](https://img.shields.io/badge/license-MIT-666863)](LICENSE)
 
-<img src="docs/screenshot-site.png" alt="The Spiral website: the Spiral wordmark over the line Small tools. No bloat. Your data stays yours." width="820" />
-
 </div>
 
 Three promises, kept the same way in every app:
@@ -116,14 +114,6 @@ shasum -a 256 ~/Downloads/Spiral.Wallpaper_1.0.3_universal.dmg
 
 If the line matches, the file is byte-for-byte what was published here.
 
-<div align="center">
-
-<img src="docs/screenshot-browse.png" alt="Spiral Wallpaper browse screen: a thumbnail grid with a glass Apply wallpaper button on the hovered tile" width="820" />
-
-<sub>The Browse screen. Thumbnails above are dev-preview placeholders; the app browses Wallhaven.</sub>
-
-</div>
-
 Everything the app does is stated on-screen before it happens. Downloaded
 files are verified to actually be images before they touch disk. The
 thumbnail cache is capped at 200 MB and says so in Settings.
@@ -174,7 +164,7 @@ started that way, and its ADRs still sit beside the code they became.
 | --- | --- | --- |
 | [`brand/`](brand/) | Tokens, fonts, logos, brand guide. **Single source of truth** — nothing else defines brand values. See [`brand/README.md`](brand/README.md). | changing a colour, font, or mark |
 | [`apps/wallpaper/`](apps/wallpaper/) | Spiral Wallpaper: React + TypeScript UI, Rust/Tauri core, DMG + NSIS installers | working on the desktop app |
-| [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Edge/Firefox on Linux, macOS, Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows runs from source (no published binary). Slim CI in this monorepo is still thin — do not treat “every push” as proven here | working on Brave policy config |
+| [`apps/slim/`](apps/slim/) | Spiral Slim: stdlib-only Python (Brave/Chrome/Firefox on Linux, macOS, and Windows; Edge on macOS and Windows) plus [`apps/slim/desktop/`](apps/slim/desktop/) — a Tauri wizard over the macOS script. macOS shipped and notarized; Windows runs from source (no published binary). Slim CI in this monorepo is still thin — do not treat “every push” as proven here | working on Brave policy config |
 | [`apps/clean/`](apps/clean/) | Spiral Clean: a native macOS maintenance app — Clean, Storage, Optimize, Uninstall, plus History and Settings. macOS only, unreleased. **Feature-complete: every screen is built.** 432 Rust tests, 107 Vitest, a native smoke gate, and nineteen ADRs. See its own [README](apps/clean/README.md) | working on the maintenance app |
 | [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows. First downloadable release **v0.1.1**. Import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | shipping the resume app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Cloudflare Pages. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |

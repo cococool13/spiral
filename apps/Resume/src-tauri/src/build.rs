@@ -4,9 +4,6 @@
 //! is no interpolation, no easing toward 90%, and no minimum display time — on
 //! the deterministic path the whole thing crosses in well under a second, and
 //! that is the honest outcome rather than a bug to disguise.
-//!
-//! When a model tier arrives (M6) a `Rewriting wording` stage slots in after
-//! `Reading structure` without renumbering the rest.
 
 use crate::docx;
 use crate::model::ResumeDoc;
@@ -168,9 +165,6 @@ pub fn build(
 ) -> Result<Built, String> {
     report(progress("Reading structure", 15));
 
-    // The free tier's wording pass. When a model tier arrives it takes this same
-    // slot and the same stage name, so the build screen's vocabulary does not
-    // change under the user.
     // Borrowed when the pass is off: the document is only read from here on,
     // so there is nothing to gain from copying it.
     let tightened;

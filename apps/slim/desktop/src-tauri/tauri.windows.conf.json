@@ -1,0 +1,5 @@
+{
+  "bundle": {
+    "longDescription": "Spiral Slim is a local wizard over SlimBrave Neo. It reads the Brave channels installed on this PC, shows the exact managed policies a profile would add, change or remove, and writes nothing until you confirm. No accounts, no telemetry. License validation is a named call to Spiral's validator on launch."
+  }
+}
