@@ -13,7 +13,6 @@ from browser_collection.models import (
 )
 
 
-BRAVE_POLICY_DOMAIN = "com.brave.Browser"
 MAC_POLICY_PATH = Path("/Library/Managed Preferences/com.brave.Browser.plist")
 WINDOWS_POLICY_PATH = r"SOFTWARE\Policies\BraveSoftware\Brave"
 EVIDENCE_PATH = Path(__file__).resolve().parents[1] / "evidence/brave.json"
