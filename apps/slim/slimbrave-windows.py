@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply a resolved SlimBrave Neo profile to Brave on Windows.
+"""Apply a resolved Spiral Slim profile to Brave on Windows.
 
 The counterpart to ``spiral-slim-mac.py``'s plan mode. The two share everything
 that decides *what* may be written — ``browser_collection.plan`` validates
