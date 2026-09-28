@@ -125,8 +125,8 @@ Per the repo rule, plus this app's own:
 ```bash
 cd apps/Resume
 pnpm check:hex     # no hex outside tokens.css
-pnpm build         # token check + tsc + vite build
-pnpm test          # frontend suite (Vitest)
+pnpm build         # token check + check-model-mirror.mjs + tsc + vite build
+pnpm test          # check-model-mirror.mjs, then frontend suite (Vitest)
 cd src-tauri && cargo test && cargo clippy --all-targets
 ```
 
