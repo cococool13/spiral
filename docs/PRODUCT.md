@@ -90,8 +90,10 @@ Per app, as already confirmed:
   against the spiral-license worker, and the updater may ask GitHub once
   whether a newer build exists. Closing the window quits.
 - Slim writes enterprise policy files on the machine and shows each change first.
-- Clean never leaves the machine. Removals go to Trash. The safety-core tests
-  are the gate for every removal change.
+  On launch it calls `license_ensure` against the spiral-license worker.
+- Clean calls `license_ensure` against the spiral-license worker on launch.
+  Removals go to Trash. The safety-core tests are the gate for every removal
+  change.
 - Resume's free tier never opens a connection. A model tier exists only because
   the person chose one — their own API key, or a model downloaded to disk —
   and the app names which engine did the work. Titles, employers, dates, schools
@@ -160,8 +162,9 @@ The consequences are deliberate and are not treated as gaps to close later:
   may ask GitHub once for a newer build. It validates what it downloaded is an
   image before it writes it.
 - Slim writes policy files on the user's own machine and shows each change first.
-- Clean never leaves the machine, and moves recoverable items to the Trash
-  rather than deleting them.
+  On launch it calls `license_ensure` against the spiral-license worker.
+- Clean calls `license_ensure` against the spiral-license worker on launch, and
+  moves recoverable items to the Trash rather than deleting them.
 - Resume's free tier never opens a connection at all. A model tier exists only
   because the user chose one — their own API key, or a model downloaded to their
   own disk — and the app names which engine did the work, on the build screen

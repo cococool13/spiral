@@ -26,11 +26,11 @@ export default function PrivacyPage() {
         <section className="mt-16 border-t border-gray/25 pt-10">
           <h2 className="type-heading text-xl text-paper">Wallpaper</h2>
           <p className="mt-3 text-gray">
-            Reaches Wallhaven&apos;s public SFW API when you search or apply. On open it
-            may ask GitHub once whether a newer build exists — named in Settings, and
-            switchable off. It validates an image before writing or applying it, and keeps
-            thumbnails on disk behind a cap you can see in Settings. Closing the window
-            quits.
+            Reaches Wallhaven&apos;s public SFW API when you search or apply. On launch it
+            calls license_ensure against the spiral-license worker. On open it may ask
+            GitHub once whether a newer build exists — named in Settings, and switchable
+            off. It validates an image before writing or applying it, and keeps thumbnails
+            on disk behind a cap you can see in Settings. Closing the window quits.
           </p>
         </section>
 
