@@ -141,16 +141,6 @@ p {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.type-eyebrow::before {
-  content: none;
-  display: none;
-  width: 0;
-  height: 0;
-  border-radius: 0;
-  background: transparent;
-  margin-right: 10px;
-  vertical-align: 2px;
-}
 
 /* Sharp filled CTA — Instrument Utility. Class name kept for call sites. */
 .glass-pill {
@@ -207,16 +197,6 @@ p {
     background: color-mix(in oklab, var(--spiral-paper) 10%, transparent);
     border-color: color-mix(in oklab, var(--spiral-paper) 45%, transparent);
   }
-}
-.glass-pill--disabled {
-  min-width: min(14rem, 100%);
-  background: color-mix(in oklab, var(--spiral-mute) 16%, transparent);
-  border-color: transparent;
-  color: var(--spiral-gray);
-  cursor: not-allowed;
-}
-.glass-pill--disabled:hover {
-  background: color-mix(in oklab, var(--spiral-mute) 16%, transparent);
 }
 
 /* Compact enough to sit in the floating nav without becoming a second hero. */
