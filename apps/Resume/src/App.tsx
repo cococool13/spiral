@@ -34,7 +34,6 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [versions, setVersions] = useState<BuiltVersion[]>([]);
-  const [showing, setShowing] = useState(0);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [generate, setGenerate] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -255,13 +254,10 @@ export default function App() {
               ) : versions.length > 0 ? (
                 <Result
                   versions={versions}
-                  showing={showing}
                   format={draft.format === "docx" ? "docx" : "pdf"}
-                  onShow={setShowing}
                   onAnotherStyle={() => {
                     withViewTransition(() => {
                       setVersions([]);
-                      setShowing(0);
                       setGenerate(false);
                       setStep("style");
                       setReached((seen) => (seen.includes("style") ? seen : [...seen, "style"]));
@@ -278,7 +274,6 @@ export default function App() {
                         ...all,
                         { ...result, style: styleName(draft.template) },
                       ]);
-                      setShowing(versions.length);
                     });
                   }}
                   onBack={() => withViewTransition(() => choose({ format: "" }))}
