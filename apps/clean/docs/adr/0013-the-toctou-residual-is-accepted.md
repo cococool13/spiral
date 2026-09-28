@@ -1,6 +1,6 @@
 # The validation-to-deletion race is an accepted residual
 
-`remove::execute` validates a candidate path and then `delete_permanent` acts on it. Between those two moments the path is re-resolved by name, so the filesystem can change underneath. Spiral Clean **does not** defend against a directory being swapped for a *different real directory* in that window. This is a decision, not an oversight, and it is recorded here because the code comment that describes it (`src-tauri/src/remove.rs`, above `delete_permanent`) reads as a note rather than as a ruling.
+`remove::execute` validates a candidate path and then `delete_permanent` acts on it. Between those two moments the path is re-resolved by name, so the filesystem can change underneath. Spiral Clean **does not** defend against a directory being swapped for a *different real directory* in that window. This is a decision, not an oversight, and it is recorded here because the code comment that describes it (`src-tauri/src/remove/delete.rs`, above `delete_permanent`) reads as a note rather than as a ruling.
 
 ## What is defended, and what is not
 
