@@ -50,3 +50,36 @@ export function waitingSentence(platform: Platform): string {
 export function needsProfileApproval(platform: Platform): boolean {
   return platform === "macos";
 }
+
+/**
+ * Undo copy for the Done screen.
+ *
+ * macOS removes plist files, the Configuration Profile, and leaked profile
+ * prefs. Windows only deletes the managed-policy registry key, and the
+ * fallback command is `slimbrave-windows.py`, not the Mac profile script.
+ */
+export function undoCopy(platform: Platform): {
+  readonly summary: string;
+  readonly confirm: string;
+  readonly fallbackLead: string;
+  readonly fallbackCommand: string;
+} {
+  if (platform === "windows") {
+    return {
+      summary:
+        "Removing the policies puts Brave back to its own defaults. It deletes the managed policies from the registry.",
+      confirm: "I want Spiral Slim to remove every policy it wrote.",
+      fallbackLead:
+        "You can remove the policies from an Administrator PowerShell with",
+      fallbackCommand: "python slimbrave-windows.py --reset",
+    };
+  }
+  return {
+    summary:
+      "Removing the policies puts Brave back to its own defaults. It deletes the managed policy files, removes the Configuration Profile, and repairs the per-site exceptions SlimBrave writes into your Brave profile.",
+    confirm:
+      "I want Spiral Slim to remove every policy it wrote and the Configuration Profile with it.",
+    fallbackLead: "You can remove the policies from Terminal with",
+    fallbackCommand: "sudo python3 spiral-slim-mac.py --reset",
+  };
+}

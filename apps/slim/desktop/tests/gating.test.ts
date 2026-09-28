@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { undoCopy } from "../src/lib/platform";
 import { canAdvance, canApply, capabilityFor, initialState, reduce } from "../src/lib/wizard";
 import { catalog, detection, preview, run } from "./fixtures";
 
@@ -30,6 +31,19 @@ describe("platform capability gating", () => {
     const capability = capabilityFor(detection({ platform: "windows" }));
     expect(capability.canApply).toBe(true);
     expect(capability.reason).toBe("");
+  });
+
+  it("names undo for the platform, including the fallback command", () => {
+    const mac = undoCopy("macos");
+    expect(mac.summary).toContain("Configuration Profile");
+    expect(mac.fallbackCommand).toBe("sudo python3 spiral-slim-mac.py --reset");
+
+    const windows = undoCopy("windows");
+    expect(windows.summary).toContain("registry");
+    expect(windows.summary).not.toContain("Configuration Profile");
+    expect(windows.confirm).not.toContain("Configuration Profile");
+    expect(windows.fallbackCommand).toBe("python slimbrave-windows.py --reset");
+    expect(windows.fallbackLead).toContain("Administrator PowerShell");
   });
 
   it("names the machine the way the platform's users do", () => {
