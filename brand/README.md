@@ -14,7 +14,6 @@ The mark is the original filled helix — three bands, not a stroke redraw.
 | `tokens.json` | The same tokens for non-CSS consumers | icon-generation scripts |
 | `fonts/` | Self-hosted Host Grotesk woff2 | both surfaces — no CDN at runtime |
 | `logo/mark.svg` | Original helix, three filled bands, `currentColor`, viewBox `337 154 352 566` | apps + reference |
-| `logo/mark-compact.svg` | Same mark (filled helix reads at small sizes) | `collection/` nav |
 | `logo/mark-red.svg` | Mark in helix red | apps |
 | `logo/lockup-red.svg` | Helix + drawn SPIRAL. First-run screens only | `apps/wallpaper` |
 | `logo/png/mark-{16..1024}.png` | Icon-pipeline sources (tall helix) | Tauri icon generation |
@@ -42,7 +41,7 @@ with a surface id — do not reintroduce per-app copies of the sync logic.
 | `apps/wallpaper/` | brand marks + `src/styles/tokens.css` + Host Grotesk |
 | `apps/slim/desktop/` | `src/assets/brand/` (soft-fail without `/brand` if marks committed) |
 | `apps/clean/` | brand marks + `src/styles/tokens.css` + Host Grotesk |
-| `apps/Resume/` | same as Clean, plus `mark-compact-red` |
+| `apps/Resume/` | same as Clean |
 
 All run on `predev` and `prebuild`.
 
