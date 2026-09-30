@@ -58,7 +58,7 @@ export function homeJsonLd(): Record<string, unknown> {
         "@id": `${SITE}/#org`,
         name: "Spiral",
         url: `${SITE}/`,
-        email: "cohencool@icloud.com",
+        email: "hi@cohencool.com",
       },
       {
         "@type": "SoftwareApplication",

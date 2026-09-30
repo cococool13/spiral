@@ -57,10 +57,10 @@ export default function ThanksPage() {
         <p className="mt-12 text-gray">
           Stuck? Email{" "}
           <a
-            href="mailto:cohencool@icloud.com"
+            href="mailto:hi@cohencool.com"
             className="text-paper underline decoration-paper/20 underline-offset-4 hover:decoration-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
           >
-            cohencool@icloud.com
+            hi@cohencool.com
           </a>{" "}
           from the receipt.
         </p>

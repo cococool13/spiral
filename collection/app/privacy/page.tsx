@@ -90,10 +90,10 @@ export default function PrivacyPage() {
         <p className="mt-16 text-gray">
           Questions:{" "}
           <a
-            href="mailto:cohencool@icloud.com"
+            href="mailto:hi@cohencool.com"
             className="text-paper underline decoration-paper/20 underline-offset-4 hover:decoration-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
           >
-            cohencool@icloud.com
+            hi@cohencool.com
           </a>
         </p>
       </main>
