@@ -29,28 +29,6 @@ export const KIND_FILTERS: Array<"All" | WorkKind> = [
 
 export const otherWork: OtherProject[] = [
   {
-    id: "coastal-hardware",
-    name: "Coastal Hardware",
-    description:
-      "Static marketing site for Coastal Hardware & Building Supply in Brunswick. Live on Cloudflare Workers.",
-    kind: "Website",
-    cover: "/work/coastal-hardware.webp",
-    coverAlt: "Coastal Hardware home page with a storefront hero and product categories.",
-    href: "https://coastal-hardware.cohencool.workers.dev",
-    where: "Brunswick, Georgia",
-  },
-  {
-    id: "coastal-pharmacare",
-    name: "Coastal PharmaCare",
-    description:
-      "Marketing site for a closed-door pharmacy, with a contact form on Cloudflare Pages.",
-    kind: "Website",
-    cover: "/work/coastal-pharmacare.webp",
-    coverAlt: "Coastal PharmaCare home page over a coastal marsh photograph.",
-    href: "https://coastal-pharmacare.pages.dev",
-    where: "Brunswick, Georgia",
-  },
-  {
     id: "entr",
     name: "Dixon Management Group",
     description:
