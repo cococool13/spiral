@@ -176,7 +176,7 @@ const appPages: AppPage[] = [
       },
       {
         title: "It stays out of your disk",
-        body: "Thumbnails are cached locally with a 200 MB ceiling you can see and change in Settings. Nothing else is kept.",
+        body: "Thumbnails are cached locally with a 200 MB ceiling you can see in Settings. The wallpaper now on your desktop is kept; earlier full-size copies are removed.",
       },
       {
         title: "It checks what it downloads",
