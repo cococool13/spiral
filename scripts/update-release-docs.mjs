@@ -29,7 +29,7 @@ const RULES = [
   { file: "README.md", pattern: /Spiral\.Wallpaper_\d+\.\d+\.\d+_universal\.dmg/g },
   { file: "README.md", pattern: /\*\*v\d+\.\d+\.\d+\*\* — macOS \+ Windows/g },
   { file: "README.md", pattern: /Wallpaper\*\* is at v\d+\.\d+\.\d+/g },
-  { file: "CLAUDE.md", pattern: /Current app release \*\*v\d+\.\d+\.\d+\*\*/g },
+  { file: "AGENTS.md", pattern: /Current app release \*\*v\d+\.\d+\.\d+\*\*/g },
 ];
 
 function arg(name) {
