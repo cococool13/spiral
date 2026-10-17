@@ -760,4 +760,18 @@ mod tests {
         let url = spawn_json_once(200, r#"{"ok":true,"status":"active","key":"LIC1.a.b"}"#);
         assert_eq!(validate_online("mem_x", "dev", &url).await.unwrap(), "LIC1.a.b");
     }
+
+    /// Live check against a local `wrangler dev`, run by ../licensing/scripts/e2e-local.mjs keys:
+    /// SPIRAL_E2E_KEY=<signed spiral key> SPIRAL_LICENSE_URL=http://localhost:8787/activate cargo test live_server
+    /// Skips when the variables are unset.
+    #[tokio::test]
+    async fn live_server_activates_a_purchased_key() {
+        let (Ok(key), Ok(url)) = (std::env::var("SPIRAL_E2E_KEY"), std::env::var("SPIRAL_LICENSE_URL")) else {
+            return;
+        };
+        verify_key(&key).expect("offline signature check");
+        let signed = validate_online(&key, &"d".repeat(64), &url).await.expect("server accepts the key");
+        assert_eq!(signed, key);
+        println!("spiral license ok lid={}", verify_key(&signed).unwrap().lid);
+    }
 }
