@@ -3,7 +3,7 @@
 A free, privacy-first, super-lightweight desktop wallpaper app for macOS and
 Windows. Click a wallpaper — it downloads and applies. The app quits when you
 close the window; nothing keeps running in the background. Unlocks with a Spiral
-Collection license key (buy on Whop via spiralcc.tech or the Activate screen).
+Collection license key (buy via spiralcc.tech or the Activate screen).
 
 - **Source:** Wallhaven, no key needed. A second source needs product approval.
 - **Privacy:** no account, no analytics, no telemetry. On open the app checks

@@ -35,7 +35,7 @@ edge and the control is there, or use the arrow keys.
 ## What it does not do
 
 - No accounts, telemetry, background process, or browser extension.
-  The one network call is the named Whop license check on launch
+  The one network call is the named license check (activation, then about weekly)
   (`docs/licensing.md`); policy work stays on this machine.
 - No password field. Elevation goes through the operating system's own
   dialog — the macOS authorisation prompt, or UAC on Windows — which the OS

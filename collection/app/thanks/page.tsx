@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "You're in — Spiral",
   robots: { index: false, follow: false },
   description:
-    "Download Wallpaper, Slim, and Resume. Paste your Whop license key on the Activate screen.",
+    "Download Wallpaper, Slim, and Resume. Paste your license key on the Activate screen.",
   alternates: { canonical: "/thanks/" },
   openGraph: { url: "/thanks/" },
 };
@@ -23,7 +23,7 @@ export default function ThanksPage() {
         <h1 className="type-display text-4xl text-paper sm:text-5xl">You are in.</h1>
         <p className="mt-8 text-lg text-gray">
           One $9.99 license unlocks the shipping apps. Open each app, paste the key from
-          your Whop receipt on Activate, then it stays in the keychain. Clean is not a
+          your purchase email on Activate, then it stays in the keychain. Clean is not a
           download yet; the same key will cover it when it ships.
         </p>
 
@@ -37,8 +37,8 @@ export default function ThanksPage() {
             → Run anyway — the file is not code-signed yet.
           </li>
           <li>
-            On Activate, paste the membership ID from the receipt. It usually starts with
-            mem_.
+            On Activate, paste the license key from your purchase email. It starts with
+            LIC1. A key from an earlier purchase (it starts with mem_) still works.
           </li>
         </ol>
 

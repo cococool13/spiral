@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Whop URL guard: every whop.ts mirror must match collection/lib/whop.ts.
+// Checkout URL guard: every checkout.ts mirror must match collection/lib/checkout.ts.
 //
-//   node scripts/check-whop.mjs
-//   node scripts/sync-whop.mjs   # rewrite mirrors from canonical
+//   node scripts/check-checkout.mjs
+//   node scripts/sync-checkout.mjs   # rewrite mirrors from canonical
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CANONICAL, KEYS, MIRRORS } from "./sync-whop.mjs";
+import { CANONICAL, KEYS, MIRRORS } from "./sync-checkout.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
@@ -33,7 +33,7 @@ for (const rel of MIRRORS) {
   for (const key of KEYS) {
     if (mirror[key] !== canonical[key]) {
       console.error(
-        `check-whop: ${rel} ${key} differs from canonical\n` +
+        `check-checkout: ${rel} ${key} differs from canonical\n` +
           `  canonical: ${canonical[key]}\n` +
           `  mirror:    ${mirror[key]}`,
       );
@@ -43,8 +43,8 @@ for (const rel of MIRRORS) {
 }
 
 if (failed) {
-  console.error("check-whop: run node scripts/sync-whop.mjs to fix mirrors");
+  console.error("check-checkout: run node scripts/sync-checkout.mjs to fix mirrors");
   process.exit(1);
 }
 
-console.log(`check-whop: ${MIRRORS.length} mirrors match ${CANONICAL}`);
+console.log(`check-checkout: ${MIRRORS.length} mirrors match ${CANONICAL}`);

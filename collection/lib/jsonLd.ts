@@ -4,7 +4,7 @@
  * No ratings, review counts, or other figures we do not have.
  */
 import { apps } from "@/lib/apps";
-import { WHOP_CHECKOUT_URL } from "@/lib/whop";
+import { CHECKOUT_URL } from "@/lib/checkout";
 
 const SITE = "https://spiralcc.tech";
 
@@ -24,7 +24,7 @@ const OFFER = {
   description: "One $9.99 license. Unlocks Wallpaper, Slim, Resume, and Clean.",
   price: "9.99",
   priceCurrency: "USD",
-  url: WHOP_CHECKOUT_URL,
+  url: CHECKOUT_URL,
   availability: "https://schema.org/InStock",
 };
 

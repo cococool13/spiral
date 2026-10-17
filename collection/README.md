@@ -72,7 +72,7 @@ expandable. Both are useful product evidence, not decorative imagery.
 
 The main navigation has a mobile disclosure with Escape and outside-click
 closing. All four products remain reachable on narrow screens. Purchase goes
-to Whop; downloads use the catalogue's platform-aware offers.
+to Stripe checkout; downloads use the catalogue's platform-aware offers.
 
 ### The budgets that do apply
 
@@ -97,7 +97,7 @@ These exist so it stays fast.
 | --- | --- |
 | `app/` | App Router entry — `layout.tsx`, `page.tsx`, `globals.css` (the `@theme` token bridge, nav bar, footer close, shared motion), `home.css` (observatory hero, app frames, rules board, letter) |
 | `components/` | Flat, one file per component. Not shadcn — no `ui/` subfolder. |
-| `lib/` | `apps.ts` (the app catalogue — edit this to add an app), `whop.ts` (Whop checkout URLs), `otherWork.ts`, `useOS.ts` |
+| `lib/` | `apps.ts` (the app catalogue — edit this to add an app), `checkout.ts` (checkout and lost-key URLs), `otherWork.ts`, `useOS.ts` |
 | Root `scripts/sync-brand.mjs collection` | Copies `/brand` → `public/brand/` (gitignored); allowlist in `scripts/brand-manifest.mjs` |
 | `public/brand/` | **Generated. Never edit** — deleted and rewritten on every build. |
 

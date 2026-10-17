@@ -13,7 +13,7 @@ Current app release **v1.0.3** (Spiral Wallpaper).
 ## Read first
 
 - `README.md` — repo map, releases, downloads, build, roadmap
-- `docs/licensing.md` — Whop checkout URLs, license gate, validator deploy
+- `docs/licensing.md` — checkout URLs, license gate, licensing server
 - `brand/README.md` — what is canonical and how surfaces consume it
 - `collection/README.md` — **required before any `collection/` work** (charter, budgets, stack)
 - `apps/clean/README.md` — Clean safety model and what blocks release
@@ -29,9 +29,9 @@ Current app release **v1.0.3** (Spiral Wallpaper).
 - **Slim** (`apps/slim`): Python + Tauri wizard (shipped on macOS).
 - **Website** (`collection/`): Next.js App Router + React 19 + Tailwind v4, `output: 'export'`,
   Biome 2 lint/format. Deployed to Cloudflare Pages. Checkout URLs in
-  `collection/lib/whop.ts`.
-- **Licensing:** Whop one-time purchase ($9.99). Apps gate on `crates/spiral-license`;
-  validator at `workers/license/` (Cloudflare Worker). See `docs/licensing.md`.
+  `collection/lib/checkout.ts`.
+- **Licensing:** one-time purchase ($9.99) through Stripe checkout. Apps gate on `crates/spiral-license`;
+  keys are issued and checked by the shared licensing Worker in `~/Projects/licensing`. See `docs/licensing.md`.
 - **Brand** (`brand/`): single source of truth. Sync with
   `node scripts/sync-brand.mjs <surface>` (allowlists in `scripts/brand-manifest.mjs`).
   Hex gate: `node scripts/check-hex.mjs <surface>`. Never edit a synced copy.
@@ -95,14 +95,12 @@ pnpm lint            # biome check .
 pnpm typecheck
 pnpm build           # hex gate + static export → out/
 
-# Whop checkout URLs (canonical: collection/lib/whop.ts)
-node scripts/sync-whop.mjs   # rewrite app mirrors after plan change
-node scripts/check-whop.mjs  # CI gate — mirrors must match canonical
+# Checkout URLs (canonical: collection/lib/checkout.ts)
+node scripts/sync-checkout.mjs   # rewrite app mirrors after a URL change
+node scripts/check-checkout.mjs  # CI gate — mirrors must match canonical
 
-# License validator Worker
-cd workers/license
-pnpm install && pnpm test && pnpm typecheck
-npx wrangler deploy
+# License crate
+cd crates/spiral-license && cargo test
 ```
 
 **Never run `cargo fmt` in `apps/clean`.** No `rustfmt.toml`, no CI format check; a blind fmt
@@ -130,8 +128,7 @@ Resume uses `.github/workflows/release-resume.yml` (macOS + Windows, `sidecar: t
 brand/         design system — every colour, font, mark
 apps/          wallpaper | slim | clean | Resume  (capital R on Resume)
 collection/    spiralcc.tech (Next.js static export → Pages spiral-collection)
-crates/        spiral-license — shared Whop gate for desktop apps
-workers/       spiral-license — Cloudflare Worker (Whop API proxy)
+crates/        spiral-license — shared signed-key gate for desktop apps
 docs/          PRODUCT.md, DESIGN.md, licensing.md, reference/, specs
 scripts/       release.mjs, version.mjs, downloads.mjs, …
 ```
@@ -163,14 +160,8 @@ pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --b
 
 `--branch=main` marks production; without it Pages files a preview and the live site does not move.
 
-License validator (Workers, not Pages):
-
-```bash
-cd workers/license
-pnpm install && npx wrangler deploy
-```
-
-Secrets: `WHOP_API_KEY` via `npx wrangler secret put`. See `workers/license/README.md`.
+Licensing server: the shared `licensing` Worker lives in `~/Projects/licensing` (its own
+repo), not here. See `docs/licensing.md`.
 
 ## Definition of done
 

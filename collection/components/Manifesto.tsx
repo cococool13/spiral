@@ -1,4 +1,4 @@
-import { WHOP_CHECKOUT_URL } from "@/lib/whop";
+import { CHECKOUT_URL } from "@/lib/checkout";
 import DownloadMenu from "./DownloadMenu";
 import Mark from "./Mark";
 
@@ -24,7 +24,7 @@ export default function Manifesto() {
         </p>
         <ol className="license-steps">
           <li>
-            <span>01</span>Buy securely through Whop.
+            <span>01</span>Buy securely through Stripe.
           </li>
           <li>
             <span>02</span>Download the apps you want.
@@ -34,7 +34,7 @@ export default function Manifesto() {
           </li>
         </ol>
         <div className="license-actions">
-          <a href={WHOP_CHECKOUT_URL} className="glass-pill" rel="noopener noreferrer">
+          <a href={CHECKOUT_URL} className="glass-pill" rel="noopener noreferrer">
             Buy the collection <span aria-hidden="true">↗</span>
           </a>
           <DownloadMenu variant="purchase" />

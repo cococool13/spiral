@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { apps } from "@/lib/apps";
-import { WHOP_CHECKOUT_URL } from "@/lib/whop";
+import { CHECKOUT_URL } from "@/lib/checkout";
 import DownloadMenu from "./DownloadMenu";
 import Mark from "./Mark";
 
@@ -61,7 +61,7 @@ export default function Nav() {
             <DownloadMenu />
           </div>
           <a
-            href={WHOP_CHECKOUT_URL}
+            href={CHECKOUT_URL}
             className="glass-pill glass-pill--nav"
             rel="noopener noreferrer"
           >

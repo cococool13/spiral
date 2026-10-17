@@ -1,4 +1,4 @@
-import { WHOP_CHECKOUT_URL } from "@/lib/whop";
+import { CHECKOUT_URL } from "@/lib/checkout";
 import HeroShowcase from "./HeroShowcase";
 
 export default function Hero() {
@@ -15,7 +15,7 @@ export default function Hero() {
           does, then quits when you close the window.
         </p>
         <div className="hero-actions">
-          <a href={WHOP_CHECKOUT_URL} className="glass-pill" rel="noopener noreferrer">
+          <a href={CHECKOUT_URL} className="glass-pill" rel="noopener noreferrer">
             Buy — $9.99 <span aria-hidden="true">↗</span>
           </a>
           <a href="#apps" className="text-link">

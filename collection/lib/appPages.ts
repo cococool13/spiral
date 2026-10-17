@@ -220,7 +220,7 @@ const appPages: AppPage[] = [
       },
       {
         q: "Do I need a license?",
-        a: "Yes. Buy Spiral Collection once on Whop ($9.99), then paste the license key when the app asks. The source stays public; the shipped apps stay locked without a key.",
+        a: "Yes. Buy Spiral Collection once ($9.99), then paste the license key from your purchase email when the app asks. The source stays public; the shipped apps stay locked without a key.",
       },
       {
         q: "Windows?",
