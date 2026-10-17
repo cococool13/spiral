@@ -60,7 +60,7 @@ export function Activate({ onDone }: ActivateProps) {
         </a>
         {" · "}
         <a href={CHECKOUT_URL} target="_blank" rel="noreferrer">
-          Buy Spiral Collection — $9.99
+          Buy Spiral Collection — $15
         </a>
       </p>
     </main>
