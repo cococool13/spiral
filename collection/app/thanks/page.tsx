@@ -22,7 +22,7 @@ export default function ThanksPage() {
       <main id="content" className="information-page setup-page shell">
         <h1 className="type-display text-4xl text-paper sm:text-5xl">You are in.</h1>
         <p className="mt-8 text-lg text-gray">
-          One $9.99 license unlocks the shipping apps. Open each app, paste the key from
+          One $15 license unlocks the shipping apps. Open each app, paste the key from
           your purchase email on Activate, then it stays in the keychain. Clean is not a
           download yet; the same key will cover it when it ships.
         </p>

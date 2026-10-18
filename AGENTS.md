@@ -30,7 +30,7 @@ Current app release **v1.0.3** (Spiral Wallpaper).
 - **Website** (`collection/`): Next.js App Router + React 19 + Tailwind v4, `output: 'export'`,
   Biome 2 lint/format. Deployed to Cloudflare Pages. Checkout URLs in
   `collection/lib/checkout.ts`.
-- **Licensing:** one-time purchase ($9.99) through Stripe checkout. Apps gate on `crates/spiral-license`;
+- **Licensing:** one-time purchase ($15) through Stripe checkout. Apps gate on `crates/spiral-license`;
   keys are issued and checked by the shared licensing Worker in `~/Projects/licensing`. See `docs/licensing.md`.
 - **Brand** (`brand/`): single source of truth. Sync with
   `node scripts/sync-brand.mjs <surface>` (allowlists in `scripts/brand-manifest.mjs`).
