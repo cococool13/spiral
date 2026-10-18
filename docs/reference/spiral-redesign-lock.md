@@ -53,7 +53,7 @@ Token commitments: see brand/tokens.css (Identity 03)
 
 ## Product truth (unchanged)
 
-Whop URLs, download routing, privacy copy, unreleased Clean honesty, no
+Stripe buy links, download routing, privacy copy, unreleased Clean honesty, no
 telemetry claims, keyboard/reduced-motion requirements.
 
 ## Completion checks

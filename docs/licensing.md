@@ -1,6 +1,6 @@
 # Licensing
 
-Spiral Collection is sold once ($15) through Stripe Checkout, with Stripe
+Spiral Collection is sold once ($9.99) through Stripe Checkout, with Stripe
 Managed Payments as merchant of record. One license key unlocks every desktop app
 in the collection. Source stays public; shipped binaries stay locked without a key.
 

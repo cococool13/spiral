@@ -7,7 +7,7 @@ const rules = [
   {
     id: "PAY",
     title: "No subscription",
-    body: "One $15 license for the collection. Download the apps you need and activate with your license key.",
+    body: "One $9.99 license for the collection. Download the apps you need and activate with your license key.",
   },
   {
     id: "RUN",

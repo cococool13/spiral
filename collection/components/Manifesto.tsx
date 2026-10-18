@@ -15,7 +15,7 @@ export default function Manifesto() {
       </div>
       <div className="license-detail">
         <p className="license-price">
-          $15 <span>once</span>
+          $9.99 <span>once</span>
         </p>
         <p>
           Wallpaper, Slim, and Resume.

@@ -65,7 +65,7 @@ export default function Nav() {
             className="glass-pill glass-pill--nav"
             rel="noopener noreferrer"
           >
-            Buy — $15
+            Buy — $9.99
           </a>
           <button
             ref={toggle}
