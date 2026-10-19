@@ -169,7 +169,7 @@ started that way, and its ADRs still sit beside the code they became.
 | [`apps/Resume/`](apps/Resume/) | Spiral Resume: a resume goes in, a typeset PDF or Word file comes out, and no fact is ever changed. macOS + Windows. First downloadable release **v0.1.1**. Import, the Check screen where every extracted fact is editable, twelve templates rendered by an embedded Typst, PDF and DOCX export, and three engine tiers. 218 Rust tests plus 76 Vitest tests. See the [design spec](apps/Resume/docs/design-spec.md) | shipping the resume app |
 | [`collection/`](collection/) | The landing site that houses every app. Next.js + Tailwind, static export, deployed to Cloudflare Pages. **Plays by different rules than the apps** — see [`collection/README.md`](collection/README.md) | working on the website |
 | [`docs/`](docs/) | [`PRODUCT.md`](docs/PRODUCT.md), [`DESIGN.md`](docs/DESIGN.md), [`licensing.md`](docs/licensing.md), [`reference/`](docs/reference/), build specs | you need context, not code |
-| [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
+| [`AGENTS.md`](AGENTS.md) | The build briefs: brand rules, stack decisions, scope | an agent is picking up work |
 
 **Brand assets are never duplicated.** Each surface copies what it needs out of
 `brand/` at build time into a gitignored folder — `collection/public/brand/`,
