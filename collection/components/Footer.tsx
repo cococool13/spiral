@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { apps } from "@/lib/apps";
 import Mark from "./Mark";
 
-const EMAIL = "hi@cohencool.com";
+const EMAIL = "cohenbcoolidge@gmail.com";
 const GITHUB = "https://github.com/cococool13";
 const year = 2026;
 
