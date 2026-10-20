@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { CHECKOUT_URL, RESEND_URL } from "../lib/checkout";
 import { useRadioGroup } from "../lib/useRadioGroup";
@@ -23,10 +23,16 @@ export function Activate({ onDone }: ActivateProps) {
   const [busy, setBusy] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
   const [error, setError] = useState("");
+  // The arrow keys move focus within the switch, so once it has been used no
+  // form may pull focus out of it with autoFocus.
+  const switched = useRef(false);
   const modeProps = useRadioGroup(
     MODES.map((m) => m.id),
     mode,
-    setMode,
+    (m: Mode) => {
+      switched.current = true;
+      setMode(m);
+    },
   );
 
   async function submit(event: React.FormEvent) {
@@ -59,7 +65,12 @@ export function Activate({ onDone }: ActivateProps) {
           </button>
         ))}
       </div>
-      <EmailUnlock onDone={onDone} hidden={mode !== "email"} onBusyChange={setEmailBusy} />
+      <EmailUnlock
+        onDone={onDone}
+        hidden={mode !== "email"}
+        onBusyChange={setEmailBusy}
+        autoFocus={!switched.current}
+      />
       {mode === "key" && (
         <>
           <p className="panel__lede">
@@ -79,7 +90,7 @@ export function Activate({ onDone }: ActivateProps) {
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
                 disabled={busy}
-                autoFocus
+                autoFocus={!switched.current}
               />
             </label>
             {error ? <p className="activate__error" role="alert">{error}</p> : null}

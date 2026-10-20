@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface EmailUnlockProps {
@@ -7,12 +7,19 @@ interface EmailUnlockProps {
   hidden?: boolean;
   /** Lets the screen lock the mode switch while a code is being sent or checked. */
   onBusyChange?: (busy: boolean) => void;
+  /** Off once the mode switch has been used, so its arrow keys keep focus. */
+  autoFocus?: boolean;
 }
 
 type Busy = "send" | "check" | null;
 
 /** Unlock without the key: the server emails a 6-digit code to the buyer. */
-export function EmailUnlock({ onDone, hidden = false, onBusyChange }: EmailUnlockProps) {
+export function EmailUnlock({
+  onDone,
+  hidden = false,
+  onBusyChange,
+  autoFocus = true,
+}: EmailUnlockProps) {
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
@@ -20,6 +27,17 @@ export function EmailUnlock({ onDone, hidden = false, onBusyChange }: EmailUnloc
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
 
+  // Set by a successful send. The code field takes focus once it is enabled
+  // (it mounts disabled while the send finishes), but not when the step
+  // reappears after a mode switch.
+  const focusCode = useRef(false);
+  const codeInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (focusCode.current && busy === null && sentTo && !hidden) {
+      focusCode.current = false;
+      codeInput.current?.focus();
+    }
+  }, [busy, sentTo, hidden]);
   const isBusy = busy !== null;
   useEffect(() => {
     onBusyChange?.(isBusy);
@@ -42,6 +60,7 @@ export function EmailUnlock({ onDone, hidden = false, onBusyChange }: EmailUnloc
       "send",
       async () => {
         await invoke("license_request_code", { email: target });
+        focusCode.current = true;
         setSentTo(target);
         setResent(again);
         // The old code stops working once a new one is sent.
@@ -101,7 +120,7 @@ export function EmailUnlock({ onDone, hidden = false, onBusyChange }: EmailUnloc
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy !== null}
-              autoFocus
+              autoFocus={autoFocus}
             />
           </label>
           {errorRegion}
@@ -137,7 +156,8 @@ export function EmailUnlock({ onDone, hidden = false, onBusyChange }: EmailUnloc
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             disabled={busy !== null}
-            autoFocus
+            ref={codeInput}
+            autoFocus={autoFocus}
           />
         </label>
         {errorRegion}

@@ -46,6 +46,14 @@ describe("Unlock with", () => {
     fireEvent.keyDown(screen.getByRole("radio", { name: "License key" }), { key: "ArrowRight" });
     expect(screen.getByRole("radio", { name: "Email" }).getAttribute("aria-checked")).toBe("true");
   });
+
+  it("keeps focus in the switch while the arrow keys change the form", () => {
+    render(<Activate onDone={vi.fn()} />);
+    fireEvent.keyDown(screen.getByRole("radio", { name: "License key" }), { key: "ArrowRight" });
+    expect(document.activeElement).toBe(screen.getByRole("radio", { name: "Email" }));
+    fireEvent.keyDown(screen.getByRole("radio", { name: "Email" }), { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(screen.getByRole("radio", { name: "License key" }));
+  });
 });
 
 describe("Email unlock", () => {
@@ -56,6 +64,7 @@ describe("Email unlock", () => {
     expect(mockInvoke).toHaveBeenCalledWith("license_request_code", { email: "buyer@example.com" });
     expect(screen.getByText("Enter the code sent to buyer@example.com.")).toBeTruthy();
     expect(screen.getByLabelText("6-digit code").getAttribute("autocomplete")).toBe("one-time-code");
+    expect(document.activeElement).toBe(screen.getByLabelText("6-digit code"));
   });
 
   it("unlocks with the code and calls onDone", async () => {
