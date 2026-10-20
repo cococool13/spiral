@@ -1562,6 +1562,61 @@ code {
   color: var(--hlx-02);
 }
 
+/* The live region stays mounted so screen readers hear the first error;
+   while empty it must not add a gap. */
+.activate__error:empty {
+  margin-top: calc(var(--unit) * -2);
+}
+
+/* Unlock with: license key or email. */
+.unlock-mode {
+  display: flex;
+}
+
+.unlock-mode__option {
+  border-radius: 0;
+  color: var(--ink-02);
+}
+
+.unlock-mode__option + .unlock-mode__option {
+  margin-left: -1px;
+}
+
+.unlock-mode__option[aria-pressed="true"] {
+  position: relative;
+  border-color: var(--paper);
+  color: var(--paper);
+}
+
+.activate__links {
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--unit) * 3);
+}
+
+.activate__link {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  color: var(--paper);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .activate__link:hover:not(:disabled) {
+    background: none;
+  }
+}
+
+.activate__link:disabled {
+  border: 0;
+  background: none;
+  color: var(--ink-02);
+}
+
 .activate__error--boot {
   text-align: center;
   padding: 0 calc(var(--unit) * 6) calc(var(--unit) * 4);

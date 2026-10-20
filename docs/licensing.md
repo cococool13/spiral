@@ -46,6 +46,24 @@ edited key never unlocks.
 
 Override the server at dev time with `SPIRAL_LICENSE_URL` (full URL including `/activate`).
 
+## Unlock with email
+
+No account and no password. The key stays the default and the fallback.
+
+1. On **Activate**, the buyer picks **Email** and enters the email they paid with.
+2. The app POSTs `{ app: "spiral", email }` to `<validator>/request`. The server
+   always answers the same way, so it never says whether the email bought a license.
+   It emails a 6-digit code when it did.
+3. The buyer enters the code. The app POSTs `{ app: "spiral", email, code, device_id }`
+   to `<validator>/verify`. `device_id` is the same machine hash as key activation.
+4. The server returns the signed key, exactly like `/activate`. The app verifies it
+   offline and stores it, so launches and weekly checks work the same as with a pasted key.
+
+`<validator>` is the `/activate` URL above, so `SPIRAL_LICENSE_URL` moves all three
+endpoints. The app trims and lowercases the email and requires exactly six digits
+before it calls the server. It never logs the email or the code. A rate limit
+(`429` or `rate_limited`) shows "Too many tries"; it does not count as an outage.
+
 ## Earlier buyers
 
 Keys sold before the move start with `mem_`. They keep working:
@@ -65,6 +83,8 @@ app's `src-tauri/src/license.rs` exposes Tauri commands:
 
 - `license_status` — key stored?
 - `license_activate` — verify, register, store
+- `license_request_code` — email a 6-digit code to the buyer
+- `license_activate_email` — trade email + code for the signed key, then store it like `license_activate`
 - `license_ensure` — launch gate (offline signature, weekly online check, 30-day grace)
 - `license_clear` — remove key (dev/support)
 
@@ -75,5 +95,5 @@ Gated commands call `license::require` (async) or `license::require_sync`
 
 License checks are a named network call to Spiral's licensing server: on
 activation and about once a week. They send the key, a hash of the machine id, and
-the product name. It is not telemetry. Payment happens on Stripe's hosted page;
+the product name. Email unlock also sends the email the buyer types and the code. It is not telemetry. Payment happens on Stripe's hosted page;
 no payment data touches Spiral's servers.

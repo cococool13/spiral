@@ -669,6 +669,36 @@
   color: var(--spiral-oxblood);
 }
 
+/* The live region stays mounted so screen readers hear the first error;
+   while empty it must not add a gap. */
+.activate__error:empty {
+  margin-top: calc(var(--unit) * -2);
+}
+
+.activate__links {
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--unit) * 3);
+}
+
+.activate__link {
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--paper);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.activate__link:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .firstrun {
     animation: none;

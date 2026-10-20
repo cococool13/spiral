@@ -1103,6 +1103,40 @@ body {
   font-size: 14px;
 }
 
+/* The live region stays mounted so screen readers hear the first error;
+   while empty it must not add a gap. */
+.activate__error:empty {
+  margin-top: calc(var(--spiral-unit) * -2);
+}
+
+/* Unlock with: license key or email. */
+.unlock-mode {
+  display: flex;
+  margin-bottom: calc(var(--spiral-unit) * 3);
+}
+
+.unlock-mode__option {
+  border-radius: 0;
+  background: none;
+  color: var(--spiral-gray);
+}
+
+.unlock-mode__option + .unlock-mode__option {
+  margin-left: -1px;
+}
+
+.unlock-mode__option[aria-checked="true"] {
+  position: relative;
+  border-color: var(--spiral-paper);
+  color: var(--spiral-paper);
+}
+
+.activate__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spiral-unit);
+}
+
 .activate-screen__buy {
   margin: calc(var(--spiral-unit) * 3) 0 0;
   color: var(--spiral-gray);

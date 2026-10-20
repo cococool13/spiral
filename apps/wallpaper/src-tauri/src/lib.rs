@@ -115,6 +115,8 @@ pub fn run() {
             clear_thumb_cache,
             license::license_status,
             license::license_activate,
+            license::license_request_code,
+            license::license_activate_email,
             license::license_ensure,
             license::license_clear,
         ])
