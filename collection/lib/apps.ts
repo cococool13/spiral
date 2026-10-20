@@ -38,7 +38,8 @@ export interface SpiralApp {
 }
 
 const RELEASE = "https://github.com/cococool13/spiral/releases/download/v1.0.3";
-const SLIM_RELEASE = "https://github.com/cococool13/Spiral-Slim/releases/download/v1.0.0";
+// Slim ships from this repo under a slim-v* tag, like Resume under resume-v*.
+const SLIM_RELEASE = "https://github.com/cococool13/spiral/releases/download/slim-v1.0.1";
 const RESUME_RELEASE =
   "https://github.com/cococool13/spiral/releases/download/resume-v0.1.1";
 
@@ -68,12 +69,12 @@ export const apps: SpiralApp[] = [
     name: "Spiral Slim",
     tagline: "Brave wizard on Mac. Scripts for Brave, Chrome, Edge, and Firefox.",
     status: "live",
-    version: "1.0.0",
+    version: "1.0.1",
     brewCask: "spiral-slim",
     noWindowsBinary: true,
     downloads: {
       mac: {
-        url: `${SLIM_RELEASE}/Spiral.Slim_1.0.0_universal.dmg`,
+        url: `${SLIM_RELEASE}/Spiral.Slim_1.0.1_universal.dmg`,
         label: "Download for Mac",
       },
       // No Windows binary is published — SECURITY.md. Source link only.
@@ -81,7 +82,7 @@ export const apps: SpiralApp[] = [
         url: "https://github.com/cococool13/spiral/tree/main/apps/slim",
         label: "Read the source",
       },
-      all: "https://github.com/cococool13/Spiral-Slim/releases/latest",
+      all: "https://github.com/cococool13/spiral/releases/tag/slim-v1.0.1",
     },
     page: "/slim/",
   },
