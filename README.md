@@ -241,9 +241,9 @@ record of what had to be true first.
 git tag vX.Y.Z && git push origin vX.Y.Z
 
 # or let the release script do the bump, the commit and the tag for you
-node scripts/release.mjs clean 0.1.0           # bump, commit, tag — nothing pushed
+node scripts/release.mjs clean 0.1.1           # bump, commit, tag — nothing pushed
 node scripts/release.mjs resume 0.1.0          # Spiral Resume, tag resume-v0.1.0
-node scripts/release.mjs clean 0.1.0 --push    # ...and push it
+node scripts/release.mjs clean 0.1.1 --push    # ...and push it
 ```
 
 The workflow refuses to publish a partial release. It stops before building if
@@ -304,7 +304,7 @@ of scope for v1: animated wallpapers, and any network call that is not Wallhaven
 or the named, switchable GitHub update check.
 
 **Clean** has every screen built and every gate green. Four things stand
-between it and a `clean-v0.1.0` tag, and none of them is code anyone can write
+between it and a `clean-v0.1.1` tag, and none of them is code anyone can write
 today:
 
 1. **Nobody has seen it rendered.** The app has never been opened. The smoke

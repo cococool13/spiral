@@ -2,7 +2,7 @@
 
 A native macOS maintenance app. Four things it does — clean, uninstall, optimize, and show you what is using your disk — and one thing it is built around: **it can prove what it will not touch.**
 
-**Status: feature-complete, unreleased.** Version 0.1.0. Every screen is built; the release itself is blocked on four items listed at the bottom.
+**Status: feature-complete, unreleased.** Version 0.1.1. Every screen is built; the release itself is blocked on four items listed at the bottom.
 
 macOS only. No Windows or Linux build, now or planned.
 

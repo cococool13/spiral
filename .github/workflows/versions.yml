@@ -25,7 +25,7 @@ on:
   release:
     types: [published]
   schedule:
-    # Weekly, as the backstop for releases published from another repository.
+    # Weekly, as the backstop for a missed release event.
     - cron: "0 9 * * 1"
   push:
     branches: [main]
@@ -85,8 +85,7 @@ jobs:
   # `release: published` is the trigger that matters: publishing a release is
   # the exact moment the site goes stale, and this says so within a minute
   # instead of whenever somebody next looks. The schedule is the backstop for
-  # Spiral Slim, which publishes from its own repository and so fires no
-  # release event here.
+  # a release whose event was missed.
   downloads:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

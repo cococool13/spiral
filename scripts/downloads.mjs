@@ -138,8 +138,8 @@ async function latest() {
       continue;
     }
     // The repository is taken from the URL rather than from a table here, so
-    // there is no second mapping to drift. Slim publishes from its own repo,
-    // and this notices that without being told.
+    // there is no second mapping to drift. An app that publishes from another
+    // repository is checked there without being told.
     const parts = urls.map(dissect).find(Boolean);
     if (!parts) {
       say(`  ${slug}: no release URL to check`);
