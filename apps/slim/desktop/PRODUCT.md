@@ -12,8 +12,8 @@ People on macOS or Windows who want Brave configured sensibly and do not want to
 policy reference to get there. They are in a one-time errand, not a workflow:
 open, pick, read what will change, confirm, done. A meaningful share are
 privacy-conscious and are here because the wizard shows the exact diff
-before touching anything. The only network call is the named Whop license
-check on launch (`docs/licensing.md`).
+before touching anything. The only network call is the named license
+check (on activation, then about weekly) (`docs/licensing.md`).
 
 Second audience: people who already ran SlimBrave Neo from a terminal and want
 the same thing without `sudo` and a curses TUI.

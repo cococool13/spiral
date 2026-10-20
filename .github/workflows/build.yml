@@ -51,9 +51,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check Whop checkout URLs
+      - name: Check checkout URLs
         working-directory: .
-        run: node scripts/check-whop.mjs
+        run: node scripts/check-checkout.mjs
 
       - uses: pnpm/action-setup@v6
         with:

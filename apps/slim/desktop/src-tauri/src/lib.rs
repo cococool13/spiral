@@ -77,7 +77,7 @@ fn require_license(app: &tauri::AppHandle) -> SlimResult<()> {
         SlimError::new(
             "License required",
             detail,
-            "Activate Spiral Slim with your Whop license key, then try again.",
+            "Activate Spiral Slim with your license key, then try again.",
         )
     })
 }

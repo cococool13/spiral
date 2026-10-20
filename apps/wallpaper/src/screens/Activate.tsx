@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import lockupRed from "../assets/brand/lockup-red.svg";
-import { WHOP_CHECKOUT_URL, WHOP_MANAGE_URL } from "../lib/whop";
+import { CHECKOUT_URL, RESEND_URL } from "../lib/checkout";
 
 interface ActivateProps {
   onDone: () => void;
@@ -30,7 +30,7 @@ export function Activate({ onDone }: ActivateProps) {
     <main className="firstrun">
       <img src={lockupRed} alt="Spiral" className="firstrun__lockup" />
       <p className="firstrun__line">
-        Enter your Whop license key. The app stays locked until the key checks out.
+        Enter your Spiral Collection license key. The app stays locked until the key checks out.
       </p>
       <form className="activate" onSubmit={submit}>
         <label className="activate__label" htmlFor="license-key">
@@ -43,7 +43,7 @@ export function Activate({ onDone }: ActivateProps) {
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder="Paste key from Whop"
+          placeholder="Paste key from your purchase email"
           value={key}
           onChange={(e) => setKey(e.target.value)}
           disabled={busy}
@@ -59,12 +59,12 @@ export function Activate({ onDone }: ActivateProps) {
         </button>
       </form>
       <p className="firstrun__line">
-        <a href={WHOP_MANAGE_URL} target="_blank" rel="noreferrer">
-          Find your license key on Whop
+        <a href={RESEND_URL} target="_blank" rel="noreferrer">
+          Lost your key? Email it to me again
         </a>
         {" · "}
-        <a href={WHOP_CHECKOUT_URL} target="_blank" rel="noreferrer">
-          Buy Spiral Collection — $9.99
+        <a href={CHECKOUT_URL} target="_blank" rel="noreferrer">
+          Buy Spiral Collection — $15
         </a>
       </p>
     </main>

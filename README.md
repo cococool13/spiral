@@ -36,7 +36,7 @@ Three promises, kept the same way in every app:
 
 ## Licensing
 
-Spiral Collection is **$9.99 once on Whop**. One license key unlocks Wallpaper,
+Spiral Collection is **$15 once**, through Stripe checkout. One license key unlocks Wallpaper,
 Slim, Clean, and Resume. Source stays public; shipped apps stay locked until you
 paste a key on the Activate screen.
 

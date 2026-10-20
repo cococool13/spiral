@@ -1,10 +1,12 @@
 # spiral-license
 
-Shared Rust crate for Whop license checks in Spiral desktop apps.
+Shared Rust crate for license checks in Spiral desktop apps.
 
-Keys live in the OS keychain. Validation goes to Spiral's Cloudflare Worker
-(`workers/license/`), which holds the Whop API key — never ship that key inside
-an app.
+Keys are signed (`LIC1.…`, Ed25519) by the shared licensing Worker
+(`~/Projects/licensing`). The crate verifies them offline with the public keys it
+carries, asks the Worker about once a week, and keeps working for 30 days when the
+Worker cannot be reached. Keys live in the OS keychain. The signing key never ships
+in an app.
 
 ## Usage
 
@@ -15,7 +17,6 @@ Each app depends on this crate via a path in its `Cargo.toml` and expands
 spiral_license::license_commands!(spiral_license::AppId::Wallpaper);
 ```
 
-Default validator: `https://spiral-license.cohencool.workers.dev/validate`.
+Default server: `https://licensing.cohencool.workers.dev/activate`.
 
-See [`docs/licensing.md`](../../docs/licensing.md) for checkout URLs, grace
-period, and deploy.
+See [`docs/licensing.md`](../../docs/licensing.md).
