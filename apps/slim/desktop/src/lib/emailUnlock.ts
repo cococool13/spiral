@@ -45,7 +45,8 @@ export function reduceEmailUnlock(
     case "busy":
       return { ...state, busy: event.busy, error: "" };
     case "sent":
-      return { ...state, busy: null, sentTo: event.to, resent: event.again };
+      // A new code replaces the old one on the server, so the old one is cleared here.
+      return { ...state, busy: null, sentTo: event.to, resent: event.again, code: "" };
     case "failed":
       return { ...state, busy: null, error: event.error };
     case "unlocked":

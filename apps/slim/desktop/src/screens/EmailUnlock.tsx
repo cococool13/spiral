@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useEffect, useReducer } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   canSend,
@@ -11,12 +11,23 @@ import {
 
 interface EmailUnlockProps {
   onDone: () => void;
+  /** Hidden while the key form shows. The component stays mounted so a sent code survives a switch. */
+  hidden?: boolean;
+  /** Lets the screen lock the mode switch while a code is being sent or checked. */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 /** Unlock without the key: the server emails a 6-digit code to the buyer. */
-export function EmailUnlock({ onDone }: EmailUnlockProps) {
+export function EmailUnlock({ onDone, hidden = false, onBusyChange }: EmailUnlockProps) {
   const [state, dispatch] = useReducer(reduceEmailUnlock, initialEmailUnlock);
   const { email, sentTo, resent, code, busy, error } = state;
+
+  const isBusy = busy !== null;
+  useEffect(() => {
+    onBusyChange?.(isBusy);
+  }, [isBusy, onBusyChange]);
+
+  if (hidden) return null;
 
   const errorRegion = (
     <p className="activate__error" aria-live="polite">

@@ -21,6 +21,7 @@ export function Activate({ onDone }: ActivateProps) {
   const [mode, setMode] = useState<Mode>("key");
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
   const [error, setError] = useState("");
   const modeProps = useRadioGroup(
     MODES.map((m) => m.id),
@@ -51,16 +52,15 @@ export function Activate({ onDone }: ActivateProps) {
             key={m.id}
             type="button"
             className="btn unlock-mode__option"
-            disabled={busy}
+            disabled={busy || emailBusy}
             {...modeProps(m.id)}
           >
             {m.name}
           </button>
         ))}
       </div>
-      {mode === "email" ? (
-        <EmailUnlock onDone={onDone} />
-      ) : (
+      <EmailUnlock onDone={onDone} hidden={mode !== "email"} onBusyChange={setEmailBusy} />
+      {mode === "key" && (
         <>
           <p className="panel__lede">
             Enter your Spiral Collection license key. The app stays locked until the key checks out.

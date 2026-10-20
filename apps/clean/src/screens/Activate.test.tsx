@@ -111,4 +111,42 @@ describe("Email unlock", () => {
     expect(screen.getByLabelText("Email")).toBeTruthy();
     expect(screen.queryByLabelText("6-digit code")).toBeNull();
   });
+  it("keeps the code step when switching to the key and back", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    openEmail();
+    await sendCode();
+    fireEvent.click(screen.getByRole("button", { name: "License key" }));
+    expect(screen.queryByLabelText("6-digit code")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Email" }));
+    expect(screen.getByText("Enter the code sent to buyer@example.com.")).toBeTruthy();
+    expect(mockInvoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("locks the switch while a code is on its way", async () => {
+    let finish: () => void = () => {};
+    mockInvoke.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = () => resolve(undefined);
+        }),
+    );
+    openEmail();
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "buyer@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send code" }));
+    const key = screen.getByRole("button", { name: "License key" }) as HTMLButtonElement;
+    await waitFor(() => expect(key.disabled).toBe(true));
+    finish();
+    await screen.findByLabelText("6-digit code");
+    await waitFor(() => expect(key.disabled).toBe(false));
+  });
+
+  it("clears the old code after sending again", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    openEmail();
+    await sendCode();
+    fireEvent.change(screen.getByLabelText("6-digit code"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send again" }));
+    await screen.findByText("Enter the new code sent to buyer@example.com.");
+    expect((screen.getByLabelText("6-digit code") as HTMLInputElement).value).toBe("");
+  });
 });

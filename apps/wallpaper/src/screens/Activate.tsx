@@ -19,6 +19,7 @@ export function Activate({ onDone }: ActivateProps) {
   const [mode, setMode] = useState<Mode>("key");
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent) {
@@ -48,15 +49,14 @@ export function Activate({ onDone }: ActivateProps) {
               mode === m.value ? "segmented__option segmented__option--active" : "segmented__option"
             }
             onClick={() => setMode(m.value)}
-            disabled={busy}
+            disabled={busy || emailBusy}
           >
             {m.label}
           </button>
         ))}
       </div>
-      {mode === "email" ? (
-        <EmailUnlock onDone={onDone} />
-      ) : (
+      <EmailUnlock onDone={onDone} hidden={mode !== "email"} onBusyChange={setEmailBusy} />
+      {mode === "key" && (
         <>
           <p className="firstrun__line">
             Enter your Spiral Collection license key. The app stays locked until the key checks out.

@@ -1,20 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface EmailUnlockProps {
   onDone: () => void;
+  /** Hidden while the key form shows. The component stays mounted so a sent code survives a switch. */
+  hidden?: boolean;
+  /** Lets the screen lock the mode switch while a code is being sent or checked. */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 type Busy = "send" | "check" | null;
 
 /** Unlock without the key: the server emails a 6-digit code to the buyer. */
-export function EmailUnlock({ onDone }: EmailUnlockProps) {
+export function EmailUnlock({ onDone, hidden = false, onBusyChange }: EmailUnlockProps) {
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
+
+  const isBusy = busy !== null;
+  useEffect(() => {
+    onBusyChange?.(isBusy);
+  }, [isBusy, onBusyChange]);
 
   async function run(kind: Exclude<Busy, null>, action: () => Promise<void>, fallback: string) {
     setBusy(kind);
@@ -35,6 +44,8 @@ export function EmailUnlock({ onDone }: EmailUnlockProps) {
         await invoke("license_request_code", { email: target });
         setSentTo(target);
         setResent(again);
+        // The old code stops working once a new one is sent.
+        setCode("");
       },
       "Could not send a code.",
     );
@@ -58,6 +69,8 @@ export function EmailUnlock({ onDone }: EmailUnlockProps) {
     setCode("");
     setError("");
   }
+
+  if (hidden) return null;
 
   const errorRegion = (
     <p className="activate__error" aria-live="polite">

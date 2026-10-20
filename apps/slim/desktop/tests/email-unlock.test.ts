@@ -115,6 +115,12 @@ describe("email unlock", () => {
     expect(s.get()).toMatchObject({ sentTo: "buyer@example.com", resent: true, error: "" });
   });
 
+  it("clears the old code when a new one is sent", async () => {
+    const s = store({ ...initialEmailUnlock, sentTo: "buyer@example.com", code: "123456" });
+    await sendCode(ok, s.dispatch, "buyer@example.com", true);
+    expect(s.get()).toMatchObject({ resent: true, code: "" });
+  });
+
   it("goes back to the email step for a different email", () => {
     const s = store({
       ...initialEmailUnlock,
