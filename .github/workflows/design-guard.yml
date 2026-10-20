@@ -1,0 +1,6 @@
+name: taste
+on: [pull_request]
+jobs:
+  guard:
+    uses: cococool13/design-guard/.github/workflows/guard.yml@v1
+    secrets: inherit
