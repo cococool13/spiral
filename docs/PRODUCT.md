@@ -78,9 +78,9 @@ Shared, and not treated as gaps:
 - Where an app talks to the internet, it names the host and talks to nothing else.
 - Nothing is uploaded for processing.
 - No undisclosed background process.
-- **One Whop license** ($9.99) unlocks all four desktop apps. Keys validate through
-  Spiral's Cloudflare Worker on launch; 72h offline grace. Checkout URLs live in
-  `collection/lib/whop.ts`. See [`licensing.md`](licensing.md).
+- **One license** ($15, Stripe checkout) unlocks all four desktop apps. Keys are
+  signed and verify offline; Spiral's licensing Worker is asked about once a week
+  (30-day grace). Checkout URLs live in `collection/lib/checkout.ts`. See [`licensing.md`](licensing.md).
 
 Per app, as already confirmed:
 

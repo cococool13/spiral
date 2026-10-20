@@ -1,3 +1,3 @@
-//! Whop license commands for Wallpaper.
+//! License commands for Wallpaper.
 
 spiral_license::license_commands!(spiral_license::AppId::Wallpaper);

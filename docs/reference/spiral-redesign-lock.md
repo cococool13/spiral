@@ -4,7 +4,7 @@
 
 Complete redesign and rebrand of spiralcc.tech and the shared brand system for
 people choosing small desktop tools. First screen: name the collection, show
-real product evidence, make the $9.99 one-time license obvious.
+real product evidence, make the $15 one-time license obvious.
 
 **Chosen hybrid (user lock):** Direction 2 colors + Direction 3 design/feel.
 - Colors: Cron / Dark Instrument (warm near-black, paper type, single helix CTA)
@@ -29,7 +29,7 @@ real product evidence, make the $9.99 one-time license obvious.
 Primary direction: Instrument Utility (Cron color × Control grammar)
 Preserve: warm near-black page; paper type; helix as sole chromatic CTA/focus/
   warning; 0° surfaces and controls; mono metadata/nav; real product evidence;
-  visitor-controlled showcase; $9.99 one-time facts; source-only honesty
+  visitor-controlled showcase; $15 one-time facts; source-only honesty
 Borrow only: Sleeve’s selector (press to change preview); Cushion’s single
   obvious download/buy verb
 Role rules: helix never fills a page section; mute never becomes an accent;
@@ -53,7 +53,7 @@ Token commitments: see brand/tokens.css (Identity 03)
 
 ## Product truth (unchanged)
 
-Whop URLs, download routing, privacy copy, unreleased Clean honesty, no
+Stripe buy links, download routing, privacy copy, unreleased Clean honesty, no
 telemetry claims, keyboard/reduced-motion requirements.
 
 ## Completion checks

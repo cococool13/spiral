@@ -68,13 +68,12 @@ export default function PrivacyPage() {
         <section className="mt-10 border-t border-gray/25 pt-10">
           <h2 className="type-heading text-xl text-paper">License check</h2>
           <p className="mt-3 text-gray">
-            Shipped desktop apps validate your Whop license key on launch through
-            Spiral&apos;s validator at{" "}
-            <span className="text-paper">spiral-license.cohencool.workers.dev</span>. That
-            server calls Whop&apos;s API with a company key so the apps never ship one.
-            The request sends your license key, a machine identifier, and which app you
-            opened — nothing else. If the validator is unreachable, apps allow up to 72
-            hours offline before asking again.
+            Shipped desktop apps check your license key against Spiral&apos;s server at{" "}
+            <span className="text-paper">licensing.cohencool.workers.dev</span> when you
+            activate and then about once a week. The key is signed, so launches between
+            checks happen offline. The request sends your license key, a hash of a machine
+            identifier, and the product name — nothing else. If the server is unreachable,
+            apps keep working for up to 30 days after the last good check.
           </p>
         </section>
 
@@ -82,8 +81,8 @@ export default function PrivacyPage() {
           <h2 className="type-heading text-xl text-paper">This site</h2>
           <p className="mt-3 text-gray">
             spiralcc.tech is a static site. Fonts and images are served from the same
-            host. The site loads Whop&apos;s page pixel (`t.whop.tw`) so purchase ads can
-            attribute visits; that is site analytics for ads, not app telemetry.
+            host. Checkout runs on Stripe&apos;s hosted page; payment details go to Stripe
+            and Link, never to Spiral&apos;s servers. The site loads no analytics.
           </p>
         </section>
 

@@ -1,0 +1,38 @@
+name: license
+
+# The licensing server is the shared Worker in Cohen's `licensing` repo; nothing here deploys.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/spiral-license/**"
+      - "scripts/check-checkout.mjs"
+      - "scripts/sync-checkout.mjs"
+      - "collection/lib/checkout.ts"
+  pull_request:
+    paths:
+      - "crates/spiral-license/**"
+      - "scripts/check-checkout.mjs"
+      - "scripts/sync-checkout.mjs"
+      - "collection/lib/checkout.ts"
+  workflow_dispatch:
+
+concurrency:
+  group: license-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checkout-urls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node scripts/check-checkout.mjs
+
+  crate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test spiral-license crate
+        working-directory: crates/spiral-license
+        run: cargo test

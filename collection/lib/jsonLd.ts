@@ -4,13 +4,13 @@
  * No ratings, review counts, or other figures we do not have.
  */
 import { apps } from "@/lib/apps";
-import { WHOP_CHECKOUT_URL } from "@/lib/whop";
+import { CHECKOUT_URL } from "@/lib/checkout";
 
 const SITE = "https://spiralcc.tech";
 
 /** Same sentence as `app/layout.tsx` metadata.description. */
 const COLLECTION_DESCRIPTION =
-  "Spiral Collection — Wallpaper, Slim, Resume, and Clean. One $9.99 license. No telemetry, no background processes. Mac, and Windows where each app ships.";
+  "Spiral Collection — Wallpaper, Slim, Resume, and Clean. One $15 license. No telemetry, no background processes. Mac, and Windows where each app ships.";
 
 /**
  * Live apps the home page and checkout actually sell. Clean has a page but
@@ -21,10 +21,10 @@ const LISTED = ["wallpaper", "slim", "resume"] as const;
 const OFFER = {
   "@type": "Offer",
   name: "Spiral Collection license",
-  description: "One $9.99 license. Unlocks Wallpaper, Slim, Resume, and Clean.",
-  price: "9.99",
+  description: "One $15 license. Unlocks Wallpaper, Slim, Resume, and Clean.",
+  price: "15.00",
   priceCurrency: "USD",
-  url: WHOP_CHECKOUT_URL,
+  url: CHECKOUT_URL,
   availability: "https://schema.org/InStock",
 };
 
@@ -70,7 +70,7 @@ export function homeJsonLd(): Record<string, unknown> {
         operatingSystem: "macOS, Windows",
         offers: OFFER,
         featureList: [
-          "One $9.99 license",
+          "One $15 license",
           "No telemetry",
           "No background processes",
           "Nothing to sign in to",
