@@ -1,6 +1,6 @@
 [package]
 name = "spiral-slim"
-version = "1.0.0"
+version = "1.0.1"
 description = "A local wizard for configuring Brave through SlimBrave Neo"
 authors = ["Spiral"]
 edition = "2021"

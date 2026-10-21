@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { version } from "../../package.json";
 import { Settings } from "./Settings";
 
 const deleteStoredData = vi.fn(async () => {});
@@ -33,7 +34,9 @@ describe("Settings", () => {
   it("shows the exact folder the document is stored in", async () => {
     render(<Settings onClose={vi.fn()} onCleared={vi.fn()} onEngineChanged={vi.fn()} />);
     await waitFor(() => expect(screen.getByText("/tmp/spiral-resume")).toBeTruthy());
-    expect(screen.getByText("Spiral Resume 0.1.1")).toBeTruthy();
+    // The release bump changes package.json, so the test reads the version from there.
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(screen.getByText(`Spiral Resume ${version}`)).toBeTruthy();
   });
 
   it("closes from the heading, without opening the menu again", async () => {

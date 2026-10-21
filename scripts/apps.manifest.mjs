@@ -40,12 +40,14 @@ export const APPS = {
       live: true,
       releaseConst: "SLIM_RELEASE",
       owner: "cococool13",
-      repo: "Spiral-Slim",
-      downloadTag: (v) => `v${v}`,
+      // Slim releases from this repo on slim-v* tags (release-slim.yml), like
+      // Resume. The old Spiral-Slim repo is gone, so its links were 404s.
+      repo: "spiral",
+      downloadTag: (v) => `slim-v${v}`,
       assets: {
         mac: (v) => `Spiral.Slim_${v}_universal.dmg`,
       },
-      all: "latest",
+      all: "tag",
       noWindowsBinary: true,
     },
   },
