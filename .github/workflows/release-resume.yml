@@ -41,6 +41,11 @@ on:
   push:
     tags: ["resume-v*"]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Create the GitHub release (false = build artifacts only)
+        type: boolean
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -65,3 +70,6 @@ jobs:
       updater: false
       sidecar: true
       bundle-config: src-tauri/tauri.bundle.conf.json
+      # Tag pushes have no inputs, so they always publish. A manual run can
+      # pass publish: false to build without touching any release.
+      publish: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
