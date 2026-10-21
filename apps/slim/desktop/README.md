@@ -141,9 +141,10 @@ before it is stapled will not match what people download.
 6. Publish it on this repository's Releases page under a `slim-v*` tag, and
    nowhere else. [`SECURITY.md`](../SECURITY.md) tells users to reject a copy
    from any other source, so a mirror does not help them — it makes them doubt
-   the real one. v1.0.0 predates the move and still sits on the archived
-   `cococool13/Spiral-Slim` release; `SECURITY.md` names both, and it must keep
-   naming every location that serves a real build.
+   the real one. v1.0.0 predated the move and lived on `cococool13/Spiral-Slim`,
+   which no longer exists; every build since `slim-v1.0.1` is on this
+   repository. `SECURITY.md` must keep naming every location that serves a real
+   build.
 
 ### Not done, and deliberately
 

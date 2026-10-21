@@ -96,7 +96,7 @@ sudo python3 spiral-slim-mac.py
 
 Requires root. Policies are written to `/Library/Managed Preferences/com.brave.Browser.plist` by default; with `--persist on` an Apple Configuration Profile is installed instead.
 
-The native macOS wizard under [`desktop/`](desktop/README.md) is v1.0.0 and shipped — install it with `brew install --cask cococool13/spiral/spiral-slim`, or [download the DMG](https://github.com/cococool13/Spiral-Slim/releases/latest). It drives this same script through a read-only `--detect`/`--preview-plan`/`--apply-plan` interface (Brave only — see [CLI Reference](#cli-reference)).
+The native macOS wizard under [`desktop/`](desktop/README.md) is v1.0.1 — install it with `brew install --cask cococool13/spiral/spiral-slim`, or [download the DMG](https://github.com/cococool13/spiral/releases/download/slim-v1.0.1/Spiral.Slim_1.0.1_universal.dmg). It drives this same script through a read-only `--detect`/`--preview-plan`/`--apply-plan` interface (Brave only — see [CLI Reference](#cli-reference)).
 
 **Persistence on macOS (Apple Silicon / macOS 13+).** On modern macOS, `cfprefsd` and `mdmclient` may clear directly-written `/Library/Managed Preferences/*.plist` files at reboot when no Configuration Profile backs them, so policies don't always survive a restart. Spiral Slim offers two modes:
 
