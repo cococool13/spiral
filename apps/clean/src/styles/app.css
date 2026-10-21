@@ -333,3 +333,53 @@ dialog code {
   text-align: left;
   color: var(--spiral-oxblood);
 }
+
+/* The live region stays mounted so screen readers hear the first error;
+   while empty it must not add a gap. */
+.activate__error:empty {
+  margin-top: calc(var(--spiral-unit) * -2);
+}
+
+/* Unlock with: license key or email. */
+.unlock-mode {
+  display: flex;
+}
+
+.unlock-mode__option {
+  padding: 0 calc(var(--spiral-unit) * 2);
+  border: 1px solid var(--spiral-conc-03);
+  border-radius: 0;
+  background: none;
+  color: var(--spiral-gray);
+}
+
+.unlock-mode__option + .unlock-mode__option {
+  margin-left: -1px;
+}
+
+.unlock-mode__option[aria-pressed="true"] {
+  position: relative;
+  border-color: var(--spiral-paper);
+  color: var(--spiral-paper);
+}
+
+.activate__links {
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--spiral-unit) * 3);
+}
+
+.activate__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  color: var(--spiral-paper);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.activate__link:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

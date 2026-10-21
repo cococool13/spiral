@@ -97,6 +97,9 @@ pub enum LicenseError {
     NoAccess,
     DeviceMismatch,
     ValidatorNotConfigured,
+    InvalidEmail,
+    InvalidCode,
+    RateLimited,
     Other(String),
 }
 
@@ -120,6 +123,9 @@ impl LicenseError {
             Self::ValidatorNotConfigured => {
                 "License checks are not configured yet. Try again later.".into()
             }
+            Self::InvalidEmail => "Enter the email you paid with.".into(),
+            Self::InvalidCode => "That code is wrong or has expired.".into(),
+            Self::RateLimited => "Too many tries. Wait a few minutes and try again.".into(),
             Self::Other(e) => e.clone(),
         }
     }
@@ -133,6 +139,40 @@ fn trusted_keys() -> impl Iterator<Item = &'static (&'static str, &'static str)>
 fn b64url_decode(text: &str) -> Option<Vec<u8>> {
     let bytes = URL_SAFE_NO_PAD.decode(text).ok()?;
     (URL_SAFE_NO_PAD.encode(&bytes) == text).then_some(bytes)
+}
+
+/// Trimmed and lowercased; a basic shape check only, the server decides the rest.
+fn normalize_email(raw: &str) -> Result<String, LicenseError> {
+    let email = raw.trim().to_lowercase();
+    let valid = email.len() <= 254
+        && !email.chars().any(char::is_whitespace)
+        && email.split_once('@').is_some_and(|(local, domain)| {
+            !local.is_empty()
+                && !domain.contains('@')
+                && domain.contains('.')
+                && !domain.starts_with('.')
+                && !domain.ends_with('.')
+        });
+    if valid {
+        Ok(email)
+    } else {
+        Err(LicenseError::InvalidEmail)
+    }
+}
+
+/// Codes arrive typed or pasted: drop whitespace, then require exactly six digits.
+fn normalize_code(raw: &str) -> Result<String, LicenseError> {
+    let code: String = raw.chars().filter(|c| !c.is_whitespace()).collect();
+    if code.len() == 6 && code.bytes().all(|b| b.is_ascii_digit()) {
+        Ok(code)
+    } else {
+        Err(LicenseError::InvalidCode)
+    }
+}
+
+/// `…/activate` becomes `…/activate/request` and `…/activate/verify`.
+fn email_endpoint(validator_url: &str, step: &str) -> String {
+    format!("{}/{step}", validator_url.trim_end_matches('/'))
 }
 
 /// Keys arrive pasted from email: drop every whitespace character.
@@ -332,7 +372,7 @@ fn classify_validator(
     let code = error.unwrap_or("unknown");
     match code {
         "invalid_key" | "wrong_app" => Err(LicenseError::InvalidKey),
-        "refunded" | "revoked" | "disputed" | "no_access" => Err(LicenseError::NoAccess),
+        "refunded" | "revoked" | "disputed" | "expired" | "no_access" => Err(LicenseError::NoAccess),
         "device_limit" | "device_mismatch" => Err(LicenseError::DeviceMismatch),
         "validator_not_configured" => Err(LicenseError::ValidatorNotConfigured),
         "bad_request" | "missing_fields" | "bad_json" => Err(LicenseError::Other(format!(
@@ -370,6 +410,98 @@ pub async fn activate(app: AppId, key: &str, validator_url: &str) -> Result<(), 
         delete_account(app, account);
     }
     Ok(())
+}
+
+/// Email unlock, step 1: ask the server to email a code. The server answers the
+/// same whether or not the email bought a license.
+pub async fn request_code(email: &str, validator_url: &str) -> Result<(), LicenseError> {
+    let email = normalize_email(email)?;
+    post_email_step(
+        &email_endpoint(validator_url, "request"),
+        serde_json::json!({ "app": LICENSE_APP_ID, "email": email }),
+    )
+    .await
+    .map(|_| ())
+}
+
+/// Email unlock, step 2: trade the emailed code for the signed key, then store it
+/// exactly like `activate`.
+pub async fn activate_with_code(
+    app: AppId,
+    email: &str,
+    code: &str,
+    validator_url: &str,
+) -> Result<(), LicenseError> {
+    let email = normalize_email(email)?;
+    let code = normalize_code(code)?;
+    let body = post_email_step(
+        &email_endpoint(validator_url, "verify"),
+        serde_json::json!({
+            "app": LICENSE_APP_ID,
+            "email": email,
+            "code": code,
+            "device_id": device_id(),
+        }),
+    )
+    .await?;
+    let signed = body
+        .key
+        .ok_or_else(|| LicenseError::Network("server returned no key".into()))?;
+    verify_key(&signed)?;
+    store_key(app, &signed)?;
+    save_status(app, &signed)?;
+    for account in [LEGACY_KEY_ACCOUNT, LEGACY_STATUS_ACCOUNT] {
+        delete_account(app, account);
+    }
+    Ok(())
+}
+
+/// Like `classify_validator`, plus the email-step verdicts. A rate limit is a
+/// message to wait here, not an outage.
+fn classify_email_step(
+    ok: bool,
+    http_success: bool,
+    http_server_error: bool,
+    http_429: bool,
+    error: Option<&str>,
+) -> Result<(), LicenseError> {
+    if http_429 {
+        return Err(LicenseError::RateLimited);
+    }
+    match error {
+        Some("invalid_code") => Err(LicenseError::InvalidCode),
+        Some("rate_limited") => Err(LicenseError::RateLimited),
+        _ => classify_validator(ok, http_success, http_server_error, false, error),
+    }
+}
+
+async fn post_email_step(
+    url: &str,
+    payload: serde_json::Value,
+) -> Result<ActivateResponse, LicenseError> {
+    let res = http_client()?
+        .post(url)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| LicenseError::Network(e.to_string()))?;
+    let status = res.status();
+    // Checked before the body: a 429 from the edge may not be JSON.
+    if status.as_u16() == 429 {
+        return Err(LicenseError::RateLimited);
+    }
+    let body: ActivateResponse = res
+        .json()
+        .await
+        .map_err(|e| LicenseError::Network(e.to_string()))?;
+    classify_email_step(
+        body.ok,
+        status.is_success(),
+        status.is_server_error(),
+        false,
+        body.error.as_deref(),
+    )?;
+    Ok(body)
 }
 
 /// What a launch decides, given the stored key's offline check and its last online check.
@@ -476,6 +608,20 @@ macro_rules! license_commands {
         #[tauri::command]
         pub async fn license_activate(key: String) -> Result<(), String> {
             $crate::activate(APP, &key, &validator_url())
+                .await
+                .map_err(map_err)
+        }
+
+        #[tauri::command]
+        pub async fn license_request_code(email: String) -> Result<(), String> {
+            $crate::request_code(&email, &validator_url())
+                .await
+                .map_err(map_err)
+        }
+
+        #[tauri::command]
+        pub async fn license_activate_email(email: String, code: String) -> Result<(), String> {
+            $crate::activate_with_code(APP, &email, &code, &validator_url())
                 .await
                 .map_err(map_err)
         }
@@ -759,6 +905,119 @@ mod tests {
     async fn validate_online_returns_the_signed_key() {
         let url = spawn_json_once(200, r#"{"ok":true,"status":"active","key":"LIC1.a.b"}"#);
         assert_eq!(validate_online("mem_x", "dev", &url).await.unwrap(), "LIC1.a.b");
+    }
+
+    #[test]
+    fn email_endpoints_extend_the_validator_url() {
+        let base = "https://licensing.example/activate";
+        assert_eq!(email_endpoint(base, "request"), "https://licensing.example/activate/request");
+        assert_eq!(email_endpoint(base, "verify"), "https://licensing.example/activate/verify");
+        assert_eq!(
+            email_endpoint("http://localhost:8787/activate/", "verify"),
+            "http://localhost:8787/activate/verify"
+        );
+    }
+
+    #[test]
+    fn normalizes_and_checks_emails() {
+        assert_eq!(normalize_email("  Buyer@Example.COM \n").unwrap(), "buyer@example.com");
+        assert_eq!(normalize_email("a.b+c@mail.co.uk").unwrap(), "a.b+c@mail.co.uk");
+        for bad in ["", "   ", "buyer", "@example.com", "buyer@", "buyer@example", "a@b@c.com", "a b@c.com", "a@.com", "a@com."] {
+            assert_eq!(normalize_email(bad), Err(LicenseError::InvalidEmail), "{bad}");
+        }
+        let long = format!("{}@x.io", "a".repeat(250));
+        assert_eq!(normalize_email(&long), Err(LicenseError::InvalidEmail));
+    }
+
+    #[test]
+    fn normalizes_and_checks_codes() {
+        assert_eq!(normalize_code("123456").unwrap(), "123456");
+        assert_eq!(normalize_code(" 123 456\n").unwrap(), "123456");
+        for bad in ["", "12345", "1234567", "12345a", "１２３４５６", "12-456"] {
+            assert_eq!(normalize_code(bad), Err(LicenseError::InvalidCode), "{bad}");
+        }
+    }
+
+    #[test]
+    fn classify_email_step_maps_code_and_rate_limit_verdicts() {
+        assert_eq!(classify_email_step(true, true, false, false, None), Ok(()));
+        assert_eq!(
+            classify_email_step(false, false, false, false, Some("invalid_code")),
+            Err(LicenseError::InvalidCode)
+        );
+        assert_eq!(
+            classify_email_step(false, false, false, false, Some("rate_limited")),
+            Err(LicenseError::RateLimited)
+        );
+        assert_eq!(
+            classify_email_step(false, false, false, true, None),
+            Err(LicenseError::RateLimited)
+        );
+        assert!(!grace_eligible(&LicenseError::RateLimited));
+        for (code, want) in [
+            ("refunded", LicenseError::NoAccess),
+            ("disputed", LicenseError::NoAccess),
+            ("revoked", LicenseError::NoAccess),
+            ("device_limit", LicenseError::DeviceMismatch),
+        ] {
+            assert_eq!(classify_email_step(false, false, false, false, Some(code)), Err(want));
+        }
+        assert!(matches!(
+            classify_email_step(false, false, false, false, Some("bad_request")),
+            Err(LicenseError::Other(_))
+        ));
+        assert!(matches!(
+            classify_email_step(false, false, true, false, Some("server_error")),
+            Err(LicenseError::Network(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn bad_email_or_code_never_reaches_the_network() {
+        // Nothing listens on port 9: a network call would surface as Network.
+        let url = "http://127.0.0.1:9/activate";
+        assert_eq!(request_code("nope", url).await, Err(LicenseError::InvalidEmail));
+        assert_eq!(
+            activate_with_code(AppId::Wallpaper, "nope", "123456", url).await,
+            Err(LicenseError::InvalidEmail)
+        );
+        assert_eq!(
+            activate_with_code(AppId::Wallpaper, "a@b.co", "12345", url).await,
+            Err(LicenseError::InvalidCode)
+        );
+    }
+
+    #[tokio::test]
+    async fn request_code_accepts_the_neutral_reply() {
+        let url = spawn_json_once(
+            200,
+            r#"{"ok":true,"message":"If that email bought this app, a code is on its way."}"#,
+        );
+        assert_eq!(request_code("Buyer@Example.com", &url).await, Ok(()));
+    }
+
+    #[tokio::test]
+    async fn request_code_reports_rate_limits() {
+        let url = spawn_json_once(429, r#"{"ok":false,"error":"rate_limited"}"#);
+        assert_eq!(request_code("a@b.co", &url).await, Err(LicenseError::RateLimited));
+    }
+
+    #[tokio::test]
+    async fn activate_with_code_refuses_a_wrong_code() {
+        let url = spawn_json_once(400, r#"{"ok":false,"error":"invalid_code"}"#);
+        assert_eq!(
+            activate_with_code(AppId::Wallpaper, "a@b.co", "123456", &url).await,
+            Err(LicenseError::InvalidCode)
+        );
+    }
+
+    #[tokio::test]
+    async fn activate_with_code_rejects_an_unsigned_key_before_storing() {
+        let url = spawn_json_once(200, r#"{"ok":true,"status":"active","key":"LIC1.a.b"}"#);
+        assert_eq!(
+            activate_with_code(AppId::Wallpaper, "a@b.co", "123456", &url).await,
+            Err(LicenseError::InvalidKey)
+        );
     }
 
     /// Live check against a local `wrangler dev`, run by ../licensing/scripts/e2e-local.mjs keys:
