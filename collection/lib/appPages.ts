@@ -141,11 +141,11 @@ const appPages: AppPage[] = [
       },
       {
         q: "Is there a Windows build?",
-        a: "Yes. 0.1.1 includes a Windows installer. It is unsigned, the same as Wallpaper, so SmartScreen will warn the first time.",
+        a: "Yes. 0.1.2 includes a Windows installer. It is unsigned, the same as Wallpaper, so SmartScreen will warn the first time.",
       },
     ],
     closing: {
-      headline: ["0.1.1 is the first downloadable release.", "One license unlocks it."],
+      headline: ["0.1.2 is out now.", "One license unlocks it."],
       body: "macOS is signed and notarized. Windows is unsigned, the same as Wallpaper.",
     },
   },
