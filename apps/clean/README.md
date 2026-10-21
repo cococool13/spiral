@@ -33,7 +33,7 @@ Most cleaners ask you to trust them. This one is built so that trust is not the 
 
 **Every guard is proven by mutation, not coverage** ([ADR-0012](docs/adr/0012-guards-are-proven-by-mutation.md)). Stub the guard to `true`, name the tests that then fail. Four guards carry that proof today. Browser caches and Trash are catalog entries ([ADR-0001](docs/adr/0001-cleanup-retention-policy.md), [ADR-0006](docs/adr/0006-safe-categories-are-a-shipped-catalog.md)) — data, not guards — so they do not get their own ADR-0012 mutation rows; they delete only through the Catalog justification on the remove boundary.
 
-**Nothing leaves the Mac.** No telemetry, no accounts, no network call of any kind — not even an update check, because there is no updater yet.
+**Nothing leaves the Mac except the license check.** No telemetry, no accounts, no update check (there is no updater yet). The one thing Clean talks to is Spiral's licensing server, `licensing.cohencool.workers.dev`, and only for the license: when you activate, and to re-check the key about once a week ([`crates/spiral-license`](../../crates/spiral-license/src/lib.rs)). Activating with a key sends the key; unlocking with email sends the email address, then the 6-digit code. Every request also carries the app id `spiral`, and activations and re-checks carry a device id, which is a SHA-256 hash of the Mac's hardware UUID. Nothing about your files, apps or disk is sent. Between re-checks a launch verifies the key offline, and if the server can't be reached a recently checked key keeps working for 30 days.
 
 ## Two things worth knowing before you use it
 
@@ -94,4 +94,4 @@ src-tauri/src/
 3. **Notarization** — needs the Apple ID and an app-specific password.
 4. **The updater cannot be written yet** — the Tauri plugin reads `plugins.updater.pubkey` at init and panics without it, so the key has to exist before any updater code does.
 
-Deliberately out of scope for v1: a menu bar HUD or anything resident, scheduled cleaning, duplicate and large-old-file finders, `node_modules` and Docker, `.lproj` stripping, and any network call whatsoever.
+Deliberately out of scope for v1: a menu bar HUD or anything resident, scheduled cleaning, duplicate and large-old-file finders, `node_modules` and Docker, `.lproj` stripping, and any network call beyond the license check.
