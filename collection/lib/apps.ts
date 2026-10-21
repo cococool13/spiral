@@ -37,11 +37,11 @@ export interface SpiralApp {
   };
 }
 
-const RELEASE = "https://github.com/cococool13/spiral/releases/download/v1.0.3";
+const RELEASE = "https://github.com/cococool13/spiral/releases/download/v1.0.4";
 // Slim ships from this repo under a slim-v* tag, like Resume under resume-v*.
 const SLIM_RELEASE = "https://github.com/cococool13/spiral/releases/download/slim-v1.0.1";
 const RESUME_RELEASE =
-  "https://github.com/cococool13/spiral/releases/download/resume-v0.1.1";
+  "https://github.com/cococool13/spiral/releases/download/resume-v0.1.2";
 
 export const apps: SpiralApp[] = [
   {
@@ -49,16 +49,16 @@ export const apps: SpiralApp[] = [
     name: "Spiral Wallpaper",
     tagline: "Click a wallpaper. It downloads and applies. That's it.",
     status: "live",
-    version: "1.0.3",
+    version: "1.0.4",
     brewCask: "spiral-wallpaper",
     page: "/wallpaper/",
     downloads: {
       mac: {
-        url: `${RELEASE}/Spiral.Wallpaper_1.0.3_universal.dmg`,
+        url: `${RELEASE}/Spiral.Wallpaper_1.0.4_universal.dmg`,
         label: "Download for Mac",
       },
       windows: {
-        url: `${RELEASE}/Spiral.Wallpaper_1.0.3_x64-setup.exe`,
+        url: `${RELEASE}/Spiral.Wallpaper_1.0.4_x64-setup.exe`,
         label: "Download for Windows",
       },
       all: "https://github.com/cococool13/spiral/releases/latest",
@@ -110,19 +110,19 @@ export const apps: SpiralApp[] = [
     name: "Spiral Resume",
     tagline: "Twelve typeset layouts. Digits and names are not allowed to move.",
     status: "live",
-    version: "0.1.1",
+    version: "0.1.2",
     brewCask: "spiral-resume",
     page: "/resume/",
     downloads: {
       mac: {
-        url: `${RESUME_RELEASE}/Spiral.Resume_0.1.1_universal.dmg`,
+        url: `${RESUME_RELEASE}/Spiral.Resume_0.1.2_universal.dmg`,
         label: "Download for Mac",
       },
       windows: {
-        url: `${RESUME_RELEASE}/Spiral.Resume_0.1.1_x64-setup.exe`,
+        url: `${RESUME_RELEASE}/Spiral.Resume_0.1.2_x64-setup.exe`,
         label: "Download for Windows",
       },
-      all: "https://github.com/cococool13/spiral/releases/tag/resume-v0.1.1",
+      all: "https://github.com/cococool13/spiral/releases/tag/resume-v0.1.2",
     },
   },
 ];

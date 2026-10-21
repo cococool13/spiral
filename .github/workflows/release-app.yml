@@ -76,6 +76,14 @@ on:
           compile the app. Empty means build with the plain config.
         type: string
         default: ""
+      publish:
+        description: >
+          Create the GitHub release from the build artifacts. False builds,
+          signs and uploads workflow artifacts only, with no release, for
+          example a Windows build for a release that already exists. Tag
+          pushes never set it, so they keep publishing.
+        type: boolean
+        default: true
 
 jobs:
   macos:
@@ -280,7 +288,8 @@ jobs:
     # Both build jobs may be skipped by their inputs; `always()` lets this run
     # anyway, and the guard below refuses a release where a job that was asked
     # for did not succeed. Without it, `needs` on a skipped job cancels this.
-    if: always()
+    # `publish: false` skips it entirely: build artifacts only, no release.
+    if: always() && inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
