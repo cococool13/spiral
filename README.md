@@ -325,7 +325,7 @@ network call whatsoever.
 screen, twelve templates, PDF and Word export, and three engine tiers. macOS is
 signed and notarized; Windows is unsigned, the same accepted gap as Wallpaper.
 The `resume-v0.1.0` tag never produced a DMG. Homebrew cask
-`cococool13/spiral/spiral-resume` is live at 0.1.1 — bump it with every macOS
+`cococool13/spiral/spiral-resume` is live at 0.1.2 — bump it with every macOS
 release the same way as Wallpaper. Do not use `/releases/latest` for Resume;
 that URL is Wallpaper.
 
