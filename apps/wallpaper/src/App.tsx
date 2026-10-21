@@ -23,7 +23,7 @@ function App() {
       .catch(() => setBoot("error"));
   }, []);
 
-  // On boot: license_ensure (Spiral's validator, or 72h offline grace).
+  // On boot: license_ensure (Spiral's validator; if it can't be reached, a 30-day grace from the last good check).
   useEffect(() => {
     if (boot === "error" || !boot) return;
     invoke("license_ensure")

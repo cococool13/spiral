@@ -8,6 +8,17 @@
   "permissions": [
     "core:default",
     "updater:default",
-    "process:default"
+    "process:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://licensing.cohencool.workers.dev/buy/spiral"
+        },
+        {
+          "url": "https://licensing.cohencool.workers.dev/resend"
+        }
+      ]
+    }
   ]
 }

@@ -17,6 +17,12 @@
         },
         {
           "url": "https://platform.openai.com/*"
+        },
+        {
+          "url": "https://licensing.cohencool.workers.dev/buy/spiral"
+        },
+        {
+          "url": "https://licensing.cohencool.workers.dev/resend"
         }
       ]
     }
