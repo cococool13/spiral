@@ -4,7 +4,7 @@ Brand system, native apps, and the spiralcc.tech site.
 **Website host:** Cloudflare Pages project `spiral-collection` (`spiralcc.tech`;
 `spiral-collection.pages.dev` remains the project hostname).
 
-Current app release **v1.0.3** (Spiral Wallpaper).
+Current app release **v1.0.4** (Spiral Wallpaper).
 
 > **Two Wallpaper codebases exist in history.** This repo (`github.com/cococool13/spiral`)
 > is the shipped one — pnpm **11.9**, **no tray, closing the window quits**. The Codex-built
