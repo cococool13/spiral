@@ -44,10 +44,12 @@ The tap is [`github.com/cococool13/homebrew-spiral`](https://github.com/cococool
 It pins the release's SHA-256, so Homebrew refuses to install anything else. A
 `brew install` for Spiral Slim from any other tap is not from this project.
 
-v1.0.0 is on the archived [`cococool13/Spiral-Slim`](https://github.com/cococool13/Spiral-Slim/releases/latest)
-release; every version after it ships from
+Every release ships from
 [`cococool13/spiral`](https://github.com/cococool13/spiral/releases) under a
-`slim-v*` tag. Every release carries `SHA256SUMS.txt`.
+`slim-v*` tag, starting with
+[`slim-v1.0.1`](https://github.com/cococool13/spiral/releases/tag/slim-v1.0.1).
+The old `cococool13/Spiral-Slim` repository, which held v1.0.0, no longer
+exists. Every release carries `SHA256SUMS.txt`.
 
 ### What official does *not* include
 

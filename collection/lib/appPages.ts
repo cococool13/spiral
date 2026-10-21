@@ -158,7 +158,7 @@ const appPages: AppPage[] = [
     headline: ["One click.", "New wallpaper."],
     sub: "Search, click, done. A 4.6 MB app that closes when you close it and leaves nothing running behind.",
     secondary: { label: "All downloads", href: RELEASE },
-    proofLine: "One license. Version 1.0.3, signed and notarised on macOS.",
+    proofLine: "One license. Version 1.0.4, signed and notarised on macOS.",
     tagline: [
       "Most wallpaper apps want an account,",
       "a subscription and a background process.",
@@ -237,7 +237,7 @@ const appPages: AppPage[] = [
     ],
     closing: {
       headline: ["Small,", "and out of the way."],
-      body: "Signed on macOS, and 4.6 MB. Version 1.0.3 is out now. Needs a Spiral Collection license key.",
+      body: "Signed on macOS, and 4.6 MB. Version 1.0.4 is out now. Needs a Spiral Collection license key.",
     },
   },
 
