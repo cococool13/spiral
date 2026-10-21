@@ -48,7 +48,7 @@ link inside any app. Full flow, validator deploy, and where checkout URLs live:
 
 | App | What it does | Status | Get it |
 | --- | --- | --- | --- |
-| [**Spiral Wallpaper**](apps/wallpaper/) | Click a wallpaper, it downloads and applies. Browses [Wallhaven](https://wallhaven.cc). 4.6 MB binary, ~95 MB idle RAM, window on screen in 0.23 s. | **v1.0.3** — macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/latest) |
+| [**Spiral Wallpaper**](apps/wallpaper/) | Click a wallpaper, it downloads and applies. Browses [Wallhaven](https://wallhaven.cc). 4.6 MB binary, ~95 MB idle RAM, window on screen in 0.23 s. | **v1.0.4** — macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/latest) |
 | [**Spiral Slim**](apps/slim/) | Debloats and hardens Brave, Chrome, Edge, and Firefox with enterprise policies the browsers respect natively. Shows every change before it makes it. | **v1.0.0** — macOS app, scripts everywhere | [Download](https://github.com/cococool13/Spiral-Slim/releases/latest) · [Read the scripts](apps/slim/) |
 | [**Spiral Clean**](apps/clean/) | Reclaims disk space and uninstalls apps, macOS only. Every removal is proven safe by a Rust test suite before it ships. | Unreleased — Clean and Uninstall built | [Design spec](apps/clean/docs/design-spec.md) |
 | [**Spiral Resume**](apps/Resume/) | Your resume in twelve typeset layouts, as a PDF or a Word file. It tightens the wording and is never allowed to change a fact. | **v0.1.1** — first downloadable release, macOS + Windows | [Download](https://github.com/cococool13/spiral/releases/tag/resume-v0.1.1) |
@@ -109,7 +109,7 @@ instead. [Here's how](apps/slim/).
 Every release includes `SHA256SUMS.txt`. Compare it to the file you downloaded:
 
 ```bash
-shasum -a 256 ~/Downloads/Spiral.Wallpaper_1.0.3_universal.dmg
+shasum -a 256 ~/Downloads/Spiral.Wallpaper_1.0.4_universal.dmg
 ```
 
 If the line matches, the file is byte-for-byte what was published here.
@@ -296,7 +296,7 @@ things it cannot derive, checks the certificate password actually opens the
 
 ## Roadmap, stated plainly
 
-**Wallpaper** is at v1.0.3 with a signed and notarized universal macOS build.
+**Wallpaper** is at v1.0.4 with a signed and notarized universal macOS build.
 Next: Windows signing and the remaining runtime pass on real Windows hardware.
 On hold: additional wallpaper sources (Unsplash and Pexels shipped briefly
 and were removed). Out
