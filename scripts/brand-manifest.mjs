@@ -42,6 +42,17 @@ export const SURFACES = {
     },
   },
 
+  spiral: {
+    root: "apps/spiral",
+    softFailStandalone: false,
+    wipeDirs: ["src/assets/brand", "src/assets/fonts"],
+    entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
+    hex: {
+      scan: ["src", "index.html"],
+      allow: ["src/styles/tokens.css"],
+    },
+  },
+
   wallpaper: {
     root: "apps/spiral",
     softFailStandalone: false,

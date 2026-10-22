@@ -63,6 +63,28 @@
   --red-press: #8b1a18;
   --red-text: #b8231f;
   --on-red: #ffffff;
+
+  /* Proof Plate layout. Shared by light and dark. */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-56: 56px;
+  --space-72: 72px;
+  --radius-plate: 0px;
+  --radius-ctl: 6px;
+  --dur-state: 120ms;
+  --dur-mark: 150ms;
+  --dur-sheet: 220ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-ui: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --toolbar-h: 52px;
+  --sidebar-w: 216px;
+  --status-h: 28px;
 }
 
 @media (prefers-color-scheme: dark) {
