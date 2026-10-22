@@ -1,5 +1,6 @@
 mod bench;
 mod boot;
+mod bundle;
 mod license;
 mod paths;
 mod resume;
@@ -249,6 +250,134 @@ fn modules_set(
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RenameOffer {
+    visible: bool,
+    other_copy: Option<String>,
+}
+
+#[tauri::command]
+fn rename_offer(shell: State<'_, shell::Shell>) -> RenameOffer {
+    let choice = shell.snapshot().rename_choice;
+    let Some(current) = bundle::current_bundle() else {
+        return RenameOffer {
+            visible: false,
+            other_copy: None,
+        };
+    };
+    let facts = bundle::inspect(&current);
+    let roots = copy_roots(&current);
+    RenameOffer {
+        visible: bundle::rename_block(choice, &facts).is_none(),
+        other_copy: bundle::other_copy(&current, &roots).map(|path| path.display().to_string()),
+    }
+}
+
+#[tauri::command]
+fn rename_decline(shell: State<'_, shell::Shell>) -> Result<(), String> {
+    let mut settings = shell.settings_mut();
+    settings.rename_choice = settings::RenameChoice::Declined;
+    settings.save(shell.root())
+}
+
+#[tauri::command]
+fn rename_apply(app: AppHandle, shell: State<'_, shell::Shell>) -> Result<(), String> {
+    let snapshot = shell.snapshot();
+    let Some(current) = bundle::current_bundle() else {
+        return Err("Spiral could not rename the app. Try again.".into());
+    };
+    let facts = bundle::inspect(&current);
+    if bundle::rename_block(snapshot.rename_choice, &facts).is_some() {
+        return Err("Spiral could not rename the app. Try again.".into());
+    }
+    let Some(job) = bundle::job(&current) else {
+        return Err("Spiral could not rename the app. Try again.".into());
+    };
+    let plist = bundle::launch_agent_plist();
+    bundle::perform(&job, snapshot.launch_at_login, plist.as_deref(), |path| {
+        reopen(path)
+    })?;
+    {
+        let mut settings = shell.settings_mut();
+        settings.rename_choice = settings::RenameChoice::Done;
+        settings.save(shell.root())?;
+    }
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
+fn bundle_trash(path: String) -> Result<(), String> {
+    let target = std::path::PathBuf::from(&path);
+    let Some(current) = bundle::current_bundle() else {
+        return Err("Spiral could not move that copy to the Trash.".into());
+    };
+    if !bundle::trash_allowed(&current, &target) {
+        return Err("Spiral could not move that copy to the Trash.".into());
+    }
+    move_to_trash(&target)
+}
+
+fn copy_roots(current: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut roots = Vec::new();
+    if let Some(parent) = current.parent() {
+        roots.push(parent.to_path_buf());
+    }
+    roots.push(std::path::PathBuf::from("/Applications"));
+    if let Some(home) = std::env::var_os("HOME") {
+        roots.push(std::path::PathBuf::from(home).join("Applications"));
+    }
+    roots
+}
+
+fn reopen(path: &std::path::Path) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let status = std::process::Command::new("/usr/bin/open")
+            .arg(path)
+            .status()
+            .map_err(|_| "Spiral could not reopen the renamed app.".to_string())?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err("Spiral could not reopen the renamed app.".into())
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+        Err("Spiral could not reopen the renamed app.".into())
+    }
+}
+
+fn move_to_trash(path: &std::path::Path) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let text = path.to_string_lossy();
+        if text.contains('"') || text.contains('\n') {
+            return Err("Spiral could not move that copy to the Trash.".into());
+        }
+        let status = std::process::Command::new("/usr/bin/osascript")
+            .arg("-e")
+            .arg(format!(
+                "tell application \"Finder\" to delete POSIX file \"{text}\""
+            ))
+            .status()
+            .map_err(|_| "Spiral could not move that copy to the Trash.".to_string())?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err("Spiral could not move that copy to the Trash.".into())
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+        Err("Spiral could not move that copy to the Trash.".into())
+    }
+}
+
 #[tauri::command]
 fn bench_mark(mark: String) -> Result<(), String> {
     if !bench::known(&mark) {
@@ -299,6 +428,10 @@ pub fn run() {
             license::provider_view,
             license::provider_set,
             license::provider_clear,
+            rename_offer,
+            rename_decline,
+            rename_apply,
+            bundle_trash,
         ])
         .setup(|app| {
             let app_data = app
