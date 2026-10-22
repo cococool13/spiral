@@ -31,10 +31,7 @@ pub fn serve<R: BufRead, W: Write>(root: &Path, input: R, output: W) -> Result<(
         proto: PROTO,
     })?;
     let mut session = Session::open(root);
-    loop {
-        let Some(line) = port.next_line()? else {
-            break;
-        };
+    while let Some(line) = port.next_line()? {
         if line.is_empty() {
             continue;
         }

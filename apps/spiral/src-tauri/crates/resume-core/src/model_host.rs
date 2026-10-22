@@ -31,18 +31,16 @@ pub struct Running {
     pub port: u16,
 }
 
+#[derive(Default)]
 pub enum ModelHost {
+    #[default]
     Off,
     Spawning,
     Ready(Sidecar),
     Busy(Sidecar),
-    Failed { reason: String },
-}
-
-impl Default for ModelHost {
-    fn default() -> Self {
-        Self::Off
-    }
+    Failed {
+        reason: String,
+    },
 }
 
 impl ModelHost {

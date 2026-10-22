@@ -39,17 +39,30 @@ fn free(doc: ResumeDoc) -> Rewritten {
     }
 }
 
-pub async fn rewrite_wording(
-    root: &Path,
-    stored: &EngineSettings,
-    provider: &Provider,
-    doc: ResumeDoc,
-    aim: &str,
-    tighten: bool,
-    keys: &mut dyn ProviderKey,
-    host: &mut ModelHost,
-    on_progress: &mut dyn FnMut(Progress),
-) -> Result<Rewritten, String> {
+pub struct WordingJob<'a> {
+    pub root: &'a Path,
+    pub stored: &'a EngineSettings,
+    pub provider: &'a Provider,
+    pub doc: ResumeDoc,
+    pub aim: &'a str,
+    pub tighten: bool,
+    pub keys: &'a mut dyn ProviderKey,
+    pub host: &'a mut ModelHost,
+    pub on_progress: &'a mut dyn FnMut(Progress),
+}
+
+pub async fn rewrite_wording(job: WordingJob<'_>) -> Result<Rewritten, String> {
+    let WordingJob {
+        root,
+        stored,
+        provider,
+        doc,
+        aim,
+        tighten,
+        keys,
+        host,
+        on_progress,
+    } = job;
     if !tighten {
         return Ok(Rewritten {
             doc,

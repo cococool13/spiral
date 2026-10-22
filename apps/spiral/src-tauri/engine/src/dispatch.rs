@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
-use resume_core::engine_run::{rewrite_wording, ProviderKey};
+use resume_core::engine_run::{rewrite_wording, ProviderKey, WordingJob};
 use resume_core::model::ResumeDoc;
 use resume_core::model_host::ModelHost;
 use resume_core::settings::{self, EngineSettings};
@@ -20,6 +20,13 @@ pub struct Session {
     runtime: tokio::runtime::Runtime,
     last_built: Option<Vec<u8>>,
     cancelled: bool,
+}
+
+struct BuildSpec<'a> {
+    look: &'a str,
+    aim: &'a str,
+    tighten: bool,
+    format: &'a str,
 }
 
 impl Session {
@@ -79,7 +86,17 @@ impl Session {
                 aim,
                 tighten,
                 format,
-            } => self.build(id, doc, &look, &aim, tighten, &format, host),
+            } => self.build(
+                id,
+                doc,
+                BuildSpec {
+                    look: &look,
+                    aim: &aim,
+                    tighten,
+                    format: &format,
+                },
+                host,
+            ),
             Call::ReviewWording { doc } => self.review(id, doc, host),
             Call::SaveBuilt { path } => self.save_built(Path::new(&path)),
             Call::SaveDocument { stored } => {
@@ -160,12 +177,15 @@ impl Session {
         &mut self,
         id: u64,
         doc: Value,
-        look: &str,
-        aim: &str,
-        tighten: bool,
-        format: &str,
+        spec: BuildSpec<'_>,
         host: &mut (impl ProviderKey + Events),
     ) -> Result<Value, UserError> {
+        let BuildSpec {
+            look,
+            aim,
+            tighten,
+            format,
+        } = spec;
         let doc = doc_from(doc)?;
         let template = templates::find(look)
             .ok_or_else(|| UserError::new("That style is no longer available."))?;
@@ -176,17 +196,17 @@ impl Session {
         let progress = std::cell::RefCell::new(Vec::new());
         let rewritten = self
             .runtime
-            .block_on(rewrite_wording(
-                &self.root,
-                &stored,
-                &provider,
+            .block_on(rewrite_wording(WordingJob {
+                root: &self.root,
+                stored: &stored,
+                provider: &provider,
                 doc,
                 aim,
                 tighten,
-                host,
-                &mut self.host,
-                &mut |step| progress.borrow_mut().push(step.percent),
-            ))
+                keys: host,
+                host: &mut self.host,
+                on_progress: &mut |step| progress.borrow_mut().push(step.percent),
+            }))
             .map_err(UserError::new)?;
         for percent in progress.into_inner() {
             host.emit(
@@ -253,17 +273,17 @@ impl Session {
             let progress = std::cell::RefCell::new(Vec::new());
             let rewritten = self
                 .runtime
-                .block_on(rewrite_wording(
-                    &self.root,
-                    &stored,
-                    &provider,
+                .block_on(rewrite_wording(WordingJob {
+                    root: &self.root,
+                    stored: &stored,
+                    provider: &provider,
                     doc,
-                    "",
-                    true,
-                    host,
-                    &mut self.host,
-                    &mut |step| progress.borrow_mut().push(step.percent),
-                ))
+                    aim: "",
+                    tighten: true,
+                    keys: host,
+                    host: &mut self.host,
+                    on_progress: &mut |step| progress.borrow_mut().push(step.percent),
+                }))
                 .map_err(UserError::new)?;
             for percent in progress.into_inner() {
                 host.emit(
@@ -274,8 +294,8 @@ impl Session {
                     },
                 );
             }
-            return Ok(serde_json::to_value(&rewritten.doc)
-                .map_err(|err| UserError::new(err.to_string()))?);
+            return serde_json::to_value(&rewritten.doc)
+                .map_err(|err| UserError::new(err.to_string()));
         }
         let mut out = Vec::new();
         for role in doc.roles() {
@@ -410,10 +430,8 @@ impl Session {
                 "The model installed, but the choice could not be saved: {err}."
             ))
         })?;
-        Ok(
-            serde_json::to_value(local::status(&self.root, &stored.offline_model))
-                .map_err(|err| UserError::new(err.to_string()))?,
-        )
+        serde_json::to_value(local::status(&self.root, &stored.offline_model))
+            .map_err(|err| UserError::new(err.to_string()))
     }
 }
 
