@@ -43,7 +43,7 @@ export const SURFACES = {
   },
 
   wallpaper: {
-    root: "apps/wallpaper",
+    root: "apps/spiral",
     softFailStandalone: false,
     wipeDirs: ["src/assets/brand", "src/assets/fonts"],
     entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
