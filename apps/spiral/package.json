@@ -11,10 +11,10 @@
     "dev": "vite",
     "build": "node ../../scripts/check-hex.mjs wallpaper && tsc && vite build",
     "check:hex": "node ../../scripts/check-hex.mjs wallpaper",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/sign-helpers.test.mjs",
     "smoke": "node scripts/smoke.mjs",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "node scripts/tauri.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
