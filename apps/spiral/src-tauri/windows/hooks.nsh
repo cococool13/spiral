@@ -1,9 +1,19 @@
-; Spiral Wallpaper — NSIS install-flow copy.
-; Brand rule: state what actually happens, never invent steps. Every line
-; below describes a real action the installer takes, in the order it happens.
+; Spiral — NSIS install hooks.
+; The new product name is Spiral, so the install directory is not the
+; Spiral Wallpaper directory. Remove that older install quietly.
+; Do not delete the app-data directory. The desktop image path lives there.
 
 !macro NSIS_HOOK_PREINSTALL
-  DetailPrint "Setting up Spiral Wallpaper..."
+  DetailPrint "Checking for Spiral Wallpaper..."
+  StrCpy $R9 ""
+  ReadRegStr $R9 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Spiral Wallpaper" "UninstallString"
+  ${If} $R9 == ""
+    ReadRegStr $R9 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Spiral Wallpaper" "UninstallString"
+  ${EndIf}
+  ${If} $R9 != ""
+    DetailPrint "Removing the previous Spiral Wallpaper install."
+    ExecWait '$R9 /S'
+  ${EndIf}
   DetailPrint "Copying files to your machine..."
 !macroend
 
@@ -18,9 +28,9 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
-  DetailPrint "Removing Spiral Wallpaper..."
+  DetailPrint "Removing Spiral..."
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
-  DetailPrint "Spiral is removed. Nothing was left running."
+  DetailPrint "Spiral is removed. Your wallpapers were left in place."
 !macroend

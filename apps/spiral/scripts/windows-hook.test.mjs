@@ -1,0 +1,18 @@
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+const hook = readFileSync(
+  new URL("../src-tauri/windows/hooks.nsh", import.meta.url),
+  "utf8",
+);
+
+test("the installer removes Spiral Wallpaper quietly and leaves app data", () => {
+  assert.match(hook, /Spiral Wallpaper/);
+  assert.match(hook, /ExecWait '\$R9 \/S'/);
+  assert.match(hook, /\$\{MAINBINARYNAME\}\.exe/);
+  assert.doesNotMatch(hook, /APPDATA/i);
+  assert.doesNotMatch(hook, /app\.spiral\.wallpaper/);
+  assert.doesNotMatch(hook, /RMDir/);
+  assert.doesNotMatch(hook, /Delete /);
+});

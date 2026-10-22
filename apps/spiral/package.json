@@ -13,7 +13,7 @@
     "check:hex": "node ../../scripts/check-hex.mjs spiral",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:chunks": "node scripts/check-chunks.mjs",
-    "test": "vitest run && node --test scripts/sign-helpers.test.mjs",
+    "test": "vitest run && node --test scripts/sign-helpers.test.mjs scripts/windows-hook.test.mjs",
     "smoke": "node scripts/smoke.mjs",
     "preview": "vite preview",
     "tauri": "node scripts/tauri.mjs"

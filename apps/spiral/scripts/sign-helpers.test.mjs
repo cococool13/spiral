@@ -75,4 +75,7 @@ test("ad-hoc codesign gives llama the three keys and the other two none", () => 
   assert.throws(() => assertHelperEntitlements(app), /llama-server/);
   signFile(join(mac, "llama-server"), llamaEntitlements, "-", { timestamp: false });
   assertHelperEntitlements(app);
+
+  signFile(join(mac, "spiral-wallpaper"), llamaEntitlements, "-", { timestamp: false });
+  assert.throws(() => assertHelperEntitlements(app), /spiral-wallpaper/);
 });
