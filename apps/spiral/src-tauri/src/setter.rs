@@ -90,8 +90,10 @@ mod macos {
         };
 
         for screen in NSScreen::screens(mtm).iter() {
-            unsafe { workspace.setDesktopImageURL_forScreen_options_error(&url, &screen, &options) }
-                .map_err(|e| format!("apply_failed:{}", e.localizedDescription()))?;
+            unsafe {
+                workspace.setDesktopImageURL_forScreen_options_error(&url, &screen, &options)
+            }
+            .map_err(|e| format!("apply_failed:{}", e.localizedDescription()))?;
         }
         Ok(())
     }

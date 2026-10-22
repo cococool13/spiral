@@ -6,6 +6,17 @@
  * in production builds.
  */
 
+window.__SPIRAL_BOOT__ = {
+  version: "2.0.0",
+  platform: "macos",
+  modules: [
+    { id: "wallpaper", enabled: true, available: true, unavailableReason: null },
+    { id: "resume", enabled: true, available: true, unavailableReason: null },
+  ],
+  start: { kind: "picker", preselect: ["wallpaper", "resume"] },
+  bench: false,
+};
+
 interface MockSettings {
   launchAtLogin: boolean;
   fitMode: string;
@@ -48,6 +59,9 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   get_settings: () => ({ ...settings }),
+  modules_set: () => undefined,
+  bench_mark: () => undefined,
+  license_ensure: () => undefined,
   set_settings: (args) => {
     Object.assign(settings, args.settings as Partial<MockSettings>);
   },

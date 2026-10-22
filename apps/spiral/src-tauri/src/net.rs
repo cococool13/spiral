@@ -45,9 +45,10 @@ fn host_allowed(url: &str) -> Result<(), String> {
     if parsed.scheme() != "https" {
         return Err("bad_response".into());
     }
-    let host = parsed.host_str().ok_or_else(|| "bad_response".to_string())?;
-    let ok = host == ALLOWED_HOST_SUFFIX
-        || host.ends_with(&format!(".{ALLOWED_HOST_SUFFIX}"));
+    let host = parsed
+        .host_str()
+        .ok_or_else(|| "bad_response".to_string())?;
+    let ok = host == ALLOWED_HOST_SUFFIX || host.ends_with(&format!(".{ALLOWED_HOST_SUFFIX}"));
     if ok {
         Ok(())
     } else {

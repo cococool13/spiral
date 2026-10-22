@@ -31,20 +31,27 @@ async fn run(app: &tauri::AppHandle) -> Result<(), String> {
     // SPIRAL_RESTORE=<path>: just set that wallpaper and exit (recovery helper).
     if let Ok(restore) = std::env::var("SPIRAL_RESTORE") {
         setter::set_wallpaper(app, restore.into(), crate::settings::FitMode::Fill)?;
-        println!("SMOKE restored {}", std::env::var("SPIRAL_RESTORE").unwrap_or_default());
+        println!(
+            "SMOKE restored {}",
+            std::env::var("SPIRAL_RESTORE").unwrap_or_default()
+        );
         return Ok(());
     }
 
-    let http = &app.state::<crate::Http>().0;
+    let http = app.state::<crate::Http>();
 
-    let page = wallhaven::search(http, "", "111", "toplist", 1).await?;
-    println!("SMOKE search: {} items, last_page {}", page.items.len(), page.last_page);
+    let page = wallhaven::search(http.get(), "", "111", "toplist", 1).await?;
+    println!(
+        "SMOKE search: {} items, last_page {}",
+        page.items.len(),
+        page.last_page
+    );
     let first = page.items.first().ok_or("no results")?;
 
-    let thumb = cache::cache_thumb(app, http, &first.id, &first.thumb_url).await?;
+    let thumb = cache::cache_thumb(app, http.get(), &first.id, &first.thumb_url).await?;
     println!("SMOKE thumb cached: {thumb}");
 
-    let full = cache::download_full(app, http, &first.id, &first.full_url).await?;
+    let full = cache::download_full(app, http.get(), &first.id, &first.full_url).await?;
     println!("SMOKE full-res downloaded: {}", full.display());
 
     let previous = setter::current_wallpaper(app)?;

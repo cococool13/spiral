@@ -4,7 +4,6 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import AppBar from "./components/AppBar";
 import { Activate } from "./screens/Activate";
 import { Browse } from "./screens/Browse";
-import { FirstRun } from "./screens/FirstRun";
 import { Settings, type AppSettings } from "./screens/Settings";
 
 type Screen = "browse" | "settings";
@@ -47,7 +46,7 @@ function App() {
   if (boot === "error") {
     return (
       <main>
-        <h1>Spiral Wallpaper could not start</h1>
+        <h1>Spiral could not start</h1>
         <p>Settings would not load. Close the window and open it again.</p>
       </main>
     );
@@ -68,20 +67,6 @@ function App() {
             {licenseError}
           </p>
         )}
-      </div>
-    );
-  }
-
-  if (!boot.firstRunCompleted) {
-    return (
-      <div className="app">
-        <FirstRun
-          onDone={() => {
-            const next = { ...boot, firstRunCompleted: true };
-            setBoot(next);
-            invoke("set_settings", { settings: next }).catch(() => {});
-          }}
-        />
       </div>
     );
   }

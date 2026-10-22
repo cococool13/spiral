@@ -50,4 +50,33 @@
     rgba(255, 255, 255, 0.55),
     rgba(255, 255, 255, 0) 55%
   );
+
+  /* Proof Plate shell. Identity 03 names above stay for the existing screens. */
+  --stock: #f4f4f1;
+  --stock-2: #eaeae6;
+  --stock-3: #ffffff;
+  --rule: #d3d2cc;
+  --ink: #17181a;
+  --ink-2: #5e5e58;
+  --ink-3: #74736d;
+  --red: #d52e2b;
+  --red-press: #8b1a18;
+  --red-text: #b8231f;
+  --on-red: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --stock: #121211;
+    --stock-2: #1b1b19;
+    --stock-3: #232320;
+    --rule: #2e2d2a;
+    --ink: #edece8;
+    --ink-2: #a3a29b;
+    --ink-3: #8c8b85;
+    --red: #d52e2b;
+    --red-press: #b5221f;
+    --red-text: #ef6a62;
+    --on-red: #ffffff;
+  }
 }

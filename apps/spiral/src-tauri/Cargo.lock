@@ -3844,7 +3844,7 @@ dependencies = [
 
 [[package]]
 name = "spiral-wallpaper"
-version = "1.0.5"
+version = "2.0.0"
 dependencies = [
  "objc2",
  "objc2-app-kit",

@@ -1,6 +1,6 @@
 [package]
 name = "spiral-wallpaper"
-version = "1.0.5"
+version = "2.0.0"
 description = "Privacy-first wallpaper setter for macOS and Windows"
 authors = ["Spiral"]
 edition = "2021"
@@ -38,7 +38,7 @@ spiral-license = { path = "../../../crates/spiral-license" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
-objc2-foundation = { version = "0.3", features = ["NSArray", "NSDictionary", "NSEnumerator", "NSError", "NSString", "NSURL", "NSValue"] }
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSDictionary", "NSEnumerator", "NSError", "NSProcessInfo", "NSString", "NSURL", "NSUserDefaults", "NSValue"] }
 objc2-app-kit = { version = "0.3", features = ["NSScreen", "NSWorkspace"] }
 
 [target.'cfg(windows)'.dependencies]

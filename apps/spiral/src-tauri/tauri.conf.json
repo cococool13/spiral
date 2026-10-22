@@ -1,8 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Spiral Wallpaper",
-  "version": "1.0.5",
+  "productName": "Spiral",
+  "version": "2.0.0",
   "identifier": "app.spiral.wallpaper",
+  "mainBinaryName": "spiral-wallpaper",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -10,15 +11,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Spiral Wallpaper",
-        "width": 1120,
-        "height": 760,
-        "minWidth": 800,
-        "minHeight": 560
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost; connect-src 'self' ipc: http://ipc.localhost",
       "assetProtocol": {
@@ -43,6 +36,7 @@
     "targets": "all",
     "createUpdaterArtifacts": true,
     "macOS": {
+      "minimumSystemVersion": "11.0",
       "signingIdentity": "Developer ID Application: COHEN BENJAMIN COOLIOGE (CU8NTJWQ43)",
       "hardenedRuntime": true,
       "dmg": {
