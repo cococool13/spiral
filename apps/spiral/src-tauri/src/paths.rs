@@ -53,6 +53,18 @@ impl Root {
         self.dir.join("last_page.json.tmp")
     }
 
+    pub fn dir(&self) -> &Path {
+        &self.dir
+    }
+
+    pub fn resume_dir(&self) -> PathBuf {
+        self.dir.join("resume")
+    }
+
+    pub fn lock_file(&self) -> PathBuf {
+        self.dir.join("spiral.lock")
+    }
+
     pub fn thumb_ledger(&self) -> PathBuf {
         self.thumbs().join("ledger.json")
     }
@@ -76,6 +88,10 @@ impl LegacyRoots {
 
     pub fn detect() -> Self {
         Self::at(data_dir().join("app.spiral.resume"))
+    }
+
+    pub fn dir(&self) -> &Path {
+        &self.resume
     }
 
     pub fn resume_json(&self) -> PathBuf {

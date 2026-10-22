@@ -18,7 +18,8 @@
         "enable": true,
         "scope": [
           "$APPDATA/thumbs/**",
-          "$APPDATA/wallpapers/**"
+          "$APPDATA/wallpapers/**",
+          "$APPDATA/resume/cache/**"
         ]
       }
     }

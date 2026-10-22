@@ -59,6 +59,20 @@ pub fn clear_provider(
     Ok(ProviderView::Absent)
 }
 
+pub fn provider_secret(
+    store: &impl CredentialStore,
+    provider: ProviderId,
+) -> Result<Option<String>, String> {
+    match store
+        .get(migrate::SERVICE, provider.account(), Interaction::Silent)
+        .map_err(LicenseError::from)
+        .map_err(message)?
+    {
+        Some(secret) => Ok(Some(secret.expose().to_string())),
+        None => Ok(None),
+    }
+}
+
 enum ShellStore {
     #[cfg(any(test, not(any(target_os = "macos", target_os = "windows"))))]
     Memory(spiral_license::vault::MemoryStore),
@@ -212,6 +226,10 @@ impl LicenseGate {
 
     pub fn clear_provider(&self, provider: ProviderId) -> Result<ProviderView, String> {
         clear_provider(&self.store, provider)
+    }
+
+    pub fn provider_secret(&self, provider: ProviderId) -> Result<Option<String>, String> {
+        provider_secret(&self.store, provider)
     }
 
     pub async fn require(&self) -> Result<(), String> {
@@ -412,6 +430,20 @@ mod tests {
             serde_json::to_string(&ProviderView::NeedsPaste).unwrap(),
             r#"{"kind":"needsPaste"}"#
         );
+    }
+
+    #[test]
+    fn the_engine_answer_carries_the_secret_and_the_view_does_not() {
+        let store = MemoryStore::new();
+        set_provider(&store, ProviderId::Anthropic, "sk-test-secret").unwrap();
+        let view = read_provider(&store, ProviderId::Anthropic).unwrap();
+        let json = serde_json::to_string(&view).unwrap();
+        assert!(!json.contains("sk-test-secret"));
+        assert_eq!(json, r#"{"kind":"present"}"#);
+        let key = provider_secret(&store, ProviderId::Anthropic).unwrap();
+        assert_eq!(key.as_deref(), Some("sk-test-secret"));
+        let answer = resume_proto::Answer::ProviderKey { key };
+        assert!(!format!("{answer:?}").contains("sk-test-secret"));
     }
 
     #[tokio::test]

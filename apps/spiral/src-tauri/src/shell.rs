@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::paths::Root;
+use crate::resume::bridge::Link;
 use crate::settings::ShellSettings;
 use crate::wallpaper::WallpaperEngine;
 
@@ -66,6 +67,7 @@ pub struct Shell {
     settings: Mutex<ShellSettings>,
     active: Mutex<Option<ModuleId>>,
     wallpaper: Mutex<Option<Arc<WallpaperEngine>>>,
+    resume: Mutex<Link>,
 }
 
 impl Shell {
@@ -75,6 +77,7 @@ impl Shell {
             settings: Mutex::new(settings),
             active: Mutex::new(None),
             wallpaper: Mutex::new(None),
+            resume: Mutex::new(Link::new()),
         }
     }
 
@@ -120,8 +123,16 @@ impl Shell {
         settings.save(&self.root)
     }
 
+    pub fn active(&self) -> Option<ModuleId> {
+        *self.active.lock().expect("active")
+    }
+
     pub fn set_active(&self, id: ModuleId) {
         *self.active.lock().expect("active") = Some(id);
+    }
+
+    pub fn resume_link(&self) -> std::sync::MutexGuard<'_, Link> {
+        self.resume.lock().expect("resume")
     }
 
     pub fn ensure_wallpaper(&self, engine: Arc<WallpaperEngine>) {

@@ -2,6 +2,7 @@ mod bench;
 mod boot;
 mod license;
 mod paths;
+mod resume;
 mod settings;
 mod shell;
 mod smoke;
@@ -23,6 +24,9 @@ async fn module_activate(
     if !shell.contains(id) {
         return Err("module_inactive".into());
     }
+    if shell.active() == Some(ModuleId::Resume) && id != ModuleId::Resume {
+        shell.resume_link().leave();
+    }
     if id == ModuleId::Wallpaper {
         license::require(&app).await?;
         if shell.wallpaper_engine().is_none() {
@@ -31,8 +35,57 @@ async fn module_activate(
             shell.ensure_wallpaper(engine);
         }
     }
+    if id == ModuleId::Resume {
+        resume::migrate::adopt_app(shell.root(), &paths::LegacyRoots::detect())
+            .map_err(|err| err.to_string())?;
+        shell.resume_link().activate();
+    }
     shell.set_active(id);
     Ok(())
+}
+
+#[tauri::command]
+async fn resume(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+    call: resume_proto::Call,
+    events: tauri::ipc::Channel<resume_proto::Event>,
+) -> Result<serde_json::Value, String> {
+    if shell.active() != Some(ModuleId::Resume) || !shell.contains(ModuleId::Resume) {
+        return Err("module_inactive".into());
+    }
+    let licensed = if call.needs_license() {
+        license::require(&app).await?;
+        true
+    } else {
+        matches!(
+            app.state::<license::LicenseGate>().view().await,
+            license::LicenseView::Licensed { .. }
+        )
+    };
+    let gate = app.state::<license::LicenseGate>();
+    let mut link = shell.resume_link();
+    let dir = shell.root().resume_dir();
+    link.dispatch(
+        &dir,
+        licensed,
+        &call,
+        |provider| {
+            let provider = match provider {
+                resume_proto::ProviderId::Anthropic => {
+                    spiral_license::migrate::ProviderId::Anthropic
+                }
+                resume_proto::ProviderId::OpenAi => spiral_license::migrate::ProviderId::OpenAI,
+                resume_proto::ProviderId::Compatible => {
+                    spiral_license::migrate::ProviderId::Compatible
+                }
+            };
+            gate.provider_secret(provider)
+        },
+        |event| {
+            let _ = events.send(event);
+        },
+    )
 }
 
 #[tauri::command]
@@ -235,6 +288,7 @@ pub fn run() {
             thumb_cache_size,
             clear_thumb_cache,
             modules_set,
+            resume,
             bench_mark,
             license::license_view,
             license::license_use_legacy,

@@ -1,0 +1,10 @@
+[package]
+name = "resume-proto"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "Resume engine wire types"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

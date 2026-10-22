@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Signed license key check for Spiral desktop apps"
 publish = false
+workspace = "../../apps/spiral/src-tauri"
 
 [dependencies]
 # keyring 3 silently falls back to its in-memory mock store without a platform
