@@ -311,3 +311,58 @@ says exactly what it is. Examples: a wallpaper's real ID, size and source host; 
 "19 facts read, 1 edited"; and "No connection used" when nothing left the Mac. A competitor
 can copy the marks, but not the habit of stating every fact and every network call. That
 habit, made visible as a printer's proof, is Spiral's product promise.
+
+## Figma
+
+Figma is the canvas of record for this direction:
+[Spiral one app - components 2026-10-22](https://www.figma.com/design/pAFxoOKfjLxlhAHhAMNMYG)
+(Cohen's drafts). It was built through the claude.ai Figma connector.
+
+**Paper.** The Paper file could not be created: Paper's MCP hit its weekly limit, and an
+upgrade is a spend, so it was not done. The HTML artboards in `docs/design/artboards/`
+stay the Paper-ready source (see "Paper file" above).
+
+### Pages
+
+| Page | Contents |
+| --- | --- |
+| Tokens | `Color` collection (11 variables, Light and Dark modes, `var(--…)` code syntax), `Layout` collection (`space/4`–`space/72`, `radius/plate`, `radius/ctl`, `radius/seg-inner`, `radius/toggle`), 10 text styles, and a specimen of each |
+| Components | Every component below, as variant sets with auto layout, bound to the variables and text styles |
+| Screens | Picker, Wallpaper, Wallpaper · dark, Resume · Check, Settings › Tools, License. All 1440 × 900 and built from component instances. The dark screen is the same build with the `Color` collection set to Dark. |
+
+`on-red` (`#ffffff`) is a Figma-only variable for the label on a red fill. The CSS writes
+`#fff` there.
+
+### Components
+
+| Component | Variants and properties |
+| --- | --- |
+| Glyph/* | Wallpaper, Resume, Search, Sidebar, Check, Return, General, Tools, License, Updates. Custom 1.4-stroke vectors, no icon library |
+| Spiral mark, Registration mark, Traffic lights | Single components |
+| Sidebar item | State = Default, Selected, Disabled · Label, Glyph (swap) |
+| Segment / Segmented control | State = On, Off · Set = Wallhaven, Activate |
+| Search field | State = Default, Focus · Placeholder |
+| Button | Style = Primary, Secondary × Size = Regular, Large × State = Default, Pressed, Focus, Disabled · Label |
+| Checkbox | Checked = On, Off |
+| Toggle | State = On, Off, On disabled ("Keep one tool on.") |
+| Registration plate | Size = Picker, Page, Code × Marks = On, Off · Caption, Show caption, Content (swap) |
+| Plate content/* | Image, Resume page, Resume on bench |
+| Wallpaper tile | State = Idle, Hover, Downloading, Applied, Error · ID, Resolution, Size |
+| Picker choice | Selected = On, Off · Name, Description |
+| Text field | State = Default, Focus, Error · Label |
+| Code cell / Code field | Cell: Empty, Filled, Focus, Error · Field: Empty, Partial, Complete, Error |
+| Notice | Kind = Info, Network, Error |
+| Resume fact row | State = Default, Edited, Focused · Label, Value |
+| Settings tab | State = Default, Selected · Label, Glyph (swap) |
+
+### Differences from the HTML artboards
+
+- **Mono face.** Figma has no SF Mono. Plate lines use Roboto Mono as a stand-in for
+  `ui-monospace`. The resume page uses Source Serif 4 for the Charter-class template face.
+- **Wallpaper images.** The tiles, the picker plate and the Settings desktop use tonal
+  stand-ins: gradients sampled from each real Wallhaven image. The photo upload to Figma was
+  blocked by the local shell guard, so the photos are not in the file. To add them, upload
+  `docs/design/artboards/img/wh-*.jpg` and set each image as the fill of the tile's `Image`
+  layer.
+- **Settings › Tools.** The Wallpaper toggle is drawn as `On disabled` with the "Keep one
+  tool on." line, because Resume is off. The PNG shows it as plain on.
