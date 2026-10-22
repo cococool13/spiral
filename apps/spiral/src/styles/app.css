@@ -669,6 +669,11 @@
   color: var(--spiral-oxblood);
 }
 
+.activate-route__notice {
+  padding: calc(var(--unit) * 3) calc(var(--unit) * 3) 0;
+  text-align: center;
+}
+
 /* The live region stays mounted so screen readers hear the first error;
    while empty it must not add a gap. */
 .activate__error:empty {

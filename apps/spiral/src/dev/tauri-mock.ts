@@ -61,7 +61,15 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   get_settings: () => ({ ...settings }),
   modules_set: () => undefined,
   bench_mark: () => undefined,
-  license_ensure: () => undefined,
+  license_view: () => ({ kind: "licensed", grace: false }),
+  license_use_legacy: () => ({ kind: "licensed", grace: false }),
+  license_activate: () => undefined,
+  license_request_code: () => undefined,
+  license_activate_email: () => undefined,
+  license_clear: () => undefined,
+  provider_view: () => ({ kind: "absent" }),
+  provider_set: () => ({ kind: "present" }),
+  provider_clear: () => ({ kind: "absent" }),
   set_settings: (args) => {
     Object.assign(settings, args.settings as Partial<MockSettings>);
   },

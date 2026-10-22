@@ -2,18 +2,14 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import AppBar from "./components/AppBar";
-import { Activate } from "./screens/Activate";
 import { Browse } from "./screens/Browse";
 import { Settings, type AppSettings } from "./screens/Settings";
 
 type Screen = "browse" | "settings";
-type LicenseBoot = "loading" | "locked" | "ok" | "error";
 
 function App() {
   const [screen, setScreen] = useState<Screen>("browse");
   const [boot, setBoot] = useState<AppSettings | "error">();
-  const [license, setLicense] = useState<LicenseBoot>("loading");
-  const [licenseError, setLicenseError] = useState<string | null>(null);
   const [update, setUpdate] = useState<Update | null>(null);
 
   useEffect(() => {
@@ -22,26 +18,12 @@ function App() {
       .catch(() => setBoot("error"));
   }, []);
 
-  // On boot: license_ensure (Spiral's validator; if it can't be reached, a 30-day grace from the last good check).
-  useEffect(() => {
-    if (boot === "error" || !boot) return;
-    invoke("license_ensure")
-      .then(() => setLicense("ok"))
-      .catch((e) => {
-        setLicenseError(typeof e === "string" ? e : null);
-        setLicense("locked");
-      });
-  }, [boot]);
-
-  // Separate from license_ensure: a version check against GitHub on open,
-  // and only when the Settings toggle says so.
   useEffect(() => {
     if (boot === "error" || !boot?.firstRunCompleted || !boot.autoUpdateCheck) return;
-    if (license !== "ok") return;
     check()
       .then((found) => found && setUpdate(found))
-      .catch(() => {}); // offline is fine — Settings has a manual check
-  }, [boot, license]);
+      .catch(() => {});
+  }, [boot]);
 
   if (boot === "error") {
     return (
@@ -51,25 +33,7 @@ function App() {
       </main>
     );
   }
-  if (!boot || license === "loading") return <div className="app" aria-busy="true" />;
-
-  if (license === "locked") {
-    return (
-      <div className="app">
-        <Activate
-          onDone={() => {
-            setLicenseError(null);
-            setLicense("ok");
-          }}
-        />
-        {licenseError && (
-          <p className="activate__error" style={{ textAlign: "center", padding: "0 24px" }}>
-            {licenseError}
-          </p>
-        )}
-      </div>
-    );
-  }
+  if (!boot) return <div className="app" aria-busy="true" />;
 
   return (
     <div className="app">
