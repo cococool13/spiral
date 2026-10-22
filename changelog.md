@@ -1,5 +1,9 @@
 # changelog
 
+## 2026-10-22 — License keys survive a quit (Wallpaper 1.0.5, Slim 1.0.2, Clean 0.1.2, Resume 0.1.3)
+
+`crates/spiral-license` depended on `keyring = "3"` with no platform feature, and keyring 3 then uses an in-memory mock store. Activation said it worked, nothing reached the Keychain (or Windows Credential Manager), and every app asked for the key again after a quit. The crate now enables `apple-native` and `windows-native`, reads every write back, reports a locked keychain as a keychain error instead of "no key", and a macOS/Windows test fails if the mock store comes back. Versions bumped; not tagged.
+
 ## 2026-08-19 — Resume polish, motion pass, site live
 
 Post-0.1.1 product polish on the working tree (not a new tag yet): first-run Setup, splash assemble, DMG background, Settings/X flow, wording/tighten fixes, bigger import and style tiles, motion press feedback across apps, collection download panel exit-only, Resume listed live on the site at 0.1.1.
