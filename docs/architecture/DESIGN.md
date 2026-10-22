@@ -841,6 +841,20 @@ Cache file names use `DefaultHasher`. They match for one process run.
 
 On Windows, the engine and `llama-server` are started with `CREATE_NEW_PROCESS_GROUP`. There is no Job Object. On macOS the child is a new process group, and drop sends `SIGKILL` to that group.
 
+### Milestone 5
+
+`rename_decline` and `bundle_trash` are extra commands. The closed list names `rename_offer` and `rename_apply`. Decline stores `Declined`. Move to Trash is a separate click, and it refuses the running bundle.
+
+The Resume editor stays in `apps/Resume`. `src/modules/resume` shows "Resume is not in this build." and a Use Wallpaper button. Milestone 4 moved the Rust engine. This milestone does not move the editor. The Resume chunk stays out of the entry's static graph.
+
+The buy control reads "Buy Spiral, $15". DIRECTION.md uses an em dash in that line. The copy rule for this work does not allow that dash.
+
+License links call `plugin:opener|open_url`. `@tauri-apps/plugin-opener` is not installed. `capabilities/default.json` already allows the buy URL and the resend URL.
+
+The last-tool guard lives in `moduleSet.ts`. On a case-insensitive disk, `Tools.tsx` and `tools.ts` are one file.
+
+Proof Plate color tokens were already in `brand/tokens.css` from milestone 1. This milestone adds the layout tokens and points the app scripts at the `spiral` brand surface.
+
 ## Interrogate amendments
 
 ### Milestone 2
@@ -876,3 +890,7 @@ On Windows, the engine and `llama-server` are started with `CREATE_NEW_PROCESS_G
 **Finding 11.** `models.ref.json` stores `{ id, path }` per model. Removing one id drops that entry and leaves the other file in place. Tests: `an_exdev_model_move_writes_refs_and_copies_zero_bytes`, `removing_one_referenced_model_keeps_the_other_file`.
 
 **Finding 12.** With `SPIRAL_BENCH=1`, migration does not call `LegacyRoots::detect()` for the move. It uses `SPIRAL_LEGACY_RESUME` or `<root>/bench-legacy`. If that path is the real `app.spiral.resume` folder, migration returns an error and renames nothing. Picker preselect may still detect. Tests do not set `HOME`. Test: `a_benchmark_refuses_the_real_resume_folder_and_does_not_rename_it`.
+
+### Milestone 5
+
+**Finding 4.** Settings, on the License tab, pastes a provider key into a password field. Save calls `provider_set`, then clears the field. The secret is not left in the DOM. `needsPaste` shows "Spiral could not read the saved key. Paste it again." A save error that contains the typed key is replaced with "Spiral could not save that key. Paste it again." The vault commands stay as recorded under milestones 2 and 4. Tests: "sends a pasted key, then clears it from the screen", "does not show a key that a failed save echoes".
