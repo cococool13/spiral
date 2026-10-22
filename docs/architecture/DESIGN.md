@@ -821,6 +821,26 @@ On Windows a tile requests `http://thumb.localhost/<id>?r=sm|lg`. Tauri serves a
 
 Wallpaper replies are parsed in TypeScript. `tauri-specta` is still absent. Milestone 2 recorded that.
 
+### Milestone 4
+
+Resume fonts and `model-catalogue.json` stay in `apps/Resume/assets`. `resume-core` and the migration reader include them by relative path. Milestone 6 has to move those files before it deletes `apps/Resume`.
+
+`apps/Resume/src-tauri/src` still has `commands/`, `keys.rs`, `license.rs`, `lib.rs`, and `main.rs`. Those files do not compile after the move. Milestone 6 deletes that app.
+
+Tauri 2.12 enforces the asset protocol scope in `tauri.conf.json` under `app.security.assetProtocol.scope`. That list includes `$APPDATA/resume/cache/**`. `capabilities/default.json` names the same path in its description. The capability schema has no asset permission id.
+
+The 2 second idle rule lives in `Machine::tick`. The live bridge runs that tick on the next Resume call. It does not start a background timer. On exit, the bridge writes `Shutdown` and sends `SIGKILL` to the process group if the child is still alive after 500 ms.
+
+The codesign fixture signs three ad-hoc binaries with identity `-` and without `--timestamp`. A timestamp needs a Developer ID. The release path passes `--timestamp`.
+
+`models.ref.json` is per model. If `resume/models` already exists, migration leaves it and does not merge files by size. Byte comparison is for `resume.json` and `engine.json`.
+
+A leftover `resume.json.tmp` is recovered when it parses as a JSON object. The shell does not link `StoredDoc`.
+
+Cache file names use `DefaultHasher`. They match for one process run.
+
+On Windows, the engine and `llama-server` are started with `CREATE_NEW_PROCESS_GROUP`. There is no Job Object. On macOS the child is a new process group, and drop sends `SIGKILL` to that group.
+
 ## Interrogate amendments
 
 ### Milestone 2
@@ -838,3 +858,21 @@ Wallpaper replies are parsed in TypeScript. `tauri-specta` is still absent. Mile
 ### Milestone 3
 
 **Finding 4.** `general_view` and `general_update` read and write launch at login, the automatic update check, and fit mode. The reply is those three fields. A license field on the wire is dropped. `apply_general` writes fit mode to `settings.json` and the two flags to `spiral.json`. It leaves `first_run_completed` unchanged. When launch at login changes, autostart enable or disable runs before the write. `apps/spiral/src/shell/settings/api.ts` keeps the three fields and drops any other field. The provider commands from this finding are already recorded under milestone 2. Tests: `general_settings_round_trip_login_update_check_and_fit`, plus the frontend tests "keeps launch, update check, and fit, and drops a secret field" and "updates through general_update with those three fields".
+
+### Milestone 4
+
+**Finding 1.** The workspace release profile aborts. `[profile.engine]` inherits it and sets `panic = "unwind"`. `apps/spiral/scripts/build-engine.mjs` builds and checks with `--profile engine`. The check runs `shell_double`: a truncated PDF returns an error, and the next call still runs. A debug test is not the proof.
+
+**Finding 3.** `resume.json` and `engine.json` each have their own post-condition. A crash after the first rename leaves `engine.json` in the legacy folder, and the next run moves only that file. A legacy folder that has only `engine.json` moves that file and does not create `resume.json`. Same-size files are compared by bytes. Different bytes stay a conflict, and both files stay. Tests: `a_crash_between_resume_json_and_engine_json_retries_only_the_missing_file`, `a_settings_only_legacy_root_moves_engine_json_and_does_not_invent_resume_json`, `same_size_different_bytes_are_a_conflict_and_identical_bytes_drop_the_source`.
+
+**Finding 4.** The engine asks `Ask::ProviderKey` on the pipe. The shell answers from the vault with `provider_secret`. The WebView still receives `ProviderView` only. `Answer`'s debug text says `present` and does not print the key. The paste field stays in milestone 5. Tests: `the_engine_answer_carries_the_secret_and_the_view_does_not`, `a_provider_answer_goes_to_the_engine_and_a_cache_escape_is_rejected`, `engine_info_reports_a_key_without_returning_it`.
+
+**Finding 5.** Control frames stay at 64 KiB. A request or a reply may be 2 MiB. Quote escaping counts toward that limit. A document over 64 KiB saves, loads, and imports. Tests: `a_document_reply_over_64_kib_round_trips_and_a_control_frame_does_not`, `a_document_over_64_kib_saves_and_loads`, `an_import_over_64_kib_keeps_the_summary_including_quotes`.
+
+**Finding 7.** `crates/spiral-license/Cargo.toml` sets `workspace = "../../apps/spiral/src-tauri"`. The member path is `../../../crates/spiral-license`. One lock file: `apps/spiral/src-tauri/Cargo.lock`. Test: "the license crate points at the spiral workspace".
+
+**Finding 8.** `pnpm tauri build` runs `scripts/tauri.mjs`. That builds the engine with the engine profile, then runs Tauri with `src-tauri/tauri.bundle.conf.json`. The config names `binaries/spiral-resume-engine` and `binaries/llama-server`. `missingHelpers` fails a layout that lacks either file. The shared `release-app.yml` default stays empty so Wallpaper, Resume, and Clean do not pick up this config. Milestone 6's caller passes `bundle-config: src-tauri/tauri.bundle.conf.json`. Tests: "pnpm tauri build passes the helper bundle config and builds the engine first", "a packaged app must contain both helpers".
+
+**Finding 11.** `models.ref.json` stores `{ id, path }` per model. Removing one id drops that entry and leaves the other file in place. Tests: `an_exdev_model_move_writes_refs_and_copies_zero_bytes`, `removing_one_referenced_model_keeps_the_other_file`.
+
+**Finding 12.** With `SPIRAL_BENCH=1`, migration does not call `LegacyRoots::detect()` for the move. It uses `SPIRAL_LEGACY_RESUME` or `<root>/bench-legacy`. If that path is the real `app.spiral.resume` folder, migration returns an error and renames nothing. Picker preselect may still detect. Tests do not set `HOME`. Test: `a_benchmark_refuses_the_real_resume_folder_and_does_not_rename_it`.
