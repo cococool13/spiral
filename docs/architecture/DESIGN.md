@@ -790,3 +790,15 @@ Rejected from candidate B: a native picker and a WebView that is destroyed and r
 ### Next implementation step
 
 Start milestone 1: `git mv apps/wallpaper apps/spiral`, pin `mainBinaryName` to `spiral-wallpaper` and the LaunchAgent name to `Spiral Wallpaper`, and write `process_start`, `window_visible`, `first_paint`, and `picker_ready` to `SPIRAL_BENCH_OUT`.
+
+## Deviations
+
+### Milestone 1
+
+Proof Plate color tokens are in `brand/tokens.css` now. The picker is this milestone's first screen, and the hex gate rejects a color that is not in that file. Milestone 5 still owns the rest of the chrome and the `spiral` brand surface. Sync still uses the `wallpaper` surface, and that surface's root is `apps/spiral`.
+
+Continuing with only Resume shows "Resume is not in this build." and a button, "Use Wallpaper". That button saves Wallpaper as the only tool. The Resume module arrives in milestone 4, and the picker still has to accept the Resume-only choice.
+
+A debug build does not call autostart `enable()`. The plugin writes `current_exe()` into `Spiral Wallpaper.plist`, so a dev launch would point the installed login item at the debug binary. A release build calls `enable()` after the page finishes loading, and only when `launch_at_login` is set. That runs at page-load finished, which is before the React `first_paint` effect.
+
+`tauri.conf.json` `version` is the literal `2.0.0`, not `"../package.json"`. `scripts/version.mjs` compares that field as a semver with `package.json`, `Cargo.toml`, and `Cargo.lock`. Milestone 6 owns that script. All four files say `2.0.0`.
