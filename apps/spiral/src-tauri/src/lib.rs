@@ -1,114 +1,182 @@
 mod bench;
 mod boot;
-mod cache;
 mod license;
-mod net;
 mod paths;
-mod setter;
 mod settings;
 mod shell;
 mod smoke;
-mod wallhaven;
+mod wallpaper;
 mod window;
 
-use settings::{Settings, SettingsState};
+use settings::{GeneralSettings, SettingsState};
 use shell::ModuleId;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
-
-pub struct Http(std::sync::OnceLock<reqwest::Client>);
-
-impl Http {
-    fn new() -> Self {
-        Self(std::sync::OnceLock::new())
-    }
-
-    pub fn get(&self) -> &reqwest::Client {
-        self.0.get_or_init(|| {
-            reqwest::Client::builder()
-                .user_agent(concat!("Spiral/", env!("CARGO_PKG_VERSION")))
-                .timeout(std::time::Duration::from_secs(60))
-                .build()
-                .expect("Spiral could not start")
-        })
-    }
-}
+use wallpaper::{Applied, SearchPage, SearchParams, WallId};
 
 #[tauri::command]
-async fn search_wallpapers(
+async fn module_activate(
     app: AppHandle,
-    http: State<'_, Http>,
-    query: String,
-    categories: String,
-    sorting: String,
-    page: u32,
-) -> Result<net::SearchPage, String> {
-    license::require(&app).await?;
-    wallhaven::search(http.get(), &query, &categories, &sorting, page).await
-}
-
-#[tauri::command]
-async fn cache_thumb(
-    app: AppHandle,
-    http: State<'_, Http>,
-    id: String,
-    url: String,
-) -> Result<String, String> {
-    license::require(&app).await?;
-    cache::cache_thumb(&app, http.get(), &id, &url).await
-}
-
-#[tauri::command]
-async fn apply_wallpaper(
-    app: AppHandle,
-    http: State<'_, Http>,
-    id: String,
-    url: String,
+    shell: State<'_, shell::Shell>,
+    id: ModuleId,
 ) -> Result<(), String> {
-    license::require(&app).await?;
-    let fit = app.state::<SettingsState>().0.lock().unwrap().fit_mode;
-    let path = cache::download_full(&app, http.get(), &id, &url).await?;
-    setter::set_wallpaper(&app, path.clone(), fit)?;
-    cache::prune_wallpapers(&app, &path);
+    if !shell.contains(id) {
+        return Err("module_inactive".into());
+    }
+    if id == ModuleId::Wallpaper {
+        license::require(&app).await?;
+        if shell.wallpaper_engine().is_none() {
+            let display = wallpaper::largest_display(&app);
+            let engine = wallpaper::WallpaperEngine::open(shell.root().clone(), display);
+            shell.ensure_wallpaper(engine);
+        }
+    }
+    shell.set_active(id);
     Ok(())
 }
 
 #[tauri::command]
-fn get_settings(state: State<'_, SettingsState>) -> Settings {
-    state.0.lock().unwrap().clone()
+async fn wallpaper_cached_page(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+) -> Result<Option<SearchPage>, String> {
+    license::require(&app).await?;
+    let engine = shell.wallpaper()?;
+    Ok(engine.cached_first_page())
 }
 
 #[tauri::command]
-fn set_settings(
+async fn wallpaper_search(
     app: AppHandle,
-    state: State<'_, SettingsState>,
     shell: State<'_, shell::Shell>,
-    settings: Settings,
+    params: SearchParams,
+) -> Result<SearchPage, String> {
+    license::require(&app).await?;
+    let engine = shell.wallpaper()?;
+    engine.search(params).await.map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+async fn wallpaper_prefetch_page(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+    params: SearchParams,
 ) -> Result<(), String> {
-    let previous = state.0.lock().unwrap().clone();
+    license::require(&app).await?;
+    let engine = shell.wallpaper()?;
+    engine.prefetch_page(params);
+    Ok(())
+}
+
+#[tauri::command]
+async fn wallpaper_stage_full(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+    id: WallId,
+) -> Result<(), String> {
+    license::require(&app).await?;
+    let engine = shell.wallpaper()?;
+    engine.stage_full(id);
+    Ok(())
+}
+
+#[tauri::command]
+async fn wallpaper_apply(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+    id: WallId,
+) -> Result<Applied, String> {
+    license::require(&app).await?;
+    let engine = shell.wallpaper()?;
+    let fit = app
+        .state::<SettingsState>()
+        .0
+        .lock()
+        .expect("settings")
+        .fit_mode;
+    engine
+        .apply(id, fit, |path, fit| {
+            wallpaper::set_wallpaper(&app, path, fit)
+        })
+        .await
+        .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn general_view(
+    shell: State<'_, shell::Shell>,
+    wallpaper: State<'_, SettingsState>,
+) -> GeneralSettings {
+    let shell_settings = shell.snapshot();
+    let fit = wallpaper.0.lock().expect("settings").clone();
+    GeneralSettings::read(&shell_settings, &fit)
+}
+
+#[tauri::command]
+fn general_update(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+    wallpaper: State<'_, SettingsState>,
+    settings: GeneralSettings,
+) -> Result<GeneralSettings, String> {
+    let previous = shell.snapshot();
     if settings.launch_at_login != previous.launch_at_login {
         let autolaunch = app.autolaunch();
-        if settings.launch_at_login {
+        let result = if settings.launch_at_login {
             autolaunch.enable()
         } else {
             autolaunch.disable()
-        }
-        .map_err(|err| format!("settings_failed:{err}"))?;
+        };
+        result.map_err(|err| format!("settings_failed:{err}"))?;
     }
-    settings::save(shell.root(), &settings)?;
-    *state.0.lock().unwrap() = settings.clone();
-    shell.sync_login_flags(settings.launch_at_login, settings.auto_update_check)?;
-    Ok(())
+    let mut shell_settings = shell.settings_mut();
+    let mut wallpaper_settings = wallpaper.0.lock().expect("settings");
+    let stored = settings::apply_general(
+        shell.root(),
+        &mut shell_settings,
+        &mut wallpaper_settings,
+        &settings,
+    )?;
+    Ok(stored)
 }
 
 #[tauri::command]
-fn thumb_cache_size(app: AppHandle) -> u64 {
-    cache::thumb_cache_size(&app)
+fn thumb_cache_size(shell: State<'_, shell::Shell>) -> u64 {
+    wallpaper::stored_thumb_bytes(shell.root())
 }
 
 #[tauri::command]
-fn clear_thumb_cache(app: AppHandle) -> Result<(), String> {
-    cache::clear_thumb_cache(&app)
+fn clear_thumb_cache(shell: State<'_, shell::Shell>) -> Result<(), String> {
+    wallpaper::clear_stored_thumbs(shell.root()).map_err(|err| err.to_string())
+}
+
+fn thumb_scheme(
+    ctx: tauri::UriSchemeContext<'_, tauri::Wry>,
+    request: tauri::http::Request<Vec<u8>>,
+    responder: tauri::UriSchemeResponder,
+) {
+    let app = ctx.app_handle().clone();
+    let uri = request.uri().clone();
+    tauri::async_runtime::spawn(async move {
+        let response = match serve_thumb(&app, &uri).await {
+            Ok(bytes) => wallpaper::thumb_response(bytes),
+            Err(_) => wallpaper::empty_thumb(),
+        };
+        responder.respond(response);
+    });
+}
+
+async fn serve_thumb(
+    app: &AppHandle,
+    uri: &tauri::http::Uri,
+) -> Result<Vec<u8>, wallpaper::UserError> {
+    let (id, rendition) =
+        wallpaper::parse_thumb_request(uri).ok_or_else(wallpaper::UserError::bad)?;
+    let engine = app
+        .state::<shell::Shell>()
+        .wallpaper_engine()
+        .ok_or_else(wallpaper::UserError::inactive)?;
+    engine.thumb(&id, rendition).await
 }
 
 #[tauri::command]
@@ -154,13 +222,16 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(autostart.build())
-        .manage(Http::new())
+        .register_asynchronous_uri_scheme_protocol("thumb", thumb_scheme)
         .invoke_handler(tauri::generate_handler![
-            search_wallpapers,
-            cache_thumb,
-            apply_wallpaper,
-            get_settings,
-            set_settings,
+            module_activate,
+            wallpaper_cached_page,
+            wallpaper_search,
+            wallpaper_prefetch_page,
+            wallpaper_stage_full,
+            wallpaper_apply,
+            general_view,
+            general_update,
             thumb_cache_size,
             clear_thumb_cache,
             modules_set,

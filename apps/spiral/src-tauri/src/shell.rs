@@ -1,10 +1,11 @@
 use std::num::NonZeroU8;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::paths::Root;
 use crate::settings::ShellSettings;
+use crate::wallpaper::WallpaperEngine;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -63,6 +64,8 @@ impl<'de> Deserialize<'de> for ModuleSet {
 pub struct Shell {
     root: Root,
     settings: Mutex<ShellSettings>,
+    active: Mutex<Option<ModuleId>>,
+    wallpaper: Mutex<Option<Arc<WallpaperEngine>>>,
 }
 
 impl Shell {
@@ -70,11 +73,21 @@ impl Shell {
         Self {
             root,
             settings: Mutex::new(settings),
+            active: Mutex::new(None),
+            wallpaper: Mutex::new(None),
         }
     }
 
     pub fn root(&self) -> &Root {
         &self.root
+    }
+
+    pub fn snapshot(&self) -> ShellSettings {
+        self.settings.lock().expect("shell settings").clone()
+    }
+
+    pub fn settings_mut(&self) -> std::sync::MutexGuard<'_, ShellSettings> {
+        self.settings.lock().expect("shell settings")
     }
 
     pub fn contains(&self, id: ModuleId) -> bool {
@@ -107,20 +120,32 @@ impl Shell {
         settings.save(&self.root)
     }
 
-    pub fn sync_login_flags(
-        &self,
-        launch_at_login: bool,
-        auto_update_check: bool,
-    ) -> Result<(), String> {
-        let mut settings = self.settings.lock().expect("shell settings");
-        if settings.launch_at_login == launch_at_login
-            && settings.auto_update_check == auto_update_check
-        {
-            return Ok(());
+    pub fn set_active(&self, id: ModuleId) {
+        *self.active.lock().expect("active") = Some(id);
+    }
+
+    pub fn ensure_wallpaper(&self, engine: Arc<WallpaperEngine>) {
+        let mut slot = self.wallpaper.lock().expect("wallpaper");
+        if slot.is_none() {
+            engine.start_default_search();
+            *slot = Some(engine);
         }
-        settings.launch_at_login = launch_at_login;
-        settings.auto_update_check = auto_update_check;
-        settings.save(&self.root)
+    }
+
+    pub fn wallpaper(&self) -> Result<Arc<WallpaperEngine>, String> {
+        let active = *self.active.lock().expect("active");
+        if active != Some(ModuleId::Wallpaper) || !self.contains(ModuleId::Wallpaper) {
+            return Err("module_inactive".into());
+        }
+        self.wallpaper
+            .lock()
+            .expect("wallpaper")
+            .clone()
+            .ok_or_else(|| "module_inactive".into())
+    }
+
+    pub fn wallpaper_engine(&self) -> Option<Arc<WallpaperEngine>> {
+        self.wallpaper.lock().expect("wallpaper").clone()
     }
 }
 
@@ -132,6 +157,21 @@ mod tests {
     fn an_empty_module_set_is_rejected() {
         assert!(ModuleSet::new(std::iter::empty()).is_err());
         assert!(serde_json::from_str::<ModuleSet>("[]").is_err());
+    }
+
+    #[test]
+    fn wallpaper_is_inactive_until_it_is_the_active_module() {
+        let path = std::env::temp_dir().join(format!("spiral-shell-active-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&path);
+        std::fs::create_dir_all(&path).unwrap();
+        let root = Root::at(&path);
+        let legacy = crate::paths::LegacyRoots::at(path.join("legacy"));
+        let settings = ShellSettings::load_or_derive(&root, &legacy);
+        let shell = Shell::new(root, settings);
+        assert!(shell.contains(ModuleId::Wallpaper) || shell.contains(ModuleId::Resume));
+        assert_eq!(shell.wallpaper().err().as_deref(), Some("module_inactive"));
+        assert!(shell.wallpaper_engine().is_none());
+        let _ = std::fs::remove_dir_all(&path);
     }
 
     #[test]

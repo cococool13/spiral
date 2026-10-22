@@ -4,15 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { Toggle } from "../components/Toggle";
-
-export type FitMode = "fill" | "fit" | "center";
-
-export interface AppSettings {
-  launchAtLogin: boolean;
-  fitMode: FitMode;
-  firstRunCompleted: boolean;
-  autoUpdateCheck: boolean;
-}
+import { generalUpdate, generalView, type FitMode, type GeneralSettings } from "../shell/settings/api";
 
 const FIT_MODES: { value: FitMode; label: string }[] = [
   { value: "fill", label: "Fill" },
@@ -29,7 +21,7 @@ interface SettingsProps {
 }
 
 export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
-  const [settings, setLocal] = useState<AppSettings>();
+  const [settings, setLocal] = useState<GeneralSettings>();
   const [cacheBytes, setCacheBytes] = useState<number>();
   const [error, setError] = useState<string>();
   const [version, setVersion] = useState("");
@@ -76,18 +68,18 @@ export function Settings({ knownUpdate, onUpdateFound }: SettingsProps) {
   }
 
   useEffect(() => {
-    invoke<AppSettings>("get_settings").then(setLocal).catch(() => {});
+    generalView().then(setLocal).catch(() => {});
     invoke<number>("thumb_cache_size").then(setCacheBytes).catch(() => {});
   }, []);
 
-  async function update(patch: Partial<AppSettings>) {
+  async function update(patch: Partial<GeneralSettings>) {
     if (!settings) return;
     const next = { ...settings, ...patch };
     const previous = settings;
-    setLocal(next); // optimistic — revert on failure
+    setLocal(next);
     setError(undefined);
     try {
-      await invoke("set_settings", { settings: next });
+      setLocal(await generalUpdate(next));
     } catch {
       setLocal(previous);
       setError("The setting didn’t save. Try again.");

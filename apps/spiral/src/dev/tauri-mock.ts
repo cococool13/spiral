@@ -17,23 +17,18 @@ window.__SPIRAL_BOOT__ = {
   bench: false,
 };
 
-interface MockSettings {
+interface MockGeneral {
   launchAtLogin: boolean;
-  fitMode: string;
-  firstRunCompleted: boolean;
   autoUpdateCheck: boolean;
+  fitMode: "fill" | "fit" | "center";
 }
 
-const settings: MockSettings = {
+const general: MockGeneral = {
   launchAtLogin: false,
-  fitMode: "fill",
-  // Start at first-run so the whole flow is reviewable; flip via UI.
-  firstRunCompleted: false,
   autoUpdateCheck: true,
+  fitMode: "fill",
 };
 
-// Set `window.__SPIRAL_MOCK_UPDATE__ = true` in the console (before checking)
-// to exercise the update-available flow in the browser.
 const mockUpdate = () =>
   (window as unknown as Record<string, unknown>).__SPIRAL_MOCK_UPDATE__
     ? { rid: 1, available: true, currentVersion: "1.0.0", version: "1.1.0" }
@@ -41,24 +36,28 @@ const mockUpdate = () =>
 
 function searchPage(pageNum: number) {
   return {
-    items: Array.from({ length: 24 }, (_, i) => {
-      const seed = `w-${pageNum}-${i}`;
-      return {
-        id: seed,
-        resolution: i % 3 === 0 ? "3840x2160" : "2560x1440",
-        thumbUrl: `https://picsum.photos/seed/${seed}/600/400`,
-        fullUrl: `https://picsum.photos/seed/${seed}/3840/2160`,
-      };
-    }),
+    items: Array.from({ length: 24 }, (_, i) => ({
+      id: `w-p${pageNum}i${i}`,
+      resolution: i % 3 === 0 ? "3840x2160" : "2560x1440",
+    })),
     page: pageNum,
     lastPage: 5,
   };
 }
 
+function pageArg(args: Record<string, unknown>): number {
+  const params = args.params;
+  if (typeof params === "object" && params !== null && "page" in params) {
+    const page = (params as { page?: unknown }).page;
+    if (typeof page === "number") return page;
+  }
+  return 1;
+}
+
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
-  get_settings: () => ({ ...settings }),
+  module_activate: () => undefined,
   modules_set: () => undefined,
   bench_mark: () => undefined,
   license_view: () => ({ kind: "licensed", grace: false }),
@@ -70,16 +69,29 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   provider_view: () => ({ kind: "absent" }),
   provider_set: () => ({ kind: "present" }),
   provider_clear: () => ({ kind: "absent" }),
-  set_settings: (args) => {
-    Object.assign(settings, args.settings as Partial<MockSettings>);
+  general_view: () => ({ ...general }),
+  general_update: (args) => {
+    const next = args.settings;
+    if (typeof next === "object" && next !== null) {
+      const patch = next as Partial<MockGeneral>;
+      if (typeof patch.launchAtLogin === "boolean") general.launchAtLogin = patch.launchAtLogin;
+      if (typeof patch.autoUpdateCheck === "boolean") general.autoUpdateCheck = patch.autoUpdateCheck;
+      if (patch.fitMode === "fill" || patch.fitMode === "fit" || patch.fitMode === "center") {
+        general.fitMode = patch.fitMode;
+      }
+    }
+    return { ...general };
   },
-  search_wallpapers: async (args) => {
-    await delay(450); // visible loading state
-    return searchPage((args.page as number) ?? 1);
+  wallpaper_cached_page: () => null,
+  wallpaper_search: async (args) => {
+    await delay(450);
+    return searchPage(pageArg(args));
   },
-  cache_thumb: (args) => args.url,
-  apply_wallpaper: async () => {
-    await delay(1400); // visible downloading state
+  wallpaper_prefetch_page: () => undefined,
+  wallpaper_stage_full: () => undefined,
+  wallpaper_apply: async () => {
+    await delay(1400);
+    return { displays: 1, spaces: "current" };
   },
   thumb_cache_size: () => 37_400_000,
   clear_thumb_cache: () => undefined,
@@ -106,6 +118,6 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   convertFileSrc: (path: string) => path,
 };
 
-console.info("[spiral] Tauri mock active — browser visual-QA mode");
+console.info("[spiral] Tauri mock active. Browser visual-QA mode.");
 
 export {};

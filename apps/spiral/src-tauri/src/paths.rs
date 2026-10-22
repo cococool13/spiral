@@ -41,6 +41,22 @@ impl Root {
         self.dir.join("wallpapers")
     }
 
+    pub fn staging(&self) -> PathBuf {
+        self.dir.join("staging")
+    }
+
+    pub fn last_page(&self) -> PathBuf {
+        self.dir.join("last_page.json")
+    }
+
+    pub fn last_page_tmp(&self) -> PathBuf {
+        self.dir.join("last_page.json.tmp")
+    }
+
+    pub fn thumb_ledger(&self) -> PathBuf {
+        self.thumbs().join("ledger.json")
+    }
+
     pub fn has_wallpaper_files(&self) -> bool {
         self.settings_json().is_file() || self.thumbs().is_dir() || self.wallpapers().is_dir()
     }

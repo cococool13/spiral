@@ -18,7 +18,7 @@ pub struct Settings {
     pub auto_update_check: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FitMode {
     Fill,
@@ -38,6 +38,45 @@ impl Default for Settings {
 }
 
 pub struct SettingsState(pub Mutex<Settings>);
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GeneralSettings {
+    pub launch_at_login: bool,
+    pub auto_update_check: bool,
+    pub fit_mode: FitMode,
+}
+
+impl GeneralSettings {
+    pub fn read(shell: &ShellSettings, wallpaper: &Settings) -> Self {
+        Self {
+            launch_at_login: shell.launch_at_login,
+            auto_update_check: shell.auto_update_check,
+            fit_mode: wallpaper.fit_mode,
+        }
+    }
+}
+
+pub fn apply_general(
+    root: &Root,
+    shell: &mut ShellSettings,
+    wallpaper: &mut Settings,
+    next: &GeneralSettings,
+) -> Result<GeneralSettings, String> {
+    let shell_changed = shell.launch_at_login != next.launch_at_login
+        || shell.auto_update_check != next.auto_update_check;
+    let fit_changed = wallpaper.fit_mode != next.fit_mode;
+    shell.launch_at_login = next.launch_at_login;
+    shell.auto_update_check = next.auto_update_check;
+    wallpaper.fit_mode = next.fit_mode;
+    if fit_changed {
+        save(root, wallpaper)?;
+    }
+    if shell_changed {
+        shell.save(root)?;
+    }
+    Ok(GeneralSettings::read(shell, wallpaper))
+}
 
 pub fn load(root: &Root) -> Settings {
     fs::read_to_string(root.settings_json())
@@ -278,6 +317,47 @@ mod tests {
         let saved: ShellSettings =
             serde_json::from_str(&fs::read_to_string(root.spiral_json()).unwrap()).unwrap();
         assert!(saved.is_consistent());
+    }
+
+    #[test]
+    fn general_settings_round_trip_login_update_check_and_fit() {
+        let (_root_dir, _legacy_dir, root, legacy) = pair();
+        save(
+            &root,
+            &Settings {
+                launch_at_login: false,
+                fit_mode: FitMode::Fill,
+                first_run_completed: true,
+                auto_update_check: true,
+            },
+        )
+        .unwrap();
+        let mut shell = ShellSettings::load_or_derive(&root, &legacy);
+        let mut wallpaper = load(&root);
+        assert!(wallpaper.first_run_completed);
+        let next = GeneralSettings {
+            launch_at_login: true,
+            auto_update_check: false,
+            fit_mode: FitMode::Fit,
+        };
+        let stored = apply_general(&root, &mut shell, &mut wallpaper, &next).unwrap();
+        assert_eq!(stored, next);
+        let again = GeneralSettings::read(&shell, &wallpaper);
+        assert_eq!(again, next);
+        let on_disk = load(&root);
+        assert!(on_disk.first_run_completed);
+        assert_eq!(on_disk.fit_mode, FitMode::Fit);
+        let shell_again = ShellSettings::load_or_derive(&root, &legacy);
+        assert!(shell_again.launch_at_login);
+        assert!(!shell_again.auto_update_check);
+        assert!(!shell_again.picker_done);
+        let json = serde_json::to_string(&again).unwrap();
+        assert_eq!(
+            json,
+            r#"{"launchAtLogin":true,"autoUpdateCheck":false,"fitMode":"fit"}"#
+        );
+        assert!(!json.contains("license"));
+        assert!(!json.contains("key"));
     }
 
     #[test]

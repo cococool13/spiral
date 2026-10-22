@@ -1,25 +1,25 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import AppBar from "./components/AppBar";
-import { Browse } from "./screens/Browse";
-import { Settings, type AppSettings } from "./screens/Settings";
+import ModuleRoot from "./modules/wallpaper";
+import { generalView, type GeneralSettings } from "./shell/settings/api";
+import { Settings } from "./screens/Settings";
 
 type Screen = "browse" | "settings";
 
 function App() {
   const [screen, setScreen] = useState<Screen>("browse");
-  const [boot, setBoot] = useState<AppSettings | "error">();
+  const [boot, setBoot] = useState<GeneralSettings | "error">();
   const [update, setUpdate] = useState<Update | null>(null);
 
   useEffect(() => {
-    invoke<AppSettings>("get_settings")
+    generalView()
       .then(setBoot)
       .catch(() => setBoot("error"));
   }, []);
 
   useEffect(() => {
-    if (boot === "error" || !boot?.firstRunCompleted || !boot.autoUpdateCheck) return;
+    if (boot === "error" || !boot?.autoUpdateCheck) return;
     check()
       .then((found) => found && setUpdate(found))
       .catch(() => {});
@@ -51,9 +51,8 @@ function App() {
         ]}
       />
 
-      {/* Browse stays mounted so results and tile states survive navigation. */}
       <div className={screen === "browse" ? "screen" : "screen screen--hidden"}>
-        <Browse />
+        <ModuleRoot />
       </div>
       {screen === "settings" && <Settings knownUpdate={update} onUpdateFound={setUpdate} />}
     </div>
