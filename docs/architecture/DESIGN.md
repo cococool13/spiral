@@ -811,6 +811,16 @@ The offer status line "macOS will ask to let Spiral read it." renders only when 
 
 The key form and the email form inside the Activate route are the existing Wallpaper screens. Milestone 5 replaces those license screens.
 
+### Milestone 3
+
+`wallpaper_cached_page` is an extra command. The closed list does not name it. The grid reads the saved page from disk, then joins `wallpaper_search`. The cached command does not open the network.
+
+On Windows a tile requests `http://thumb.localhost/<id>?r=sm|lg`. Tauri serves a registered scheme on Windows at that host. macOS stays `thumb://localhost/<id>?r=sm|lg`. The content security policy allows both.
+
+`thumb_cache_size` and `clear_thumb_cache` stay. The Settings screen still shows the cache size and the clear control. Milestone 5 owns that screen.
+
+Wallpaper replies are parsed in TypeScript. `tauri-specta` is still absent. Milestone 2 recorded that.
+
 ## Interrogate amendments
 
 ### Milestone 2
@@ -824,3 +834,7 @@ The key form and the email form inside the Activate route are the existing Wallp
 **Finding 9.** Wallpaper cleanup keeps a receipt on `app.spiral` / `wallpaper-cleanup` with the value `pending`. The receipt is written before the new key. A failed key write deletes that receipt and leaves the wallpaper item. Cleanup then deletes only `license`, `whop-license`, `license-status`, and `whop-license-status` on `app.spiral.wallpaper`, and only when the receipt is pending and the new key reads back. `NeedsInteraction` on one of those deletes leaves the receipt. When all four are `Removed` or `Absent`, the receipt is deleted. `Ready` with no receipt does no writes and no deletes. A pending receipt without a new key copies again. Cleanup does not delete Resume, Clean, or Slim. Tests: `the_cleanup_receipt_is_written_before_the_key_and_delete_follows_it`, `a_failed_key_write_leaves_the_wallpaper_item`, `a_pending_receipt_without_a_key_still_copies`, `pending_cleanup_deletes_wallpaper_items_and_the_next_ready_does_not`, `a_second_ready_after_a_finished_copy_does_not_write_or_delete`, `cleanup_does_not_delete_resume_clean_or_slim`.
 
 **Interaction flag.** A silent macOS call reads `SecKeychainGetUserInteractionAllowed`, sets the flag false, and restores the saved value when the call ends, including when that value was already false. A user call does not turn the flag off. `disable_user_interaction` is not used. Tests: `silent_work_restores_a_disabled_interaction_flag`, `silent_work_restores_an_enabled_interaction_flag`, `a_user_call_does_not_turn_interaction_off`.
+
+### Milestone 3
+
+**Finding 4.** `general_view` and `general_update` read and write launch at login, the automatic update check, and fit mode. The reply is those three fields. A license field on the wire is dropped. `apply_general` writes fit mode to `settings.json` and the two flags to `spiral.json`. It leaves `first_run_completed` unchanged. When launch at login changes, autostart enable or disable runs before the write. `apps/spiral/src/shell/settings/api.ts` keeps the three fields and drops any other field. The provider commands from this finding are already recorded under milestone 2. Tests: `general_settings_round_trip_login_update_check_and_fit`, plus the frontend tests "keeps launch, update check, and fit, and drops a secret field" and "updates through general_update with those three fields".
