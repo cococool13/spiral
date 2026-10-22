@@ -1,0 +1,80 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>C1-picker</title>
+<link rel="stylesheet" href="proof.css"></head>
+<body><div class="win" style="align-items:center"><div class="lights"><i></i><i></i><i></i></div>
+<img src="img/mark-red.svg" style="height:36px;margin-top:72px">
+<div style="display:flex;gap:96px;padding-top:80px;align-items:flex-end">
+ <div style="display:flex;gap:24px;align-items:flex-end"><div style="width:440px;height:290px;background:url(img/wh-jelv1w.jpg) center/cover;box-shadow:0 30px 60px rgba(0,0,0,.6)"></div>
+  <div class="label" style="width:150px"><span class="t">Wallpaper</span><span class="r">Wallhaven, SFW.<br>Click to apply.</span><span class="r" style="color:#e9e6df">● On</span></div></div>
+ <div style="display:flex;gap:24px;align-items:flex-end"><div style="width:224px;height:290px;background:#fff;overflow:hidden;padding:14px 0 0 14px;box-shadow:0 30px 60px rgba(0,0,0,.6)"><div style="transform:scale(.38);transform-origin:top left"><div class="sheet">
+  <div class="rp-name">Maya Okafor</div>
+  <div class="rp-contact">maya.okafor@fastmail.com · +1 (415) 555-0142 · Oakland, CA</div>
+  <div class="rp-h">Experience</div>
+  <div class="rp-row"><b>Senior Product Designer, Halden Health</b><span>Mar 2021 – Present</span></div>
+  <div class="rp-li">Led redesign of performance reviews for 1,200 clinics; cut review setup from 40 to 12 minutes.</div>
+  <div class="rp-li">Built the Halden design system with 2 engineers; 140 components in production.</div>
+  <div class="rp-row"><b>Product Designer, Ferro Logistics</b><span>Jun 2017 – Feb 2021</span></div>
+  <div class="rp-li">Designed route planning, adopted by 31% of fleet customers in the first year.</div>
+  <div class="rp-li">Ran 60+ usability sessions for the dispatch launch.</div>
+  <div class="rp-h">Education</div>
+  <div class="rp-row"><b>University of Washington</b><span>2013 – 2017</span></div>
+  <div class="rp-li">B.Des., Interaction Design</div>
+  <div class="rp-h">Skills</div>
+  <div class="rp-li">Prototyping in code · Research synthesis · Design systems · SQL</div>
+</div></div></div>
+  <div class="label" style="width:150px"><span class="t">Resume</span><span class="r">PDF or Word.<br>No fact changes.</span><span class="r" style="color:#e9e6df">● On</span></div></div>
+</div>
+<div style="padding-top:88px;display:flex;flex-direction:column;align-items:center;gap:12px"><span class="btn p">Open Spiral</span><span class="r" style="font:12px ui-monospace,monospace;color:#8f8b82">Click a work to turn it off.</span></div>
+</div><style>
+@font-face { font-family: "Host Grotesk"; font-weight: 400; src: url("../../../brand/fonts/host-grotesk-400.woff2"); }
+@font-face { font-family: "Host Grotesk"; font-weight: 600; src: url("../../../brand/fonts/host-grotesk-600.woff2"); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 1440px; height: 900px; overflow: hidden; font: 13px/18px "Host Grotesk", system-ui; color: #e9e6df; background: #0c0c0b; }
+.win { height: 900px; display: flex; flex-direction: column; position: relative; background: #0c0c0b; color: #e9e6df; }
+.lights { position: absolute; left: 20px; top: 20px; display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; display: block; background: #ff5f57; } .lights i+i { background: #febc2e; } .lights i+i+i { background: #28c840; }
+.cmd { margin: 14px auto 0; width: 560px; height: 36px; border: 1px solid #2a2926; border-radius: 8px; display: flex; align-items: center; padding: 0 14px; color: #8f8b82; background: #141412; }
+.cmd .k { margin-left: auto; font: 11px ui-monospace, monospace; }
+.label { display: flex; flex-direction: column; gap: 6px; width: 240px; }
+.label .t { font-size: 20px; line-height: 26px; font-weight: 600; }
+.label .r { font: 12px/18px ui-monospace, monospace; color: #a39f96; }
+.strip { display: flex; gap: 12px; padding: 0 64px 28px; align-items: flex-end; }
+.strip div { width: 148px; height: 84px; background-size: cover; background-position: center; opacity: .55; }
+.strip div.on { opacity: 1; outline: 2px solid #e9e6df; outline-offset: 3px; }
+.btn { height: 34px; padding: 0 16px; border-radius: 8px; border: 1px solid #3a3935; display: inline-flex; align-items: center; font-weight: 600; }
+.btn.p { background: #e9e6df; color: #0c0c0b; border-color: #e9e6df; }
+</style><style>
+.grid { display: flex; flex-wrap: wrap; gap: 40px 32px; padding: 40px 40px 0; align-content: flex-start; }
+.tile { width: 266px; display: flex; flex-direction: column; gap: 10px; }
+.tile .img { width: 266px; height: 150px; background-size: cover; background-position: center; display: block; }
+.tile .line { justify-content: space-between; }
+.tile.applied .line b { color: var(--red); }
+.tile .hover { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: rgba(23,24,26,.82); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 12px; font-weight: 500; }
+.tile .hover .key { color: rgba(255,255,255,.7); }
+.tile .prog { position: absolute; left: 0; bottom: 0; height: 3px; width: 64%; background: var(--red); }
+.content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+/* resume */
+.sheet { width: 520px; background: #fff; color: #17181a; padding: 44px 48px; font-family: Charter, Georgia, serif; font-size: 10.5px; line-height: 15px; display: flex; flex-direction: column; gap: 4px; }
+.rp-name { font-size: 22px; line-height: 28px; font-weight: 700; }
+.rp-contact { color: #4a4a46; padding-bottom: 6px; }
+.rp-h { font-family: var(--font); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #cfcfca; padding: 10px 0 3px; margin-bottom: 2px; }
+.rp-row { display: flex; justify-content: space-between; padding-top: 4px; }
+.rp-li { padding-left: 10px; color: #2b2b28; }
+.facts { width: 560px; flex-shrink: 0; overflow: hidden; padding: 32px 0 0 40px; display: flex; flex-direction: column; gap: 28px; border-right: 1px solid var(--rule); }
+.fgroup { display: flex; flex-direction: column; }
+.fgroup h3 { font-size: 13px; font-weight: 600; padding-bottom: 8px; }
+.frow { display: flex; align-items: center; height: 36px; border-top: 1px solid var(--rule); gap: 0; }
+.frow:last-child { border-bottom: 1px solid var(--rule); }
+.frow .k { width: 96px; flex-shrink: 0; color: var(--ink-2); font-size: 12px; }
+.frow .v { flex: 1; font-size: 13px; }
+.frow .m { width: 56px; flex-shrink: 0; display: flex; justify-content: center; color: var(--ink-2); }
+.frow.flag .m { color: var(--red); }
+.frow.flag .v { color: var(--ink); }
+.frow.flag { background: color-mix(in srgb, var(--red) 6%, transparent); }
+.mtag { font-family: var(--mono); font-size: 10px; color: var(--red); border: 1px solid var(--red); padding: 0 4px; line-height: 14px; }
+.preview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 48px; gap: 28px; background: var(--stock-2); }
+.steps { display: flex; gap: 2px; align-items: center; font-size: 12px; color: var(--ink-3); }
+.steps span { padding: 0 8px; }
+.steps span.on { color: var(--ink); font-weight: 600; }
+.steps span.done { color: var(--ink-2); }
+</style></body></html>
