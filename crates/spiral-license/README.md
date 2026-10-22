@@ -19,4 +19,8 @@ spiral_license::license_commands!(spiral_license::AppId::Wallpaper);
 
 Default server: `https://licensing.cohencool.workers.dev/activate`.
 
+The crate enables keyring's `apple-native` and `windows-native` features. Without
+them, keyring 3 uses an in-memory mock store and keys are lost on quit. `cargo test`
+on macOS or Windows fails if that regresses.
+
 See [`docs/licensing.md`](../../docs/licensing.md).

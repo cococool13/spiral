@@ -225,18 +225,51 @@ fn entry(app: AppId, account: &str) -> Result<keyring::Entry, LicenseError> {
         .map_err(|e| LicenseError::Keychain(e.to_string()))
 }
 
+/// False means keyring fell back to its in-memory mock store, so nothing survives a quit.
+pub fn backend_is_persistent() -> bool {
+    match entry(AppId::Wallpaper, KEY_ACCOUNT) {
+        Ok(entry) => entry
+            .get_credential()
+            .downcast_ref::<keyring::mock::MockCredential>()
+            .is_none(),
+        Err(_) => false,
+    }
+}
+
+fn verify_written(expected: &str, read_back: Option<String>) -> Result<(), LicenseError> {
+    match read_back {
+        Some(value) if value == expected => Ok(()),
+        _ => Err(LicenseError::Keychain("the key was not saved".into())),
+    }
+}
+
+/// Write, then read back through a new entry so a store that keeps nothing fails here.
+fn write_account(app: AppId, account: &str, value: &str) -> Result<(), LicenseError> {
+    entry(app, account)?
+        .set_password(value)
+        .map_err(|e| LicenseError::Keychain(e.to_string()))?;
+    verify_written(value, read_account_checked(app, account)?)
+}
+
 pub fn store_key(app: AppId, key: &str) -> Result<(), LicenseError> {
     let key = normalize_key(key);
     if key.is_empty() {
         return Err(LicenseError::EmptyKey);
     }
-    entry(app, KEY_ACCOUNT)?
-        .set_password(&key)
-        .map_err(|e| LicenseError::Keychain(e.to_string()))
+    write_account(app, KEY_ACCOUNT, &key)
 }
 
 fn read_account(app: AppId, account: &str) -> Option<String> {
     entry(app, account).ok()?.get_password().ok()
+}
+
+/// Like `read_account`, but a locked or denied keychain is an error, not "no key".
+fn read_account_checked(app: AppId, account: &str) -> Result<Option<String>, LicenseError> {
+    match entry(app, account)?.get_password() {
+        Ok(value) => Ok(Some(value)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(LicenseError::Keychain(e.to_string())),
+    }
 }
 
 fn delete_account(app: AppId, account: &str) {
@@ -282,9 +315,7 @@ fn save_status(app: AppId, key: &str) -> Result<(), LicenseError> {
         validated_at: now_secs(),
     };
     let json = serde_json::to_string(&status).map_err(|e| LicenseError::Other(e.to_string()))?;
-    entry(app, STATUS_ACCOUNT)?
-        .set_password(&json)
-        .map_err(|e| LicenseError::Keychain(e.to_string()))
+    write_account(app, STATUS_ACCOUNT, &json)
 }
 
 /// Seconds since the last good online check of this key, if any.
@@ -533,9 +564,9 @@ fn current_validity(
 
 /// Launch check. Offline while the last online check is under a week old.
 pub async fn ensure_licensed(app: AppId, validator_url: &str) -> Result<(), LicenseError> {
-    let Some(key) = read_key(app) else {
+    let Some(key) = read_account_checked(app, KEY_ACCOUNT)? else {
         // A build from before the migration left a store key behind: upgrade it once.
-        return match read_account(app, LEGACY_KEY_ACCOUNT) {
+        return match read_account_checked(app, LEGACY_KEY_ACCOUNT)? {
             Some(legacy) => activate(app, &legacy, validator_url).await,
             None => Err(LicenseError::EmptyKey),
         };
@@ -818,6 +849,60 @@ mod tests {
             store_key(AppId::Wallpaper, "  ").unwrap_err(),
             LicenseError::EmptyKey
         );
+    }
+
+    /// Regression guard: without keyring's platform feature, keys vanish on quit.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[test]
+    fn keyring_uses_the_os_store_not_the_mock() {
+        for app in [AppId::Wallpaper, AppId::Clean, AppId::Resume, AppId::Slim] {
+            assert!(
+                entry(app, KEY_ACCOUNT)
+                    .unwrap()
+                    .get_credential()
+                    .downcast_ref::<keyring::mock::MockCredential>()
+                    .is_none(),
+                "{} uses keyring's mock store: enable the apple-native / windows-native feature",
+                app.as_str()
+            );
+        }
+        assert!(backend_is_persistent());
+    }
+
+    /// Linux is not shipped and has no store feature enabled, so the mock is expected.
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    #[test]
+    fn keyring_uses_the_mock_where_no_store_is_enabled() {
+        assert!(!backend_is_persistent());
+    }
+
+    /// Touches the real login Keychain. Run with
+    /// `cargo test -- --ignored keychain_round_trip`.
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn keychain_round_trip_survives_a_new_entry() {
+        let service = format!("app.spiral.test.roundtrip.{}", std::process::id());
+        let value = format!("test-{}-{}", std::process::id(), now_secs());
+        keyring::Entry::new(&service, "license")
+            .unwrap()
+            .set_password(&value)
+            .unwrap();
+        let fresh = keyring::Entry::new(&service, "license").unwrap();
+        assert_eq!(fresh.get_password().unwrap(), value);
+        fresh.delete_credential().unwrap();
+        assert!(matches!(
+            keyring::Entry::new(&service, "license").unwrap().get_password(),
+            Err(keyring::Error::NoEntry)
+        ));
+    }
+
+    #[test]
+    fn verify_written_fails_when_the_store_kept_nothing() {
+        assert_eq!(verify_written("LIC1.a", Some("LIC1.a".into())), Ok(()));
+        let lost = LicenseError::Keychain("the key was not saved".into());
+        assert_eq!(verify_written("LIC1.a", None), Err(lost.clone()));
+        assert_eq!(verify_written("LIC1.a", Some("LIC1.b".into())), Err(lost));
     }
 
     #[test]

@@ -29,7 +29,13 @@ jobs:
       - run: node scripts/check-checkout.mjs
 
   crate:
-    runs-on: ubuntu-latest
+    # macOS and Windows run the guard that keyring uses the OS store, not its in-memory mock
+    # (keys vanished on quit before the 2026-10-22 fix). App jobs do not run this crate's tests.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
