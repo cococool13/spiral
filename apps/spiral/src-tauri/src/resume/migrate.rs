@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::paths::{LegacyRoots, Root};
 
-const CATALOGUE: &str = include_str!("../../../../Resume/assets/model-catalogue.json");
+const CATALOGUE: &str = include_str!("../../assets/model-catalogue.json");
 
 #[derive(Debug)]
 pub enum MigrateError {

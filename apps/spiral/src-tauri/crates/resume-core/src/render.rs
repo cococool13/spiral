@@ -97,14 +97,14 @@ pub fn unprintable(text: &str) -> Vec<char> {
 /// what will let the DOCX exporter name those two and still match this PDF page
 /// for page. See `assets/fonts/README.md`.
 const RESUME_FACES: [&[u8]; 8] = [
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSerif-Regular.ttf"),
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSerif-Bold.ttf"),
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSerif-Italic.ttf"),
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSerif-BoldItalic.ttf"),
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSans-Regular.ttf"),
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSans-Bold.ttf"),
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSans-Italic.ttf"),
-    include_bytes!("../../../../../Resume/assets/fonts/LiberationSans-BoldItalic.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSerif-Regular.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSerif-Bold.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSerif-Italic.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSerif-BoldItalic.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSans-Regular.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSans-Bold.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSans-Italic.ttf"),
+    include_bytes!("../../../assets/fonts/LiberationSans-BoldItalic.ttf"),
 ];
 
 impl ResumeWorld {

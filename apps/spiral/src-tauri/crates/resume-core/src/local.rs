@@ -47,7 +47,7 @@ struct CatalogueFile {
     models: Vec<Catalogue>,
 }
 
-const CATALOGUE: &str = include_str!("../../../../../Resume/assets/model-catalogue.json");
+const CATALOGUE: &str = include_str!("../../../assets/model-catalogue.json");
 
 /// Every model this build can actually offer, in the order the file lists them
 /// — smallest first, which is the order a person should read them in.
