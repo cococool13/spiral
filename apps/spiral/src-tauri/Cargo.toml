@@ -26,7 +26,7 @@ panic = "unwind"
 
 [package]
 name = "spiral-wallpaper"
-version = "2.0.0"
+version.workspace = true
 description = "Privacy-first wallpaper setter for macOS and Windows"
 authors = ["Spiral"]
 edition = "2021"

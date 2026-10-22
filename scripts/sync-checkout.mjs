@@ -9,12 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 export const CANONICAL = join(ROOT, "collection/lib/checkout.ts");
 
-export const MIRRORS = [
-  "apps/wallpaper/src/lib/checkout.ts",
-  "apps/clean/src/lib/checkout.ts",
-  "apps/Resume/src/lib/checkout.ts",
-  "apps/slim/desktop/src/lib/checkout.ts",
-];
+export const MIRRORS = ["apps/spiral/src/lib/checkout.ts"];
 
 export const KEYS = ["CHECKOUT_URL", "RESEND_URL"];
 

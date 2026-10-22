@@ -1,106 +1,70 @@
-// Single registry for release / version / downloads / site catalogue rewrite.
-// Tag functions are monorepo git tags. site.downloadTag may differ (Slim).
+// One live app. Retired ids stay so an old tag can be named
+// without reading a directory this repo no longer has.
 
 /** @type {Record<string, object>} */
 export const APPS = {
-  wallpaper: {
-    name: "Spiral Wallpaper",
+  spiral: {
+    name: "Spiral",
     builds: "macOS + Windows",
     workflow: "build.yml",
     tag: (v) => `v${v}`,
-    dir: "apps/wallpaper",
+    dir: "apps/spiral",
     crate: "spiral-wallpaper",
     site: {
-      slug: "wallpaper",
+      slug: "spiral",
       live: true,
       releaseConst: "RELEASE",
       owner: "cococool13",
       repo: "spiral",
       downloadTag: (v) => `v${v}`,
       assets: {
-        mac: (v) => `Spiral.Wallpaper_${v}_universal.dmg`,
-        windows: (v) => `Spiral.Wallpaper_${v}_x64-setup.exe`,
+        mac: (v) => `Spiral_${v}_universal.dmg`,
+        windows: (v) => `Spiral_${v}_x64-setup.exe`,
       },
       all: "latest",
-      appPages: {
-        proofLine: (v) => `Free. Version ${v}, signed and notarised on macOS.`,
-        closingBody: (v) => `Free, signed on macOS, and 4.6 MB. Version ${v} is out now.`,
-      },
-    },
-  },
-  slim: {
-    name: "Spiral Slim",
-    builds: "macOS",
-    workflow: "release-slim.yml",
-    tag: (v) => `slim-v${v}`,
-    dir: "apps/slim/desktop",
-    crate: "spiral-slim",
-    site: {
-      slug: "slim",
-      live: true,
-      releaseConst: "SLIM_RELEASE",
-      owner: "cococool13",
-      // Slim releases from this repo on slim-v* tags (release-slim.yml), like
-      // Resume. The old Spiral-Slim repo is gone, so its links were 404s.
-      repo: "spiral",
-      downloadTag: (v) => `slim-v${v}`,
-      assets: {
-        mac: (v) => `Spiral.Slim_${v}_universal.dmg`,
-      },
-      all: "tag",
-      noWindowsBinary: true,
-    },
-  },
-  clean: {
-    name: "Spiral Clean",
-    builds: "macOS",
-    workflow: "release-clean.yml",
-    tag: (v) => `clean-v${v}`,
-    dir: "apps/clean",
-    crate: "spiral-clean",
-    site: {
-      slug: "clean",
-      live: false,
-    },
-  },
-  resume: {
-    name: "Spiral Resume",
-    builds: "macOS + Windows",
-    workflow: "release-resume.yml",
-    tag: (v) => `resume-v${v}`,
-    dir: "apps/Resume",
-    crate: "spiral-resume",
-    site: {
-      slug: "resume",
-      live: true,
-      releaseConst: "RESUME_RELEASE",
-      owner: "cococool13",
-      repo: "spiral",
-      downloadTag: (v) => `resume-v${v}`,
-      assets: {
-        mac: (v) => `Spiral.Resume_${v}_universal.dmg`,
-        windows: (v) => `Spiral.Resume_${v}_x64-setup.exe`,
-      },
-      all: "tag",
-      appPages: {
-        ctaLabel: (v) => `Get ${v}`,
-        ctaHref: (v) =>
-          `https://github.com/cococool13/spiral/releases/tag/resume-v${v}`,
-        faqWindows: (v) =>
-          `Yes. ${v} includes a Windows installer. It is unsigned, the same as Wallpaper, so SmartScreen will warn the first time.`,
-        closingHeadline: (v) => `${v} is the first downloadable release.`,
-      },
     },
   },
 };
 
-/** Longest prefix first — bare `v` must be last. */
+/** Apps this repo no longer releases. `release.mjs` refuses these ids. */
+export const RETIRED = {
+  wallpaper: {},
+  resume: {},
+  clean: {},
+  slim: {},
+};
+
+/** Longest prefix first. Bare `v` is last. */
 export const TAG_PREFIXES = [
   { prefix: "slim-v", app: "slim" },
   { prefix: "clean-v", app: "clean" },
   { prefix: "resume-v", app: "resume" },
-  { prefix: "v", app: "wallpaper" },
+  { prefix: "v", app: "spiral" },
 ];
+
+const SEMVER = /^\d+\.\d+\.\d+$/;
+
+/** `clean-v0.1.0` -> `{ app: "clean", version: "0.1.0" }`, or null. */
+export function parseTag(tag) {
+  for (const { prefix, app } of TAG_PREFIXES) {
+    if (tag.startsWith(prefix)) {
+      const version = tag.slice(prefix.length);
+      return SEMVER.test(version) ? { app, version } : null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Wallpaper shipped on bare `v` tags through 1.x. Spiral starts at 2.0.0.
+ * A 1.x tag is retired and is not compared with the live files.
+ */
+export function isRetiredTag(parsed) {
+  if (!parsed) return false;
+  if (parsed.app !== "spiral") return Boolean(RETIRED[parsed.app]);
+  const major = Number(parsed.version.split(".")[0]);
+  return major < 2;
+}
 
 export function sameFamily(tag) {
   if (tag.startsWith("resume-v")) return (other) => other.startsWith("resume-v");

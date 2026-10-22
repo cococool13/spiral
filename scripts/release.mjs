@@ -18,7 +18,7 @@
 import { spawnSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APPS } from "./apps.manifest.mjs";
+import { APPS, RETIRED } from "./apps.manifest.mjs";
 import { updateCatalogue } from "./update-catalogue.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -136,6 +136,11 @@ recreated shortly before. Start it explicitly:
 
 const [app, version, ...flags] = process.argv.slice(2);
 const push = flags.includes("--push");
+
+if (app && RETIRED[app]) {
+  die(`${app} is retired. This repo releases Spiral only:
+  node scripts/release.mjs spiral <x.y.z>`);
+}
 
 if (!APPS[app] || !version) {
   die(`usage: node scripts/release.mjs <app> <x.y.z> [--push]
