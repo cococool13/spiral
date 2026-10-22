@@ -1,4 +1,3 @@
-/* Identity 02 — Host Grotesk, self-hosted. Files synced from /brand. */
 @font-face {
   font-family: "Host Grotesk";
   font-style: normal;
@@ -21,28 +20,6 @@
   src: url("../assets/fonts/host-grotesk-600.woff2") format("woff2");
 }
 
-/* Names the Wallpaper CSS already uses, bound to Identity 02 tokens. */
-:root {
-  --conc-01: var(--spiral-void);
-  --conc-02: var(--spiral-lift);
-  --conc-03: var(--spiral-conc-03);
-  --ink-01: var(--spiral-ink);
-  --stl-02: var(--spiral-mute);
-  --hlx-01: var(--spiral-helix);
-  --hlx-02: var(--spiral-oxblood);
-  --paper: var(--spiral-paper);
-  --hlx-01-ink: var(--spiral-red-fill);
-  --font-ui: var(--spiral-font-sans);
-  --font-mono: var(--spiral-font-mono);
-  --unit: var(--spiral-unit);
-  --ease: var(--spiral-ease);
-  --dur-fast: var(--spiral-dur-fast);
-  --dur-slow: var(--spiral-dur-slow);
-  --radius-ctl: var(--spiral-radius-ctl);
-  --glass-blur: var(--spiral-glass-blur);
-  --glass-edge: var(--spiral-glass-edge);
-}
-
 *,
 *::before,
 *::after {
@@ -51,52 +28,68 @@
   padding: 0;
 }
 
-html,
+html {
+  height: 100%;
+  color-scheme: light dark;
+  background: var(--stock);
+  scrollbar-color: var(--rule) var(--stock);
+}
+
 body,
 #root {
   height: 100%;
 }
 
 body {
-  background: var(--conc-01);
-  color: var(--paper);
+  background: var(--stock);
+  color: var(--ink);
   font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
   cursor: default;
-  color-scheme: dark;
 }
 
-/* Chrome behaves like a native window; prose does not. Error copy, the
-   version string and resolutions are exactly what someone copies into a bug
-   report, so selection is restored for text while labels and controls keep
-   the desktop feel. */
+::selection {
+  background: var(--red);
+  color: var(--on-red);
+}
+
 p,
-code,
-.browse__empty-copy,
-.settings__desc,
-.settings__attribution,
-.tile__res,
-.tile__error {
+.notice,
+.tile__line,
+.status,
+input,
+textarea {
   user-select: text;
 }
 
+button,
 input,
-button {
+textarea,
+select {
   font: inherit;
   color: inherit;
+  cursor: default;
 }
 
-/* Focus — 2px helix outline, 3px offset (kept consistent from day one). */
+input,
+textarea {
+  caret-color: var(--red);
+}
+
+:focus {
+  outline: none;
+}
+
 :focus-visible {
-  outline: 2px solid var(--hlx-01);
+  outline: 2px solid var(--red);
   outline-offset: 3px;
 }
 
-/* Available to assistive tech, absent from the layout. */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -113,6 +106,12 @@ button {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .mk {
+    transform: none !important;
   }
 }

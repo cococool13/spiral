@@ -88,6 +88,13 @@
   background: var(--stock-2);
 }
 
+.picker__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .picker__choice[aria-disabled="true"] .picker__art {
   opacity: 0.45;
 }

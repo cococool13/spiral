@@ -95,7 +95,7 @@ describe("wallpaper grid", () => {
     render(
       <WallpaperGrid items={tiles(1)} platform="macos" activeTile={0} onActiveTile={() => undefined} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /Apply wallpaper/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Set as wallpaper/ }));
     expect((await screen.findAllByText("On this Space")).length).toBeGreaterThan(0);
     expect(invoke).toHaveBeenCalledWith("wallpaper_apply", { id: "w-t0" });
   });
@@ -110,7 +110,7 @@ describe("wallpaper grid", () => {
     render(
       <WallpaperGrid items={tiles(1)} platform="macos" activeTile={0} onActiveTile={() => undefined} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /Apply wallpaper/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Set as wallpaper/ }));
     const copy =
       "The image downloaded. It couldn't be set on Studio Display. Restart Spiral, then try again.";
     expect((await screen.findAllByText(copy)).length).toBeGreaterThan(0);

@@ -69,6 +69,11 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   provider_view: () => ({ kind: "absent" }),
   provider_set: () => ({ kind: "present" }),
   provider_clear: () => ({ kind: "absent" }),
+  rename_offer: () => ({ visible: false, otherCopy: null }),
+  rename_decline: () => undefined,
+  rename_apply: () => undefined,
+  bundle_trash: () => undefined,
+  "plugin:opener|open_url": () => undefined,
   general_view: () => ({ ...general }),
   general_update: (args) => {
     const next = args.settings;

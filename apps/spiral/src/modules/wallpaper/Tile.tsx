@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
+import { ReturnGlyph } from "../../ui/glyphs";
 import { apply, stageFull } from "./api";
 import { errorCopy } from "./errors";
 import { renditionFor, thumbSrc, type ThumbPlatform } from "./thumbs";
@@ -7,13 +8,6 @@ import type { GalleryItem } from "./types";
 type TileState = "idle" | "applying" | "applied" | "error";
 
 const HOVER_STAGE_MS = 250;
-
-const LABEL: Record<TileState, string> = {
-  idle: "Apply wallpaper",
-  applying: "Downloading…",
-  applied: "Apply wallpaper",
-  error: "Try again",
-};
 
 interface TileProps {
   item: GalleryItem;
@@ -30,6 +24,7 @@ export function Tile({ item, index, total, tabbable, platform, onDecoded }: Tile
   const [rendition, setRendition] = useState(renditionFor(0));
   const [state, setState] = useState<TileState>("idle");
   const [error, setError] = useState<string>();
+  const [travel, setTravel] = useState(false);
 
   useEffect(() => {
     const el = frame.current;
@@ -59,6 +54,17 @@ export function Tile({ item, index, total, tabbable, platform, onDecoded }: Tile
     void pending.then(() => onDecoded(index));
   }
 
+  function showMarks() {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setTravel(false);
+      return;
+    }
+    setTravel(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setTravel(false));
+    });
+  }
+
   async function onApply() {
     if (state === "applying") return;
     setState("applying");
@@ -66,56 +72,66 @@ export function Tile({ item, index, total, tabbable, platform, onDecoded }: Tile
     try {
       await apply(item.id);
       setState("applied");
+      showMarks();
     } catch (err: unknown) {
       setError(errorCopy(err));
       setState("error");
     }
   }
 
+  const name =
+    state === "error"
+      ? `Try again, ${item.resolution}, ${index + 1} of ${total}`
+      : `Set as wallpaper, ${item.resolution}, ${index + 1} of ${total}`;
+
   return (
-    <figure className="tile" ref={frame} onMouseEnter={onEnter} onMouseLeave={onLeave}>
-      <img
-        src={thumbSrc(item.id, rendition, platform)}
-        alt=""
-        decoding="async"
-        loading={index < 12 ? "eager" : "lazy"}
-        onLoad={onLoad}
-      />
-      <figcaption className="tile__res">{item.resolution}</figcaption>
-      <div
-        className={
-          state === "idle"
-            ? "tile__overlay"
-            : state === "error"
-              ? "tile__overlay tile__overlay--visible tile__overlay--error"
-              : "tile__overlay tile__overlay--visible"
-        }
+    <figure className="tile" ref={frame} onMouseEnter={onEnter} onMouseLeave={onLeave} data-state={state}>
+      <button
+        type="button"
+        className="tile__hit"
+        onClick={() => void onApply()}
+        aria-disabled={state === "applying"}
+        tabIndex={tabbable ? 0 : -1}
+        aria-label={name}
       >
-        {state === "applied" && <span className="tile__status">On this Space</span>}
-        {state === "error" && <p className="tile__error">{error}</p>}
-        <button
-          className={
-            state === "idle" || state === "applied"
-              ? "btn-glass btn-glass--primary"
-              : "btn-glass btn-glass--secondary"
-          }
-          onClick={onApply}
-          aria-disabled={state === "applying"}
-          tabIndex={tabbable ? 0 : -1}
-          aria-label={`${LABEL[state]}, ${item.resolution}, ${index + 1} of ${total}`}
-        >
-          {LABEL[state]}
-        </button>
-      </div>
-      <span className="visually-hidden" role="status">
-        {state === "applying"
-          ? `Downloading the ${item.resolution} wallpaper.`
-          : state === "applied"
-            ? `On this Space. ${item.resolution}.`
+        <span className="tile__frame">
+          <img
+            src={thumbSrc(item.id, rendition, platform)}
+            alt=""
+            decoding="async"
+            loading={index < 12 ? "eager" : "lazy"}
+            onLoad={onLoad}
+          />
+          {state === "applied" ? (
+            <span className="plate__marks" data-travel={travel ? "from" : undefined} aria-hidden="true">
+              <span className="mk tl" />
+              <span className="mk tr" />
+              <span className="mk bl" />
+              <span className="mk br" />
+            </span>
+          ) : null}
+          {state === "applying" ? <span className="tile__progress" /> : null}
+          <span className="tile__bar">
+            {state === "error" ? "Try again" : "Set as wallpaper"}
+            <ReturnGlyph />
+          </span>
+        </span>
+      </button>
+      <figcaption className={state === "applied" ? "tile__line tile__line--hot" : "tile__line"}>
+        {state === "applied"
+          ? "On this Space"
+          : state === "applying"
+            ? "Downloading · wallhaven.cc"
             : state === "error"
               ? error
-              : ""}
-      </span>
+              : `${item.id} · ${plateResolution(item.resolution)}`}
+      </figcaption>
     </figure>
   );
+}
+
+function plateResolution(resolution: string): string {
+  const [width, height] = resolution.split("x");
+  if (!width || !height) return resolution;
+  return `${width} × ${height}`;
 }

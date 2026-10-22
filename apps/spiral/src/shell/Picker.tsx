@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import mark from "../assets/brand/mark-red.svg";
+import resumePlate from "../assets/picker/resume.webp";
+import wallpaperPlate from "../assets/picker/wallpaper.webp";
 import { mark as benchMark } from "../bench";
 import type { ModuleId, ModuleState } from "../boot";
 import "./picker.css";
@@ -142,7 +144,12 @@ function Plate({ id, module, on, travel, plateRef, onToggle }: PlateProps) {
     : id === "wallpaper"
       ? "Wallhaven, SFW only. Click to apply."
       : "PDF or Word out. No fact changes.";
-  const art = id === "wallpaper" ? <WallpaperArt /> : <ResumeArt />;
+  const art =
+    id === "wallpaper" ? (
+      <img className="picker__img" src={wallpaperPlate} alt="" />
+    ) : (
+      <img className="picker__img" src={resumePlate} alt="" />
+    );
   const body = (
     <>
       <span className="picker__plate">
@@ -179,26 +186,3 @@ function Plate({ id, module, on, travel, plateRef, onToggle }: PlateProps) {
   );
 }
 
-function WallpaperArt() {
-  return (
-    <span className="art-wall" aria-hidden="true">
-      <span className="art-wall__ridge" />
-      <span className="art-wall__field" />
-    </span>
-  );
-}
-
-function ResumeArt() {
-  return (
-    <span className="art-page" aria-hidden="true">
-      <span className="art-page__name">Sample</span>
-      <span className="art-page__label">Experience</span>
-      <span className="art-page__rule" />
-      <span className="art-page__row" />
-      <span className="art-page__row art-page__row--short" />
-      <span className="art-page__label">Education</span>
-      <span className="art-page__rule" />
-      <span className="art-page__row art-page__row--short" />
-    </span>
-  );
-}

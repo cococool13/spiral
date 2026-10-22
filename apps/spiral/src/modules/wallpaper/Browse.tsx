@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "../../ui/Button";
 import { useDebounce } from "../../hooks/useDebounce";
 import { cachedPage, prefetchPage, search as searchWallpapers } from "./api";
 import { errorCopy } from "./errors";
 import { WallpaperGrid } from "./grid";
+import { CHIPS, useSearch } from "./state";
 import type { ThumbPlatform } from "./thumbs";
-import type { Categories, GalleryItem, SearchParams, Sorting } from "./types";
-
-const CHIPS: { label: string; categories: Categories }[] = [
-  { label: "Toplist", categories: "111" },
-  { label: "General", categories: "100" },
-  { label: "Anime", categories: "010" },
-  { label: "People", categories: "001" },
-];
+import type { GalleryItem, SearchParams, Sorting } from "./types";
 
 const SEARCH_DEBOUNCE_MS = 500;
 
@@ -22,8 +17,8 @@ interface BrowseProps {
 }
 
 export function Browse({ platform }: BrowseProps) {
-  const [query, setQuery] = useState("");
-  const [chipIndex, setChipIndex] = useState(0);
+  const { query, chip } = useSearch();
+  const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
   const [status, setStatus] = useState<Status>("loading");
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [pageNum, setPageNum] = useState(1);
@@ -32,12 +27,10 @@ export function Browse({ platform }: BrowseProps) {
   const [error, setError] = useState<string>();
   const [activeTile, setActiveTile] = useState(0);
   const requestId = useRef(0);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
 
   const search = useCallback(() => {
     const id = ++requestId.current;
-    const params = currentParams(debouncedQuery, CHIPS[chipIndex].categories, 1);
+    const params = currentParams(debouncedQuery, CHIPS[chip].categories, 1);
     let fresh = false;
     setStatus("loading");
     setError(undefined);
@@ -71,33 +64,15 @@ export function Browse({ platform }: BrowseProps) {
         setError(errorCopy(err));
         setStatus("error");
       });
-  }, [chipIndex, debouncedQuery]);
+  }, [chip, debouncedQuery]);
 
   useEffect(() => {
     search();
   }, [search]);
 
-  useEffect(() => {
-    function focusSearch(event: KeyboardEvent) {
-      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
-      ) {
-        return;
-      }
-      event.preventDefault();
-      searchInputRef.current?.focus();
-    }
-
-    document.addEventListener("keydown", focusSearch);
-    return () => document.removeEventListener("keydown", focusSearch);
-  }, []);
-
   async function loadMore() {
     const id = requestId.current;
-    const params = currentParams(debouncedQuery, CHIPS[chipIndex].categories, pageNum + 1);
+    const params = currentParams(debouncedQuery, CHIPS[chip].categories, pageNum + 1);
     setLoadingMore(true);
     setError(undefined);
     try {
@@ -116,6 +91,8 @@ export function Browse({ platform }: BrowseProps) {
     }
   }
 
+  const emptyQuery = debouncedQuery.length > 0 ? debouncedQuery : query;
+
   return (
     <main className="browse">
       <h1 className="visually-hidden">Browse wallpapers</h1>
@@ -129,54 +106,16 @@ export function Browse({ platform }: BrowseProps) {
             : ""}
       </span>
 
-      <input
-        ref={searchInputRef}
-        type="search"
-        className="browse__search"
-        aria-label="Search wallpapers"
-        placeholder="search wallpapers, press /"
-        spellCheck={false}
-        value={query}
-        onChange={(event) => setQuery(event.currentTarget.value)}
-      />
-
-      <div className="browse__chips" role="group" aria-label="Category">
-        {CHIPS.map((chip, index) => (
-          <button
-            key={chip.label}
-            aria-pressed={index === chipIndex}
-            className={index === chipIndex ? "chip chip--active" : "chip"}
-            onClick={() => setChipIndex(index)}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
-
-      {status === "loading" && items.length === 0 && (
-        <section className="browse__empty" aria-label="Loading">
-          <span className="browse__empty-eyebrow">Browse</span>
-          <p className="browse__empty-copy">Fetching from Wallhaven…</p>
-        </section>
-      )}
-
       {status === "error" && items.length === 0 && (
-        <section className="browse__empty" aria-label="Search failed" role="alert">
-          <span className="browse__empty-eyebrow">Problem</span>
-          <p className="browse__empty-copy">{error}</p>
-          <button className="btn-glass btn-glass--secondary browse__empty-action" onClick={search}>
-            Try again
-          </button>
+        <section className="browse__empty" role="alert">
+          <p>{error}</p>
+          <Button onClick={search}>Try again</Button>
         </section>
       )}
 
       {status === "ready" && items.length === 0 && (
-        <section className="browse__empty" aria-label="No results">
-          <span className="browse__empty-eyebrow">Browse</span>
-          <h1 className="browse__empty-title">No results.</h1>
-          <p className="browse__empty-copy">
-            Nothing on Wallhaven matches "{debouncedQuery}". Try a broader search.
-          </p>
+        <section className="browse__empty">
+          <p>Nothing on Wallhaven matches "{emptyQuery}". Try a broader search.</p>
         </section>
       )}
 
@@ -189,19 +128,15 @@ export function Browse({ platform }: BrowseProps) {
             onActiveTile={setActiveTile}
           />
           {error && (
-            <p className="browse__more-error" role="alert">
+            <p className="notice notice--error" role="alert">
               {error}
             </p>
           )}
           {pageNum < lastPage && (
             <div className="browse__more">
-              <button
-                className="btn-glass btn-glass--secondary"
-                onClick={loadMore}
-                disabled={loadingMore}
-              >
-                {loadingMore ? "Loading…" : "Load more"}
-              </button>
+              <Button onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Loading" : "Load more"}
+              </Button>
             </div>
           )}
         </div>
@@ -210,7 +145,7 @@ export function Browse({ platform }: BrowseProps) {
   );
 }
 
-function currentParams(query: string, categories: Categories, page: number): SearchParams {
+function currentParams(query: string, categories: SearchParams["categories"], page: number): SearchParams {
   const sorting: Sorting = query ? "relevance" : "toplist";
   return { query, categories, sorting, page };
 }

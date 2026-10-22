@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { BootState } from "../../boot";
-import { Activate } from "../../screens/Activate";
 import { licenseUseLegacy, licenseView } from "./api";
-import { legacyName, type LicenseView } from "./types";
+import { Activate } from "./Activate";
+import { LegacyOffer } from "./LegacyOffer";
+import type { LicenseView } from "./types";
 
 interface ActivateRouteProps {
   view: LicenseView;
@@ -35,60 +36,44 @@ export function ActivateRoute({ view, platform, onView }: ActivateRouteProps) {
       onView(await licenseUseLegacy(offer));
     } catch (caught) {
       setEmailInstead(true);
-      setError(
-        typeof caught === "string"
-          ? caught
-          : "Spiral could not read that key. Use email instead.",
-      );
+      setError(typeof caught === "string" ? caught : "Spiral could not read that key. Use email instead.");
     } finally {
       setBusy(false);
     }
   }
 
-  if (offer && !emailInstead) {
+  if (view.kind === "locked" && !offer) {
     return (
-      <main className="picker">
-        <div className="picker__head">
-          <h1>Activate Spiral</h1>
-          <p className="picker__line">Spiral found your key from {legacyName(offer)}.</p>
-          {platform === "macos" ? (
-            <p className="picker__line">macOS will ask to let Spiral read it.</p>
-          ) : null}
-        </div>
-        <div className="picker__foot">
-          <button type="button" className="picker__go" disabled={busy} onClick={() => void useKey()}>
-            Use this key
-          </button>
-          <button
-            type="button"
-            className="picker__link"
-            disabled={busy}
-            onClick={() => setEmailInstead(true)}
-          >
-            Use email instead
-          </button>
-          {error ? (
-            <p className="picker__error" role="alert">
-              {error}
-            </p>
-          ) : null}
-        </div>
+      <main className="stage">
+        <h1>Activate Spiral</h1>
+        <p className="notice notice--error" role="alert">
+          {view.message}
+        </p>
       </main>
     );
   }
 
+  if (offer && !emailInstead) {
+    return (
+      <LegacyOffer
+        offer={offer}
+        platform={platform}
+        busy={busy}
+        error={error}
+        onUseKey={() => void useKey()}
+        onEmail={() => setEmailInstead(true)}
+      />
+    );
+  }
+
   return (
-    <div className="app">
-      {error ? (
-        <p className="activate__error activate-route__notice" role="alert">
-          {error}
-        </p>
-      ) : null}
+    <>
+      {error ? <p className="notice notice--error activate-route__notice" role="alert">{error}</p> : null}
       <Activate
         onDone={() => {
           void refresh();
         }}
       />
-    </div>
+    </>
   );
 }
