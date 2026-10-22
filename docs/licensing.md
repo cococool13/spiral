@@ -39,7 +39,8 @@ edited key never unlocks.
 2. The app verifies the signature offline, then POSTs `{ key, app: "spiral", device }`
    to `https://licensing.cohencool.workers.dev/activate`. `device` is a SHA-256 of the
    machine id, the same for all four apps, so one computer counts once (limit 3).
-3. The key is stored in the OS keychain.
+3. The key is stored in the OS keychain. Wallpaper 1.0.4, Slim 1.0.1, Clean 0.1.1
+   and Resume 0.1.2 did not persist it on macOS or Windows; fixed 2026-10-22.
 4. Launches verify offline. About once a week the app asks the server again; a
    refund, dispute or revocation locks it then. If the server cannot be reached,
    the app keeps working for 30 days after the last good check.
