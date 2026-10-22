@@ -802,3 +802,25 @@ Continuing with only Resume shows "Resume is not in this build." and a button, "
 A debug build does not call autostart `enable()`. The plugin writes `current_exe()` into `Spiral Wallpaper.plist`, so a dev launch would point the installed login item at the debug binary. A release build calls `enable()` after the page finishes loading, and only when `launch_at_login` is set. That runs at page-load finished, which is before the React `first_paint` effect.
 
 `tauri.conf.json` `version` is the literal `2.0.0`, not `"../package.json"`. `scripts/version.mjs` compares that field as a semver with `package.json`, `Cargo.toml`, and `Cargo.lock`. Milestone 6 owns that script. All four files say `2.0.0`.
+
+### Milestone 2
+
+`tauri-specta` is not in this tree. Milestone 1 did not add it. The shell parses `LicenseView` and `ProviderView` in `apps/spiral/src/shell/license/types.ts`.
+
+The offer status line "macOS will ask to let Spiral read it." renders only when the boot platform is `macos`. This route has no Windows prompt sentence.
+
+The key form and the email form inside the Activate route are the existing Wallpaper screens. Milestone 5 replaces those license screens.
+
+## Interrogate amendments
+
+### Milestone 2
+
+**Finding 2.** `migrate::ensure_licensed` exchanges a primary `mem_` key once per launch, before the offline check. `LaunchExchange` records `Network` and `ValidatorNotConfigured`. A later call in that launch returns the recorded error and does not call the server. The `mem_` value stays in the vault. Success stores the signed key and a status document whose hash matches that key, with `grace` false. Tests: `a_copied_mem_key_is_exchanged_once_and_kept_when_the_server_is_unclear`, `a_copied_mem_key_is_replaced_by_the_signed_key_and_matching_status`. The keyring `ensure_licensed` used by the other apps has the same once-per-launch branch. Tests use `MemoryStore`.
+
+**Finding 4.** The shell commands `provider_view`, `provider_set`, and `provider_clear` set and clear provider credentials. The secret write stays in the shell. The reply is presence only: `present`, `needsPaste`, or `absent`. The TypeScript wrappers are in `apps/spiral/src/shell/license/api.ts`. General settings read and update stay in milestone 3. The paste field stays in milestone 5. Tests: `provider_set_and_clear_report_presence_and_hide_the_secret`, `provider_set_returns_presence_and_hides_the_secret`.
+
+**Finding 6.** `CredentialStore::exists` returns `Existence` and does not return `Secret`. `migrate` probes Resume, Clean, and Slim with `exists` only. On macOS the probe loads attributes and does not load data. If the OS returns bytes, they are zeroed and dropped. On Windows the probe reads the credential with the secret copy off and wipes the blob. Test: `a_permissive_resume_item_is_not_read_or_deleted_before_consent` (open item, zero secret `get` calls, zero `Interaction::User` gets, zero deletes).
+
+**Finding 9.** Wallpaper cleanup keeps a receipt on `app.spiral` / `wallpaper-cleanup` with the value `pending`. The receipt is written before the new key. A failed key write deletes that receipt and leaves the wallpaper item. Cleanup then deletes only `license`, `whop-license`, `license-status`, and `whop-license-status` on `app.spiral.wallpaper`, and only when the receipt is pending and the new key reads back. `NeedsInteraction` on one of those deletes leaves the receipt. When all four are `Removed` or `Absent`, the receipt is deleted. `Ready` with no receipt does no writes and no deletes. A pending receipt without a new key copies again. Cleanup does not delete Resume, Clean, or Slim. Tests: `the_cleanup_receipt_is_written_before_the_key_and_delete_follows_it`, `a_failed_key_write_leaves_the_wallpaper_item`, `a_pending_receipt_without_a_key_still_copies`, `pending_cleanup_deletes_wallpaper_items_and_the_next_ready_does_not`, `a_second_ready_after_a_finished_copy_does_not_write_or_delete`, `cleanup_does_not_delete_resume_clean_or_slim`.
+
+**Interaction flag.** A silent macOS call reads `SecKeychainGetUserInteractionAllowed`, sets the flag false, and restores the saved value when the call ends, including when that value was already false. A user call does not turn the flag off. `disable_user_interaction` is not used. Tests: `silent_work_restores_a_disabled_interaction_flag`, `silent_work_restores_an_enabled_interaction_flag`, `a_user_call_does_not_turn_interaction_off`.
