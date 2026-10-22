@@ -165,12 +165,15 @@ pub fn run() {
             clear_thumb_cache,
             modules_set,
             bench_mark,
-            license::license_status,
+            license::license_view,
+            license::license_use_legacy,
             license::license_activate,
             license::license_request_code,
             license::license_activate_email,
-            license::license_ensure,
             license::license_clear,
+            license::provider_view,
+            license::provider_set,
+            license::provider_clear,
         ])
         .setup(|app| {
             let app_data = app
@@ -184,6 +187,7 @@ pub fn run() {
             let boot = boot::BootState::from(&shell_settings, boot::resume_supported());
             app.manage(SettingsState(std::sync::Mutex::new(wallpaper)));
             app.manage(shell::Shell::new(root, shell_settings));
+            app.manage(license::LicenseGate::production());
             window::open(app.handle(), &boot)?;
             smoke::maybe_run(app.handle().clone());
             Ok(())

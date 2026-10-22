@@ -35,6 +35,7 @@ tauri-plugin-process = "2"
 # Opens the Activate screen's Buy and resend-key links in the browser.
 tauri-plugin-opener = "2"
 spiral-license = { path = "../../../crates/spiral-license" }
+tokio = { version = "1", features = ["macros", "rt", "sync"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
