@@ -12,14 +12,21 @@ use ed25519_dalek::{Signature, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+#[cfg(target_os = "macos")]
+pub mod macos;
+pub mod migrate;
+pub mod vault;
+#[cfg(target_os = "windows")]
+pub mod windows;
+
 /// Licensing Worker. Override at run time with `SPIRAL_LICENSE_URL` (full URL including `/activate`).
 pub const DEFAULT_VALIDATOR_URL: &str = "https://licensing.cohencool.workers.dev/activate";
 
 /// Every Spiral app shares one license, sold under this app id.
 pub const LICENSE_APP_ID: &str = "spiral";
 
-const RECHECK_SECS: u64 = 7 * 24 * 60 * 60;
-const GRACE_SECS: u64 = 30 * 24 * 60 * 60;
+pub(crate) const RECHECK_SECS: u64 = 7 * 24 * 60 * 60;
+pub(crate) const GRACE_SECS: u64 = 30 * 24 * 60 * 60;
 
 /// Public keys that sign license keys, by kid. Same set as the Swift LicenseKit.
 const PRODUCTION_KEYS: &[(&str, &str)] = &[("k1", "kuCXGSc9gcqvCGvRT7ggcpVi1LaEB5o5pg2Z1xyV528=")];
@@ -100,6 +107,9 @@ pub enum LicenseError {
     InvalidEmail,
     InvalidCode,
     RateLimited,
+    NeedsInteraction,
+    Denied,
+    ProviderKeyEmpty,
     Other(String),
 }
 
@@ -126,6 +136,9 @@ impl LicenseError {
             Self::InvalidEmail => "Enter the email you paid with.".into(),
             Self::InvalidCode => "That code is wrong or has expired.".into(),
             Self::RateLimited => "Too many tries. Wait a few minutes and try again.".into(),
+            Self::NeedsInteraction => "macOS will ask to let Spiral read it.".into(),
+            Self::Denied => "Spiral could not read that key. Use email instead.".into(),
+            Self::ProviderKeyEmpty => "That key is empty. Paste it again.".into(),
             Self::Other(e) => e.clone(),
         }
     }
@@ -298,11 +311,51 @@ pub fn clear_key(app: AppId) -> Result<(), LicenseError> {
     Ok(())
 }
 
-fn hash_hex(value: &str) -> String {
+pub(crate) fn hash_hex(value: &str) -> String {
     hex::encode(Sha256::digest(value.as_bytes()))
 }
 
-fn now_secs() -> u64 {
+pub(crate) fn status_document(key: &str) -> Result<String, LicenseError> {
+    let status = CachedStatus {
+        key_hash: hash_hex(key),
+        validated_at: now_secs(),
+    };
+    serde_json::to_string(&status).map_err(|err| LicenseError::Other(err.to_string()))
+}
+
+pub(crate) fn status_binds(raw: &str, key: &str) -> bool {
+    serde_json::from_str::<CachedStatus>(raw)
+        .ok()
+        .is_some_and(|status| status.key_hash == hash_hex(key))
+}
+
+pub(crate) fn status_age(raw: &str, key: &str, now: u64) -> Option<u64> {
+    let status: CachedStatus = serde_json::from_str(raw).ok()?;
+    (status.key_hash == hash_hex(key)).then(|| now.saturating_sub(status.validated_at))
+}
+
+pub(crate) fn accept_key(raw: &str) -> Result<(), LicenseError> {
+    #[cfg(test)]
+    if let Some(hook) = VERIFY_HOOK.with(|cell| cell.get()) {
+        return hook(raw);
+    }
+    verify_key(raw).map(|_| ())
+}
+
+#[cfg(test)]
+type VerifyHook = fn(&str) -> Result<(), LicenseError>;
+
+#[cfg(test)]
+thread_local! {
+    static VERIFY_HOOK: std::cell::Cell<Option<VerifyHook>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(test)]
+pub(crate) fn set_verify_hook(hook: Option<VerifyHook>) {
+    VERIFY_HOOK.with(|cell| cell.set(hook));
+}
+
+pub(crate) fn now_secs() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
@@ -377,7 +430,7 @@ pub fn machine_id() -> String {
 
 /// What the server sees: a hash, the same for every Spiral app on this machine,
 /// so the four apps count as one device.
-fn device_id() -> String {
+pub(crate) fn device_id() -> String {
     hash_hex(&machine_id())
 }
 
@@ -403,7 +456,9 @@ fn classify_validator(
     let code = error.unwrap_or("unknown");
     match code {
         "invalid_key" | "wrong_app" => Err(LicenseError::InvalidKey),
-        "refunded" | "revoked" | "disputed" | "expired" | "no_access" => Err(LicenseError::NoAccess),
+        "refunded" | "revoked" | "disputed" | "expired" | "no_access" => {
+            Err(LicenseError::NoAccess)
+        }
         "device_limit" | "device_mismatch" => Err(LicenseError::DeviceMismatch),
         "validator_not_configured" => Err(LicenseError::ValidatorNotConfigured),
         "bad_request" | "missing_fields" | "bad_json" => Err(LicenseError::Other(format!(
@@ -417,7 +472,7 @@ fn classify_validator(
     }
 }
 
-fn grace_eligible(e: &LicenseError) -> bool {
+pub(crate) fn grace_eligible(e: &LicenseError) -> bool {
     matches!(
         e,
         LicenseError::Network(_) | LicenseError::ValidatorNotConfigured
@@ -463,6 +518,20 @@ pub async fn activate_with_code(
     code: &str,
     validator_url: &str,
 ) -> Result<(), LicenseError> {
+    let signed = signed_key_for_code(email, code, validator_url).await?;
+    store_key(app, &signed)?;
+    save_status(app, &signed)?;
+    for account in [LEGACY_KEY_ACCOUNT, LEGACY_STATUS_ACCOUNT] {
+        delete_account(app, account);
+    }
+    Ok(())
+}
+
+pub(crate) async fn signed_key_for_code(
+    email: &str,
+    code: &str,
+    validator_url: &str,
+) -> Result<String, LicenseError> {
     let email = normalize_email(email)?;
     let code = normalize_code(code)?;
     let body = post_email_step(
@@ -478,13 +547,8 @@ pub async fn activate_with_code(
     let signed = body
         .key
         .ok_or_else(|| LicenseError::Network("server returned no key".into()))?;
-    verify_key(&signed)?;
-    store_key(app, &signed)?;
-    save_status(app, &signed)?;
-    for account in [LEGACY_KEY_ACCOUNT, LEGACY_STATUS_ACCOUNT] {
-        delete_account(app, account);
-    }
-    Ok(())
+    accept_key(&signed)?;
+    Ok(signed)
 }
 
 /// Like `classify_validator`, plus the email-step verdicts. A rate limit is a
@@ -537,12 +601,15 @@ async fn post_email_step(
 
 /// What a launch decides, given the stored key's offline check and its last online check.
 #[derive(Debug, PartialEq, Eq)]
-enum Launch {
+pub(crate) enum Launch {
     Licensed,
     CheckOnline,
 }
 
-fn launch_step(offline: Result<(), LicenseError>, age: Option<u64>) -> Result<Launch, LicenseError> {
+pub(crate) fn launch_step(
+    offline: Result<(), LicenseError>,
+    age: Option<u64>,
+) -> Result<Launch, LicenseError> {
     offline?;
     match age {
         Some(age) if age < RECHECK_SECS => Ok(Launch::Licensed),
@@ -562,6 +629,18 @@ fn current_validity(
     }
 }
 
+static MEM_EXCHANGE: std::sync::Mutex<Option<LicenseError>> = std::sync::Mutex::new(None);
+
+fn mem_exchange_block() -> Option<LicenseError> {
+    MEM_EXCHANGE.lock().ok()?.clone()
+}
+
+fn remember_mem_exchange(err: LicenseError) {
+    if let Ok(mut slot) = MEM_EXCHANGE.lock() {
+        *slot = Some(err);
+    }
+}
+
 /// Launch check. Offline while the last online check is under a week old.
 pub async fn ensure_licensed(app: AppId, validator_url: &str) -> Result<(), LicenseError> {
     let Some(key) = read_account_checked(app, KEY_ACCOUNT)? else {
@@ -573,6 +652,18 @@ pub async fn ensure_licensed(app: AppId, validator_url: &str) -> Result<(), Lice
     };
     let now = now_secs();
     let age = checked_age(app, &key, now);
+    if key.starts_with("mem_") {
+        if let Some(err) = mem_exchange_block() {
+            return Err(err);
+        }
+        return match activate(app, &key, validator_url).await {
+            Err(err) if grace_eligible(&err) => {
+                remember_mem_exchange(err.clone());
+                Err(err)
+            }
+            other => other,
+        };
+    }
     if launch_step(verify_key(&key).map(|_| ()), age)? == Launch::Licensed {
         return Ok(());
     }
@@ -586,7 +677,11 @@ pub async fn ensure_licensed(app: AppId, validator_url: &str) -> Result<(), Lice
 }
 
 /// POST { key, app, device } and return the signed key the server holds for it.
-async fn validate_online(key: &str, device: &str, validator_url: &str) -> Result<String, LicenseError> {
+pub(crate) async fn validate_online(
+    key: &str,
+    device: &str,
+    validator_url: &str,
+) -> Result<String, LicenseError> {
     let client = http_client()?;
     let res = client
         .post(validator_url)
@@ -704,7 +799,8 @@ mod tests {
         }
         fn key(&self, kid: &str, app: &str) -> String {
             use ed25519_dalek::Signer as _;
-            let json = format!(r#"{{"v":1,"kid":"{kid}","app":"{app}","lid":"lic_t","eh":"0","iat":1}}"#);
+            let json =
+                format!(r#"{{"v":1,"kid":"{kid}","app":"{app}","lid":"lic_t","eh":"0","iat":1}}"#);
             let body = format!("LIC1.{}", URL_SAFE_NO_PAD.encode(json));
             let sig = self.0.sign(body.as_bytes());
             format!("{body}.{}", URL_SAFE_NO_PAD.encode(sig.to_bytes()))
@@ -730,10 +826,15 @@ mod tests {
     fn vector_signature_checks_out_with_its_payload() {
         // Re-sign the vector's payload check without the app gate: signature bytes must verify.
         let parts: Vec<&str> = VECTOR_KEY.split('.').collect();
-        let key = VerifyingKey::from_bytes(&STANDARD.decode(VECTOR_PUB).unwrap().try_into().unwrap()).unwrap();
+        let key =
+            VerifyingKey::from_bytes(&STANDARD.decode(VECTOR_PUB).unwrap().try_into().unwrap())
+                .unwrap();
         let sig: [u8; 64] = b64url_decode(parts[2]).unwrap().try_into().unwrap();
         assert!(key
-            .verify_strict(format!("LIC1.{}", parts[1]).as_bytes(), &Signature::from_bytes(&sig))
+            .verify_strict(
+                format!("LIC1.{}", parts[1]).as_bytes(),
+                &Signature::from_bytes(&sig)
+            )
             .is_ok());
     }
 
@@ -748,7 +849,10 @@ mod tests {
         assert!(verify_key_with(&s.key("zz", "spiral"), keys).is_err());
         assert!(verify_key_with(&s.key("t1", "ember"), keys).is_err());
         // Every single-character change.
-        let alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".chars().collect();
+        let alphabet: Vec<char> =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+                .chars()
+                .collect();
         let chars: Vec<char> = good.chars().collect();
         for i in (5..chars.len()).step_by(2) {
             if chars[i] == '.' {
@@ -796,7 +900,10 @@ mod tests {
             ("disputed", LicenseError::NoAccess),
             ("device_limit", LicenseError::DeviceMismatch),
         ] {
-            assert_eq!(classify_validator(false, false, false, false, Some(code)), Err(want));
+            assert_eq!(
+                classify_validator(false, false, false, false, Some(code)),
+                Err(want)
+            );
         }
     }
 
@@ -820,10 +927,19 @@ mod tests {
     #[test]
     fn launch_is_offline_inside_the_recheck_window() {
         assert_eq!(launch_step(Ok(()), Some(0)), Ok(Launch::Licensed));
-        assert_eq!(launch_step(Ok(()), Some(RECHECK_SECS - 1)), Ok(Launch::Licensed));
-        assert_eq!(launch_step(Ok(()), Some(RECHECK_SECS)), Ok(Launch::CheckOnline));
+        assert_eq!(
+            launch_step(Ok(()), Some(RECHECK_SECS - 1)),
+            Ok(Launch::Licensed)
+        );
+        assert_eq!(
+            launch_step(Ok(()), Some(RECHECK_SECS)),
+            Ok(Launch::CheckOnline)
+        );
         assert_eq!(launch_step(Ok(()), None), Ok(Launch::CheckOnline));
-        assert_eq!(launch_step(Err(LicenseError::InvalidKey), Some(0)), Err(LicenseError::InvalidKey));
+        assert_eq!(
+            launch_step(Err(LicenseError::InvalidKey), Some(0)),
+            Err(LicenseError::InvalidKey)
+        );
     }
 
     #[test]
@@ -892,7 +1008,9 @@ mod tests {
         assert_eq!(fresh.get_password().unwrap(), value);
         fresh.delete_credential().unwrap();
         assert!(matches!(
-            keyring::Entry::new(&service, "license").unwrap().get_password(),
+            keyring::Entry::new(&service, "license")
+                .unwrap()
+                .get_password(),
             Err(keyring::Error::NoEntry)
         ));
     }
@@ -974,7 +1092,10 @@ mod tests {
         let url = spawn_json_once(403, r#"{"ok":false,"error":"refunded"}"#);
         let err = validate_online("LIC1.x.y", "dev", &url).await.unwrap_err();
         assert_eq!(err, LicenseError::NoAccess);
-        assert_eq!(current_validity(Err(err), Some(0)), Err(LicenseError::NoAccess));
+        assert_eq!(
+            current_validity(Err(err), Some(0)),
+            Err(LicenseError::NoAccess)
+        );
     }
 
     #[tokio::test]
@@ -989,14 +1110,23 @@ mod tests {
     #[tokio::test]
     async fn validate_online_returns_the_signed_key() {
         let url = spawn_json_once(200, r#"{"ok":true,"status":"active","key":"LIC1.a.b"}"#);
-        assert_eq!(validate_online("mem_x", "dev", &url).await.unwrap(), "LIC1.a.b");
+        assert_eq!(
+            validate_online("mem_x", "dev", &url).await.unwrap(),
+            "LIC1.a.b"
+        );
     }
 
     #[test]
     fn email_endpoints_extend_the_validator_url() {
         let base = "https://licensing.example/activate";
-        assert_eq!(email_endpoint(base, "request"), "https://licensing.example/activate/request");
-        assert_eq!(email_endpoint(base, "verify"), "https://licensing.example/activate/verify");
+        assert_eq!(
+            email_endpoint(base, "request"),
+            "https://licensing.example/activate/request"
+        );
+        assert_eq!(
+            email_endpoint(base, "verify"),
+            "https://licensing.example/activate/verify"
+        );
         assert_eq!(
             email_endpoint("http://localhost:8787/activate/", "verify"),
             "http://localhost:8787/activate/verify"
@@ -1005,10 +1135,31 @@ mod tests {
 
     #[test]
     fn normalizes_and_checks_emails() {
-        assert_eq!(normalize_email("  Buyer@Example.COM \n").unwrap(), "buyer@example.com");
-        assert_eq!(normalize_email("a.b+c@mail.co.uk").unwrap(), "a.b+c@mail.co.uk");
-        for bad in ["", "   ", "buyer", "@example.com", "buyer@", "buyer@example", "a@b@c.com", "a b@c.com", "a@.com", "a@com."] {
-            assert_eq!(normalize_email(bad), Err(LicenseError::InvalidEmail), "{bad}");
+        assert_eq!(
+            normalize_email("  Buyer@Example.COM \n").unwrap(),
+            "buyer@example.com"
+        );
+        assert_eq!(
+            normalize_email("a.b+c@mail.co.uk").unwrap(),
+            "a.b+c@mail.co.uk"
+        );
+        for bad in [
+            "",
+            "   ",
+            "buyer",
+            "@example.com",
+            "buyer@",
+            "buyer@example",
+            "a@b@c.com",
+            "a b@c.com",
+            "a@.com",
+            "a@com.",
+        ] {
+            assert_eq!(
+                normalize_email(bad),
+                Err(LicenseError::InvalidEmail),
+                "{bad}"
+            );
         }
         let long = format!("{}@x.io", "a".repeat(250));
         assert_eq!(normalize_email(&long), Err(LicenseError::InvalidEmail));
@@ -1045,7 +1196,10 @@ mod tests {
             ("revoked", LicenseError::NoAccess),
             ("device_limit", LicenseError::DeviceMismatch),
         ] {
-            assert_eq!(classify_email_step(false, false, false, false, Some(code)), Err(want));
+            assert_eq!(
+                classify_email_step(false, false, false, false, Some(code)),
+                Err(want)
+            );
         }
         assert!(matches!(
             classify_email_step(false, false, false, false, Some("bad_request")),
@@ -1061,7 +1215,10 @@ mod tests {
     async fn bad_email_or_code_never_reaches_the_network() {
         // Nothing listens on port 9: a network call would surface as Network.
         let url = "http://127.0.0.1:9/activate";
-        assert_eq!(request_code("nope", url).await, Err(LicenseError::InvalidEmail));
+        assert_eq!(
+            request_code("nope", url).await,
+            Err(LicenseError::InvalidEmail)
+        );
         assert_eq!(
             activate_with_code(AppId::Wallpaper, "nope", "123456", url).await,
             Err(LicenseError::InvalidEmail)
@@ -1084,7 +1241,10 @@ mod tests {
     #[tokio::test]
     async fn request_code_reports_rate_limits() {
         let url = spawn_json_once(429, r#"{"ok":false,"error":"rate_limited"}"#);
-        assert_eq!(request_code("a@b.co", &url).await, Err(LicenseError::RateLimited));
+        assert_eq!(
+            request_code("a@b.co", &url).await,
+            Err(LicenseError::RateLimited)
+        );
     }
 
     #[tokio::test]
@@ -1110,11 +1270,16 @@ mod tests {
     /// Skips when the variables are unset.
     #[tokio::test]
     async fn live_server_activates_a_purchased_key() {
-        let (Ok(key), Ok(url)) = (std::env::var("SPIRAL_E2E_KEY"), std::env::var("SPIRAL_LICENSE_URL")) else {
+        let (Ok(key), Ok(url)) = (
+            std::env::var("SPIRAL_E2E_KEY"),
+            std::env::var("SPIRAL_LICENSE_URL"),
+        ) else {
             return;
         };
         verify_key(&key).expect("offline signature check");
-        let signed = validate_online(&key, &"d".repeat(64), &url).await.expect("server accepts the key");
+        let signed = validate_online(&key, &"d".repeat(64), &url)
+            .await
+            .expect("server accepts the key");
         assert_eq!(signed, key);
         println!("spiral license ok lid={}", verify_key(&signed).unwrap().lid);
     }
