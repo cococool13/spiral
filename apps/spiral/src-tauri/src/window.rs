@@ -1,5 +1,5 @@
 use tauri::webview::{Color, PageLoadEvent};
-use tauri::{WebviewUrl, WebviewWindowBuilder};
+use tauri::WebviewWindowBuilder;
 
 use crate::boot::BootState;
 
@@ -8,11 +8,14 @@ pub fn open(app: &tauri::AppHandle, boot: &BootState) -> tauri::Result<()> {
         .expect("boot state serializes")
         .replace('<', "\\u003c");
     let script = format!("window.__SPIRAL_BOOT__={json};");
-    let _window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-        .title("Spiral")
-        .inner_size(1120.0, 760.0)
-        .min_inner_size(800.0, 560.0)
-        .visible(true)
+    let config = app
+        .config()
+        .app
+        .windows
+        .first()
+        .cloned()
+        .expect("Spiral lists one window");
+    let _window = WebviewWindowBuilder::from_config(app, &config)?
         .background_color(stock_color())
         .initialization_script(script)
         .on_page_load(|window, payload| {
