@@ -1,6 +1,8 @@
 mod bench;
 mod boot;
 mod bundle;
+
+pub use bundle::payload_after_archive_root;
 mod license;
 mod paths;
 mod resume;
@@ -334,8 +336,9 @@ fn copy_roots(current: &std::path::Path) -> Vec<std::path::PathBuf> {
 fn reopen(path: &std::path::Path) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        let status = std::process::Command::new("/usr/bin/open")
-            .arg(path)
+        let (program, target) = bundle::relaunch_open(path);
+        let status = std::process::Command::new(program)
+            .arg(&target)
             .status()
             .map_err(|_| "Spiral could not reopen the renamed app.".to_string())?;
         if status.success() {

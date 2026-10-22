@@ -70,8 +70,8 @@ pub fn job(bundle: &Path) -> Option<RenameJob> {
     let parent = bundle.parent()?;
     let to = parent.join(NEW_NAME);
     Some(RenameJob {
-        old_exe: bundle.join("Contents/MacOS/spiral-wallpaper"),
-        new_exe: to.join("Contents/MacOS/spiral-wallpaper"),
+        old_exe: login_executable(bundle),
+        new_exe: login_executable(&to),
         from: bundle.to_path_buf(),
         to,
     })
@@ -121,7 +121,10 @@ pub fn rewrite_login_at(plist: &Path, old_exe: &Path, new_exe: &Path) -> Result<
 }
 
 pub fn current_bundle() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
+    bundle_containing(&std::env::current_exe().ok()?)
+}
+
+pub fn bundle_containing(exe: &Path) -> Option<PathBuf> {
     let mut cursor = exe.parent();
     while let Some(path) = cursor {
         if path.extension().and_then(|ext| ext.to_str()) == Some("app") {
@@ -130,6 +133,20 @@ pub fn current_bundle() -> Option<PathBuf> {
         cursor = path.parent();
     }
     None
+}
+
+pub fn payload_after_archive_root(entry: &Path) -> PathBuf {
+    let mut parts = entry.components();
+    parts.next();
+    parts.as_path().to_path_buf()
+}
+
+pub fn relaunch_open(bundle: &Path) -> (&'static str, PathBuf) {
+    ("/usr/bin/open", bundle.to_path_buf())
+}
+
+pub fn login_executable(bundle: &Path) -> PathBuf {
+    bundle.join("Contents/MacOS/spiral-wallpaper")
 }
 
 pub fn other_copy(current: &Path, roots: &[PathBuf]) -> Option<PathBuf> {
@@ -394,6 +411,45 @@ mod tests {
         let written = fs::read(&plist).unwrap();
         assert!(contains_slice(&written, &path_bytes(&job.new_exe)));
         assert!(!contains_slice(&written, &path_bytes(&job.old_exe)));
+    }
+
+    #[test]
+    fn updater_replacement_keeps_the_running_bundle_and_drops_the_archive_root() {
+        let running =
+            PathBuf::from("/Applications/Spiral Wallpaper.app/Contents/MacOS/spiral-wallpaper");
+        let bundle = bundle_containing(&running).unwrap();
+        assert_eq!(bundle, PathBuf::from("/Applications/Spiral Wallpaper.app"));
+        let entry = Path::new("Spiral.app/Contents/MacOS/spiral-wallpaper");
+        let installed = bundle.join(payload_after_archive_root(entry));
+        assert_eq!(installed, login_executable(&bundle));
+        assert_ne!(
+            installed,
+            PathBuf::from("/Applications/Spiral.app/Contents/MacOS/spiral-wallpaper")
+        );
+    }
+
+    #[test]
+    fn relaunch_opens_the_bundle_and_reads_the_plist_executable() {
+        let bundle = PathBuf::from("/Applications/Spiral Wallpaper.app");
+        let (program, target) = relaunch_open(&bundle);
+        assert_eq!(program, "/usr/bin/open");
+        assert_eq!(target, bundle);
+        let plist_executable = "spiral-wallpaper";
+        let started = bundle.join("Contents/MacOS").join(plist_executable);
+        assert_eq!(started, login_executable(&bundle));
+        let renamed_in_plist = bundle.join("Contents/MacOS").join("spiral");
+        assert_ne!(relaunch_open(&bundle).1, renamed_in_plist);
+        assert_eq!(relaunch_open(&bundle).1, bundle);
+    }
+
+    #[test]
+    fn login_launch_stores_the_executable_path() {
+        let bundle = PathBuf::from("/Applications/Spiral Wallpaper.app");
+        let program = login_executable(&bundle);
+        assert!(program.ends_with("Contents/MacOS/spiral-wallpaper"));
+        let (open_program, open_target) = relaunch_open(&bundle);
+        assert_eq!(open_program, "/usr/bin/open");
+        assert_ne!(open_target, program);
     }
 
     #[test]
