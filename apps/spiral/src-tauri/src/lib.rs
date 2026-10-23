@@ -352,13 +352,12 @@ fn rename_apply(app: AppHandle, shell: State<'_, shell::Shell>) -> Result<(), St
 
 #[tauri::command]
 fn bundle_trash(path: String) -> Result<(), String> {
-    let target = std::path::PathBuf::from(&path);
     let Some(current) = bundle::current_bundle() else {
         return Err("Spiral could not move that copy to the Trash.".into());
     };
-    if !bundle::trash_allowed(&current, &target) {
+    let Some(target) = bundle::trash_target(&current, &copy_roots(&current), &path) else {
         return Err("Spiral could not move that copy to the Trash.".into());
-    }
+    };
     move_to_trash(&target)
 }
 
@@ -398,10 +397,9 @@ fn reopen(path: &std::path::Path) -> Result<(), String> {
 fn move_to_trash(path: &std::path::Path) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        let text = path.to_string_lossy();
-        if text.contains('"') || text.contains('\n') {
+        let Some(text) = bundle::finder_delete_path(path) else {
             return Err("Spiral could not move that copy to the Trash.".into());
-        }
+        };
         let status = std::process::Command::new("/usr/bin/osascript")
             .arg("-e")
             .arg(format!(

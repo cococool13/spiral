@@ -175,6 +175,31 @@ pub fn trash_allowed(current: &Path, target: &Path) -> bool {
     !same_path(current, target) && spiral_bundle(target)
 }
 
+pub fn trash_target(current: &Path, roots: &[PathBuf], requested: &str) -> Option<PathBuf> {
+    if script_meta(requested) {
+        return None;
+    }
+    let offered = other_copy(current, roots)?;
+    if offered.display().to_string() != requested {
+        return None;
+    }
+    trash_allowed(current, &offered).then_some(offered)
+}
+
+pub fn finder_delete_path(path: &Path) -> Option<String> {
+    let text = path.to_string_lossy();
+    if script_meta(&text) {
+        None
+    } else {
+        Some(text.into_owned())
+    }
+}
+
+fn script_meta(text: &str) -> bool {
+    text.chars()
+        .any(|ch| matches!(ch, '\\' | '"' | '\n' | '\r'))
+}
+
 pub fn launch_agent_plist() -> Option<PathBuf> {
     let home = std::env::var_os("HOME")?;
     Some(
@@ -475,6 +500,20 @@ mod tests {
         assert!(!trash_allowed(&current, &current));
         assert!(trash_allowed(&current, &other));
         assert!(!trash_allowed(&current, &foreign));
+        let roots = [apps, elsewhere];
+        let shown = other.display().to_string();
+        assert_eq!(
+            trash_target(&current, &roots, &shown).as_deref(),
+            Some(other.as_path())
+        );
+        assert!(trash_target(&current, &roots, &format!("{shown}\\")).is_none());
+        assert!(trash_target(&current, &roots, r"C:\Spiral.app").is_none());
+        assert!(trash_target(&current, &roots, &current.display().to_string()).is_none());
+        assert!(finder_delete_path(Path::new(r"C:\Spiral.app")).is_none());
+        assert_eq!(
+            finder_delete_path(Path::new("/Applications/Spiral.app")).as_deref(),
+            Some("/Applications/Spiral.app")
+        );
     }
 
     #[cfg(unix)]
