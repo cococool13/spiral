@@ -67,11 +67,6 @@ describe("OfflineModel", () => {
     expect(downloadOfflineModel).not.toHaveBeenCalled();
   });
 
-  it("says nothing leaves the computer", async () => {
-    render(<OfflineModel />);
-    await waitFor(() => expect(screen.getByText("Nothing leaves this computer.")).toBeTruthy());
-  });
-
   it("downloads the one that was asked for, and shows real progress", async () => {
     render(<OfflineModel />);
     fireEvent.click(await screen.findByRole("button", { name: "Download, 5.7 GB" }));

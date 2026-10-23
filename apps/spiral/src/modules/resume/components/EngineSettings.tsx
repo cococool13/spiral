@@ -50,7 +50,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
   return (
     <>
       <h3 className="panel__heading">Wording engine</h3>
-      <p className="panel__lede">Spiral restyles a resume with no key at all.</p>
+      <p className="notice">{modeCopy(info)}</p>
 
       <div className="entry__grid">
         <label className="field">
@@ -101,7 +101,18 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
         </button>
       </div>
 
-      {info.provider === "local" ? <OfflineModel /> : null}
+      {info.provider === "local" ? (
+        <OfflineModel
+          onChanged={() => {
+            void engineInfo()
+              .then((next) => {
+                setInfo(next);
+                onChanged(next);
+              })
+              .catch((e) => setError(`${e}`));
+          }}
+        />
+      ) : null}
 
       {info.provider === "local" ? null : (
         <>
@@ -179,4 +190,11 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
       ) : null}
     </>
   );
+}
+
+function modeCopy(info: EngineInfo): string {
+  if (info.rulesOnly) return "Rules only. Tightening does not call a model.";
+  if (info.provider === "local") return "Tightening uses the model on this computer.";
+  const name = PROVIDERS.find((provider) => provider.id === info.provider)?.name ?? "the saved service";
+  return `Tightening uses ${name}.`;
 }

@@ -48,9 +48,17 @@ describe("EngineSettings", () => {
     expect(screen.getByText(/billed separately/)).toBeTruthy();
   });
 
-  it("says the free path is complete rather than selling the paid one", async () => {
+  it("names the service tightening uses", async () => {
     render(<EngineSettings onChanged={vi.fn()} />);
-    await waitFor(() => expect(screen.getByText(/no key at all/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Tightening uses Claude.")).toBeTruthy());
+  });
+
+  it("names rules only when that mode is on", async () => {
+    engineInfo.mockResolvedValueOnce({ ...base, rulesOnly: true });
+    render(<EngineSettings onChanged={vi.fn()} />);
+    await waitFor(() =>
+      expect(screen.getByText("Rules only. Tightening does not call a model.")).toBeTruthy(),
+    );
   });
 
   /** The key must never be rendered into the DOM in readable form, and must

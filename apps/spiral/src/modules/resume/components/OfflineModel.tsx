@@ -17,7 +17,10 @@ import { Notice } from "./Notice";
  * bytes, and downloading a model chooses it — nobody fetches gigabytes they did
  * not mean to use.
  */
-export function OfflineModel({ onInstalled }: { onInstalled?: () => void } = {}) {
+export function OfflineModel({
+  onInstalled,
+  onChanged,
+}: { onInstalled?: () => void; onChanged?: () => void } = {}) {
   const [list, setList] = useState<ModelList | null>(null);
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
@@ -35,6 +38,7 @@ export function OfflineModel({ onInstalled }: { onInstalled?: () => void } = {})
     try {
       const next = await work();
       setList(next);
+      onChanged?.();
       return next;
     } catch (e) {
       setError(`${e}`);
@@ -72,7 +76,6 @@ export function OfflineModel({ onInstalled }: { onInstalled?: () => void } = {})
   return (
     <>
       <h3 className="panel__heading">Offline model</h3>
-      <p className="panel__lede">Nothing leaves this computer.</p>
 
       <ul className="models">
         {list.models.map((model) => (
