@@ -1,8 +1,8 @@
 # Design
 
 Visual system of every Spiral app and of spiralcc.tech. Source of truth:
-`brand/tokens.css`, synced into each surface (`collection`, `apps/wallpaper`,
-`apps/clean`, `apps/Resume`, `apps/slim/desktop`) — never edit a synced copy —
+`brand/tokens.css`, synced into each surface (`collection`, `apps/spiral`).
+Never edit a synced copy.
 and `brand/guide.html`.
 
 Website composition lock: `docs/reference/spiral-redesign-lock.md`

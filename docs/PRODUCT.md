@@ -2,211 +2,179 @@
 
 <!-- impeccable:product-schema 1 -->
 
-What every Spiral app has in common, and where each one's own scope is written
-down. This file used to be Spiral Wallpaper's brief, back when Wallpaper was the
-only app; the parts of it that were never about wallpaper are collection-wide
-and are kept here unchanged.
+What Spiral is. Wallpaper and Resume are modules of that one app.
 
-**This file is not the authority on any single app.** Scope, decisions and
-milestones live with the app — see the table under Purpose. When this file and
-an app's spec disagree about that app, the spec is right and this file is stale.
+**This file is not the authority on a screen.** Scope and decisions live in
+`docs/architecture/DESIGN.md` and `apps/spiral/CONTEXT.md`. When this file and
+those disagree, those are right and this file is stale.
 
 ## Platform
 
-desktop (macOS and Windows; Clean is macOS only). The website under
-`collection/` is a separate product.
+Desktop, macOS and Windows. The website under `collection/` is a separate product.
 
 ## Users
 
 People on macOS or Windows who want a small tool to do one job and then get out
 of the way. No accounts, no configuration appetite, no interest in a workflow.
-Some are privacy-conscious and chose Spiral specifically because it makes no
-hidden network calls.
+Some are privacy-conscious and chose Spiral because it makes no hidden network calls.
 
-| App | Who, specifically |
+| Module | Who, specifically |
 | --- | --- |
-| Wallpaper | People who want a good desktop wallpaper without ceremony. They are in a 30-second errand, not a workflow: open, browse, click, done. |
-| Slim | People who want a browser that does not phone home, and would rather see the change than trust a claim. |
-| Clean | People who want disk space back and have been burned by a cleaner that took something it should not have. |
-| Resume | People with a resume and an application to send, who want it to look typeset and to still say exactly what they wrote. |
+| Wallpaper | People who want a desktop wallpaper without ceremony. They are in a 30-second errand: open, browse, click, done. |
+| Resume | People with a resume and an application to send, who want it typeset and still saying what they wrote. |
 
-## Product Purpose
+## Product purpose
 
-Small tools. No bloat. Your data stays yours. Each app is one window and one
-job, and closing the window ends it — nothing keeps running.
+Small tools. No bloat. Your data stays yours. Spiral is one window. Closing the
+window ends it. Nothing keeps running.
 
-Success for the collection: the person finishes the errand, trusts what happened
-because it was stated on screen, and has nothing still running afterwards.
+Success: the person finishes the errand, trusts what happened because it was
+stated on screen, and has nothing still running afterwards.
 
-| App | What it is for | Its own spec |
-| --- | --- | --- |
-| **Spiral Wallpaper** | The first app of the Spiral brand: a privacy-first, super-lightweight wallpaper setter over Wallhaven's free API. Click a wallpaper, it downloads and applies. The app quits when the window closes. Unlocks with a Spiral Collection license. Success = the errand completes in under a minute and the user trusts what the app did, because everything it does is stated on-screen. | [`apps/wallpaper/README.md`](../apps/wallpaper/README.md) |
-| **Spiral Slim** | Debloats and hardens Brave, Chrome, Edge and Firefox using enterprise policies the browsers respect natively, showing every change before it makes it. Script-first on every platform by design. | [`apps/slim/`](../apps/slim/) |
-| **Spiral Clean** | Reclaims disk space and uninstalls apps on macOS. Nothing is removed unless it is in the shipped safe-category catalog, and every removal is proven safe by a Rust test suite before it ships. | [`apps/clean/docs/design-spec.md`](../apps/clean/docs/design-spec.md) |
-| **Spiral Resume** | A resume goes in; a typeset PDF or Word file comes out, the wording is tightened, and no fact is allowed to change. Digit runs and capitalized names are compared in order after every rewrite; a mechanical miss still leaves the Check screen as the backstop. | [`apps/Resume/docs/design-spec.md`](../apps/Resume/docs/design-spec.md) |
+| Module | What it is for |
+| --- | --- |
+| Wallpaper | A wallpaper setter over Wallhaven's free API. Click a wallpaper, it downloads and applies. The app quits when the window closes. A Spiral license covers it. |
+| Resume | A resume goes in. A typeset PDF or Word file comes out. The wording can be tightened. No fact is allowed to change. Digit runs and capitalized names are compared in order after every rewrite. |
 
 ## Positioning
 
-A neighbouring wallpaper, cleaner, or resume tool can copy a feature list.
-None of them can truthfully copy this: **no account, no telemetry, and every
-network host named on screen** — and, in Resume, a fact that moves is a
-rejected rewrite, not a warning.
+A neighbouring wallpaper or resume tool can copy a feature list. None of them
+can truthfully copy this: **no account, no telemetry, and every network host
+named on screen**. In Resume, a fact that moves is a rejected rewrite.
 
 The website is a separate product with a separate charter. It may use motion
-and video; the apps may not import that ambition, and the site may not import
+and video. The app may not import that ambition, and the site may not import
 app restraint. See [`collection/README.md`](../collection/README.md).
 
-## Operating Context
+## Operating context
 
-The apps are desktop windows on macOS and Windows (Clean is macOS only). They
-are independent pnpm + Tauri projects, not a root workspace. Closing the window
-quits; there is no tray and no background process.
+Spiral is a desktop window on macOS and Windows. `apps/spiral` and `collection`
+are independent pnpm projects, not a root workspace. Closing the window quits.
+There is no tray and no background process.
 
 Work happens on the person's machine, on their files. Homebrew casks in
 `cococool13/homebrew-spiral` are how macOS installs stay current. Releases are
-cut with `node scripts/release.mjs`, never a bare git tag.
+cut with `node scripts/release.mjs spiral <x.y.z>`, never a bare git tag.
 
 Resume's Check screen is the human backstop for a mis-parse. Wallpaper's
-Settings names the thumbnail cache cap. Slim shows every policy change before
-it writes. Clean only removes what a test has proved is in the safe catalog.
+Settings names the thumbnail cache cap.
 
-## Capabilities and Constraints
+## Capabilities and constraints
 
 Shared, and not treated as gaps:
 
 - No account, no analytics, no telemetry.
-- Where an app talks to the internet, it names the host and talks to nothing else.
+- Where Spiral talks to the internet, it names the host and talks to nothing else.
 - Nothing is uploaded for processing.
 - No undisclosed background process.
-- **One license** ($15, Stripe checkout) unlocks all four desktop apps. Keys are
-  signed and verify offline; Spiral's licensing Worker is asked about once a week
-  (30-day grace). Checkout URLs live in `collection/lib/checkout.ts`. See [`licensing.md`](licensing.md).
+- **One license** ($15, Stripe checkout) covers Spiral. Keys are signed and
+  verify offline. Spiral's licensing Worker is asked about once a week
+  (30-day grace). Checkout URLs live in `collection/lib/checkout.ts`. See
+  [`licensing.md`](licensing.md).
 
-Per app, as already confirmed:
+Per module:
 
 - Wallpaper reaches Wallhaven's public SFW API when you search or apply. It
   validates an image before writing or applying it, and caches thumbnails
   locally with a cap the person can see. On open it calls `license_ensure`
   against the spiral-license worker, and the updater may ask GitHub once
   whether a newer build exists. Closing the window quits.
-- Slim writes enterprise policy files on the machine and shows each change first.
-  On launch it calls `license_ensure` against the spiral-license worker.
-- Clean calls `license_ensure` against the spiral-license worker on launch.
-  Removals go to Trash. The safety-core tests are the gate for every removal
-  change.
-- Resume's free tier never opens a connection. A model tier exists only because
-  the person chose one — their own API key, or a model downloaded to disk —
-  and the app names which engine did the work. Titles, employers, dates, schools
-  and numbers are extracted before a model sees anything and diffed afterwards.
+- Resume's free pass never opens a connection. A model runs only if you add
+  your own API key or download one to disk, and the app names which engine did
+  the work. Titles, employers, dates, schools and numbers are extracted before
+  a model sees anything and checked afterwards.
 
-Out of Resume v1, recorded so later work does not "complete" them: job-description
+Out of Resume, recorded so later work does not add them: job-description
 tailoring, cover letters, ATS scores, a bundled CJK face.
 
-## Brand Commitments
+## Brand commitments
 
-Name: Spiral. Apps are Spiral Wallpaper, Spiral Slim, Spiral Clean, Spiral Resume.
+Name: Spiral. Wallpaper and Resume are modules, not separate products.
 
-Voice states, never sells. "No account needed." "Deletes 1.2 GB of caches.
-Nothing else." Errors name the problem and a next step. Not "Oops! Something
-went wrong."
+Voice states, never sells. "No account needed." Errors name the problem and a
+next step. Not "Oops! Something went wrong."
 
-Personality, already binding: "Complex but simple." Modern industrial — a
+Personality, already binding: "Complex but simple." Modern industrial. A
 concrete warehouse. Three pillars: privacy, ease of use, super lightweight.
 
 Identity lives in `brand/`. No brand value is defined outside it. Surfaces copy
-what they need at build time; editing a synced copy is always wrong.
+what they need at build time. Editing a synced copy is always wrong.
 
-Anti-references, already binding: Electron-weight apps; warm editorial softness
-(Mastercard cream, circles, orbital arcs); upsells, account gates, and
-background services nobody asked for.
+Anti-references, already binding: Electron-weight apps. Warm editorial softness.
+Upsells, account gates, and background services nobody asked for.
 
-Visual recipes (cinematic black, helix red, glass only on controls, motion
-that explains state) live in [`DESIGN.md`](DESIGN.md), not here.
+Visual recipes live in [`DESIGN.md`](DESIGN.md), not here.
 
-## Evidence on Hand
+## Evidence on hand
 
 - Brand system: [`brand/`](../brand/), including `brand/guide.html` and
   `brand/tokens.css`.
-- Shipped: Spiral Wallpaper v1.0.3 (macOS signed and notarized; Windows built,
-  unsigned). Checksums ship as `SHA256SUMS.txt`.
-- Slim: shipped on macOS.
-- Clean: feature-complete, unreleased — blocked on signing, notarization, the
-  updater key, and nobody having yet opened it.
-- Resume: v0.1.1 (`resume-v0.1.1`). macOS signed and notarized; Windows unsigned.
+- Published download: Spiral Wallpaper v1.0.4. macOS is signed and notarized.
+  Windows is built and unsigned. Checksums ship as `SHA256SUMS.txt`.
+- Resume 0.1.2 remains at its release tag. Spiral 2.0.0 in this tree is not
+  published.
 
 Do not fabricate testimonials, download counts, employer placements, ATS pass
-rates, or "users say" copy. The apps have no telemetry, so those numbers do not
+rates, or "users say" copy. The app has no telemetry, so those numbers do not
 exist here.
 
-## Product Principles
+## Product principles
 
 1. **State every material action** before it happens. Trust is the product.
-2. **One window, one job, then quit.** Nothing keeps running.
+2. **One window, then quit.** Nothing keeps running.
 3. **The person's data stays on the machine.** A network call is an exception
    that must name its host.
-4. **The app's spec beats this file** when they disagree about that app.
+4. **The architecture spec beats this file** when they disagree.
 5. **Lightweight is a feature**, with one measured exception: Resume embeds
-   Typst so preview and export cannot disagree, and the README says so.
+   Typst in a helper so preview and export cannot disagree, and the README says so.
 
 ## Privacy position
 
-One position, kept the same way in every app: **no account, no telemetry, and no
-network request the user did not ask for.** Where an app talks to the internet at
-all, it names the host it talks to and talks to nothing else. Nothing is uploaded
-for processing; where an app can do work locally, it does it locally.
-
-The consequences are deliberate and are not treated as gaps to close later:
+No account, no telemetry, and no network request the user did not ask for.
+Where Spiral talks to the internet, it names the host and talks to nothing else.
+Nothing is uploaded for processing. Where the work can stay on the machine, it does.
 
 - Wallpaper reaches Wallhaven's public API when you search or apply. On open
   it calls `license_ensure` against the spiral-license worker, and the updater
-  may ask GitHub once for a newer build. It validates what it downloaded is an
+  may ask GitHub once for a newer build. It validates that a download is an
   image before it writes it.
-- Slim writes policy files on the user's own machine and shows each change first.
-  On launch it calls `license_ensure` against the spiral-license worker.
-- Clean calls `license_ensure` against the spiral-license worker on launch, and
-  moves recoverable items to the Trash rather than deleting them.
-- Resume's free tier never opens a connection at all. A model tier exists only
-  because the user chose one — their own API key, or a model downloaded to their
-  own disk — and the app names which engine did the work, on the build screen
-  and under the result.
+- Resume's free pass never opens a connection. A model runs only because you
+  chose one, your own API key or a model downloaded to your disk, and the app
+  names which engine did the work.
 
-## Brand Personality
+## Brand personality
 
-"Complex but simple." Modern industrial: a concrete warehouse — concrete floors,
-few walls, metal beams. Sophisticated, professional, calm. Three pillars:
-privacy, ease of use, super lightweight. Voice states, never sells ("No account
-needed." "Deletes 1.2 GB of caches. Nothing else.").
+"Complex but simple." Modern industrial: a concrete warehouse. Sophisticated,
+professional, calm. Three pillars: privacy, ease of use, super lightweight.
+Voice states, never sells.
 
 ## Anti-references
 
-- Electron-style heavyweight apps; anything that needs a loading spinner to boot.
-- Warm editorial softness (the Mastercard reference's cream palette, circles,
-  orbital arcs) — Spiral is concrete, not cream.
+- Electron-style heavyweight apps. Anything that needs a loading spinner to boot.
+- Warm editorial softness. Spiral is concrete, not cream.
 - Apps that upsell, gate content behind accounts, or run background services
   nobody asked for.
 - "Oops! Something went wrong" error voice.
 
-## Design Principles
+## Design principles
 
-1. Everything is stated — no behavior that matters is left "obvious," from
+1. Everything is stated. No behavior that matters is left obvious, from
    network calls to cache caps.
-2. Depth from material, not decoration — flat black surfaces, hairline rules;
-   glass exists only on controls, and sparingly.
-3. Red has one job — the mark, interaction, warnings. Never body copy, never mood.
-4. Motion explains state, never decorates — one easing curve; entrances rise,
+2. Depth from material, not decoration. Flat black surfaces, hairline rules.
+   Glass exists only on controls, and sparingly.
+3. Red has one job. The mark, interaction, warnings. Never body copy, never mood.
+4. Motion explains state, never decorates. One easing curve. Entrances rise,
    exits fade.
-5. Lightweight is a feature — every dependency and frame spent must earn its
-   place. Spiral Resume is the one measured exception, and the README says so
-   rather than dropping the claim quietly: it embeds the Typst typesetter so the
-   preview and the exported PDF cannot disagree.
+5. Lightweight is a feature. Every dependency and frame spent must earn its
+   place. Resume is the measured exception, and the README says so.
 
-These are the apps' rules. **The website plays by different ones** — decorative
+These are the app's rules. **The website plays by different ones.** Decorative
 motion is wanted there, and video belongs there. See
 [`collection/README.md`](../collection/README.md) before working in `collection/`.
 
-## Accessibility & Inclusion
+## Accessibility and inclusion
 
 WCAG AA target using the brand guide's measured contrast table (gray on black
-for secondary; paper labels on red-fill at bold ≥15px). Full keyboard
-navigation including grid arrows; 2px helix focus outline at 3px offset;
-`prefers-reduced-motion` honored globally; nothing interactive below 44×44px.
+for secondary; paper labels on red-fill at bold 15px or larger). Full keyboard
+navigation including grid arrows. 2px helix focus outline at 3px offset.
+`prefers-reduced-motion` honored globally. Nothing interactive below 44 by 44 px.

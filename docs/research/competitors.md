@@ -53,7 +53,7 @@ Universal Mach-O, arm64 + x86_64. SDK 27.0, Mach-O minimum 11.0. Developer ID si
 
 First window 1120 × 760 at window level, plus a 500 × 500 off-screen window. Whether the visible window was the license gate or the grid was not recorded. No license was entered.
 
-Apply, from `apps/wallpaper/src-tauri/src/setter.rs`: on the main thread, `NSWorkspace.setDesktopImageURL:forScreen:options:error:` for every `NSScreen`, with scaling and allow-clipping. An all-spaces option is not set. Thumbnail path, from `cache.rs` and `wallhaven.rs`: Wallhaven `thumbs.large` is stored in an on-disk cache with a 200 MB cap, then the full file is downloaded and set. Time to first thumbnails, apply time, and Space coverage were not measured.
+Apply, from `apps/spiral/src-tauri/src/wallpaper/setter.rs`: on the main thread, `NSWorkspace.setDesktopImageURL:forScreen:options:error:` for every `NSScreen`, with scaling and allow-clipping. An all-spaces option is not set. Thumbnail path, from `cache.rs` and `wallhaven.rs`: Wallhaven `thumbs.large` is stored in an on-disk cache with a 200 MB cap, then the full file is downloaded and set. Time to first thumbnails, apply time, and Space coverage were not measured.
 
 ### Muro 6.0.2
 

@@ -4,7 +4,7 @@
 Concrete surfaces from the Spiral tokens, the mark in one color, hairline
 rules — same material language as the app and the DMG background.
 
-Run from apps/wallpaper/:  python3 scripts/make-nsis-images.py
+Run from apps/spiral/:  python3 scripts/make-nsis-images.py
 """
 
 from PIL import Image, ImageDraw, ImageFont

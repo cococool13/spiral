@@ -8,7 +8,7 @@
 # looks like. Six findings, all this one string, all in policy tables.
 #
 # It is allowlisted by exact secret value rather than by path: allowlisting
-# apps/slim/** would stop scanning a directory that writes system policy and
+# A path allowlist would stop scanning a directory that writes system policy and
 # shells out with elevation, which is the last place worth going quiet. A real
 # key committed beside these tables still fails.
 #

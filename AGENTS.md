@@ -4,7 +4,7 @@ Brand system, native apps, and the spiralcc.tech site.
 **Website host:** Cloudflare Pages project `spiral-collection` (`spiralcc.tech`;
 `spiral-collection.pages.dev` remains the project hostname).
 
-Current app release **v1.0.4** (Spiral Wallpaper).
+Current published download **v1.0.4** (Spiral Wallpaper). The app in this repo is Spiral 2.0.0.
 
 > **Two Wallpaper codebases exist in history.** This repo (`github.com/cococool13/spiral`)
 > is the shipped one — pnpm **11.9**, **no tray, closing the window quits**. The Codex-built
@@ -16,17 +16,17 @@ Current app release **v1.0.4** (Spiral Wallpaper).
 - `docs/licensing.md` — checkout URLs, license gate, licensing server
 - `brand/README.md` — what is canonical and how surfaces consume it
 - `collection/README.md` — **required before any `collection/` work** (charter, budgets, stack)
-- `apps/clean/README.md` — Clean safety model and what blocks release
-- `docs/PRODUCT.md` — shared product language (not per-app scope)
+- `docs/PRODUCT.md` — shared product language
 - `docs/DESIGN.md` — shipped visual system
-- `apps/<app>/CONTEXT.md` — ubiquitous language for that app (all four have one)
+- `apps/spiral/CONTEXT.md` — ubiquitous language for Spiral
 - `brand/guide.html` — full brand reference
 
 ## Stack
 
-- **Apps** (`apps/wallpaper`, `apps/clean`, `apps/Resume`): React + Vite + strict TypeScript UI;
+- **App** (`apps/spiral`): React + Vite + strict TypeScript UI;
   Tauri 2 / Rust owns network, cache, settings, OS ops. Fonts self-hosted (no font CDN).
-- **Slim** (`apps/slim`): Python + Tauri wizard (shipped on macOS).
+  Wallpaper and Resume are modules. Resume's typesetter and model runner live in a
+  helper process, not in the shell.
 - **Website** (`collection/`): Next.js App Router + React 19 + Tailwind v4, `output: 'export'`,
   Biome 2 lint/format. Deployed to Cloudflare Pages. Checkout URLs in
   `collection/lib/checkout.ts`.
@@ -37,9 +37,9 @@ Current app release **v1.0.4** (Spiral Wallpaper).
   Hex gate: `node scripts/check-hex.mjs <surface>`. Never edit a synced copy.
   Releases: `node scripts/release.mjs` also rewrites `collection/lib/apps.ts`
   through `scripts/update-catalogue.mjs`.
-- **No root workspace.** Each of `apps/wallpaper`, `apps/clean`, `apps/Resume`, and `collection`
-  is an independent pnpm project (`packageManager: pnpm@11.9.0`). `cd` into one before running
-  anything. Prerequisites: Node 22+, pnpm 11.9, Rust via rustup, platform build tools.
+- **No root workspace.** `apps/spiral` and `collection` are independent pnpm projects
+  (`packageManager: pnpm@11.9.0`). `cd` into one before running anything.
+  Prerequisites: Node 22+, pnpm 11.9, Rust via rustup, platform build tools.
 
 Apps and the website share a brand, not a performance charter — details live in
 `collection/README.md`.
@@ -47,10 +47,9 @@ Apps and the website share a brand, not a performance charter — details live i
 ## Cursor Cloud
 
 Cloud agents run **Linux**. `collection` works there (`pnpm dev` on localhost:3000).
-The four apps are Tauri; `pnpm tauri dev` / `build` / `pnpm smoke` only prove
-native behavior on macOS/Windows. On the VM, JS/TS frontends and `cargo test` /
-`clippy` still run. Clean has macOS-only tests (login items, firmlinks, `.app`
-plists) that fail on Linux by design — CI covers those on macOS.
+The app is Tauri; `pnpm tauri dev` / `build` / `pnpm smoke` only prove
+native behavior on macOS/Windows. On the VM, the JS/TS frontend and `cargo test` /
+`clippy` still run. macOS bundle tests run in CI on macOS.
 
 The snapshot already has Rust stable via rustup (≥1.85 / edition2024), Tauri
 GTK/WebKit libs, and pytest (`python3 -m pytest`; `~/.local/bin` is not on
@@ -59,33 +58,16 @@ GTK/WebKit libs, and pytest (`python3 -m pytest`; `~/.local/bin` is not on
 ## Commands
 
 ```bash
-# Wallpaper
-cd apps/wallpaper
+# Spiral
+cd apps/spiral
 pnpm install
 pnpm check:hex       # reject colors outside the approved token set
 pnpm build           # token check + TypeScript + Vite production build
+pnpm test
 pnpm tauri dev
 pnpm tauri build
 pnpm smoke           # native e2e; non-zero on failure
-
-# Clean
-cd apps/clean
-pnpm install && pnpm check:hex && pnpm build
-pnpm test            # Vitest; not run by `pnpm build`
-pnpm tauri dev
-cd src-tauri && cargo test && cargo clippy --all-targets
-
-# Resume
-cd apps/Resume
-pnpm install && pnpm check:hex && pnpm build
-pnpm test
-pnpm tauri dev
-cd src-tauri && cargo test && cargo clippy --all-targets
-
-# Resume ignored probes (write nothing into the repo)
-cd apps/Resume/src-tauri
-SPIRAL_RESUME_SAMPLES="../Resume Template" cargo test --lib import::real_files -- --ignored --nocapture
-SPIRAL_RESUME_DUMP_DIR=/tmp/spiral-previews cargo test --lib templates::dump -- --ignored
+cd src-tauri && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings
 
 # Website
 cd collection
@@ -103,20 +85,17 @@ node scripts/check-checkout.mjs  # CI gate — mirrors must match canonical
 cd crates/spiral-license && cargo test
 ```
 
-**Never run `cargo fmt` in `apps/clean`.** No `rustfmt.toml`, no CI format check; a blind fmt
-rewrites ~1170 lines of unrelated noise. Match surrounding style by hand.
-
-**Cut every release with `node scripts/release.mjs <app> <x.y.z>`**, never a bare `git tag`.
+**Cut every release with `node scripts/release.mjs spiral <x.y.z>`**, never a bare `git tag`.
 It bumps the four version files, commits, and tags that commit (pushes only with `--push`).
 `node scripts/version.mjs tag <tag>` inspects an existing tag.
 
 **After any release, `collection/lib/apps.ts` goes stale.** Check with
 `node scripts/downloads.mjs latest` (CI also runs this on `release: published` and weekly).
 
-Tag prefixes: Wallpaper bare `v*`, Slim `slim-v*`, Clean `clean-v*`, Resume `resume-v*`.
-Shared workflow `.github/workflows/release-app.yml` (Clean: macOS only, no updater).
-Resume uses `.github/workflows/release-resume.yml` (macOS + Windows, `sidecar: true` for
-`llama-server`; models download at runtime — see `apps/Resume/docs/offline-model.md`).
+Live tags are `v2` and later. `v1`, `slim-v*`, `clean-v*`, and `resume-v*` are retired.
+`node scripts/version.mjs tag` prints `retired` for those and exits 0.
+Shared workflow `.github/workflows/release-app.yml`. Spiral passes `sidecar: true`
+and `bundle-config: src-tauri/tauri.bundle.conf.json`. Models download at runtime.
 
 **Every macOS release:** bump the matching cask in
 [`cococool13/homebrew-spiral`](https://github.com/cococool13/homebrew-spiral)
@@ -126,7 +105,7 @@ Resume uses `.github/workflows/release-resume.yml` (macOS + Windows, `sidecar: t
 
 ```
 brand/         design system — every colour, font, mark
-apps/          wallpaper | slim | clean | Resume  (capital R on Resume)
+apps/          spiral
 collection/    spiralcc.tech (Next.js static export → Pages spiral-collection)
 crates/        spiral-license — shared signed-key gate for desktop apps
 docs/          PRODUCT.md, DESIGN.md, licensing.md, reference/, specs
@@ -145,7 +124,7 @@ only in Documents or a sibling repo.
 - Preserve keyboard nav, visible focus, and reduced-motion behavior.
 - Source-only, privacy-first: no telemetry, accounts, silent startup, or undisclosed background process. License validation is a named call to Spiral's validator on launch — see `docs/licensing.md`.
 - Wallpaper: Wallhaven SFW only; closing the window quits (no tray); static wallpapers only until approved otherwise.
-- Resume: **no fact may ever change** (`src-tauri/src/gate.rs`). Parser lives in `parse_text/`; Typst is embedded as a Rust crate so preview and PDF cannot disagree. New templates/fields must appear in both Typst and DOCX halves and in the shared `FACTS` list in `docx.rs`.
+- Resume: **no fact may ever change** (`apps/spiral/src-tauri/crates/resume-core/src/gate.rs`). The parser lives in `parse_text/`. Typst is in the helper, so preview and PDF cannot disagree. New templates and fields must appear in both Typst and DOCX halves and in the shared `FACTS` list in `docx.rs`.
 - Native behavior must be verified on the affected OS; a frontend build alone does not prove wallpaper, signing, or installer behavior.
 
 ## Deploy
@@ -165,8 +144,6 @@ repo), not here. See `docs/licensing.md`.
 
 ## Definition of done
 
-- **App:** `pnpm build`. For Rust / wallpaper / cache / installer / updater / platform changes, also the relevant native smoke/build on the affected OS.
-- **Clean:** also `pnpm test` and `cargo test` from `src-tauri` always. Changes to `remove.rs` / `exclude.rs` / `paths.rs` need a mutation proof (ADR-0012).
-- **Resume:** also `pnpm test`, `cargo test`, and `cargo clippy --all-targets` every time. Parser/template changes: inspect the real-sample report.
+- **App:** `pnpm build` in `apps/spiral`. For Rust, wallpaper, cache, installer, updater, or platform changes, also the relevant native smoke or build on the affected OS. Resume parser and template changes also need `cargo test` and `cargo clippy --all-targets` from `src-tauri`.
 - **Website:** `pnpm lint`, `pnpm typecheck`, `pnpm build`.
 - Report exact commands run and anything still platform-unverified.
