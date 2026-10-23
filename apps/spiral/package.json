@@ -1,0 +1,43 @@
+{
+  "name": "spiral-wallpaper",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "sync-brand": "node ../../scripts/sync-brand.mjs spiral",
+    "predev": "node ../../scripts/sync-brand.mjs spiral",
+    "prebuild": "node ../../scripts/sync-brand.mjs spiral",
+    "dev": "vite",
+    "check:classes": "node scripts/check-classes.mjs",
+    "build": "node ../../scripts/check-hex.mjs spiral && node scripts/check-boundaries.mjs && node scripts/check-classes.mjs && tsc && vite build && node scripts/check-chunks.mjs",
+    "check:hex": "node ../../scripts/check-hex.mjs spiral",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:chunks": "node scripts/check-chunks.mjs",
+    "test": "vitest run && node --test scripts/sign-helpers.test.mjs scripts/windows-hook.test.mjs scripts/build-engine.test.mjs scripts/check-classes.test.mjs scripts/make-release-manifest.test.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "preview": "vite preview",
+    "tauri": "node scripts/tauri.mjs",
+    "build-sidecar": "node scripts/build-sidecar.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "~2.14.0",
+    "posthog-js": "1.438.19",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.6.0",
+    "jsdom": "^25.0.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.7",
+    "vitest": "^4.1.12"
+  }
+}

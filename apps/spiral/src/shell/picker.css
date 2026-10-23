@@ -1,0 +1,383 @@
+.picker {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 40px;
+  overflow: auto;
+  background: var(--stock);
+  color: var(--ink);
+  color-scheme: light dark;
+  font-family: var(--spiral-font-sans);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.picker ::selection {
+  background: var(--red);
+  color: var(--on-red);
+}
+
+.picker__head,
+.picker__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.picker__head {
+  gap: 24px;
+}
+
+.picker__foot {
+  gap: 14px;
+}
+
+.picker__mark {
+  height: 40px;
+  width: auto;
+}
+
+.picker h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.picker__plates {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 72px;
+  width: min(872px, 100%);
+}
+
+.picker__choice {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.picker__plate {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 400 / 250;
+}
+
+.picker__art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--stock-2);
+}
+
+.picker__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.picker__choice[aria-disabled="true"] .picker__art {
+  opacity: 0.45;
+}
+
+.picker__choice[aria-disabled="true"] .picker__name {
+  color: var(--ink-2);
+}
+
+.art-wall {
+  position: absolute;
+  inset: 0;
+  background: var(--stock-3);
+}
+
+.art-wall__ridge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 62%;
+  background: var(--ink);
+  clip-path: polygon(
+    0 78%,
+    16% 46%,
+    34% 64%,
+    52% 28%,
+    70% 58%,
+    86% 36%,
+    100% 52%,
+    100% 100%,
+    0 100%
+  );
+}
+
+.art-wall__field {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 22%;
+  background: var(--rule);
+}
+
+.art-page {
+  position: absolute;
+  top: 18px;
+  bottom: 0;
+  left: 50%;
+  width: 62%;
+  transform: translateX(-50%);
+  padding: 16px 14px 0;
+  background: var(--stock-3);
+  color: var(--ink);
+  font-family: Charter, Georgia, serif;
+}
+
+.art-page__name {
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+.art-page__label {
+  margin-top: 10px;
+  font-family: var(--spiral-font-sans);
+  font-size: 8px;
+  line-height: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.art-page__rule {
+  height: 1px;
+  margin: 4px 0 6px;
+  background: var(--rule);
+}
+
+.art-page__row {
+  height: 6px;
+  margin: 5px 0;
+  background: var(--ink);
+}
+
+.art-page__row--short {
+  width: 62%;
+}
+
+.picker__marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mk {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mk::before,
+.mk::after {
+  content: "";
+  position: absolute;
+  background: var(--ink);
+}
+
+.mk::before {
+  top: 0;
+  left: 6px;
+  width: 1px;
+  height: 13px;
+}
+
+.mk::after {
+  top: 6px;
+  left: 0;
+  width: 13px;
+  height: 1px;
+}
+
+.mk.tl {
+  top: -20px;
+  left: -20px;
+  --tx: -6px;
+  --ty: -6px;
+}
+
+.mk.tr {
+  top: -20px;
+  right: -20px;
+  --tx: 6px;
+  --ty: -6px;
+}
+
+.mk.bl {
+  bottom: -20px;
+  left: -20px;
+  --tx: -6px;
+  --ty: 6px;
+}
+
+.mk.br {
+  right: -20px;
+  bottom: -20px;
+  --tx: 6px;
+  --ty: 6px;
+}
+
+.picker__marks[data-travel="from"] .mk {
+  transform: translate(var(--tx), var(--ty));
+}
+
+.picker__name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.picker__box {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 4px;
+}
+
+.picker__choice:hover:not([aria-disabled="true"]) .picker__box {
+  border-color: var(--ink);
+}
+
+.picker__choice[aria-checked="true"] .picker__box {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.picker__choice[aria-checked="true"] .picker__box::after {
+  content: "";
+  width: 8px;
+  height: 4px;
+  border-bottom: 1.5px solid var(--stock);
+  border-left: 1.5px solid var(--stock);
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.picker__name {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.picker__line,
+.picker__later,
+.picker__error {
+  margin: 0;
+  font-family: var(--spiral-font-mono);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+.picker__line,
+.picker__later {
+  color: var(--ink-2);
+}
+
+.picker__error {
+  max-width: 36ch;
+  color: var(--red-text);
+  text-align: center;
+}
+
+.picker__go {
+  height: 38px;
+  padding: 0 20px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: var(--red);
+  color: var(--on-red);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 120ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.picker__go:hover:not(:disabled) {
+  border-color: var(--red-press);
+  background: var(--red-press);
+}
+
+.picker__go:active:not(:disabled) {
+  border-color: var(--red-press);
+  background: var(--red-press);
+}
+
+.picker__go:disabled {
+  border-color: var(--rule);
+  background: var(--stock-3);
+  color: var(--ink-3);
+}
+
+.picker__link {
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--spiral-font-mono);
+  font-size: 11px;
+  line-height: 16px;
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.picker__link:hover:not(:disabled) {
+  text-decoration-color: var(--ink);
+}
+
+.picker__link:disabled {
+  color: var(--ink-3);
+  cursor: default;
+}
+
+@media (max-width: 980px) {
+  .picker {
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .picker__plates {
+    gap: 24px;
+  }
+
+  .picker__mark {
+    height: 28px;
+  }
+}

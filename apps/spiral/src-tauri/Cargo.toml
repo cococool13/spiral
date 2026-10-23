@@ -1,0 +1,64 @@
+[workspace]
+resolver = "2"
+members = [
+    ".",
+    "engine",
+    "crates/resume-core",
+    "crates/resume-proto",
+    "../../../crates/spiral-license",
+]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2021"
+publish = false
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
+
+[profile.engine]
+inherits = "release"
+panic = "unwind"
+
+[package]
+name = "spiral-wallpaper"
+version.workspace = true
+description = "Privacy-first wallpaper setter for macOS and Windows"
+authors = ["Spiral"]
+edition = "2021"
+
+[lib]
+name = "spiral_wallpaper_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "gzip", "http2"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+# Opens the Activate screen's Buy and resend-key links in the browser.
+tauri-plugin-opener = "2"
+spiral-license = { path = "../../../crates/spiral-license" }
+resume-proto = { path = "crates/resume-proto" }
+tokio = { version = "1", features = ["macros", "rt", "sync"] }
+rfd = "0.15"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSDictionary", "NSEnumerator", "NSError", "NSProcessInfo", "NSString", "NSURL", "NSUserDefaults", "NSValue"] }
+objc2-app-kit = { version = "0.3", features = ["NSScreen", "NSWorkspace"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_UI_WindowsAndMessaging"] }
+winreg = "0.55"
+

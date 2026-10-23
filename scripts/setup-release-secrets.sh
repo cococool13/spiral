@@ -138,7 +138,7 @@ fi
 
 bold "All seven present. A release is now one command:"
 echo "  git tag v1.0.2 && git push origin v1.0.2"
-dim "The tag must match the version in apps/wallpaper/package.json."
+dim "The tag must match the version in apps/spiral/package.json."
 echo
 dim "Delete the .p12 you exported — GitHub has it now:"
 dim "  rm \"$P12_PATH\""

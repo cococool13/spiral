@@ -1,0 +1,33 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window. The asset protocol may read $APPDATA/resume/cache/**.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "updater:default",
+    "process:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://licensing.cohencool.workers.dev/buy/spiral"
+        },
+        {
+          "url": "https://licensing.cohencool.workers.dev/buy/spiral?ph=*"
+        },
+        {
+          "url": "https://licensing.cohencool.workers.dev/resend"
+        },
+        {
+          "url": "https://console.anthropic.com/settings/keys"
+        },
+        {
+          "url": "https://platform.openai.com/api-keys"
+        }
+      ]
+    }
+  ]
+}

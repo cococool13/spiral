@@ -42,49 +42,14 @@ export const SURFACES = {
     },
   },
 
-  wallpaper: {
-    root: "apps/wallpaper",
+  spiral: {
+    root: "apps/spiral",
     softFailStandalone: false,
     wipeDirs: ["src/assets/brand", "src/assets/fonts"],
     entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
     hex: {
       scan: ["src", "index.html"],
       allow: ["src/styles/tokens.css"],
-    },
-  },
-
-  clean: {
-    root: "apps/clean",
-    softFailStandalone: false,
-    wipeDirs: ["src/assets/brand", "src/assets/fonts"],
-    entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
-    hex: {
-      scan: ["src", "index.html"],
-      allow: ["src/styles/tokens.css"],
-    },
-  },
-
-  resume: {
-    root: "apps/Resume",
-    softFailStandalone: false,
-    wipeDirs: ["src/assets/brand", "src/assets/fonts"],
-    entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
-    hex: {
-      scan: ["src", "index.html"],
-      allow: ["src/styles/tokens.css"],
-    },
-  },
-
-  slim: {
-    root: "apps/slim/desktop",
-    softFailStandalone: true,
-    standaloneProbe: ["src/assets/brand/mark-red.svg", "src/assets/brand/lockup-red.svg"],
-    wipeDirs: ["src/assets/brand", "src/assets/fonts"],
-    entries: [...APP_MARKS, ...APP_TOKENS_FONTS],
-    hex: {
-      scan: ["src", "index.html", "tests"],
-      allow: ["src/styles/tokens.css"],
-      skipMissingScanRoots: true,
     },
   },
 };

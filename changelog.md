@@ -141,7 +141,7 @@ about.
 - The module comment pointed at `scripts/fetch-sidecar.mjs`, which does not
   exist. The script is `build-sidecar.mjs`, and it builds rather than fetches.
 
-- `pnpm test` in `apps/Resume` broke the moment anyone built the sidecar:
+- `pnpm test` in `the Resume app` broke the moment anyone built the sidecar:
   `build-sidecar` clones llama.cpp into `src-tauri/target/`, and Vitest's
   default discovery found 214 test files there instead of 13. The config now
   looks only at `src/`. Found by running the two commands in the same session,
@@ -150,7 +150,7 @@ about.
 ### Added
 - `sidecar` and `bundle-config` inputs on the shared `release-app.yml`, both off
   by default so no other app changes, and both on for Resume.
-- `apps/wallpaper/CONTEXT.md` and `apps/slim/CONTEXT.md`. All four apps now
+- `the Wallpaper context` and `the Slim context`. All four apps now
   carry their ubiquitous language beside the code.
 
 ## 2026-08-13 — A release path for Resume, and one product document
@@ -169,7 +169,7 @@ The first Resume release ships **without** the offline model tier. The app
 already reports that tier as unavailable and says so on screen, which is a
 shippable, honest state; the deterministic and bring-your-own-key tiers are
 complete. Enabling the offline tier has a required order, now written down in
-`apps/Resume/docs/offline-model.md` and repeated in the workflow header: build
+`the Resume offline-model note` and repeated in the workflow header: build
 the sidecar on the runner, bundle with `tauri.bundle.conf.json`, then pin a
 model. Pinning first would offer the user a 2.5 GB download the app cannot run.
 The sidecar script also refuses to run anywhere but macOS, and Resume releases
@@ -196,7 +196,7 @@ Wallpaper's original sentences are preserved as Wallpaper's row.
 The app was built through M1–M7 and the repo's own documents never learned it
 existed. `README.md` listed Resume among the apps that are "not yet started",
 `CLAUDE.md` did not mention it once — no layout entry, no commands, no
-Definition of Done — and a reader had no way to know that `apps/Resume` holds a
+Definition of Done — and a reader had no way to know that `the Resume app` holds a
 finished flow.
 
 ### Fixed (conflict)
@@ -204,11 +204,11 @@ finished flow.
 entry in the repo map, its commands, its place in the release table, and a
 roadmap paragraph. The lightweight promise is qualified rather than quietly
 dropped: Resume embeds Typst and is the one app measured in tens of megabytes,
-which `apps/Resume/docs/design-spec.md` decision 19 required the README to say.
+which `the Resume design spec` decision 19 required the README to say.
 
 ### Added
-- `apps/Resume/CONTEXT.md` — the app's ubiquitous language, following
-  `apps/clean/CONTEXT.md`. Fact, fact gate, block, entry, detail, prose line,
+- `the Resume context` — the app's ubiquitous language, following
+  `the Clean context`. Fact, fact gate, block, entry, detail, prose line,
   furniture, engine tier: the words the code is written in.
 - `CLAUDE.md` — Resume's layout entry, commands (including the two `#[ignore]`
   tests that show what the engine does with a real document), the reason it has
@@ -217,14 +217,14 @@ which `apps/Resume/docs/design-spec.md` decision 19 required the README to say.
   that `docs/PRODUCT.md` is Spiral Wallpaper's document, not the collection's.
 
 ### Corrected
-- `apps/Resume/docs/design-spec.md`: decision 4 records that import now reads a
+- `the Resume design spec`: decision 4 records that import now reads a
   file by its first bytes and accepts plain text; decision 22 extends "every
   section" to every field; decision 23 records that an undrawable character is
   reported rather than printed blank.
 - The website said the optional model is 2.7 GB where every other document says
   2.5 GB, and described the input step as PDF or Word only. Both now match the
   app. The number stays provisional until a release pins the model —
-  `apps/Resume/docs/offline-model.md`.
+  `the Resume offline-model note`.
 
 ## 2026-08-07 — Documentation audit
 

@@ -1,0 +1,80 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>F4-settings-tools</title>
+<link rel="stylesheet" href="proof.css"></head>
+<body><div class="desk" style="position:relative"><div class="menubar"><img src="img/mark-red.svg" style="height:14px"><b>Spiral</b><span>File</span><span>Edit</span><span>View</span><span>Window</span><span>Help</span></div>
+<div class="swin">
+  <div style="height:32px;display:flex;align-items:center;justify-content:center;position:relative"><div class="lights" style="position:absolute;left:0;top:10px;padding-left:14px"><i></i><i></i><i></i></div><b style="font-size:13px;font-weight:600">Tools</b></div>
+  <div class="stabs"><span class="stab"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6"/></svg>General</span><span class="stab on"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="3.5" width="6.5" height="6.5"/><rect x="11" y="3.5" width="6.5" height="6.5"/><rect x="2.5" y="12" width="6.5" height="4.5"/><path d="M11 14.25h6.5"/></svg>Tools</span><span class="stab"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6.5" cy="10" r="3.5"/><path d="M10 10h7.5M15 10v3M17.5 10v2"/></svg>License</span><span class="stab"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 3v10M6 9l4 4 4-4M4 16.5h12"/></svg>Updates</span></div>
+  <div style="padding:8px 32px 16px"><div class="trow"><div class="thumb" style="background-image:url(img/wh-9okkr1.jpg)"></div><div style="flex:1;display:flex;flex-direction:column;gap:4px"><b style="font-size:14px;font-weight:600">Wallpaper</b><span class="line" style="white-space:normal">Reaches wallhaven.cc when you search or apply.</span></div><span class="toggle on"></span></div><div class="trow"><div class="thumb" style="background:var(--stock-2);overflow:hidden;display:flex;justify-content:center;padding-top:6px"><div style="transform:scale(.19);transform-origin:top center"><div class="sheet">
+  <div class="rp-name">Maya Okafor</div>
+  <div class="rp-contact">maya.okafor@fastmail.com · +1 (415) 555-0142 · Oakland, CA</div>
+  <div class="rp-h">Experience</div>
+  <div class="rp-row"><b>Senior Product Designer, Halden Health</b><span>Mar 2021 – Present</span></div>
+  <div class="rp-li">Led redesign of performance reviews for 1,200 clinics; cut review setup from 40 to 12 minutes.</div>
+  <div class="rp-li">Built the Halden design system with 2 engineers; 140 components in production.</div>
+  <div class="rp-row"><b>Product Designer, Ferro Logistics</b><span>Jun 2017 – Feb 2021</span></div>
+  <div class="rp-li">Designed route planning, adopted by 31% of fleet customers in the first year.</div>
+  <div class="rp-li">Ran 60+ usability sessions for the dispatch launch.</div>
+  <div class="rp-h">Education</div>
+  <div class="rp-row"><b>University of Washington</b><span>2013 – 2017</span></div>
+  <div class="rp-li">B.Des., Interaction Design</div>
+  <div class="rp-h">Skills</div>
+  <div class="rp-li">Prototyping in code · Research synthesis · Design systems · SQL</div>
+</div></div></div><div style="flex:1;display:flex;flex-direction:column;gap:4px"><b style="font-size:14px;font-weight:600">Resume</b><span class="line" style="white-space:normal">Opens no connection unless you add a model.</span></div><span class="toggle"></span></div></div>
+</div></div><style>
+.grid { display: flex; flex-wrap: wrap; gap: 40px 32px; padding: 40px 40px 0; align-content: flex-start; }
+.tile { width: 266px; display: flex; flex-direction: column; gap: 10px; }
+.tile .img { width: 266px; height: 150px; background-size: cover; background-position: center; display: block; }
+.tile .line { justify-content: space-between; }
+.tile.applied .line b { color: var(--red); }
+.tile .hover { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: rgba(23,24,26,.82); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 12px; font-weight: 500; }
+.tile .hover .key { color: rgba(255,255,255,.7); }
+.tile .prog { position: absolute; left: 0; bottom: 0; height: 3px; width: 64%; background: var(--red); }
+.content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+/* resume */
+.sheet { width: 520px; background: #fff; color: #17181a; padding: 44px 48px; font-family: Charter, Georgia, serif; font-size: 10.5px; line-height: 15px; display: flex; flex-direction: column; gap: 4px; }
+.rp-name { font-size: 22px; line-height: 28px; font-weight: 700; }
+.rp-contact { color: #4a4a46; padding-bottom: 6px; }
+.rp-h { font-family: var(--font); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #cfcfca; padding: 10px 0 3px; margin-bottom: 2px; }
+.rp-row { display: flex; justify-content: space-between; padding-top: 4px; }
+.rp-li { padding-left: 10px; color: #2b2b28; }
+.facts { width: 560px; flex-shrink: 0; overflow: hidden; padding: 32px 0 0 40px; display: flex; flex-direction: column; gap: 28px; border-right: 1px solid var(--rule); }
+.fgroup { display: flex; flex-direction: column; }
+.fgroup h3 { font-size: 13px; font-weight: 600; padding-bottom: 8px; }
+.frow { display: flex; align-items: center; height: 36px; border-top: 1px solid var(--rule); gap: 0; }
+.frow:last-child { border-bottom: 1px solid var(--rule); }
+.frow .k { width: 96px; flex-shrink: 0; color: var(--ink-2); font-size: 12px; }
+.frow .v { flex: 1; font-size: 13px; }
+.frow .m { width: 56px; flex-shrink: 0; display: flex; justify-content: center; color: var(--ink-2); }
+.frow.flag .m { color: var(--red); }
+.frow.flag .v { color: var(--ink); }
+.frow.flag { background: color-mix(in srgb, var(--red) 6%, transparent); }
+.mtag { font-family: var(--mono); font-size: 10px; color: var(--red); border: 1px solid var(--red); padding: 0 4px; line-height: 14px; }
+.preview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 48px; gap: 28px; background: var(--stock-2); }
+.steps { display: flex; gap: 2px; align-items: center; font-size: 12px; color: var(--ink-3); }
+.steps span { padding: 0 8px; }
+.steps span.on { color: var(--ink); font-weight: 600; }
+.steps span.done { color: var(--ink-2); }
+</style><style>
+.grid { gap: 40px 32px; }
+.tile { width: 262px; }
+.tile .img { width: 262px; height: 147px; }
+.tile.focus-ring .img { outline: 2px solid var(--red); outline-offset: 3px; }
+.frow .v.edit { height: 30px; display: flex; align-items: center; padding: 0 8px; margin-left: -9px; border: 1px solid var(--rule); border-radius: var(--r-ctl); background: var(--stock-3); outline: 2px solid var(--red); outline-offset: 2px; }
+.frow { height: 38px; }
+.add { color: var(--ink-2); font-size: 12px; font-weight: 500; padding-top: 10px; }
+.desk { width: 1440px; height: 900px; background: url(img/full-zpvdzv.jpg) center/cover; display: flex; align-items: center; justify-content: center; }
+.menubar { position: absolute; top: 0; left: 0; right: 0; height: 28px; background: rgba(246,246,244,.72); display: flex; align-items: center; gap: 20px; padding: 0 18px; font-size: 13px; font-weight: 500; color: #17181a; }
+.swin { width: 680px; background: var(--stock); border-radius: 12px; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.12); display: flex; flex-direction: column; }
+.stabs { display: flex; justify-content: center; gap: 4px; padding: 6px 0 10px; border-bottom: 1px solid var(--rule); }
+.stab { width: 76px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: var(--r-ctl); color: var(--ink-2); font-size: 11px; font-weight: 500; }
+.stab svg { width: 20px; height: 20px; }
+.stab.on { background: var(--stock-2); color: var(--ink); }
+.trow { display: flex; align-items: center; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--rule); }
+.trow:last-child { border-bottom: 0; }
+.trow .thumb { width: 112px; height: 70px; flex-shrink: 0; background-size: cover; background-position: center; }
+.otp { display: flex; gap: 10px; }
+.otp span { width: 48px; height: 60px; border: 1px solid var(--rule); border-radius: var(--r-ctl); background: var(--stock-3); display: flex; align-items: center; justify-content: center; font: 500 26px var(--mono); }
+.otp span.cur { outline: 2px solid var(--red); outline-offset: 2px; }
+.link { color: var(--ink-2); font-size: 12px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
+</style></body></html>

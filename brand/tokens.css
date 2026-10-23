@@ -43,11 +43,55 @@
      Stadium pills are retired; CTAs are square fills. */
   --spiral-radius-ctl: 0px;
   --spiral-radius-pill: 0px;
-  --spiral-glass-blur: blur(16px) saturate(1.7);
-  --spiral-glass-edge: rgba(255, 255, 255, 0.45);
-  --spiral-glass-sheen: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0.55),
-    rgba(255, 255, 255, 0) 55%
-  );
+
+  /* Proof Plate shell. Identity 03 names above stay for the existing screens. */
+  --stock: #f4f4f1;
+  --stock-2: #eaeae6;
+  --stock-3: #ffffff;
+  --rule: #d3d2cc;
+  --ink: #17181a;
+  --ink-2: #5e5e58;
+  --ink-3: #74736d;
+  --red: #d52e2b;
+  --red-press: #8b1a18;
+  --red-text: #b8231f;
+  --on-red: #ffffff;
+
+  /* Proof Plate layout. Shared by light and dark. */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-56: 56px;
+  --space-72: 72px;
+  --radius-plate: 0px;
+  --radius-ctl: 6px;
+  --dur-state: 120ms;
+  --dur-mark: 150ms;
+  --dur-sheet: 220ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-ui: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --toolbar-h: 52px;
+  --sidebar-w: 216px;
+  --status-h: 28px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --stock: #121211;
+    --stock-2: #1b1b19;
+    --stock-3: #232320;
+    --rule: #2e2d2a;
+    --ink: #edece8;
+    --ink-2: #a3a29b;
+    --ink-3: #8c8b85;
+    --red: #d52e2b;
+    --red-press: #b5221f;
+    --red-text: #ef6a62;
+    --on-red: #ffffff;
+  }
 }

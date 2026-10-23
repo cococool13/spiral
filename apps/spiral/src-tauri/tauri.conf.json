@@ -1,0 +1,91 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Spiral",
+  "version": "2.0.0",
+  "identifier": "app.spiral.wallpaper",
+  "mainBinaryName": "spiral-wallpaper",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Spiral",
+        "create": false,
+        "url": "index.html",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 640,
+        "visible": true,
+        "resizable": true,
+        "decorations": true,
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay",
+        "trafficLightPosition": { "x": 20, "y": 18 }
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost thumb: http://thumb.localhost; connect-src 'self' ipc: http://ipc.localhost https://us.i.posthog.com https://us-assets.i.posthog.com",
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/thumbs/**",
+          "$APPDATA/wallpapers/**",
+          "$APPDATA/resume/cache/**"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRENERENkUwNUNEMTZEQQpSV1RhRnMwRmJ0M1VCTVBhZU1jQ3JoU1BLMkN2M3lweUgvblNXcjh3VVVLcTc0dHFSN0xxYXRNYQo=",
+      "endpoints": [
+        "https://github.com/cococool13/spiral/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "Developer ID Application: COHEN BENJAMIN COOLIOGE (CU8NTJWQ43)",
+      "hardenedRuntime": true,
+      "dmg": {
+        "background": "./dmg/background.png",
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "./windows/hooks.nsh",
+        "headerImage": "./windows/header.bmp",
+        "sidebarImage": "./windows/sidebar.bmp"
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

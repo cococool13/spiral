@@ -8,7 +8,7 @@
 # looks like. Six findings, all this one string, all in policy tables.
 #
 # It is allowlisted by exact secret value rather than by path: allowlisting
-# apps/slim/** would stop scanning a directory that writes system policy and
+# A path allowlist would stop scanning a directory that writes system policy and
 # shells out with elevation, which is the last place worth going quiet. A real
 # key committed beside these tables still fails.
 #
@@ -51,6 +51,19 @@ description = "macOS keychain fixture filename in Clean remove tests"
 regexTarget = "secret"
 regexes = [
   '''^keychain-2\.db$''',
+]
+
+# The migrate tests used this stand-in before it was renamed. It is not a
+# signed license. The value stays in git history, so the range scan still
+# sees it. The allow is this exact string in this one file.
+[[allowlists]]
+description = "Renamed migrate-test stand-in, still present in history"
+regexTarget = "secret"
+regexes = [
+  '''^LIC1\.signed-test$''',
+]
+paths = [
+  '''(^|/)crates/spiral-license/src/migrate\.rs$''',
 ]
 
 # Generated trees, excluded by path rather than by value.

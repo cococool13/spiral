@@ -1,6 +1,6 @@
 /**
  * Original helix — three filled bands (core, upper, lower).
- * Path data matches brand/logo/mark.svg and Slim's IntroMark.
+ * Path data matches brand/logo/mark.svg.
  */
 const VIEWBOX = "337 154 352 566";
 const RATIO = 352 / 566;

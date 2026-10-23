@@ -5,10 +5,11 @@
 // package.json still said 0.1.0, and nobody noticed until a production audit
 // read all three side by side.
 //
-//   node scripts/version.mjs check                 every app
-//   node scripts/version.mjs check wallpaper       one app
-//   node scripts/version.mjs set wallpaper 1.0.3   write all four
-//   node scripts/version.mjs tag v1.0.3            does that tag match?
+//   node scripts/version.mjs check              the live app
+//   node scripts/version.mjs check spiral       same
+//   node scripts/version.mjs set spiral 2.0.1   write the version files
+//   node scripts/version.mjs tag v2.0.0         does that tag match?
+//   node scripts/version.mjs tag clean-v0.1.2   prints "retired" and exits 0
 //
 // `tag` exists because `check` proves the four files agree with *each other*
 // and never that they agree with the tag being released. That gap shipped a
@@ -24,22 +25,13 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APPS, TAG_PREFIXES } from "./apps.manifest.mjs";
+import { APPS, isRetiredTag, parseTag } from "./apps.manifest.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
-/** `clean-v0.1.0` -> `{ app: "clean", version: "0.1.0" }`, or null. */
-export function parseTag(tag) {
-  for (const { prefix, app } of TAG_PREFIXES) {
-    if (tag.startsWith(prefix)) {
-      const version = tag.slice(prefix.length);
-      return SEMVER.test(version) ? { app, version } : null;
-    }
-  }
-  return null;
-}
+export { parseTag };
 
 const fail = (message) => {
   process.stderr.write(`version: ${message}\n`);
@@ -83,9 +75,9 @@ function versionsFor(app) {
   const { crate } = APPS[app];
 
   const cargoToml = read(files["Cargo.toml"]).match(
-    /^\s*\[package\][\s\S]*?^\s*version\s*=\s*"([^"]+)"/m,
+    /^\s*\[workspace\.package\][\s\S]*?^\s*version\s*=\s*"([^"]+)"/m,
   );
-  if (!cargoToml) fail(`could not read a [package] version from ${files["Cargo.toml"]}`);
+  if (!cargoToml) fail(`could not read a [workspace.package] version from ${files["Cargo.toml"]}`);
 
   const lock = lockEntry(read(files["Cargo.lock"]), crate);
   if (!lock) fail(`no [[package]] entry named "${crate}" in ${files["Cargo.lock"]}`);
@@ -142,10 +134,10 @@ function set(app, version) {
 
   const toml = read(files["Cargo.toml"]);
   const nextToml = toml.replace(
-    /(^\s*\[package\][\s\S]*?^\s*version\s*=\s*")[^"]+(")/m,
+    /(^\s*\[workspace\.package\][\s\S]*?^\s*version\s*=\s*")[^"]+(")/m,
     `$1${version}$2`,
   );
-  if (nextToml === toml) fail(`no [package] version to replace in ${files["Cargo.toml"]}`);
+  if (nextToml === toml) fail(`no [workspace.package] version to replace in ${files["Cargo.toml"]}`);
   write(files["Cargo.toml"], nextToml);
 
   // Prefer cargo: it revalidates the whole graph while it rewrites the entry.
@@ -195,6 +187,10 @@ function checkTag(tag) {
       `"${tag}" is not a release tag this repo understands. ` +
         `Expected v<x.y.z>, slim-v<x.y.z>, clean-v<x.y.z>, or resume-v<x.y.z>.`,
     );
+  }
+  if (isRetiredTag(parsed)) {
+    process.stdout.write(`${tag}: retired\n`);
+    process.exit(0);
   }
   const { app, version } = parsed;
   const found = versionsFor(app);

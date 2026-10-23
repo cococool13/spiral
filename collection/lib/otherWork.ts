@@ -78,7 +78,7 @@ export const otherWork: OtherProject[] = [
     id: "jcc-calculators",
     name: "JCC Calculators",
     description:
-      "Advisor calculator hub — pension vs lump sum live; buy vs lease and mortgage next. Link-only.",
+      "Advisor calculator hub. Pension vs lump sum is live. Buy vs lease and mortgage are next. Link only.",
     kind: "Tool",
     cover: "/work/jcc-calculators.webp",
     coverAlt:
@@ -90,7 +90,7 @@ export const otherWork: OtherProject[] = [
     id: "jcc-secure",
     name: "SECURE Case Study",
     description:
-      "Static 401(k) case study for a multi-specialty group — participation up 60%, fees down 26%.",
+      "Static 401(k) case study for a multi-specialty group. Participation up 60%, fees down 26%.",
     kind: "Website",
     cover: "/work/jcc-secure.webp",
     coverAlt: "The case study landing page with a headline and summary figures.",
@@ -101,7 +101,7 @@ export const otherWork: OtherProject[] = [
     id: "jcc-templates",
     name: "JCC Client Templates",
     description:
-      "LinkedIn and social templates for Jacobs, Coolidge & Company — HTML, PNG, JPG, and PDF exports.",
+      "LinkedIn and social templates for Jacobs, Coolidge & Company. HTML, PNG, JPG, and PDF exports.",
     kind: "Print",
     cover: "/work/jcc-templates.webp",
     coverAlt:
@@ -113,7 +113,7 @@ export const otherWork: OtherProject[] = [
     id: "glynn-strategic-plan",
     name: "Glynn County Strategic Plan",
     description:
-      "Fixed-page strategic plan report, deck, and companion pieces. Local deliverable — not hosted.",
+      "Fixed-page strategic plan report, deck, and companion pieces. Local deliverable, not hosted.",
     kind: "Report",
     cover: "/work/glynn-strategic-plan.webp",
     coverAlt:

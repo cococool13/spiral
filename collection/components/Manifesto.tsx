@@ -9,7 +9,7 @@ export default function Manifesto() {
         <h2>
           One key.
           <br />
-          The collection.
+          Spiral.
         </h2>
         <Mark size={96} className="license-mark" />
       </div>
@@ -18,16 +18,16 @@ export default function Manifesto() {
           $15 <span>once</span>
         </p>
         <p>
-          Wallpaper, Slim, and Resume.
+          Wallpaper and Resume.
           <br />
-          One license key for the collection.
+          One license key.
         </p>
         <ol className="license-steps">
           <li>
             <span>01</span>Buy securely through Stripe.
           </li>
           <li>
-            <span>02</span>Download the apps you want.
+            <span>02</span>Download the published build.
           </li>
           <li>
             <span>03</span>Paste your key on the Activate screen.
@@ -35,7 +35,7 @@ export default function Manifesto() {
         </ol>
         <div className="license-actions">
           <a href={CHECKOUT_URL} className="glass-pill" rel="noopener noreferrer">
-            Buy the collection <span aria-hidden="true">↗</span>
+            Buy Spiral <span aria-hidden="true">↗</span>
           </a>
           <DownloadMenu variant="purchase" />
         </div>
@@ -43,8 +43,7 @@ export default function Manifesto() {
           Already bought it? Start here <span aria-hidden="true">↗</span>
         </a>
         <p className="license-note">
-          Clean is in development and has no download yet. Check each app page for
-          platform availability.
+          The download is Spiral Wallpaper 1.0.4. Resume 0.1.2 stays at its release tag.
         </p>
       </div>
     </section>

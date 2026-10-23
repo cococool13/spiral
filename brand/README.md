@@ -15,7 +15,7 @@ The mark is the original filled helix — three bands, not a stroke redraw.
 | `fonts/` | Self-hosted Host Grotesk woff2 | both surfaces — no CDN at runtime |
 | `logo/mark.svg` | Original helix, three filled bands, `currentColor`, viewBox `337 154 352 566` | apps + reference |
 | `logo/mark-red.svg` | Mark in helix red | apps |
-| `logo/lockup-red.svg` | Helix + drawn SPIRAL. First-run screens only | `apps/wallpaper` |
+| `logo/lockup-red.svg` | Helix + drawn SPIRAL. First-run screens only | `apps/spiral` |
 | `logo/png/mark-{16..1024}.png` | Icon-pipeline sources (tall helix) | Tauri icon generation |
 | `hero/hero-exit.webp` | Dark corridor, daylight at the far door | Wallpaper product plate + social card (synced to `/brand/hero/`) |
 | `guide.html` | Full brand reference | humans |
@@ -27,9 +27,9 @@ copies what it needs at build time, into a **gitignored** destination, via the
 **one** root script:
 
 ```bash
-node scripts/sync-brand.mjs <collection|wallpaper|clean|resume|slim>
+node scripts/sync-brand.mjs <collection|spiral>
 node scripts/sync-brand.mjs --all
-node scripts/check-hex.mjs <wallpaper|clean|resume|slim>
+node scripts/check-hex.mjs <collection|spiral>
 ```
 
 Allowlists live in `scripts/brand-manifest.mjs`. Package scripts call those
@@ -38,10 +38,7 @@ with a surface id — do not reintroduce per-app copies of the sync logic.
 | Surface | Destinations |
 | --- | --- |
 | `collection/` | `collection/public/brand/` (served at `/brand/…`) |
-| `apps/wallpaper/` | brand marks + `src/styles/tokens.css` + Host Grotesk |
-| `apps/slim/desktop/` | `src/assets/brand/` (soft-fail without `/brand` if marks committed) |
-| `apps/clean/` | brand marks + `src/styles/tokens.css` + Host Grotesk |
-| `apps/Resume/` | same as Clean |
+| `apps/spiral/` | brand marks + `src/styles/tokens.css` + Host Grotesk |
 
 All run on `predev` and `prebuild`.
 

@@ -1,8 +1,8 @@
 # Design
 
 Visual system of every Spiral app and of spiralcc.tech. Source of truth:
-`brand/tokens.css`, synced into each surface (`collection`, `apps/wallpaper`,
-`apps/clean`, `apps/Resume`, `apps/slim/desktop`) — never edit a synced copy —
+`brand/tokens.css`, synced into each surface (`collection`, `apps/spiral`).
+Never edit a synced copy.
 and `brand/guide.html`.
 
 Website composition lock: `docs/reference/spiral-redesign-lock.md`
@@ -64,8 +64,6 @@ one collection, so it is described here rather than in any single app.
 - **One menu**, right, 44×44. Escape closes it; click outside closes it.
 - **No rule under the bar.** The page and the bar are the same material.
 - **The panel**: flat lift, hairline border, radius 0, mono 12px items.
-
-Spiral Slim is the exception: wizard step ticks where the menu would be.
 
 ## Components
 

@@ -1,8 +1,7 @@
 # Licensing
 
 Spiral Collection is sold once ($15) through Stripe Checkout, with Stripe
-Managed Payments as merchant of record. One license key unlocks every desktop app
-in the collection. Source stays public; shipped binaries stay locked without a key.
+Managed Payments as merchant of record. One license key covers Spiral. Source stays public; shipped binaries stay locked without a key.
 
 Keys are issued, stored and checked by the shared licensing Worker in
 `~/Projects/licensing` (one Worker and one D1 database for every Cohen Mac app;
@@ -38,16 +37,16 @@ edited key never unlocks.
 1. Buyer pastes the key on **Activate**.
 2. The app verifies the signature offline, then POSTs `{ key, app: "spiral", device }`
    to `https://licensing.cohencool.workers.dev/activate`. `device` is a SHA-256 of the
-   machine id, the same for all four apps, so one computer counts once (limit 3).
-3. The key is stored in the OS keychain. Wallpaper 1.0.4, Slim 1.0.1, Clean 0.1.1
-   and Resume 0.1.2 did not persist it on macOS or Windows; fixed 2026-10-22.
+   machine id, so one computer counts once (limit 3).
+3. The key is stored in the OS keychain. Builds through Wallpaper 1.0.4 and
+   Resume 0.1.2 did not persist it on macOS or Windows. That was fixed 2026-10-22.
 4. Launches verify offline. About once a week the app asks the server again; a
    refund, dispute or revocation locks it then. If the server cannot be reached,
    the app keeps working for 30 days after the last good check.
 
 Override the server at dev time with `SPIRAL_LICENSE_URL` (full URL including `/activate`).
 
-## Unlock with email
+## Activate with email
 
 No account and no password. The key stays the default and the fallback.
 

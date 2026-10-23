@@ -6,9 +6,9 @@ const VOID = tokens.color.void;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://spiralcc.tech"),
-  title: "Spiral — Small tools. No bloat. Your data stays yours.",
+  title: "Spiral. Wallpaper and Resume.",
   description:
-    "Spiral Collection — Wallpaper, Slim, Resume, and Clean. One $15 license. No telemetry, no background processes. Mac, and Windows where each app ships.",
+    "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
   alternates: { canonical: "/" },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "32x32" }],
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: "Spiral",
-    title: "Spiral — Small tools. No bloat. Your data stays yours.",
+    title: "Spiral. Wallpaper and Resume.",
     description:
-      "Spiral Collection — Wallpaper, Slim, Resume, and Clean. One $15 license. No telemetry, no background processes. Mac, and Windows where each app ships.",
+      "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
     images: [
       {
         url: "/brand/hero/hero-exit.webp",
@@ -32,9 +32,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Spiral — Small tools. No bloat. Your data stays yours.",
+    title: "Spiral. Wallpaper and Resume.",
     description:
-      "Spiral Collection — Wallpaper, Slim, Resume, and Clean. One $15 license. No telemetry, no background processes. Mac, and Windows where each app ships.",
+      "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
     images: ["/brand/hero/hero-exit.webp"],
   },
 };

@@ -65,7 +65,7 @@ export default function Nav() {
             className="glass-pill glass-pill--nav"
             rel="noopener noreferrer"
           >
-            Buy — $15
+            Buy, $15
           </a>
           <button
             ref={toggle}
@@ -89,16 +89,14 @@ export default function Nav() {
         <div className="shell">
           <p className="meta-id">The collection</p>
           <ul>
-            {apps
-              .filter((app) => app.page)
-              .map((app) => (
-                <li key={app.slug}>
-                  <a href={app.page} onClick={() => setOpen(false)}>
-                    {app.name.replace("Spiral ", "")}
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                </li>
-              ))}
+            {apps[0].sections.map((section) => (
+              <li key={section.id}>
+                <a href={`/#${section.id}`} onClick={() => setOpen(false)}>
+                  {section.name}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </li>
+            ))}
           </ul>
           <div className="mobile-secondary">
             {[
