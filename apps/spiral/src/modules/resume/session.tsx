@@ -106,8 +106,26 @@ function useResumeSession(): ResumeSession {
   const paintedOnce = useRef(false);
   const draftRef = useRef(draft);
   const savedKey = useRef("");
+  const saveGen = useRef(0);
   draftRef.current = draft;
   const settled = useDebounced(draft);
+
+  function persist(current: Draft) {
+    const key = JSON.stringify(current);
+    if (key === savedKey.current) return;
+    const gen = ++saveGen.current;
+    void saveDocument(current)
+      .then(() => {
+        if (gen !== saveGen.current) return;
+        savedKey.current = key;
+        setSaveError("");
+      })
+      .catch((err: unknown) => {
+        if (gen !== saveGen.current) return;
+        savedKey.current = "";
+        setSaveError(String(err));
+      });
+  }
 
   useEffect(() => {
     let live = true;
@@ -139,24 +157,13 @@ function useResumeSession(): ResumeSession {
 
   useEffect(() => {
     if (!edited.current) return;
-    const key = JSON.stringify(settled);
-    if (key === savedKey.current) return;
-    savedKey.current = key;
-    void saveDocument(settled)
-      .then(() => setSaveError(""))
-      .catch((err: unknown) => setSaveError(String(err)));
+    persist(settled);
   }, [settled]);
 
   useEffect(() => {
     function flush() {
       if (!edited.current) return;
-      const current = draftRef.current;
-      const key = JSON.stringify(current);
-      if (key === savedKey.current) return;
-      savedKey.current = key;
-      void saveDocument(current)
-        .then(() => setSaveError(""))
-        .catch((err: unknown) => setSaveError(String(err)));
+      persist(draftRef.current);
     }
     window.addEventListener("pagehide", flush);
     window.addEventListener("beforeunload", flush);

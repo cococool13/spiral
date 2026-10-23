@@ -115,6 +115,19 @@ describe("Resume editor", () => {
     });
   });
 
+  it("retries an edit when the save fails", async () => {
+    saveDocument.mockRejectedValueOnce("The resume could not be saved.");
+    const view = show();
+    await waitFor(() => expect(screen.getByText(/Saved from/)).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByRole("button", { name: "Open it" }));
+    const headline = (await screen.findByLabelText("Headline")) as HTMLInputElement;
+    fireEvent.change(headline, { target: { value: "Analyst" } });
+    await waitFor(() => expect(saveDocument).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(await screen.findByText("The resume could not be saved.")).toBeTruthy();
+    view.unmount();
+    await waitFor(() => expect(saveDocument).toHaveBeenCalledTimes(2));
+  });
+
   it("lets someone with no resume type the facts", async () => {
     loadDocument.mockResolvedValueOnce(null);
     show();
