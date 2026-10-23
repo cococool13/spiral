@@ -120,7 +120,7 @@ Spiral has no trial clock. It does not send `trial_started`.
 
 The app does not capture `checkout_started`. The licensing Worker captures `checkout_started` and `purchase` from `?ph=`. A click on `https://licensing.cohencool.workers.dev/buy/spiral` appends `?ph=<distinct_id>` when analytics is on. The resend URL is unchanged. When analytics is off, the buy URL is unchanged.
 
-The Resume screen in this build has no export control. `noteResumeExported` is the call an export success must use. Nothing in that screen calls it, so `first_resume_exported` does not fire today.
+A successful Resume export calls `noteResumeExported`. The first successful export can send `activated` with `first_resume_exported`. The event has no file name, path, or document text. If a wallpaper was applied first, that activation already won and this export does not send another.
 
 Init uses `person_profiles: 'identified_only'`, `persistence: 'localStorage'`, `respect_dnt: true`, `autocapture: false`, `capture_pageview: false`, `capture_pageleave: false`, `disable_session_recording: true`, `disable_surveys: true`, `advanced_disable_flags: true`, `capture_exceptions: false`, and `disable_external_dependency_loading: true`. Autocapture is off because a button can contain a wallpaper title or resume text. There is no `$pageview`, no `Application Opened`, and no `$exception`.
 

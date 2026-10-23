@@ -797,7 +797,7 @@ Start milestone 1: `git mv apps/wallpaper apps/spiral`, pin `mainBinaryName` to 
 
 Proof Plate color tokens are in `brand/tokens.css` now. The picker is this milestone's first screen, and the hex gate rejects a color that is not in that file. Milestone 5 still owns the rest of the chrome and the `spiral` brand surface. Sync still uses the `wallpaper` surface, and that surface's root is `apps/spiral`.
 
-Continuing with only Resume shows "Resume is not in this build." and a button, "Use Wallpaper". That button saves Wallpaper as the only tool. The Resume module arrives in milestone 4, and the picker still has to accept the Resume-only choice.
+Milestone 1 left Resume as a placeholder screen with a button that saved Wallpaper as the only tool. The editor replaced that screen later. The picker still accepts a Resume-only choice. macOS before 13 still greys Resume out.
 
 A debug build does not call autostart `enable()`. The plugin writes `current_exe()` into `Spiral Wallpaper.plist`, so a dev launch would point the installed login item at the debug binary. A release build calls `enable()` after the page finishes loading, and only when `launch_at_login` is set. That runs at page-load finished, which is before the React `first_paint` effect.
 
@@ -829,7 +829,7 @@ Resume fonts and `model-catalogue.json` stay in `apps/Resume/assets`. `resume-co
 
 Tauri 2.12 enforces the asset protocol scope in `tauri.conf.json` under `app.security.assetProtocol.scope`. That list includes `$APPDATA/resume/cache/**`. `capabilities/default.json` names the same path in its description. The capability schema has no asset permission id.
 
-The 2 second idle rule lives in `Machine::tick`. The live bridge runs that tick on the next Resume call. It does not start a background timer. On exit, the bridge writes `Shutdown` and sends `SIGKILL` to the process group if the child is still alive after 500 ms.
+The 2 second idle rule lives in `Machine::tick`. Milestone 4 ran that tick on the next Resume call. A later resume milestone starts a background timer. On exit, the bridge writes `Shutdown` and sends `SIGKILL` to the process group if the child is still alive after 500 ms.
 
 The codesign fixture signs three ad-hoc binaries with identity `-` and without `--timestamp`. A timestamp needs a Developer ID. The release path passes `--timestamp`.
 
@@ -845,7 +845,7 @@ On Windows, the engine and `llama-server` are started with `CREATE_NEW_PROCESS_G
 
 `rename_decline` and `bundle_trash` are extra commands. The closed list names `rename_offer` and `rename_apply`. Decline stores `Declined`. Move to Trash is a separate click, and it refuses the running bundle.
 
-The Resume editor stays in `apps/Resume`. `src/modules/resume` shows "Resume is not in this build." and a Use Wallpaper button. Milestone 4 moved the Rust engine. This milestone does not move the editor. The Resume chunk stays out of the entry's static graph.
+Milestone 5 left the Resume editor in `apps/Resume` and left `src/modules/resume` as a placeholder. Milestone 4 had moved the Rust engine. This milestone did not move the editor. The Resume chunk stayed out of the entry's static graph.
 
 The buy control reads "Buy Spiral, $15". DIRECTION.md uses an em dash in that line. The copy rule for this work does not allow that dash.
 
@@ -863,7 +863,7 @@ Resume fonts and `model-catalogue.json` now live under `apps/spiral/src-tauri/as
 
 Bare `v` tags with a major below 2 are retired Wallpaper tags. `version.mjs tag` prints `retired` and exits 0 without reading a deleted tree. `v2` and later must match the live files.
 
-The Resume editor was not moved. Milestone 5 left `src/modules/resume` on "Resume is not in this build." Deleting `apps/Resume` removes the editor. The placeholder stays. Moving the editor is not a milestone 6 acceptance check.
+Milestone 6 deleted `apps/Resume` and did not move the editor. The placeholder from milestone 5 stayed. Moving the editor was not a milestone 6 acceptance check.
 
 The Windows NSIS hook runs the old "Spiral Wallpaper" uninstaller with `/S` and does not delete `%APPDATA%\app.spiral.wallpaper`. The executable name stays `spiral-wallpaper.exe`. A disposable Windows install was not run on this Mac, and a signed updater install was not run. `rehearsal.json` is absent on purpose. The release job keeps `windows: true` and fails until that receipt says `windows` is `passed`. The notarize, disk-image rebuild, and updater repack steps are in `release-app.yml` and have not been executed against a Developer ID build.
 
@@ -929,10 +929,38 @@ Autocapture, page views, page leave, and exceptions are off. The app sends no cr
 
 Spiral has no trial clock, so it does not send `trial_started`.
 
-The Resume screen still says "Resume is not in this build." It has no export control. `noteResumeExported` is the call an export success uses. That screen does not call it. `first_wallpaper_applied` is the activation that can fire in this build.
+When this analytics milestone landed, the Resume screen was still the placeholder and had no export control. `noteResumeExported` is the call an export success uses. The editor now calls it on the first successful save. `first_wallpaper_applied` can still fire first if a wallpaper is applied before that export.
 
 `begin()` runs after `general_view` resolves, which is after `picker_ready` and `first_paint`. An opted-out launch does not import `posthog-js`. If settings fail to load, analytics stays off.
 
 `collection/lib/appPages.ts` is gone. The site loads no PostHog script. The privacy page says the app sends anonymous events to PostHog.
 
 The client does not call `identify` and does not capture `checkout_started`. The licensing Worker captures `checkout_started` and `purchase` from `?ph=`.
+
+## Deviations
+
+### Resume module
+
+Earlier milestones left `src/modules/resume` as a placeholder and then deleted `apps/Resume/src`. This work restores the editor into `src/modules/resume` and removes that placeholder.
+
+`Call::Check` is new. The closed call list had no check. The Check step needs findings in the WebView. The call is Free and Cancel. It does not keep the engine alive. Hidden-text findings are reported when a caller supplies hidden runs. `pdf-extract` does not expose text render mode, so this pass does not collect invisible PDF text.
+
+`LoadDocument` is read by the shell from `resume/resume.json` and does not spawn the engine. The import screen can show a saved resume before Hello. The engine remains the only writer. A valid `resume.json.tmp` is renamed into place, matching `Store::load`. Corrupt JSON is reported and left in place.
+
+An empty `ImportFile` path and a non-absolute `SaveBuilt` path open an `rfd` dialog on the main thread. Cancel returns JSON null and does not call the engine. `tauri-plugin-dialog` was not added. The capability schema has no dialog permission. Absolute paths skip the dialog.
+
+Progress events stay `{ done, total }`. The build screen shows percent and the stage "Building". The old stage names are not on the wire.
+
+Thumbnail replies are `{ id, name, file, error }`. SVG bytes stay in `cache/`. `ImportFile` still returns the document, plus a `source` string the editor uses for the check and does not save.
+
+`Preview` and `Build` take an `accent` string. An empty accent is ink. Milestone 4 had hardcoded ink for both.
+
+The idle watch is a 200 ms thread started from `run()` after the shell is managed. `Link::poll` does nothing when no child exists, so activate-without-spawn does not trip the 5 second hello timeout. When a child is idle, shutdown still happens about 2 seconds after the last reply, without waiting for another call.
+
+The ATS timing check is a `resume-core` unit test on a generated two-page text. There is no committed two-page file under `bench/fixtures`. The shell stamps `ats_check:resume` when a check reply returns.
+
+The stepper is Import, Details, Style, Build, Check, Export. Format stays a control on Build. The old Check screen is Details. The new Check screen is the ATS panel. DIRECTION's breadcrumb was Import, Check, Style, Format, Build. This milestone's flow is the six steps.
+
+`completeSetup` is not a proto call. Rules-only saves the current engine settings and marks setup done. Provider keys go through `provider_set` and `provider_clear`. The WebView sees presence only.
+
+`module_ready:resume` fires when `module_activate` resolves. It does not wait for Hello. The import screen paints before that Hello. `first_useful_action:resume` fires when the first preview image paints.
