@@ -964,3 +964,19 @@ The stepper is Import, Details, Style, Build, Check, Export. Format stays a cont
 `completeSetup` is not a proto call. Rules-only saves the current engine settings and marks setup done. Provider keys go through `provider_set` and `provider_clear`. The WebView sees presence only.
 
 `module_ready:resume` fires when `module_activate` resolves. It does not wait for Hello. The import screen paints before that Hello. `first_useful_action:resume` fires when the first preview image paints.
+
+### Fix pass 1
+
+`ReviewWording` is rules only. It returns `{ bulletId, tightened, notes }` and does not start llama-server. A local model runs on `Build` when tightening is on and rules-only mode is off. The earlier sentence that llama starts for build or review is now build only.
+
+`ImportFile` and `SaveBuilt` always open the save or open dialog in the shell command. A path from the WebView is not opened. Cancel returns JSON null. Smoke tests still call `Link::dispatch` with a fixture path. The suggested save name is the file name only.
+
+Rules-only mode is `rules_only` on `engine.json` and on `SaveEngine`. Choosing it keeps the stored provider, model, and key, and build and review do not call them. A later provider choice clears the flag.
+
+A transient license error (`Network`, `Keychain`, `NeedsInteraction`, `Denied`) stays unsettled. The screen shows the error, Try again, and the email form. `NoAccess` and `DeviceMismatch` stay settled locks and still show the email form. Try again clears the once-per-launch exchange record.
+
+`clear_license` deletes the four Wallpaper accounts and writes `license-cleared` on `app.spiral`. A later migrate skips the Wallpaper adopt when that mark is present. Resume, Clean, and Slim are left in place. A denied Wallpaper delete still writes the mark.
+
+Provider keychain commands and the legacy consent dialog run on `spawn_blocking`. The vault mutex stays held for the Security call, including across the system dialog, so the dialog is not on the UI thread.
+
+`llama-server` stays in the engine's process group. The engine writes `llama.pid`. On Windows the engine assigns llama-server to a job with `KILL_ON_JOB_CLOSE`. Dropping the sidecar kills that process only, not the engine group.

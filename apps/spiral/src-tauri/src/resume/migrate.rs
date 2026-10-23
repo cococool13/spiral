@@ -129,7 +129,7 @@ fn adopt_doc(fs: &mut impl Fs, from: &Path, to: &Path) -> Result<FileOutcome, Mi
             if let Some(parent) = to.parent() {
                 fs.create_dir_all(parent)?;
             }
-            fs.rename_file(from, to)?;
+            relocate_file(fs, from, to)?;
             Ok(FileOutcome::Moved)
         }
         (true, true) => {
@@ -156,8 +156,28 @@ fn adopt_temp(fs: &mut impl Fs, tmp: &Path, dest: &Path) -> Result<FileOutcome, 
     if let Some(parent) = dest.parent() {
         fs.create_dir_all(parent)?;
     }
-    fs.rename_file(tmp, dest)?;
+    relocate_file(fs, tmp, dest)?;
     Ok(FileOutcome::RecoveredTemp)
+}
+
+fn relocate_file(fs: &mut impl Fs, from: &Path, to: &Path) -> io::Result<()> {
+    match fs.rename_file(from, to) {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == ErrorKind::CrossesDevices => {
+            let bytes = fs.read(from)?;
+            let name = to
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("file");
+            let tmp = to.with_file_name(format!(".{name}.moving"));
+            fs.write(&tmp, &bytes)?;
+            fs.sync_file(&tmp)?;
+            fs.rename_file(&tmp, to)?;
+            fs.remove_file(from)?;
+            Ok(())
+        }
+        Err(err) => Err(err),
+    }
 }
 
 fn adopt_models(
@@ -167,34 +187,111 @@ fn adopt_models(
 ) -> Result<ModelOutcome, MigrateError> {
     let dest_models = dest.join("models");
     let refs = dest.join("models.ref.json");
-    if fs.is_dir(&dest_models) || fs.is_file(&refs) || !fs.is_dir(legacy) {
-        return Ok(if fs.is_dir(legacy) {
-            ModelOutcome::Already
-        } else {
-            ModelOutcome::Absent
-        });
+    if !fs.is_dir(legacy) {
+        return Ok(ModelOutcome::Absent);
+    }
+    if fs.is_file(&refs) && !fs.is_dir(&dest_models) && valid_refs(fs, &refs) {
+        let count = fs
+            .read(&refs)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<ModelRefs>(&bytes).ok())
+            .map(|parsed| parsed.models.len())
+            .unwrap_or(0);
+        return Ok(ModelOutcome::Referenced { count });
+    }
+    if fs.is_dir(&dest_models) {
+        return merge_models(fs, legacy, &dest_models, &refs);
     }
     match fs.rename_dir(legacy, &dest_models) {
         Ok(()) => Ok(ModelOutcome::Moved),
         Err(err) if err.kind() == ErrorKind::CrossesDevices => {
             let files = fs.files_in(legacy)?;
-            let models = files
-                .iter()
-                .filter_map(|path| {
-                    let name = path.file_name()?.to_string_lossy();
-                    Some(resume_proto::ModelRef {
-                        id: model_id(&name),
-                        path: path.display().to_string(),
-                    })
-                })
-                .collect();
-            let body = serde_json::to_vec_pretty(&ModelRefs { models })
-                .map_err(|err| io::Error::new(ErrorKind::InvalidData, err))?;
-            fs.write(&refs, &body)?;
+            let models = model_refs(&files);
+            write_refs(fs, &refs, &models)?;
             Ok(ModelOutcome::Referenced { count: files.len() })
         }
         Err(err) => Err(err.into()),
     }
+}
+
+fn merge_models(
+    fs: &mut impl Fs,
+    legacy: &Path,
+    dest_models: &Path,
+    refs: &Path,
+) -> Result<ModelOutcome, MigrateError> {
+    let mut moved = 0usize;
+    let mut referenced = Vec::new();
+    for path in fs.files_in(legacy)? {
+        let Some(name) = path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+        else {
+            continue;
+        };
+        let target = dest_models.join(&name);
+        if fs.is_file(&target) {
+            if fs.file_len(&path)? == fs.file_len(&target)? {
+                continue;
+            }
+            continue;
+        }
+        match fs.rename_file(&path, &target) {
+            Ok(()) => moved += 1,
+            Err(err) if err.kind() == ErrorKind::CrossesDevices => {
+                referenced.push(resume_proto::ModelRef {
+                    id: model_id(&name),
+                    path: path.display().to_string(),
+                })
+            }
+            Err(err) => return Err(err.into()),
+        }
+    }
+    if !referenced.is_empty() {
+        write_refs(fs, refs, &referenced)?;
+        if moved == 0 {
+            return Ok(ModelOutcome::Referenced {
+                count: referenced.len(),
+            });
+        }
+    }
+    if moved == 0 {
+        Ok(ModelOutcome::Already)
+    } else {
+        Ok(ModelOutcome::Moved)
+    }
+}
+
+fn model_refs(files: &[PathBuf]) -> Vec<resume_proto::ModelRef> {
+    files
+        .iter()
+        .filter_map(|path| {
+            let name = path.file_name()?.to_string_lossy();
+            Some(resume_proto::ModelRef {
+                id: model_id(&name),
+                path: path.display().to_string(),
+            })
+        })
+        .collect()
+}
+
+fn valid_refs(fs: &impl Fs, path: &Path) -> bool {
+    fs.read(path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<ModelRefs>(&bytes).ok())
+        .is_some()
+}
+
+fn write_refs(fs: &mut impl Fs, path: &Path, models: &[resume_proto::ModelRef]) -> io::Result<()> {
+    let body = serde_json::to_vec_pretty(&ModelRefs {
+        models: models.to_vec(),
+    })
+    .map_err(|err| io::Error::new(ErrorKind::InvalidData, err))?;
+    let tmp = path.with_extension("json.tmp");
+    fs.write(&tmp, &body)?;
+    fs.sync_file(&tmp)?;
+    fs.rename_file(&tmp, path)?;
+    Ok(())
 }
 
 fn model_id(file_name: &str) -> String {
@@ -238,6 +335,8 @@ pub trait Fs {
     fn rename_file(&mut self, from: &Path, to: &Path) -> io::Result<()>;
     fn rename_dir(&mut self, from: &Path, to: &Path) -> io::Result<()>;
     fn files_in(&self, dir: &Path) -> io::Result<Vec<PathBuf>>;
+    fn file_len(&self, path: &Path) -> io::Result<u64>;
+    fn sync_file(&mut self, path: &Path) -> io::Result<()>;
     fn copied_bytes(&self) -> u64;
 }
 
@@ -274,11 +373,11 @@ impl Fs for OsFs {
     }
 
     fn rename_file(&mut self, from: &Path, to: &Path) -> io::Result<()> {
-        fs::rename(from, to)
+        map_cross_device(fs::rename(from, to))
     }
 
     fn rename_dir(&mut self, from: &Path, to: &Path) -> io::Result<()> {
-        fs::rename(from, to)
+        map_cross_device(fs::rename(from, to))
     }
 
     fn files_in(&self, dir: &Path) -> io::Result<Vec<PathBuf>> {
@@ -293,8 +392,37 @@ impl Fs for OsFs {
         Ok(files)
     }
 
+    fn file_len(&self, path: &Path) -> io::Result<u64> {
+        Ok(fs::metadata(path)?.len())
+    }
+
+    fn sync_file(&mut self, path: &Path) -> io::Result<()> {
+        fs::File::open(path)?.sync_all()
+    }
+
     fn copied_bytes(&self) -> u64 {
         self.copied
+    }
+}
+
+fn map_cross_device(result: io::Result<()>) -> io::Result<()> {
+    match result {
+        Ok(()) => Ok(()),
+        Err(err) if crosses_devices(&err) => Err(io::Error::new(ErrorKind::CrossesDevices, err)),
+        Err(err) => Err(err),
+    }
+}
+
+fn crosses_devices(err: &io::Error) -> bool {
+    if err.kind() == ErrorKind::CrossesDevices {
+        return true;
+    }
+    match err.raw_os_error() {
+        #[cfg(unix)]
+        Some(18) => true,
+        #[cfg(windows)]
+        Some(17 | 32) => true,
+        _ => false,
     }
 }
 
@@ -406,6 +534,12 @@ impl Fs for MemFs {
         if self.fail_rename_at == Some(self.renames) {
             return Err(io::Error::new(ErrorKind::Interrupted, "crash"));
         }
+        if self.cross_dir && from.parent() != to.parent() {
+            return Err(io::Error::new(
+                ErrorKind::CrossesDevices,
+                "cross-device rename",
+            ));
+        }
         let bytes = self.read(from)?;
         self.write(to, &bytes)?;
         self.remove_file(from)?;
@@ -465,6 +599,17 @@ impl Fs for MemFs {
         }
         files.sort();
         Ok(files)
+    }
+
+    fn file_len(&self, path: &Path) -> io::Result<u64> {
+        match self.nodes.get(&key(path)) {
+            Some(Node::File(bytes)) => Ok(bytes.len() as u64),
+            _ => Err(io::Error::new(ErrorKind::NotFound, "missing file")),
+        }
+    }
+
+    fn sync_file(&mut self, _path: &Path) -> io::Result<()> {
+        Ok(())
     }
 
     fn copied_bytes(&self) -> u64 {
@@ -657,8 +802,47 @@ mod tests {
             .models
             .iter()
             .any(|model| model.path.ends_with("two.gguf")));
+        assert!(!fs.is_file(&dest().join("models.ref.json.tmp")));
         let raw = String::from_utf8(fs.read(&dest().join("models.ref.json")).unwrap()).unwrap();
         assert!(!raw.contains("\"dirs\""));
+    }
+
+    #[test]
+    fn a_cross_device_document_arrives_through_a_temp_file() {
+        let mut fs = MemFs::new().cross_devices();
+        fs.file(&legacy().join("resume.json"), br#"{"doc":{}}"#);
+        let report = adopt(&mut fs, &dest(), &legacy(), false, Path::new("/real")).unwrap();
+        assert_eq!(report.resume, FileOutcome::Moved);
+        assert_eq!(
+            fs.read(&dest().join("resume.json")).unwrap(),
+            br#"{"doc":{}}"#
+        );
+        assert!(!fs.is_file(&legacy().join("resume.json")));
+        assert!(!fs.is_file(&dest().join(".resume.json.moving")));
+    }
+
+    #[test]
+    fn an_existing_model_folder_is_merged_by_name_and_size() {
+        let mut fs = MemFs::new();
+        fs.dir(&dest().join("models"));
+        fs.file(&dest().join("models/one.gguf"), b"one");
+        fs.file(&legacy().join("models/one.gguf"), b"one");
+        fs.file(&legacy().join("models/two.gguf"), b"two");
+        let report = adopt(&mut fs, &dest(), &legacy(), false, Path::new("/real")).unwrap();
+        assert_eq!(report.models, ModelOutcome::Moved);
+        assert_eq!(fs.read(&dest().join("models/one.gguf")).unwrap(), b"one");
+        assert_eq!(fs.read(&dest().join("models/two.gguf")).unwrap(), b"two");
+        assert_eq!(report.copied_model_bytes, 0);
+    }
+
+    #[test]
+    fn invalid_model_refs_are_not_treated_as_done() {
+        let mut fs = MemFs::new();
+        fs.file(&dest().join("models.ref.json"), b"not json");
+        fs.file(&legacy().join("models/one.gguf"), b"one");
+        let report = adopt(&mut fs, &dest(), &legacy(), false, Path::new("/real")).unwrap();
+        assert_eq!(report.models, ModelOutcome::Moved);
+        assert_eq!(fs.read(&dest().join("models/one.gguf")).unwrap(), b"one");
     }
 
     #[test]

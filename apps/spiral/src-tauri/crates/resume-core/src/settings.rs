@@ -30,6 +30,8 @@ pub struct EngineSettings {
     /// a key is saved, or the person chose the rule-based pass.
     #[serde(default)]
     pub setup_done: bool,
+    #[serde(default)]
+    pub rules_only: bool,
 }
 
 impl Default for EngineSettings {
@@ -40,6 +42,7 @@ impl Default for EngineSettings {
             base_url: String::new(),
             offline_model: String::new(),
             setup_done: false,
+            rules_only: false,
         }
     }
 }
@@ -89,6 +92,7 @@ mod tests {
         let loaded = load(dir.path());
         assert_eq!(loaded.provider, "local");
         assert_eq!(loaded.offline_model, "");
+        assert!(!loaded.rules_only);
     }
 
     #[test]
@@ -100,6 +104,7 @@ mod tests {
             base_url: "http://localhost:11434/v1".into(),
             offline_model: "qwen3.5-4b".into(),
             setup_done: true,
+            rules_only: true,
         };
         save(dir.path(), &settings).unwrap();
         assert_eq!(load(dir.path()), settings);

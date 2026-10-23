@@ -2,6 +2,12 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+mod document;
+mod pid;
+
+pub use document::normalize_stored;
+pub use pid::{format_pid, live_matches, may_signal, parse_pid, PidRecord};
+
 pub const PROTO: u32 = 1;
 pub const CONTROL_MAX: usize = 64 * 1024;
 pub const DOCUMENT_MAX: usize = 2 * 1024 * 1024;
@@ -73,7 +79,8 @@ resume_calls! {
         provider: String,
         model: String,
         base_url: String,
-        offline_model: String
+        offline_model: String,
+        rules_only: bool
     } => Licensed, Cancel;
     OfflineModels {} => Free, Cancel;
     DownloadModel { id: String } => Licensed, Drain;

@@ -1,10 +1,13 @@
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::{mpsc, Mutex};
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use resume_proto::{
-    cache_relative, decode_from, encode_to, Call, Event, FromEngine, ProviderId, ToEngine, PROTO,
+    cache_relative, decode_from, encode_to, Call, Event, FromEngine, ProviderId, ToEngine,
+    DOCUMENT_MAX, PROTO,
 };
 use serde_json::Value;
 
@@ -16,6 +19,11 @@ pub const MISSING: &str = "Resume's engine is not in this build.";
 const IDLE: Duration = Duration::from_secs(2);
 const HELLO_LIMIT: Duration = Duration::from_secs(5);
 const CRASH_WINDOW: Duration = Duration::from_secs(10);
+const REQUEST_LIMIT: Duration = Duration::from_secs(6 * 60);
+const DOWNLOAD_LIMIT: Duration = Duration::from_secs(45 * 60);
+const WAIT_SLICE: Duration = Duration::from_millis(200);
+const BAD_REPLY: &str = "Resume's engine sent a reply Spiral could not use. Try again.";
+const TOO_SLOW: &str = "Resume's engine did not answer in time. Try again.";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
@@ -306,13 +314,36 @@ pub struct Exchange<'a> {
     pub call: &'a Call,
 }
 
-pub fn exchange<R: BufRead, W: Write>(
+#[derive(Debug)]
+struct ExchangeError {
+    message: String,
+    protocol: bool,
+}
+
+impl ExchangeError {
+    fn protocol(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            protocol: true,
+        }
+    }
+
+    fn failed(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            protocol: false,
+        }
+    }
+}
+
+#[cfg(test)]
+fn exchange<R: BufRead, W: Write>(
     input: &mut R,
     output: &mut W,
     request: &Exchange<'_>,
     answer_key: &mut dyn FnMut(ProviderId) -> Result<Option<String>, String>,
     on_event: &mut dyn FnMut(Event),
-) -> Result<Value, String> {
+) -> Result<Value, ExchangeError> {
     write_frame(
         output,
         &ToEngine::Request {
@@ -321,41 +352,77 @@ pub fn exchange<R: BufRead, W: Write>(
             licensed: request.licensed,
             call: request.call.clone(),
         },
-    )?;
+    )
+    .map_err(ExchangeError::protocol)?;
     loop {
         let mut line = String::new();
-        let read = input.read_line(&mut line).map_err(|err| err.to_string())?;
+        let read = input
+            .read_line(&mut line)
+            .map_err(|err| ExchangeError::protocol(err.to_string()))?;
         if read == 0 {
-            return Err(STOPPED.into());
+            return Err(ExchangeError::failed(STOPPED));
         }
-        match decode_from(line.trim_end()).map_err(|err| err.message)? {
-            FromEngine::Event { event, .. } => on_event(event),
-            FromEngine::Ask { ask, question, .. } => {
-                let resume_proto::Ask::ProviderKey { provider } = question;
-                let key = answer_key(provider)?;
-                write_frame(
-                    output,
-                    &ToEngine::Answer {
-                        id: request.id,
-                        ask,
-                        answer: resume_proto::Answer::ProviderKey { key },
-                    },
-                )?;
-            }
-            FromEngine::Reply {
-                ok, body, message, ..
-            } => {
-                if !ok {
-                    return Err(message.unwrap_or_else(|| STOPPED.into()));
-                }
-                let body = body.unwrap_or(Value::Null);
-                check_cache_paths(&body)?;
-                return Ok(body);
-            }
-            FromEngine::Hello { .. } => {
-                return Err(MISMATCH.into());
-            }
+        if line.len() > DOCUMENT_MAX {
+            return Err(ExchangeError::protocol(BAD_REPLY));
         }
+        if let Some(body) = accept_line(line.trim_end(), request, output, answer_key, on_event)? {
+            return Ok(body);
+        }
+    }
+}
+
+fn accept_line(
+    line: &str,
+    request: &Exchange<'_>,
+    output: &mut impl Write,
+    answer_key: &mut dyn FnMut(ProviderId) -> Result<Option<String>, String>,
+    on_event: &mut dyn FnMut(Event),
+) -> Result<Option<Value>, ExchangeError> {
+    let message = decode_from(line).map_err(|_| ExchangeError::protocol(BAD_REPLY))?;
+    match message {
+        FromEngine::Event { id, event } => {
+            if id != request.id {
+                return Err(ExchangeError::protocol(BAD_REPLY));
+            }
+            on_event(event);
+            Ok(None)
+        }
+        FromEngine::Ask { id, ask, question } => {
+            if id != request.id {
+                return Err(ExchangeError::protocol(BAD_REPLY));
+            }
+            let resume_proto::Ask::ProviderKey { provider } = question;
+            let key = answer_key(provider).map_err(ExchangeError::protocol)?;
+            write_frame(
+                output,
+                &ToEngine::Answer {
+                    id: request.id,
+                    ask,
+                    answer: resume_proto::Answer::ProviderKey { key },
+                },
+            )
+            .map_err(ExchangeError::protocol)?;
+            Ok(None)
+        }
+        FromEngine::Reply {
+            id,
+            ok,
+            body,
+            message,
+        } => {
+            if id != request.id {
+                return Err(ExchangeError::protocol(BAD_REPLY));
+            }
+            if !ok {
+                return Err(ExchangeError::failed(
+                    message.unwrap_or_else(|| STOPPED.into()),
+                ));
+            }
+            let body = body.unwrap_or(Value::Null);
+            check_cache_paths(&body).map_err(ExchangeError::protocol)?;
+            Ok(Some(body))
+        }
+        FromEngine::Hello { .. } => Err(ExchangeError::protocol(BAD_REPLY)),
     }
 }
 
@@ -383,107 +450,235 @@ fn write_frame(output: &mut impl Write, message: &ToEngine) -> Result<(), String
 }
 
 pub struct Link {
-    machine: Machine<SystemClock>,
-    child: Option<EngineProcess>,
-    next_id: u64,
+    state: Mutex<ProcessState>,
+    stdin: Mutex<Option<Box<dyn Write + Send>>>,
 }
 
-struct EngineProcess {
-    child: Child,
-    stdin: std::process::ChildStdin,
-    stdout: std::io::BufReader<std::process::ChildStdout>,
-    resume_dir: PathBuf,
+struct ProcessState {
+    machine: Machine<SystemClock>,
+    child: Option<Child>,
+    incoming: Option<mpsc::Receiver<Result<String, String>>>,
+    reader: Option<JoinHandle<()>>,
+    next_id: u64,
+    inflight: Option<u64>,
+    resume_dir: Option<PathBuf>,
+    binary: Option<PathBuf>,
 }
 
 impl Link {
     pub fn new() -> Self {
         Self {
-            machine: Machine::new(SystemClock, env!("CARGO_PKG_VERSION")),
-            child: None,
-            next_id: 1,
+            state: Mutex::new(ProcessState {
+                machine: Machine::new(SystemClock, env!("CARGO_PKG_VERSION")),
+                child: None,
+                incoming: None,
+                reader: None,
+                next_id: 1,
+                inflight: None,
+                resume_dir: None,
+                binary: None,
+            }),
+            stdin: Mutex::new(None),
         }
     }
 
-    pub fn activate(&mut self) -> Vec<Effect> {
-        let effects = self.machine.activate();
+    fn lock(&self) -> std::sync::MutexGuard<'_, ProcessState> {
+        self.state.lock().expect("resume")
+    }
+
+    pub fn activate(&self) -> Vec<Effect> {
+        let effects = self.lock().machine.activate();
         self.apply(&effects);
         effects
     }
 
-    pub fn leave(&mut self) -> Vec<Effect> {
-        let effects = self.machine.leave();
+    pub fn leave(&self) -> Vec<Effect> {
+        let effects = self.lock().machine.leave();
         self.apply(&effects);
         effects
     }
 
-    pub fn poll(&mut self) {
-        if self.child.is_none() {
-            return;
+    pub fn poll(&self) {
+        let effects = {
+            let mut state = self.lock();
+            if state.child.is_none() {
+                return;
+            }
+            if take_exit(&mut state) {
+                state.machine.child_exit()
+            } else {
+                state.machine.tick()
+            }
+        };
+        if !effects.is_empty() {
+            self.apply(&effects);
         }
-        let effects = self.machine.tick();
-        if effects.is_empty() {
-            return;
-        }
-        self.apply(&effects);
     }
 
     pub fn dispatch(
-        &mut self,
+        &self,
         resume_dir: &Path,
         licensed: bool,
         call: &Call,
         mut answer_key: impl FnMut(ProviderId) -> Result<Option<String>, String>,
         mut on_event: impl FnMut(Event),
     ) -> Result<Value, String> {
-        let crashed = self.poll_exit();
-        if crashed
-            .iter()
-            .any(|effect| matches!(effect, Effect::Tell(STOPPED)))
-        {
-            return Err(STOPPED.into());
-        }
-        let tick = self.machine.tick();
-        self.apply(&tick);
-        if tick
-            .iter()
-            .any(|effect| matches!(effect, Effect::Tell(STOPPED)))
-        {
-            return Err(STOPPED.into());
-        }
-        let effects = self.machine.call(call.keeps_engine());
-        if effects
-            .iter()
-            .any(|effect| matches!(effect, Effect::Tell(_)))
-        {
-            return Err(STOPPED.into());
-        }
-        self.ensure(resume_dir)?;
-        let id = self.next_id;
-        self.next_id = self.next_id.saturating_add(1);
-        let epoch = self.machine.epoch().max(1);
-        let request = Exchange {
-            id,
-            epoch,
-            licensed,
-            call,
+        let request = {
+            {
+                let mut state = self.lock();
+                if take_exit(&mut state) {
+                    let crashed = state.machine.child_exit();
+                    drop(state);
+                    if crashed
+                        .iter()
+                        .any(|effect| matches!(effect, Effect::Tell(STOPPED)))
+                    {
+                        return Err(STOPPED.into());
+                    }
+                }
+            }
+            let mut state = self.lock();
+            let tick = state.machine.tick();
+            let stopped = tick
+                .iter()
+                .any(|effect| matches!(effect, Effect::Tell(STOPPED)));
+            drop(state);
+            self.apply(&tick);
+            if stopped {
+                return Err(STOPPED.into());
+            }
+            let mut state = self.lock();
+            let effects = state.machine.call(call.keeps_engine());
+            if effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::Tell(_)))
+            {
+                return Err(STOPPED.into());
+            }
+            drop(state);
+            self.ensure(resume_dir)?;
+            let mut state = self.lock();
+            let id = state.next_id;
+            state.next_id = state.next_id.saturating_add(1);
+            state.inflight = Some(id);
+            let epoch = state.machine.epoch().max(1);
+            let incoming = state.incoming.take();
+            Exchange {
+                id,
+                epoch,
+                licensed,
+                call,
+            }
+            .pipe(incoming)
         };
-        let EngineProcess { stdin, stdout, .. } = self.child.as_mut().ok_or(MISSING)?;
-        let body = exchange(stdout, stdin, &request, &mut answer_key, &mut on_event);
-        let _ = self.machine.reply(epoch);
-        body
+        let ExchangeHold { request, incoming } = request;
+        let Some(incoming) = incoming else {
+            self.fail_protocol(request.epoch);
+            return Err(MISSING.into());
+        };
+        let wrote = {
+            let mut stdin = self.stdin.lock().expect("resume stdin");
+            match stdin.as_mut() {
+                Some(stdin) => write_frame(
+                    stdin,
+                    &ToEngine::Request {
+                        id: request.id,
+                        epoch: request.epoch,
+                        licensed: request.licensed,
+                        call: request.call.clone(),
+                    },
+                ),
+                None => Err(MISSING.to_string()),
+            }
+        };
+        if let Err(err) = wrote {
+            self.fail_protocol(request.epoch);
+            return Err(err);
+        }
+        let limit = if request.call.keeps_engine() {
+            DOWNLOAD_LIMIT
+        } else {
+            REQUEST_LIMIT
+        };
+        let started = Instant::now();
+        let body = loop {
+            if started.elapsed() > limit {
+                self.fail_protocol(request.epoch);
+                return Err(TOO_SLOW.into());
+            }
+            if self.lock().child.is_none() {
+                self.finish(request.epoch, None);
+                return Err(STOPPED.into());
+            }
+            match incoming.recv_timeout(WAIT_SLICE) {
+                Ok(Ok(line)) => {
+                    if line.len() > DOCUMENT_MAX {
+                        self.fail_protocol(request.epoch);
+                        return Err(BAD_REPLY.into());
+                    }
+                    let step = {
+                        let mut stdin = self.stdin.lock().expect("resume stdin");
+                        match stdin.as_mut() {
+                            Some(stdin) => accept_line(
+                                line.trim_end(),
+                                &request,
+                                stdin,
+                                &mut answer_key,
+                                &mut on_event,
+                            ),
+                            None => Err(ExchangeError::failed(STOPPED)),
+                        }
+                    };
+                    match step {
+                        Ok(Some(body)) => break body,
+                        Ok(None) => {}
+                        Err(err) if err.protocol => {
+                            self.fail_protocol(request.epoch);
+                            return Err(err.message);
+                        }
+                        Err(err) => {
+                            self.finish(request.epoch, Some(incoming));
+                            return Err(err.message);
+                        }
+                    }
+                }
+                Ok(Err(_)) => {
+                    self.fail_protocol(request.epoch);
+                    return Err(BAD_REPLY.into());
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    self.finish(request.epoch, None);
+                    return Err(STOPPED.into());
+                }
+            }
+        };
+        self.finish(request.epoch, Some(incoming));
+        Ok(body)
     }
 
-    fn ensure(&mut self, resume_dir: &Path) -> Result<(), String> {
-        if self.child.is_some() {
+    fn finish(&self, epoch: u64, incoming: Option<mpsc::Receiver<Result<String, String>>>) {
+        let mut state = self.lock();
+        if let Some(incoming) = incoming {
+            state.incoming = Some(incoming);
+        }
+        state.inflight = None;
+        let _ = state.machine.reply(epoch);
+    }
+
+    fn fail_protocol(&self, epoch: u64) {
+        self.finish(epoch, None);
+        self.stop_child();
+    }
+
+    fn ensure(&self, resume_dir: &Path) -> Result<(), String> {
+        if self.lock().child.is_some() {
             return Ok(());
         }
-        if let Some(bundle) = std::env::current_exe()
-            .ok()
-            .and_then(|exe| exe.parent().map(Path::to_path_buf))
-        {
-            crate::resume::pidfile::reap_stale(&resume_dir.join("engine.pid"), &bundle);
-        }
         let binary = engine_binary().ok_or_else(|| MISSING.to_string())?;
+        crate::resume::pidfile::reap_stale(&resume_dir.join("engine.pid"), &binary);
+        let llama = binary.with_file_name(format!("llama-server{}", std::env::consts::EXE_SUFFIX));
+        crate::resume::pidfile::reap_stale(&resume_dir.join("llama.pid"), &llama);
         std::fs::create_dir_all(resume_dir).map_err(|err| err.to_string())?;
         let mut command = Command::new(&binary);
         command
@@ -504,51 +699,71 @@ impl Link {
         let mut child = command.spawn().map_err(|err| err.to_string())?;
         let stdout = child.stdout.take().ok_or_else(|| MISSING.to_string())?;
         let stdin = child.stdin.take().ok_or_else(|| MISSING.to_string())?;
-        let mut stdout = std::io::BufReader::new(stdout);
-        let mut line = String::new();
-        stdout.read_line(&mut line).map_err(|err| err.to_string())?;
-        if let Err(err) = accept_hello(&line, env!("CARGO_PKG_VERSION")) {
+        let (tx, rx) = mpsc::channel();
+        let reader = std::thread::spawn(move || read_stdout(stdout, tx));
+        let hello = match rx.recv_timeout(HELLO_LIMIT) {
+            Ok(Ok(line)) => line,
+            _ => {
+                let _ = child.kill();
+                kill_group(child.id());
+                let _ = child.wait();
+                let _ = reader.join();
+                return Err(TOO_SLOW.into());
+            }
+        };
+        if let Err(err) = accept_hello(&hello, env!("CARGO_PKG_VERSION")) {
             let _ = child.kill();
+            kill_group(child.id());
+            let _ = child.wait();
+            let _ = reader.join();
             return Err(err);
         }
-        let hello = self.machine.hello(env!("CARGO_PKG_VERSION"), PROTO);
+        let mut state = self.lock();
+        let hello = state.machine.hello(env!("CARGO_PKG_VERSION"), PROTO);
         if hello.iter().any(|effect| matches!(effect, Effect::Tell(_))) {
+            drop(state);
             let _ = child.kill();
+            kill_group(child.id());
+            let _ = child.wait();
+            let _ = reader.join();
             return Err(MISMATCH.into());
         }
         let _ = std::fs::write(
             resume_dir.join("engine.pid"),
-            format!("{}\n{}\n", child.id(), binary.display()),
+            resume_proto::format_pid(child.id(), &binary),
         );
-        self.child = Some(EngineProcess {
-            child,
-            stdin,
-            stdout,
-            resume_dir: resume_dir.to_path_buf(),
-        });
+        state.child = Some(child);
+        state.incoming = Some(rx);
+        state.reader = Some(reader);
+        state.resume_dir = Some(resume_dir.to_path_buf());
+        state.binary = Some(binary);
+        drop(state);
+        *self.stdin.lock().expect("resume stdin") = Some(Box::new(stdin));
         Ok(())
     }
 
-    fn apply(&mut self, effects: &[Effect]) {
+    fn apply(&self, effects: &[Effect]) {
         for effect in effects {
             match effect {
                 Effect::Shutdown { drain } => {
-                    if let Some(process) = self.child.as_mut() {
-                        let _ = write_frame(
-                            process.stdin.by_ref(),
-                            &ToEngine::Shutdown { drain: *drain },
-                        );
+                    let alive = self.lock().child.is_some();
+                    if alive {
+                        let mut stdin = self.stdin.lock().expect("resume stdin");
+                        if let Some(stdin) = stdin.as_mut() {
+                            let _ = write_frame(stdin, &ToEngine::Shutdown { drain: *drain });
+                        }
                     }
                     if !drain {
                         self.stop_child();
                     }
                 }
                 Effect::Cancel => {
-                    if let Some(process) = self.child.as_mut() {
-                        let _ = write_frame(
-                            process.stdin.by_ref(),
-                            &ToEngine::Cancel { id: self.next_id },
-                        );
+                    let id = self.lock().inflight;
+                    if let Some(id) = id {
+                        let mut stdin = self.stdin.lock().expect("resume stdin");
+                        if let Some(stdin) = stdin.as_mut() {
+                            let _ = write_frame(stdin, &ToEngine::Cancel { id });
+                        }
                     }
                 }
                 Effect::Kill => self.stop_child(),
@@ -557,52 +772,114 @@ impl Link {
         }
     }
 
-    fn poll_exit(&mut self) -> Vec<Effect> {
-        let exited = self
-            .child
-            .as_mut()
-            .and_then(|process| process.child.try_wait().ok())
-            .flatten()
-            .is_some();
-        if !exited {
-            return Vec::new();
+    fn stop_child(&self) {
+        let taken = {
+            let mut state = self.lock();
+            let child = state.child.take();
+            let reader = state.reader.take();
+            let dir = state.resume_dir.take();
+            state.incoming.take();
+            state.inflight = None;
+            (child, reader, dir)
+        };
+        {
+            let mut stdin = self.stdin.lock().expect("resume stdin");
+            *stdin = None;
         }
-        if let Some(process) = self.child.take() {
-            let _ = std::fs::remove_file(process.resume_dir.join("engine.pid"));
-        }
-        self.machine.child_exit()
-    }
-
-    fn stop_child(&mut self) {
-        let Some(mut process) = self.child.take() else {
+        let Some(mut child) = taken.0 else {
+            if let Some(reader) = taken.1 {
+                let _ = reader.join();
+            }
             return;
         };
         let started = Instant::now();
         loop {
-            match process.child.try_wait() {
-                Ok(Some(_)) => {
-                    let _ = std::fs::remove_file(process.resume_dir.join("engine.pid"));
-                    return;
-                }
+            match child.try_wait() {
+                Ok(Some(_)) => break,
                 Ok(None) if started.elapsed() < Duration::from_millis(500) => {
                     std::thread::sleep(Duration::from_millis(20));
                 }
-                _ => break,
+                _ => {
+                    let pid = child.id();
+                    let _ = child.kill();
+                    kill_group(pid);
+                    break;
+                }
             }
         }
-        let pid = process.child.id();
-        let _ = process.child.kill();
-        kill_group(pid);
-        let _ = process.child.wait();
-        let _ = std::fs::remove_file(process.resume_dir.join("engine.pid"));
+        kill_group(child.id());
+        let _ = child.wait();
+        if let Some(reader) = taken.1 {
+            let _ = reader.join();
+        }
+        if let Some(dir) = taken.2 {
+            let _ = std::fs::remove_file(dir.join("engine.pid"));
+            let _ = std::fs::remove_file(dir.join("llama.pid"));
+        }
+    }
+}
+
+struct ExchangeHold<'a> {
+    request: Exchange<'a>,
+    incoming: Option<mpsc::Receiver<Result<String, String>>>,
+}
+
+impl<'a> Exchange<'a> {
+    fn pipe(self, incoming: Option<mpsc::Receiver<Result<String, String>>>) -> ExchangeHold<'a> {
+        ExchangeHold {
+            request: self,
+            incoming,
+        }
     }
 }
 
 impl Drop for Link {
     fn drop(&mut self) {
-        if self.child.is_some() {
-            let effects = vec![Effect::Shutdown { drain: false }];
-            self.apply(&effects);
+        if self.state.lock().expect("resume").child.is_some() {
+            self.apply(&[Effect::Shutdown { drain: false }]);
+        }
+    }
+}
+
+fn take_exit(state: &mut ProcessState) -> bool {
+    let exited = state
+        .child
+        .as_mut()
+        .and_then(|child| child.try_wait().ok())
+        .flatten()
+        .is_some();
+    if !exited {
+        return false;
+    }
+    if let Some(mut child) = state.child.take() {
+        kill_group(child.id());
+        let _ = child.wait();
+    }
+    if let Some(dir) = state.resume_dir.take() {
+        let _ = std::fs::remove_file(dir.join("engine.pid"));
+        let _ = std::fs::remove_file(dir.join("llama.pid"));
+    }
+    state.incoming.take();
+    state.inflight = None;
+    true
+}
+
+fn read_stdout(stdout: std::process::ChildStdout, tx: mpsc::Sender<Result<String, String>>) {
+    let mut stdout = std::io::BufReader::new(stdout);
+    let mut line = String::new();
+    loop {
+        line.clear();
+        match stdout.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => {
+                if tx.send(Ok(line.trim_end().to_string())).is_err() {
+                    break;
+                }
+            }
+            Err(err) => {
+                let _ = tx.send(Err(err.to_string()));
+                break;
+            }
         }
     }
 }
@@ -642,7 +919,7 @@ unsafe extern "C" {
 mod tests {
     use std::io::BufReader;
 
-    use resume_proto::{every_call, Answer, FromEngine};
+    use resume_proto::{every_call, Answer, FromEngine, ToEngine};
 
     use super::*;
 
@@ -815,24 +1092,25 @@ mod tests {
             &mut |_| {},
         )
         .unwrap_err();
-        assert!(err.contains("cache"), "{err}");
+        assert!(err.message.contains("cache"), "{err:?}");
         worker.join().unwrap();
     }
 
     #[test]
     fn poll_does_not_stop_an_engine_that_has_not_started() {
-        let mut link = Link::new();
+        let link = Link::new();
         link.activate();
         link.poll();
-        assert!(matches!(link.machine.phase(), Phase::Spawning));
-        assert!(link.child.is_none());
+        assert!(matches!(link.lock().machine.phase(), Phase::Spawning));
+        assert!(link.lock().child.is_none());
     }
 
     #[test]
     fn poll_shuts_the_child_down_about_two_seconds_after_the_last_reply() {
-        let mut link = Link::new();
+        let link = Link::new();
         link.activate();
         assert!(link
+            .lock()
             .machine
             .hello(env!("CARGO_PKG_VERSION"), PROTO)
             .is_empty());
@@ -845,17 +1123,17 @@ mod tests {
             .spawn()
             .unwrap();
         let stdin = child.stdin.take().unwrap();
-        let stdout = BufReader::new(child.stdout.take().unwrap());
-        link.child = Some(EngineProcess {
-            child,
-            stdin,
-            stdout,
-            resume_dir: dir.clone(),
-        });
+        drop(child.stdout.take());
+        {
+            let mut state = link.lock();
+            state.child = Some(child);
+            state.resume_dir = Some(dir.clone());
+        }
+        *link.stdin.lock().expect("stdin") = Some(Box::new(stdin));
         let started = Instant::now();
         loop {
             link.poll();
-            if link.child.is_none() {
+            if link.lock().child.is_none() {
                 break;
             }
             if started.elapsed() > Duration::from_secs(4) {
@@ -867,6 +1145,115 @@ mod tests {
         assert!(elapsed >= Duration::from_millis(1_500), "{elapsed:?}");
         assert!(elapsed < Duration::from_secs(4), "{elapsed:?}");
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_reply_for_another_request_is_rejected() {
+        let (engine_read, mut shell_write) = std::io::pipe().unwrap();
+        let (shell_read, mut engine_write) = std::io::pipe().unwrap();
+        let worker = std::thread::spawn(move || {
+            let mut engine_read = BufReader::new(engine_read);
+            let mut line = String::new();
+            engine_read.read_line(&mut line).unwrap();
+            send_from(
+                &mut engine_write,
+                &FromEngine::reply(9, Ok(serde_json::json!({ "hasKey": true }))),
+            );
+        });
+        let mut shell_read = BufReader::new(shell_read);
+        let call = Call::EngineInfo {};
+        let err = exchange(
+            &mut shell_read,
+            &mut shell_write,
+            &Exchange {
+                id: 4,
+                epoch: 1,
+                licensed: true,
+                call: &call,
+            },
+            &mut |_| Ok(None),
+            &mut |_| {},
+        )
+        .unwrap_err();
+        assert!(err.protocol);
+        assert!(err.message.contains("could not use"), "{}", err.message);
+        worker.join().unwrap();
+    }
+
+    #[test]
+    fn cancel_uses_the_request_that_is_running() {
+        let link = Link::new();
+        let (mut read, write) = std::io::pipe().unwrap();
+        *link.stdin.lock().expect("stdin") = Some(Box::new(write));
+        link.lock().inflight = Some(7);
+        link.lock().next_id = 40;
+        link.apply(&[Effect::Cancel]);
+        let mut line = String::new();
+        std::io::BufRead::read_line(&mut std::io::BufReader::new(&mut read), &mut line).unwrap();
+        match resume_proto::decode_to(line.trim_end()).unwrap() {
+            ToEngine::Cancel { id } => assert_eq!(id, 7),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn leave_returns_while_a_job_is_waiting() {
+        let link = std::sync::Arc::new(Link::new());
+        link.activate();
+        assert!(link
+            .lock()
+            .machine
+            .hello(env!("CARGO_PKG_VERSION"), PROTO)
+            .is_empty());
+        let child = Command::new("sleep")
+            .arg("30")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap();
+        let (tx, rx) = mpsc::channel();
+        let (read, write) = std::io::pipe().unwrap();
+        let seen = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let flag = std::sync::Arc::clone(&seen);
+        std::thread::spawn(move || {
+            let mut read = BufReader::new(read);
+            let mut line = String::new();
+            let _ = read.read_line(&mut line);
+            flag.store(true, std::sync::atomic::Ordering::SeqCst);
+            std::thread::sleep(Duration::from_secs(5));
+        });
+        {
+            let mut state = link.lock();
+            state.child = Some(child);
+            state.incoming = Some(rx);
+        }
+        *link.stdin.lock().expect("stdin") = Some(Box::new(write));
+        let worker_link = std::sync::Arc::clone(&link);
+        let worker = std::thread::spawn(move || {
+            let _ = worker_link.dispatch(
+                std::path::Path::new("."),
+                true,
+                &Call::EngineInfo {},
+                |_| Ok(None),
+                |_| {},
+            );
+        });
+        let ready = Instant::now();
+        while !seen.load(std::sync::atomic::Ordering::SeqCst) {
+            if ready.elapsed() > Duration::from_secs(2) {
+                panic!("the job did not start");
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let started = Instant::now();
+        link.leave();
+        assert!(
+            started.elapsed() < Duration::from_millis(1_500),
+            "{:?}",
+            started.elapsed()
+        );
+        worker.join().unwrap();
+        drop(tx);
     }
 
     fn send_from(output: &mut impl std::io::Write, message: &FromEngine) {

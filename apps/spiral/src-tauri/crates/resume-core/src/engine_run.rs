@@ -63,7 +63,7 @@ pub async fn rewrite_wording(job: WordingJob<'_>) -> Result<Rewritten, String> {
         host,
         on_progress,
     } = job;
-    if !tighten {
+    if !tighten || stored.rules_only {
         return Ok(Rewritten {
             doc,
             engine: RESTYLE_ENGINE.to_string(),
@@ -81,16 +81,25 @@ pub async fn rewrite_wording(job: WordingJob<'_>) -> Result<Rewritten, String> {
         let model = crate::local::model_path(root, &entry);
         on_progress(stage("Starting the offline engine", 5, LOCAL_ENGINE));
         let running = host.run(&binary, &model)?;
-        crate::model_host::wait_until_ready(running.port, crate::model_host::READY_ATTEMPTS)
-            .await?;
+        let _ = std::fs::write(
+            root.join("llama.pid"),
+            resume_proto::format_pid(running.pid, &binary),
+        );
+        if let Err(err) = host.wait_ready().await {
+            host.stop();
+            let _ = std::fs::remove_file(root.join("llama.pid"));
+            return Err(err);
+        }
         on_progress(stage("Rewriting wording", 10, LOCAL_ENGINE));
         let local = Provider::Local {
             base_url: running.url,
         };
-        let (doc, outcome) =
-            crate::rewrite::rewrite_doc(&doc, &local, "", &stored.model, aim).await?;
-        on_progress(stage("Checking facts", 12, LOCAL_ENGINE));
+        let rewritten =
+            crate::rewrite::rewrite_doc(&doc, &local, &running.api_key, &stored.model, aim).await;
         host.stop();
+        let _ = std::fs::remove_file(root.join("llama.pid"));
+        let (doc, outcome) = rewritten?;
+        on_progress(stage("Checking facts", 12, LOCAL_ENGINE));
         return Ok(Rewritten {
             doc,
             engine: LOCAL_ENGINE.to_string(),

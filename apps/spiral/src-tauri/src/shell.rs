@@ -67,7 +67,7 @@ pub struct Shell {
     settings: Mutex<ShellSettings>,
     active: Mutex<Option<ModuleId>>,
     wallpaper: Mutex<Option<Arc<WallpaperEngine>>>,
-    resume: Mutex<Link>,
+    resume: Link,
 }
 
 impl Shell {
@@ -77,7 +77,7 @@ impl Shell {
             settings: Mutex::new(settings),
             active: Mutex::new(None),
             wallpaper: Mutex::new(None),
-            resume: Mutex::new(Link::new()),
+            resume: Link::new(),
         }
     }
 
@@ -131,8 +131,8 @@ impl Shell {
         *self.active.lock().expect("active") = Some(id);
     }
 
-    pub fn resume_link(&self) -> std::sync::MutexGuard<'_, Link> {
-        self.resume.lock().expect("resume")
+    pub fn resume_link(&self) -> &Link {
+        &self.resume
     }
 
     pub fn ensure_wallpaper(&self, engine: Arc<WallpaperEngine>) {

@@ -4768,6 +4768,7 @@ dependencies = [
  "typst-layout",
  "typst-pdf",
  "typst-svg",
+ "windows-sys 0.60.2",
  "zip 8.6.0",
 ]
 

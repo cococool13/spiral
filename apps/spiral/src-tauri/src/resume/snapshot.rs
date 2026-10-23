@@ -26,12 +26,15 @@ pub fn load(resume_dir: &Path) -> Result<Value, String> {
 
 fn read_json(path: &Path) -> Result<Option<Value>, String> {
     match std::fs::read(path) {
-        Ok(bytes) => serde_json::from_slice(&bytes).map(Some).map_err(|_| {
-            format!(
-                "Could not read the saved resume: {} is not valid JSON. The file was left in place.",
-                path.display()
-            )
-        }),
+        Ok(bytes) => {
+            let value: Value = serde_json::from_slice(&bytes).map_err(|_| {
+                format!(
+                    "Could not read the saved resume: {} is not valid JSON. The file was left in place.",
+                    path.display()
+                )
+            })?;
+            resume_proto::normalize_stored(value).map(Some)
+        }
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(err) => Err(format!(
             "Could not read the saved resume: {err}. The file was left in place."
@@ -65,6 +68,7 @@ mod tests {
         .unwrap();
         let value = load(&dir).unwrap();
         assert_eq!(value["stored"]["doc"]["contact"]["name"], "Ada");
+        assert_eq!(value["stored"]["doc"]["headline"], "");
         assert!(dir.join("resume.json").is_file());
         std::fs::write(dir.join("resume.json"), b"not json").unwrap();
         let err = load(&dir).unwrap_err();

@@ -29,6 +29,8 @@ pub fn spawn_count() -> u32 {
 pub struct Running {
     pub url: String,
     pub port: u16,
+    pub api_key: String,
+    pub pid: u32,
 }
 
 #[derive(Default)]
@@ -60,6 +62,8 @@ impl ModelHost {
         let running = Running {
             url: sidecar.url(),
             port: sidecar.port,
+            api_key: sidecar.api_key.clone(),
+            pid: sidecar.child.id(),
         };
         *self = Self::Busy(sidecar);
         Ok(running)
@@ -67,6 +71,15 @@ impl ModelHost {
 
     pub fn stop(&mut self) {
         *self = Self::Off;
+    }
+
+    pub async fn wait_ready(&mut self) -> Result<(), String> {
+        match self {
+            Self::Busy(sidecar) | Self::Ready(sidecar) => {
+                sidecar.wait_until_ready(READY_ATTEMPTS).await
+            }
+            _ => Err("The offline engine is not running.".to_string()),
+        }
     }
 }
 
@@ -87,12 +100,14 @@ pub fn free_port() -> Result<u16, String> {
 
 /// The arguments the sidecar is started with. Extracted so the flags can be
 /// asserted without launching a process.
-pub fn arguments(model: &Path, port: u16) -> Vec<String> {
+pub fn arguments(model: &Path, port: u16, api_key: &str) -> Vec<String> {
     vec![
         "--model".into(),
         model.display().to_string(),
         "--port".into(),
         port.to_string(),
+        "--api-key".into(),
+        api_key.to_string(),
         // Loopback only. Never 0.0.0.0 — a resume-rewriting server reachable
         // from the local network is not something anyone asked for.
         "--host".into(),
@@ -121,7 +136,11 @@ pub fn arguments(model: &Path, port: u16) -> Vec<String> {
 /// covers child processes too.
 pub struct Sidecar {
     child: Child,
+    finished: bool,
     pub port: u16,
+    pub api_key: String,
+    #[cfg(windows)]
+    job: Option<KillJob>,
 }
 
 /// Where Tauri puts an `externalBin` sidecar: **beside the app's own
@@ -156,16 +175,12 @@ impl Sidecar {
                     .to_string(),
             );
         }
+        let api_key = random_key()?;
         let mut command = Command::new(binary);
         command
-            .args(arguments(model, port))
+            .args(arguments(model, port, &api_key))
             .stdout(Stdio::null())
             .stderr(Stdio::null());
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::CommandExt;
-            command.process_group(0);
-        }
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
@@ -174,7 +189,58 @@ impl Sidecar {
         let child = command
             .spawn()
             .map_err(|e| format!("Could not start the offline engine: {e}."))?;
-        Ok(Self { child, port })
+        #[cfg(windows)]
+        let job = match KillJob::contain(&child) {
+            Ok(job) => Some(job),
+            Err(err) => {
+                let mut child = child;
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(err);
+            }
+        };
+        Ok(Self {
+            child,
+            finished: false,
+            port,
+            api_key,
+            #[cfg(windows)]
+            job,
+        })
+    }
+
+    fn exited(&mut self) -> Result<bool, String> {
+        if self.finished {
+            return Ok(true);
+        }
+        match self.child.try_wait() {
+            Ok(Some(_)) => {
+                self.finished = true;
+                Ok(true)
+            }
+            Ok(None) => Ok(false),
+            Err(err) => Err(format!("Could not check the offline engine: {err}.")),
+        }
+    }
+
+    pub async fn wait_until_ready(&mut self, attempts: u32) -> Result<(), String> {
+        let client = reqwest::Client::new();
+        let health = format!("http://127.0.0.1:{}/health", self.port);
+        for _ in 0..attempts {
+            if self.exited()? {
+                return Err("The offline engine stopped before it was ready.".to_string());
+            }
+            if let Ok(response) = client.get(&health).bearer_auth(&self.api_key).send().await {
+                if response.status().is_success() {
+                    return Ok(());
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+        Err(
+            "The offline model is taking longer than three minutes to load, so the build was stopped. It is usually faster the second time. Build again, or use your own API key."
+                .to_string(),
+        )
     }
 
     pub fn url(&self) -> String {
@@ -184,19 +250,28 @@ impl Sidecar {
 
 impl Drop for Sidecar {
     fn drop(&mut self) {
-        #[cfg(unix)]
-        kill_group(self.child.id() as i32);
         let _ = self.child.kill();
         let _ = self.child.wait();
+        #[cfg(windows)]
+        {
+            self.job.take();
+        }
     }
 }
 
+fn random_key() -> Result<String, String> {
+    let mut bytes = [0u8; 32];
+    fill_random(&mut bytes)?;
+    Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
 #[cfg(unix)]
-fn kill_group(pid: i32) {
-    extern "C" {
-        fn kill(pid: i32, sig: i32) -> i32;
-    }
-    unsafe { kill(-pid, 9) };
+fn fill_random(buf: &mut [u8]) -> Result<(), String> {
+    use std::io::Read;
+    let mut file = std::fs::File::open("/dev/urandom")
+        .map_err(|err| format!("Spiral could not start the offline engine. {err}"))?;
+    file.read_exact(buf)
+        .map_err(|err| format!("Spiral could not start the offline engine. {err}"))
 }
 
 /// Half-second polls. A 2.5 GB model that is not in the page cache — the first
@@ -211,22 +286,65 @@ pub const READY_ATTEMPTS: u32 = 360;
 /// silently reintroducing a timeout that a cold start cannot meet.
 const _: () = assert!(READY_ATTEMPTS / 2 >= 180);
 
-/// Wait until the server answers, or give up with a sentence.
-pub async fn wait_until_ready(port: u16, attempts: u32) -> Result<(), String> {
-    let client = reqwest::Client::new();
-    let health = format!("http://127.0.0.1:{port}/health");
-    for _ in 0..attempts {
-        if let Ok(response) = client.get(&health).send().await {
-            if response.status().is_success() {
-                return Ok(());
-            }
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+#[cfg(windows)]
+fn fill_random(buf: &mut [u8]) -> Result<(), String> {
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn SystemFunction036(buffer: *mut u8, length: u32) -> u8;
     }
-    Err(
-        "The offline model is taking longer than three minutes to load, so the build was stopped. It is usually faster the second time. Build again, or use your own API key."
-            .to_string(),
-    )
+    let ok = unsafe { SystemFunction036(buf.as_mut_ptr(), buf.len() as u32) };
+    if ok == 0 {
+        Err("Spiral could not start the offline engine.".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(windows)]
+struct KillJob(windows_sys::Win32::Foundation::HANDLE);
+
+#[cfg(windows)]
+impl KillJob {
+    fn contain(child: &Child) -> Result<Self, String> {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::JobObjects::{
+            AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+            SetInformationJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+            JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+        };
+        let job = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
+        if job.is_null() {
+            return Err("Spiral could not keep the offline engine with this app.".to_string());
+        }
+        let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        let set = unsafe {
+            SetInformationJobObject(
+                job,
+                JobObjectExtendedLimitInformation,
+                &info as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION as *const _,
+                std::mem::size_of_val(&info) as u32,
+            )
+        };
+        if set == 0 {
+            unsafe { CloseHandle(job) };
+            return Err("Spiral could not keep the offline engine with this app.".to_string());
+        }
+        let assigned = unsafe { AssignProcessToJobObject(job, child.as_raw_handle()) };
+        if assigned == 0 {
+            unsafe { CloseHandle(job) };
+            return Err("Spiral could not keep the offline engine with this app.".to_string());
+        }
+        Ok(Self(job))
+    }
+}
+
+#[cfg(windows)]
+impl Drop for KillJob {
+    fn drop(&mut self) {
+        unsafe { windows_sys::Win32::Foundation::CloseHandle(self.0) };
+    }
 }
 
 #[cfg(test)]
@@ -237,7 +355,7 @@ mod tests {
     #[test]
     fn the_sidecar_is_only_ever_reachable_on_loopback() {
         assert_eq!(base_url(8080), "http://127.0.0.1:8080/v1");
-        let args = arguments(Path::new("/models/x.gguf"), 8080);
+        let args = arguments(Path::new("/models/x.gguf"), 8080, "secret");
         let host = args
             .iter()
             .position(|a| a == "--host")
@@ -247,11 +365,14 @@ mod tests {
             !args.iter().any(|a| a == "0.0.0.0"),
             "the offline engine must never bind a public interface"
         );
+        assert!(args
+            .windows(2)
+            .any(|pair| pair[0] == "--api-key" && pair[1] == "secret"));
     }
 
     #[test]
     fn the_model_path_and_port_are_passed_through() {
-        let args = arguments(Path::new("/models/qwen.gguf"), 51234);
+        let args = arguments(Path::new("/models/qwen.gguf"), 51234, "secret");
         assert!(args
             .windows(2)
             .any(|w| w[0] == "--model" && w[1] == "/models/qwen.gguf"));
@@ -274,7 +395,7 @@ mod tests {
     /// offline tier silently falling back to the free pass on every build.
     #[test]
     fn thinking_is_turned_off() {
-        let args = arguments(Path::new("/models/x.gguf"), 8080);
+        let args = arguments(Path::new("/models/x.gguf"), 8080, "secret");
         let at = args
             .iter()
             .position(|a| a == "--reasoning")
@@ -414,9 +535,10 @@ mod live {
             .local_addr()
             .unwrap()
             .port();
-        let engine = Sidecar::start(&binary, &model, port).expect("the engine did not start");
+        let mut engine = Sidecar::start(&binary, &model, port).expect("the engine did not start");
         let loading = std::time::Instant::now();
-        wait_until_ready(port, READY_ATTEMPTS)
+        engine
+            .wait_until_ready(READY_ATTEMPTS)
             .await
             .expect("the engine never became ready");
         let loaded = loading.elapsed();
@@ -425,9 +547,10 @@ mod live {
             base_url: engine.url(),
         };
         let writing = std::time::Instant::now();
-        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local", "")
-            .await
-            .expect("the offline rewrite failed");
+        let (out, outcome) =
+            crate::rewrite::rewrite_doc(&doc, &provider, &engine.api_key, "local", "")
+                .await
+                .expect("the offline rewrite failed");
         let wrote = writing.elapsed();
 
         println!("\n=== {} ===", model.display());
@@ -483,8 +606,9 @@ mod live {
             .local_addr()
             .unwrap()
             .port();
-        let engine = Sidecar::start(&binary, &model, port).expect("the engine did not start");
-        wait_until_ready(port, READY_ATTEMPTS)
+        let mut engine = Sidecar::start(&binary, &model, port).expect("the engine did not start");
+        engine
+            .wait_until_ready(READY_ATTEMPTS)
             .await
             .expect("the engine never became ready");
 
@@ -505,9 +629,10 @@ mod live {
         let provider = crate::provider::Provider::Local {
             base_url: engine.url(),
         };
-        let (out, outcome) = crate::rewrite::rewrite_doc(&doc, &provider, "", "local", "")
-            .await
-            .expect("the offline rewrite failed");
+        let (out, outcome) =
+            crate::rewrite::rewrite_doc(&doc, &provider, &engine.api_key, "local", "")
+                .await
+                .expect("the offline rewrite failed");
 
         let after = &out.experience[0].bullets[0].text;
         println!("before: {}", doc.experience[0].bullets[0].text);

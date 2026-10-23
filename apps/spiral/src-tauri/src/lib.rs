@@ -61,18 +61,12 @@ async fn resume(
         return resume::snapshot::load(&shell.root().resume_dir());
     }
     let call = match call {
-        resume_proto::Call::ImportFile { path } if path.is_empty() => {
-            match resume::dialog::pick_open(&app)? {
-                None => return Ok(serde_json::Value::Null),
-                Some(path) => resume_proto::Call::ImportFile { path },
-            }
-        }
-        resume_proto::Call::SaveBuilt { path } if !std::path::Path::new(&path).is_absolute() => {
-            let name = std::path::Path::new(&path)
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("resume.pdf");
-            match resume::dialog::pick_save(&app, name)? {
+        resume_proto::Call::ImportFile { .. } => match resume::dialog::pick_open(&app)? {
+            None => return Ok(serde_json::Value::Null),
+            Some(path) => resume_proto::Call::ImportFile { path },
+        },
+        resume_proto::Call::SaveBuilt { path } => {
+            match resume::dialog::pick_save(&app, &suggested_save_name(&path))? {
                 None => return Ok(serde_json::Value::Null),
                 Some(path) => resume_proto::Call::SaveBuilt { path },
             }
@@ -88,15 +82,17 @@ async fn resume(
             license::LicenseView::Licensed { .. }
         )
     };
-    let gate = app.state::<license::LicenseGate>();
+    let is_check = matches!(call, resume_proto::Call::Check { .. });
     let dir = shell.root().resume_dir();
-    let mut value = {
-        let mut link = shell.resume_link();
-        link.dispatch(
-            &dir,
+    let job_dir = dir.clone();
+    let app_for_job = app.clone();
+    let mut value = tokio::task::spawn_blocking(move || {
+        let gate_app = app_for_job.clone();
+        app_for_job.state::<shell::Shell>().resume_link().dispatch(
+            &job_dir,
             licensed,
             &call,
-            |provider| {
+            move |provider| {
                 let provider = match provider {
                     resume_proto::ProviderId::Anthropic => {
                         spiral_license::migrate::ProviderId::Anthropic
@@ -106,14 +102,18 @@ async fn resume(
                         spiral_license::migrate::ProviderId::Compatible
                     }
                 };
-                gate.provider_secret(provider)
+                gate_app
+                    .state::<license::LicenseGate>()
+                    .provider_secret(provider)
             },
             |event| {
                 let _ = events.send(event);
             },
-        )?
-    };
-    if matches!(call, resume_proto::Call::Check { .. }) {
+        )
+    })
+    .await
+    .map_err(|_| "Resume's engine did not answer in time. Try again.".to_string())??;
+    if is_check {
         bench::mark("ats_check:resume");
     }
     resume::publish::absolutize(&dir, &mut value);
@@ -185,6 +185,18 @@ async fn wallpaper_apply(
         })
         .await
         .map_err(|err| err.to_string())
+}
+
+fn suggested_save_name(path: &str) -> String {
+    let name = std::path::Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("");
+    if name.is_empty() || name == "." || name == ".." {
+        "resume.pdf".to_string()
+    } else {
+        name.to_string()
+    }
 }
 
 #[tauri::command]
@@ -452,6 +464,7 @@ pub fn run() {
             resume,
             bench_mark,
             license::license_view,
+            license::license_retry,
             license::license_use_legacy,
             license::license_activate,
             license::license_request_code,

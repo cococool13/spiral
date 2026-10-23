@@ -110,7 +110,7 @@ async fn resume_pdf(app: &tauri::AppHandle) -> Result<(), String> {
     std::fs::write(&fixture, text).map_err(|err| err.to_string())?;
     let import_started = Instant::now();
     let imported = {
-        let mut link = shell.resume_link();
+        let link = shell.resume_link();
         link.dispatch(
             &dir,
             true,
@@ -130,7 +130,7 @@ async fn resume_pdf(app: &tauri::AppHandle) -> Result<(), String> {
     }
     let build_started = Instant::now();
     let built = {
-        let mut link = shell.resume_link();
+        let link = shell.resume_link();
         link.dispatch(
             &dir,
             true,

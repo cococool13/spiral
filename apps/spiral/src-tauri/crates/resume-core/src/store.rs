@@ -93,9 +93,15 @@ impl Store {
 
     fn read_doc(path: &Path) -> io::Result<Option<StoredDoc>> {
         match fs::read(path) {
-            Ok(bytes) => serde_json::from_slice(&bytes)
-                .map(Some)
-                .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err)),
+            Ok(bytes) => {
+                let value: serde_json::Value = serde_json::from_slice(&bytes)
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+                let value = resume_proto::normalize_stored(value)
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+                serde_json::from_value(value)
+                    .map(Some)
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
+            }
             Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
             Err(err) => Err(err),
         }
@@ -130,11 +136,18 @@ impl Store {
     }
 
     pub fn delete_all(&self) -> io::Result<()> {
-        match fs::remove_dir_all(&self.root) {
-            Ok(()) => Ok(()),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(e),
+        for name in [FILE, "resume.json.tmp"] {
+            match fs::remove_file(self.root.join(name)) {
+                Ok(()) => {}
+                Err(err) if err.kind() == io::ErrorKind::NotFound => {}
+                Err(err) => return Err(err),
+            }
         }
+        let cache = self.root.join("cache");
+        if cache.exists() {
+            fs::remove_dir_all(cache)?;
+        }
+        Ok(())
     }
 }
 
@@ -235,8 +248,38 @@ mod tests {
             ))
             .unwrap();
         store.delete_all().unwrap();
-        assert!(!store.path().exists());
+        assert!(store.path().is_dir());
         assert!(store.load().unwrap().is_none());
+    }
+
+    #[test]
+    fn delete_all_keeps_models_and_engine_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("resume");
+        let store = Store::new(root.clone());
+        store
+            .save(&record(
+                doc_named("Ada"),
+                "column",
+                "pdf",
+                "ink",
+                true,
+                "2026-08-11T10:00:00Z",
+            ))
+            .unwrap();
+        let models = root.join("models");
+        fs::create_dir_all(&models).unwrap();
+        fs::write(models.join("qwen.gguf"), b"weights").unwrap();
+        fs::write(root.join("models.ref.json"), b"{\"models\":[]}").unwrap();
+        fs::write(root.join("engine.json"), b"{}").unwrap();
+        fs::create_dir_all(root.join("cache")).unwrap();
+        fs::write(root.join("cache").join("page.svg"), b"<svg/>").unwrap();
+        store.delete_all().unwrap();
+        assert!(store.load().unwrap().is_none());
+        assert_eq!(fs::read(models.join("qwen.gguf")).unwrap(), b"weights");
+        assert!(root.join("models.ref.json").is_file());
+        assert!(root.join("engine.json").is_file());
+        assert!(!root.join("cache").exists());
     }
 
     #[test]
