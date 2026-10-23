@@ -235,7 +235,9 @@ jobs:
             cp -R "$APP" "$PACK/$NAME"
             TAR="src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/${NAME}.tar.gz"
             rm -f "$TAR" "$TAR.sig"
-            tar -czf "$TAR" -C "$PACK" "$NAME"
+            # No AppleDouble ._ files: once the updater unpacks them they break
+            # the code seal ("sealed resource is missing or invalid").
+            COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -czf "$TAR" -C "$PACK" "$NAME"
             pnpm tauri signer sign "$TAR"
           fi
         env:
