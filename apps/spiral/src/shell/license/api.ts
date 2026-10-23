@@ -17,7 +17,7 @@ export function licenseRetry(): Promise<LicenseView> {
 }
 
 export function licenseUseLegacy(app: LegacyApp): Promise<LicenseView> {
-  return invoke("license_use_legacy", { app }).then(parseLicenseView);
+  return invoke("license_use_legacy", { legacy: app }).then(parseLicenseView);
 }
 
 export function providerView(provider: ProviderId): Promise<ProviderView> {
