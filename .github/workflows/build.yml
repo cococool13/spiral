@@ -122,78 +122,65 @@ jobs:
           echo "Add them under Settings -> Secrets and variables -> Actions."
           exit 0
 
-  # Spiral Slim — Python collection tests + desktop typecheck/vitest/cargo.
-  # The archived Spiral-Slim repo had ci.yml; this monorepo had none.
-  slim:
+  # Per-push checks for Spiral. A tag build belongs to the release job.
+  spiral:
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/spiral
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Python collection tests
-        working-directory: apps/slim
-        run: |
-          python3 -m pip install --user pytest
-          python3 -m pytest tests/ -q
-
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: apps/slim/desktop/package.json
+          package_json_file: apps/spiral/package.json
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: apps/slim/desktop/pnpm-lock.yaml
+          cache-dependency-path: apps/spiral/pnpm-lock.yaml
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: apps/slim/desktop/src-tauri
+          workspaces: apps/spiral/src-tauri
 
-      - name: Install desktop dependencies
-        working-directory: apps/slim/desktop
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Sync brand assets
-        working-directory: apps/slim/desktop
         run: pnpm sync-brand
 
-      - name: Desktop hex + typecheck
-        working-directory: apps/slim/desktop
-        run: pnpm check:hex && pnpm typecheck
+      - name: Quality gates
+        run: pnpm check:hex && pnpm exec tsc --noEmit
 
       - name: Build the frontend
-        working-directory: apps/slim/desktop
         run: pnpm build
 
-      - name: Desktop frontend tests
-        working-directory: apps/slim/desktop
+      - name: Frontend tests
         run: pnpm test
 
-      # `tauri::generate_context!` resolves `frontendDist` (../dist) at compile
-      # time, so cargo test needs the Vite export from the build step above.
-      - name: Desktop Rust tests
-        working-directory: apps/slim/desktop/src-tauri
-        run: cargo test
+      - name: Rust tests
+        working-directory: apps/spiral/src-tauri
+        run: cargo test --workspace
 
-  # Per-push CI, not the release build. On a tag the shared workflow builds
-  # Windows itself, and running both would spend five minutes producing a
-  # second copy of bundles nobody publishes.
+      - name: Clippy
+        working-directory: apps/spiral/src-tauri
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # Per-push compile, not the release build. On a tag the shared workflow
+  # builds Windows itself.
   windows:
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: windows-latest
     defaults:
       run:
-        working-directory: apps/wallpaper
-    # Lifted to job level so the build and upload steps can branch on whether
-    # a signing key is actually available. The `secrets` context is not usable
-    # in a step `if:`, but `env` is.
+        working-directory: apps/spiral
     env:
       TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
     steps:
@@ -201,48 +188,29 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: apps/wallpaper/package.json
+          package_json_file: apps/spiral/package.json
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: apps/wallpaper/pnpm-lock.yaml
+          cache-dependency-path: apps/spiral/pnpm-lock.yaml
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: apps/wallpaper/src-tauri
+          workspaces: apps/spiral/src-tauri
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # src/assets/brand is generated from /brand and gitignored, so it must
-      # exist before tsc and the Vite build resolve their SVG imports.
       - name: Sync brand assets
         run: pnpm sync-brand
 
-      - name: Quality gates (hex guard + typecheck)
-        run: pnpm check:hex && pnpm tsc --noEmit
+      - name: Build the frontend
+        run: pnpm build
 
-      # Two build steps, split on whether the updater signing key is present.
-      #
-      # Dependabot pull requests run without repository secrets by design, so
-      # TAURI_SIGNING_PRIVATE_KEY is empty there. Passing an empty string is
-      # worse than passing nothing: Tauri treats it as a key and dies with
-      # "failed to decode secret key". Omitting the key is still not enough:
-      # tauri.conf.json has createUpdaterArtifacts: true and a pubkey, so after
-      # MSI/NSIS are written Tauri tries to sign updater artifacts and dies
-      # with "A public key has been found, but no private key".
-      #
-      # Unsigned builds therefore merge createUpdaterArtifacts: false from
-      # tauri.unsigned.conf.json. A file, not inline JSON: Windows runners use
-      # PowerShell, which strips the quotes from '{"bundle":{...}}' so Tauri
-      # receives `{bundle:{...}}` and dies before compile. Do not use --no-sign:
-      # that still errors on a pubkey. Do not copy the key into Dependabot
-      # secrets. Signed main builds keep the default config and the key, so
-      # updater artifacts stay as they are today.
       - name: Build Tauri app (signed)
         if: env.TAURI_KEY != ''
         run: pnpm tauri build
@@ -250,7 +218,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
-      - name: Build Tauri app (unsigned — no signing key in this context)
+      - name: Build Tauri app (unsigned, no signing key in this context)
         if: env.TAURI_KEY == ''
         run: pnpm tauri build --config src-tauri/tauri.unsigned.conf.json
 
@@ -259,190 +227,35 @@ jobs:
         with:
           name: spiral-windows
           path: |
-            apps/wallpaper/src-tauri/target/release/bundle/msi/*.msi
-            apps/wallpaper/src-tauri/target/release/bundle/nsis/*.exe
+            apps/spiral/src-tauri/target/release/bundle/msi/*.msi
+            apps/spiral/src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
 
-      # Separate step so the signed path still hard-fails when a .sig is
-      # missing, while unsigned PR builds simply skip it.
       - name: Upload updater signatures
         if: env.TAURI_KEY != ''
         uses: actions/upload-artifact@v7
         with:
           name: spiral-windows-signatures
-          path: apps/wallpaper/src-tauri/target/release/bundle/nsis/*.sig
+          path: apps/spiral/src-tauri/target/release/bundle/nsis/*.sig
           if-no-files-found: error
 
-  # Spiral Clean's safety core is the whole point of the app: `remove.rs`,
-  # `exclude.rs` and `paths.rs` are the only thing standing between a wrong
-  # path and a permanent delete, and they are proven by a Rust test suite that
-  # until now ran nowhere but a developer's laptop. A regression there is not
-  # a broken build, it is deleted user data, so it gets the same per-push gate
-  # everything else in this repo has.
-  #
-  # macOS, not ubuntu: the app is macOS-only by decision, `paths.rs` encodes
-  # macOS firmlink behaviour, and `tauri` would need a webkit2gtk install on
-  # Linux to compile at all. No `if:` skipping tags either — Clean releases on
-  # `clean-v*`, which this workflow does not listen for, so there is no
-  # release build for this job to duplicate.
-  # Per-push CI, not a release build. Every app's tag is handled by its own
-  # release workflow, so running this on any tag just rebuilds what the
-  # release job is already building.
-  clean:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: apps/clean
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: apps/clean/package.json
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: apps/clean/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: apps/clean/src-tauri
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # src/styles/tokens.css and src/assets/brand are generated from /brand
-      # and gitignored, so they must exist before check-hex and tsc read them.
-      - name: Sync brand assets
-        run: pnpm sync-brand
-
-      - name: Quality gates (hex guard + typecheck)
-        run: pnpm check:hex && pnpm tsc --noEmit
-
-      # Before `cargo test`, not after: `tauri::generate_context!` resolves
-      # `frontendDist` (../dist) at compile time, so the Rust crate does not
-      # build at all until the Vite export exists.
-      - name: Build the frontend
-        run: pnpm build
-
-      # `pnpm build` type-checks the frontend but runs none of its tests, so
-      # this job was green against a regression the local suite catches: revert
-      # format.ts to the loop that tested `value >= 1024` before rounding and
-      # the two 1024-rollover tests fail here, while CI reported nothing.
-      - name: Frontend tests
-        run: pnpm test
-
-      - name: Rust safety suite
-        working-directory: apps/clean/src-tauri
-        run: cargo test
-
-      - name: Clippy
-        working-directory: apps/clean/src-tauri
-        run: cargo clippy --all-targets -- -D warnings
-
-  # Spiral Resume. The app shipped without a job here, so its 169 Rust tests and
-  # 76 frontend tests only ever ran on the machine that wrote them.
-  #
-  # No `tauri build`: bundling needs the `llama-server` sidecar, which is built
-  # from source by `pnpm build-sidecar` and deliberately not in the repository.
-  # That is why `externalBin` lives in `tauri.bundle.conf.json` rather than the
-  # base config — declared in the base, `tauri-build` refuses to compile at all
-  # on any machine without the binary, which is every runner and every fresh
-  # clone.
-  resume:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: apps/Resume
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: apps/Resume/package.json
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: apps/Resume/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      # Typst and its font set dominate this crate's build; without the cache
-      # every run pays several minutes for dependencies that never change.
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: apps/Resume/src-tauri
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # src/styles/tokens.css and src/assets/brand come from /brand and are
-      # gitignored, so they must exist before check-hex and tsc read them.
-      - name: Sync brand assets
-        run: pnpm sync-brand
-
-      - name: Quality gates (hex guard + typecheck)
-        run: pnpm check:hex && pnpm tsc --noEmit
-
-      # Before the Rust steps: `tauri::generate_context!` resolves `frontendDist`
-      # at compile time, so the crate does not build until the Vite export exists.
-      - name: Build the frontend
-        run: pnpm build
-
-      - name: Frontend tests
-        run: pnpm test
-
-      - name: Rust tests
-        working-directory: apps/Resume/src-tauri
-        run: cargo test
-
-      # The fact gate, the safety rules and the template lints are all enforced
-      # here. Warnings are errors: this crate has no crate-wide allow.
-      - name: Clippy
-        working-directory: apps/Resume/src-tauri
-        run: cargo clippy --all-targets -- -D warnings
-
-  # Everything below a tag is the shared workflow's job. It was extracted from
-  # the copy that used to live here, and keeping both meant maintaining two of
-  # them — the failure this repo keeps rediscovering, most recently when four
-  # version files disagreed. Spiral Slim already calls it; the wallpaper is the
-  # reason it exists.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    # Required, and the reason this call refused to start at all. A called
-    # workflow can never hold more than its caller was granted, and this
-    # repository's default token permission is read — so `publish` asking for
-    # `contents: write` exceeded a caller that had asked for nothing, and
-    # GitHub rejected the whole file before any job existed. A job that runs
-    # directly may request write for itself; a job that delegates has to be
-    # granted it here and pass it down.
     permissions:
       contents: write
     uses: ./.github/workflows/release-app.yml
     with:
-      app-dir: apps/wallpaper
+      app-dir: apps/spiral
       artifact-prefix: spiral
       macos: true
       windows: true
       updater: true
       github-latest: true
+      sidecar: true
+      bundle-config: src-tauri/tauri.bundle.conf.json
     secrets: inherit
 
-  # Wallpaper-specific, so it stays here rather than in the shared workflow:
-  # the phrases it rewrites are this app's download lines. Runs only after the
-  # release exists, because the filenames it writes are not true until the
+  # Runs after the release exists. The filenames are not true until the
   # artifacts are attached.
   docs:
     if: startsWith(github.ref, 'refs/tags/v')

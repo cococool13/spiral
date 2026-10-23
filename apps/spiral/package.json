@@ -16,7 +16,8 @@
     "test": "vitest run && node --test scripts/sign-helpers.test.mjs scripts/windows-hook.test.mjs",
     "smoke": "node scripts/smoke.mjs",
     "preview": "vite preview",
-    "tauri": "node scripts/tauri.mjs"
+    "tauri": "node scripts/tauri.mjs",
+    "build-sidecar": "node scripts/build-sidecar.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

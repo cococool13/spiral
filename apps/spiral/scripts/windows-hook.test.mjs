@@ -15,4 +15,9 @@ test("the installer removes Spiral Wallpaper quietly and leaves app data", () =>
   assert.doesNotMatch(hook, /app\.spiral\.wallpaper/);
   assert.doesNotMatch(hook, /RMDir/);
   assert.doesNotMatch(hook, /Delete /);
+  const conf = JSON.parse(
+    readFileSync(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
+  );
+  assert.equal(conf.productName, "Spiral");
+  assert.equal(conf.mainBinaryName, "spiral-wallpaper");
 });

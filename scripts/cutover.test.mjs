@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { MIRRORS } from "./sync-checkout.mjs";
+import { rewriteCatalogue } from "./update-catalogue.mjs";
 import { SURFACES } from "./brand-manifest.mjs";
 import { APPS, RETIRED, isRetiredTag, parseTag } from "./apps.manifest.mjs";
 
@@ -58,4 +59,30 @@ test("checkout has one mirror and brand has the spiral surface", () => {
     const value = (text) => text.match(new RegExp(`export const ${key} = "([^"]+)"`))[1];
     assert.equal(value(checkout), value(canonical));
   }
+});
+
+test("a future catalogue bump writes Spiral asset names", () => {
+  const src = readFileSync(new URL("../collection/lib/apps.ts", import.meta.url), "utf8");
+  const next = rewriteCatalogue(src, "spiral", "2.0.0");
+  assert.match(next, /Spiral_2\.0\.0_universal\.dmg/);
+  assert.match(next, /Spiral_2\.0\.0_x64-setup\.exe/);
+  assert.match(next, /releases\/download\/v2\.0\.0/);
+  assert.match(next, /version: "2\.0\.0"/);
+  assert.doesNotMatch(next, /Spiral\.Wallpaper_2\.0\.0/);
+  assert.match(next, /resume-v0\.1\.2/);
+});
+
+test("the spiral release caller passes the helper bundle config", () => {
+  const build = readFileSync(new URL("../.github/workflows/build.yml", import.meta.url), "utf8");
+  assert.match(build, /app-dir: apps\/spiral/);
+  assert.match(build, /bundle-config: src-tauri\/tauri.bundle.conf.json/);
+  assert.match(build, /sidecar: true/);
+  assert.match(build, /updater: true/);
+  assert.match(build, /github-latest: true/);
+  assert.match(build, /windows: true/);
+  const release = readFileSync(new URL("../.github/workflows/release-app.yml", import.meta.url), "utf8");
+  assert.match(release, /sign-helpers\.mjs/);
+  assert.match(release, /unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID/);
+  assert.match(release, /Windows hook rehearsal has not passed/);
+  assert.equal(existsSync(new URL("../apps/spiral/src-tauri/windows/rehearsal.json", import.meta.url)), false);
 });

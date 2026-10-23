@@ -32,49 +32,7 @@ updates:
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
-    directory: /apps/wallpaper
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      patch-and-minor:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: npm
-    directory: /apps/clean
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      patch-and-minor:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: npm
-    directory: /apps/Resume
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      patch-and-minor:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: npm
-    directory: /apps/slim/desktop
+    directory: /apps/spiral
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
@@ -88,49 +46,7 @@ updates:
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: cargo
-    directory: /apps/wallpaper/src-tauri
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      patch-and-minor:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: cargo
-    directory: /apps/clean/src-tauri
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      patch-and-minor:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: cargo
-    directory: /apps/Resume/src-tauri
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      patch-and-minor:
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: cargo
-    directory: /apps/slim/desktop/src-tauri
+    directory: /apps/spiral/src-tauri
     schedule:
       interval: weekly
     open-pull-requests-limit: 5

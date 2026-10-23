@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -93,5 +93,25 @@ export function signHelpers(app, identity, options = {}) {
     options,
   );
   signFile(join(mac, "spiral-wallpaper"), emptyEntitlements, identity, options);
+  assertHelperEntitlements(app);
+}
+
+export function signBundle(app, identity, options = {}) {
+  signFile(app, emptyEntitlements, identity, options);
+}
+
+const invoked =
+  process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (invoked) {
+  const app = process.argv[2];
+  const identity = process.env.APPLE_SIGNING_IDENTITY;
+  if (!app || !identity) {
+    process.stderr.write(
+      "usage: APPLE_SIGNING_IDENTITY=... node scripts/sign-helpers.mjs <App.app>\n",
+    );
+    process.exit(1);
+  }
+  signHelpers(app, identity);
+  signBundle(app, identity);
   assertHelperEntitlements(app);
 }

@@ -15,18 +15,18 @@ name: release-app
 #       uses: ./.github/workflows/release-app.yml
 #       secrets: inherit
 #       with:
-#         app-dir: apps/slim/desktop
-#         artifact-prefix: slim
-#         windows: false
+#         app-dir: apps/spiral
+#         artifact-prefix: spiral
+#         windows: true
 #
-# Wallpaper, Slim, Clean, and Resume all call this workflow. Wallpaper alone
-# sets github-latest so /releases/latest (and its updater endpoint) stay on v*.
+# Spiral calls this workflow and sets github-latest so /releases/latest
+# stays on a v2 tag or later.
 
 on:
   workflow_call:
     inputs:
       app-dir:
-        description: Path to the app, e.g. apps/slim/desktop
+        description: Path to the app, for example apps/spiral
         required: true
         type: string
       artifact-prefix:
@@ -52,9 +52,8 @@ on:
       github-latest:
         description: >
           Mark this GitHub release as the repository's /releases/latest.
-          Wallpaper must set this true — its updater and "All downloads" link
-          read that URL. Every other family must leave it false so a Clean or
-          Resume tag cannot steal Wallpaper's latest pointer.
+          Spiral sets this true. Its updater and the site All downloads link
+          read that URL.
         type: boolean
         default: false
       macos-target:
@@ -65,7 +64,7 @@ on:
         description: >
           Run `pnpm build-sidecar` on each runner before building. A sidecar is
           a native compile, not a cross-compile, so each platform builds its
-          own. Only Spiral Resume has one.
+          own. Spiral builds llama-server this way.
         type: boolean
         default: false
       bundle-config:
@@ -182,16 +181,66 @@ jobs:
       # native on both architectures. Two steps rather than one conditional
       # env: the signing key must be absent, not empty, when there is no
       # updater — see the note on TAURI_KEY above.
-      - name: Build, sign, and notarize (with updater artifacts)
+      - name: Build and sign (with updater artifacts)
         if: inputs.updater
-        run: pnpm tauri build --target ${{ inputs.macos-target }} ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
+        run: |
+          unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
+          pnpm tauri build --target ${{ inputs.macos-target }} ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
-      - name: Build, sign, and notarize
+      - name: Build and sign
         if: ${{ !inputs.updater }}
-        run: pnpm tauri build --target ${{ inputs.macos-target }} ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
+        run: |
+          unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
+          pnpm tauri build --target ${{ inputs.macos-target }} ${{ inputs.bundle-config && format('--config {0}', inputs.bundle-config) || '' }}
+
+      - name: Sign helpers, sign the app, and assert entitlements
+        run: |
+          set -euo pipefail
+          APP=$(echo src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/*.app)
+          node scripts/sign-helpers.mjs "$APP"
+
+      - name: Notarize the app and rebuild the disk image
+        run: |
+          set -euo pipefail
+          APP=$(echo src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/*.app)
+          NAME=$(basename "$APP")
+          WORK="$RUNNER_TEMP/spiral-notarize"
+          rm -rf "$WORK"
+          mkdir -p "$WORK"
+          ditto -c -k --keepParent "$APP" "$WORK/app.zip"
+          xcrun notarytool submit "$WORK/app.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$APP"
+          DMG_DIR="src-tauri/target/${{ inputs.macos-target }}/release/bundle/dmg"
+          mkdir -p "$DMG_DIR"
+          rm -f "$DMG_DIR"/*.dmg
+          VERSION="${GITHUB_REF_NAME##*v}"
+          DMG="$DMG_DIR/Spiral_${VERSION}_universal.dmg"
+          hdiutil create -volname "Spiral" -srcfolder "$APP" -ov -format UDZO "$DMG"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$DMG"
+          if [ "${{ inputs.updater }}" = "true" ]; then
+            PACK="$WORK/pack"
+            mkdir -p "$PACK"
+            cp -R "$APP" "$PACK/$NAME"
+            TAR="src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/${NAME}.tar.gz"
+            rm -f "$TAR" "$TAR.sig"
+            tar -czf "$TAR" -C "$PACK" "$NAME"
+            pnpm tauri signer sign "$TAR"
+          fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
       # The DMG is what a person downloads and exists either way.
       - name: Upload macOS bundles
@@ -238,6 +287,12 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: ${{ inputs.app-dir }}/pnpm-lock.yaml
+
+      - name: Require the Windows hook rehearsal
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          node --input-type=module -e "import { existsSync, readFileSync } from 'node:fs'; const path = 'apps/spiral/src-tauri/windows/rehearsal.json'; if (!existsSync(path)) { console.error('Windows hook rehearsal has not passed. The release includes Windows and will not skip it.'); process.exit(1); } const receipt = JSON.parse(readFileSync(path, 'utf8')); if (receipt.windows !== 'passed') { console.error('Windows hook rehearsal has not passed. The release includes Windows and will not skip it.'); process.exit(1); }"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -349,7 +404,7 @@ jobs:
             --dir "$GITHUB_WORKSPACE/artifacts" \
             --version "${GITHUB_REF_NAME##*v}" \
             --repo "$GITHUB_REPOSITORY" \
-            --notes "See the release notes for what changed."
+            --notes "Spiral Wallpaper is now Spiral. Your wallpapers and license carry over. Resume is included."
 
       # Without an updater there is no manifest, but checksums are still what
       # someone verifies a download against.
