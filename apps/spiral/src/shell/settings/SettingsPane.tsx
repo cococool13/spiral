@@ -28,6 +28,7 @@ interface SettingsPaneProps {
   onSettings: (next: GeneralSettings) => void;
   onTools: (next: ModuleId[], active: ModuleId) => void;
   onUpdateFound: (update: Update) => void;
+  onLicense: (view: LicenseView) => void;
 }
 
 export function SettingsPane(props: SettingsPaneProps) {
@@ -60,7 +61,7 @@ export function SettingsPane(props: SettingsPaneProps) {
           onChange={props.onTools}
         />
       ) : null}
-      {tab === "license" ? <License view={props.license} /> : null}
+      {tab === "license" ? <License view={props.license} onView={props.onLicense} /> : null}
       {tab === "updates" ? (
         <Updates
           settings={props.settings}

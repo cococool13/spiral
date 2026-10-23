@@ -185,6 +185,7 @@ export default function Shell() {
       }}
       onSettingsChange={setSettings}
       onUpdateFound={setUpdate}
+      onLicense={setLicense}
       setStatus={setStatusLine}
       onChooseWallpaper={() => {
         void choose(["wallpaper"]);
@@ -212,6 +213,7 @@ interface FrameProps {
   onTools: (next: ModuleId[], active: ModuleId) => void;
   onSettingsChange: (next: GeneralSettings) => void;
   onUpdateFound: (update: Update) => void;
+  onLicense: (view: LicenseView) => void;
   setStatus: (line: string) => void;
   onChooseWallpaper: () => void;
   saveError: string | null;
@@ -294,6 +296,7 @@ function Frame(props: FrameProps) {
             onSettings={props.onSettingsChange}
             onTools={props.onTools}
             onUpdateFound={props.onUpdateFound}
+            onLicense={props.onLicense}
           />
         ) : (
           props.settingsError ? (

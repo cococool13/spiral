@@ -4,6 +4,7 @@ import { notePickerOpened } from "../analytics/client";
 import wallpaperPlate from "../../assets/picker/wallpaper.webp";
 import type { ModuleId, ModuleState } from "../../boot";
 import { Toggle } from "../../ui/Toggle";
+import { ProviderPaste } from "../license/ProviderPaste";
 import { activeAfter, nextModuleSet } from "./moduleSet";
 
 interface ToolsProps {
@@ -46,31 +47,40 @@ export function Tools({ modules, enabled, active, onChange }: ToolsProps) {
             : null;
         const reasonId = reason ? `${module.id}-reason` : undefined;
         return (
-          <section className="set-row" key={module.id}>
-            <img
-              className="set-thumb"
-              src={module.id === "wallpaper" ? wallpaperPlate : resumePlate}
-              alt=""
-              width={72}
-              height={44}
-            />
-            <div className="set-row__copy">
-              <h2>{module.id === "wallpaper" ? "Wallpaper" : "Resume"}</h2>
-              <p className="notice">{COPY[module.id]}</p>
-              {reason ? (
-                <p className="notice" id={reasonId}>
-                  {reason}
-                </p>
-              ) : null}
-            </div>
-            <Toggle
-              checked={on}
-              disabled={!module.available || (on && blocked)}
-              label={module.id === "wallpaper" ? "Wallpaper" : "Resume"}
-              describedBy={reasonId}
-              onChange={(next) => toggle(module.id, next)}
-            />
-          </section>
+          <div key={module.id}>
+            <section className="set-row">
+              <img
+                className="set-thumb"
+                src={module.id === "wallpaper" ? wallpaperPlate : resumePlate}
+                alt=""
+                width={72}
+                height={44}
+              />
+              <div className="set-row__copy">
+                <h2>{module.id === "wallpaper" ? "Wallpaper" : "Resume"}</h2>
+                <p className="notice">{COPY[module.id]}</p>
+                {reason ? (
+                  <p className="notice" id={reasonId}>
+                    {reason}
+                  </p>
+                ) : null}
+              </div>
+              <Toggle
+                checked={on}
+                disabled={!module.available || (on && blocked)}
+                label={module.id === "wallpaper" ? "Wallpaper" : "Resume"}
+                describedBy={reasonId}
+                onChange={(next) => toggle(module.id, next)}
+              />
+            </section>
+            {module.id === "resume" ? (
+              <>
+                <ProviderPaste provider="anthropic" label="Anthropic" />
+                <ProviderPaste provider="openai" label="OpenAI" />
+                <ProviderPaste provider="compatible" label="Compatible" />
+              </>
+            ) : null}
+          </div>
         );
       })}
     </div>
