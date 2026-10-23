@@ -14,7 +14,7 @@ export function Button({
 }: ButtonProps) {
   const classes = [
     "btn",
-    variant === "primary" ? "btn--primary" : "btn--secondary",
+    variant === "primary" ? "btn--primary" : "",
     size === "large" ? "btn--lg" : "",
     className,
   ]

@@ -183,13 +183,18 @@
   color: var(--stock);
 }
 
-.btn--primary:hover:not(:disabled),
-.btn--primary:active:not(:disabled) {
+.btn--primary:hover:not(:disabled):not([aria-disabled="true"]),
+.btn--primary:active:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--red-press);
   background: var(--red-press);
 }
 
-.btn:disabled {
+.btn:hover:not(:disabled):not(.btn--primary):not([aria-disabled="true"]):not([aria-pressed="true"]) {
+  background: var(--stock-2);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
   border-color: var(--rule);
   background: var(--stock-2);
   color: var(--ink-3);
@@ -298,13 +303,33 @@
 }
 
 .field input,
+.field textarea,
+.field select,
 .code__cell {
-  height: 32px;
-  padding: 0 10px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-ctl);
   background: var(--stock-3);
   color: var(--ink);
+}
+
+.field input,
+.field select,
+.code__cell {
+  height: 32px;
+  padding: 0 10px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+}
+
+.field textarea {
+  min-height: 96px;
+  padding: 8px 10px;
+  line-height: 18px;
+  resize: vertical;
 }
 
 .field input::placeholder {
@@ -399,6 +424,10 @@
 
 .plate {
   position: relative;
+}
+
+.plate--code {
+  padding: var(--space-16) var(--space-24);
 }
 
 .plate__marks,
@@ -620,9 +649,18 @@
 .set-license {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-16);
-  padding: var(--space-24);
+  padding: var(--space-16) var(--space-24) var(--space-24);
+}
+
+.set-license .stage__form {
+  width: min(360px, 100%);
+}
+
+.set-help {
+  margin: 0;
+  padding: 0 var(--space-24) var(--space-16);
 }
 
 .set-row {
@@ -642,10 +680,21 @@
   gap: 6px;
 }
 
+.set-row h2,
+.set-row p {
+  margin: 0;
+}
+
 .set-row h2 {
   font-size: 13px;
   line-height: 18px;
   font-weight: 600;
+}
+
+.set-row p {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .set-row__actions {

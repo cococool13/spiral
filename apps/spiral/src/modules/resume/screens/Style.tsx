@@ -6,6 +6,12 @@ import type { Accent, ResumeDoc, Thumbnail } from "../lib/types";
 import { Notice } from "../components/Notice";
 import { useRadioGroup } from "../lib/useRadioGroup";
 
+function swatchFill(hex: string): string {
+  if (hex.startsWith("var(") || hex.startsWith("#")) return hex;
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) return `#${hex}`;
+  return "var(--ink)";
+}
+
 export function Style({
   doc,
   chosen,
@@ -146,7 +152,7 @@ export function Style({
             type="button"
             aria-label={styleName(swatch.id)}
             className="accent"
-            style={{ background: swatch.hex }}
+            style={{ background: swatchFill(swatch.hex) }}
             {...accentProps(swatch.id)}
           />
         ))}

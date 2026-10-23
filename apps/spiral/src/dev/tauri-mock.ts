@@ -36,6 +36,8 @@ const general: MockGeneral = {
   analyticsOptOut: false,
 };
 
+let licensed = true;
+
 const mockUpdate = () =>
   (window as unknown as Record<string, unknown>).__SPIRAL_MOCK_UPDATE__
     ? { rid: 1, available: true, currentVersion: "1.0.0", version: "1.1.0" }
@@ -125,23 +127,53 @@ function sampleResume(name: string) {
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   module_activate: () => undefined,
   resume: (args) => {
-    const call = args.call as { type?: string; text?: string } | undefined;
+    const call = args.call as {
+      type?: string;
+      text?: string;
+      doc?: { contact?: { name?: string } };
+    } | undefined;
     if (!call) return null;
     if (call.type === "load_document") return { stored: null };
     if (call.type === "parse_text") return sampleResume(pastedName(call.text ?? ""));
     if (call.type === "import_file") return sampleResume("Maya Okafor");
-    if (call.type === "preview") return { pages: [pageArt("Maya Okafor")] };
+    if (call.type === "preview") {
+      const doc = call.doc as { contact?: { name?: string } } | undefined;
+      const name = doc?.contact?.name?.trim() || "Resume";
+      return { pages: [pageArt(name)] };
+    }
     if (call.type === "check") return { findings: [] };
-    if (call.type === "list_accents") return [{ id: "ink", hex: "" }];
-    if (call.type === "thumbnails") return { thumbs: [] };
-    if (call.type === "build") {
+    if (call.type === "list_accents") {
+      return [
+        { id: "ink", hex: "var(--ink)" },
+        { id: "slate", hex: "var(--ink-2)" },
+        { id: "red", hex: "var(--red)" },
+      ];
+    }
+    if (call.type === "thumbnails") {
       return {
-        pages: [],
-        file: "",
-        suggestedName: "resume.pdf",
-        engine: "Built offline, no network used",
-        notes: [],
+        thumbs: ["column", "ledger", "sheet", "rule"].map((id) => ({
+          id,
+          name: id.charAt(0).toUpperCase() + id.slice(1),
+          file: pageArt(id.charAt(0).toUpperCase() + id.slice(1)),
+          error: "",
+        })),
       };
+    }
+    if (call.type === "build") {
+      const events = args.events as { onmessage?: (event: { type: string; done: number; total: number }) => void };
+      return (async () => {
+        events.onmessage?.({ type: "progress", done: 1, total: 3 });
+        await delay(400);
+        events.onmessage?.({ type: "progress", done: 2, total: 3 });
+        await delay(800);
+        return {
+          pages: [pageArt("Maya Okafor")],
+          file: "",
+          suggestedName: "Maya-Okafor.pdf",
+          engine: "Built offline, no network used",
+          notes: [],
+        };
+      })();
     }
     if (call.type === "save_built") return null;
     if (call.type === "review_wording") return [];
@@ -165,12 +197,24 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   },
   modules_set: () => undefined,
   bench_mark: () => undefined,
-  license_view: () => ({ kind: "licensed", grace: false }),
-  license_use_legacy: () => ({ kind: "licensed", grace: false }),
-  license_activate: () => undefined,
+  license_view: () =>
+    licensed
+      ? { kind: "licensed", grace: false, key: "LIC1…4f2a", device: "This computer · a1b2c3d4" }
+      : { kind: "needsActivation", offer: null },
+  license_use_legacy: () => {
+    licensed = true;
+    return { kind: "licensed", grace: false, key: "LIC1…4f2a", device: "This computer · a1b2c3d4" };
+  },
+  license_activate: () => {
+    licensed = true;
+  },
   license_request_code: () => undefined,
-  license_activate_email: () => undefined,
-  license_clear: () => undefined,
+  license_activate_email: () => {
+    licensed = true;
+  },
+  license_clear: () => {
+    licensed = false;
+  },
   provider_view: () => ({ kind: "absent" }),
   provider_set: () => ({ kind: "present" }),
   provider_clear: () => ({ kind: "absent" }),

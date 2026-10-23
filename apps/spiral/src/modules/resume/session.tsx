@@ -277,6 +277,7 @@ export function Preview({ pages, line, onPaint }: { pages: string[]; line: strin
         {line.includes("edited") ? <span className="fact-dot" aria-hidden="true" /> : null}
       </p>
       <div className="proof__pages">
+        {pages.length === 0 ? <p className="panel__lede">Drawing the page.</p> : null}
         {pages.map((page) => (
           <img key={page} src={cacheSrc(page)} alt="" onLoad={onPaint} />
         ))}

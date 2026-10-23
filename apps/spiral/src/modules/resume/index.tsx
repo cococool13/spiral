@@ -31,8 +31,9 @@ export default function ModuleRoot({ setStatus }: ModuleProps) {
   const session = useResume();
 
   useEffect(() => {
-    setStatus(session.generate ? "Building the resume" : "No connection used");
-  }, [session.generate, setStatus]);
+    const building = session.step === "build" && session.generate;
+    setStatus(building ? "Building the resume" : "No connection used");
+  }, [session.generate, session.step, setStatus]);
 
   return (
     <main className={session.step === "import" ? "resume resume--solo" : "resume"}>
@@ -46,7 +47,7 @@ export default function ModuleRoot({ setStatus }: ModuleProps) {
         )}
       </div>
       {session.step === "import" ? null : (
-        <Plate marked>
+        <Plate marked={session.pages.length > 0}>
           <Preview pages={session.pages} line={session.line} onPaint={session.painted} />
         </Plate>
       )}

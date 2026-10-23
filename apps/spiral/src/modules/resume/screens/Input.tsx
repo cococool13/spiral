@@ -174,7 +174,7 @@ export function Input({
       {savedAt && onOpenSaved ? (
         <p className="stage__saved">
           Saved from {new Date(savedAt).toLocaleString()}.{" "}
-          <button type="button" className="btn btn--quiet" onClick={onOpenSaved}>
+          <button type="button" className="link" onClick={onOpenSaved}>
             Open it
           </button>
         </p>
