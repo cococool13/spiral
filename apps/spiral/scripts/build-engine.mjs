@@ -65,10 +65,20 @@ const cargo = (args, env) =>
     env: { ...process.env, ...env },
   });
 
+// Every cargo call below is --offline so a local build never reaches the
+// network. A CI runner starts with an empty registry cache, so it fetches the
+// locked dependencies once first.
+export function needsFetch(env = process.env) {
+  return Boolean(env.CI) && env.CI !== "false";
+}
+
 const invoked =
   process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 
 if (invoked) {
+  if (needsFetch()) {
+    cargo(["fetch", "--locked"]);
+  }
   const check = process.argv.includes("--check");
   if (check) {
     cargo([
