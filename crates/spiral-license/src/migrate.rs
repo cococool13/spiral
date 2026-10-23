@@ -99,6 +99,20 @@ pub struct Validity {
     pub grace: bool,
 }
 
+pub struct Ensured {
+    pub grace: bool,
+    pub key: String,
+}
+
+impl std::fmt::Debug for Ensured {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Ensured")
+            .field("grace", &self.grace)
+            .field("key_len", &self.key.len())
+            .finish()
+    }
+}
+
 pub struct LaunchExchange {
     unclear: Mutex<Option<LicenseError>>,
 }
@@ -172,23 +186,25 @@ pub async fn ensure_licensed(
     store: &impl CredentialStore,
     validator_url: &str,
     exchange: &LaunchExchange,
-) -> Result<Validity, LicenseError> {
+) -> Result<Ensured, LicenseError> {
     let Some(key) = store.get(SERVICE, LICENSE_ACCOUNT, Interaction::Silent)? else {
         return Err(LicenseError::EmptyKey);
     };
-    if key.expose().starts_with("mem_") {
-        return exchange_mem(store, key.expose(), validator_url, exchange).await;
+    let owned = key.expose().to_string();
+    if owned.starts_with("mem_") {
+        return exchange_mem(store, &owned, validator_url, exchange).await;
     }
     let age = store
         .get(SERVICE, STATUS_ACCOUNT, Interaction::Silent)?
-        .and_then(|status| status_age(status.expose(), key.expose(), now_secs()));
-    validity_of_signed_key(key.expose(), age, validator_url)
-        .await
-        .inspect(|validity| {
-            if !validity.grace {
-                let _ = write_status_if_checked(store, key.expose(), age);
-            }
-        })
+        .and_then(|status| status_age(status.expose(), &owned, now_secs()));
+    let validity = validity_of_signed_key(&owned, age, validator_url).await?;
+    if !validity.grace {
+        let _ = write_status_if_checked(store, &owned, age);
+    }
+    Ok(Ensured {
+        grace: validity.grace,
+        key: owned,
+    })
 }
 
 async fn exchange_mem(
@@ -196,7 +212,7 @@ async fn exchange_mem(
     key: &str,
     validator_url: &str,
     exchange: &LaunchExchange,
-) -> Result<Validity, LicenseError> {
+) -> Result<Ensured, LicenseError> {
     if let Some(err) = exchange.stored() {
         return Err(err);
     }
@@ -206,7 +222,10 @@ async fn exchange_mem(
             let secret = Secret::new(signed);
             write_back(store, LICENSE_ACCOUNT, &secret)?;
             write_status(store, secret.expose())?;
-            Ok(Validity { grace: false })
+            Ok(Ensured {
+                grace: false,
+                key: secret.expose().to_string(),
+            })
         }
         Err(err) if outcome_unclear(&err) => {
             exchange.record(err.clone());
@@ -251,7 +270,7 @@ pub async fn activate(
     store: &impl CredentialStore,
     key: &str,
     validator_url: &str,
-) -> Result<(), LicenseError> {
+) -> Result<String, LicenseError> {
     let key = crate::normalize_key(key);
     if key.is_empty() {
         return Err(LicenseError::EmptyKey);
@@ -263,10 +282,12 @@ pub async fn activate(
     accept_key(&signed)?;
     let secret = Secret::new(signed);
     write_back(store, LICENSE_ACCOUNT, &secret)?;
-    write_status(store, secret.expose())
+    write_status(store, secret.expose())?;
+    Ok(secret.expose().to_string())
 }
 
 pub fn clear_license(store: &impl CredentialStore) -> Result<(), LicenseError> {
+    write_back(store, CLEARED_ACCOUNT, &Secret::new(CLEARED_MARK))?;
     for account in [LICENSE_ACCOUNT, STATUS_ACCOUNT, CLEANUP_ACCOUNT] {
         match store.delete(SERVICE, account, Interaction::Silent)? {
             DeleteOutcome::Removed | DeleteOutcome::Absent => {}
@@ -279,7 +300,7 @@ pub fn clear_license(store: &impl CredentialStore) -> Result<(), LicenseError> {
             DeleteOutcome::Removed | DeleteOutcome::Absent | DeleteOutcome::NeedsInteraction => {}
         }
     }
-    write_back(store, CLEARED_ACCOUNT, &Secret::new(CLEARED_MARK))
+    Ok(())
 }
 
 fn cleared_mark(store: &impl CredentialStore) -> Result<bool, LicenseError> {
@@ -463,11 +484,12 @@ pub async fn activate_with_code(
     email: &str,
     code: &str,
     validator_url: &str,
-) -> Result<(), LicenseError> {
+) -> Result<String, LicenseError> {
     let signed = crate::signed_key_for_code(email, code, validator_url).await?;
     let secret = Secret::new(signed);
     write_back(store, LICENSE_ACCOUNT, &secret)?;
-    write_status(store, secret.expose())
+    write_status(store, secret.expose())?;
+    Ok(secret.expose().to_string())
 }
 
 fn write_status(store: &impl CredentialStore, key: &str) -> Result<(), LicenseError> {
@@ -952,6 +974,53 @@ mod tests {
     }
 
     #[test]
+    fn a_partial_clear_marks_cleared_before_it_deletes_the_key() {
+        let store = MemoryStore::new();
+        open(SERVICE, LICENSE_ACCOUNT, "LIC1.here", &store);
+        open(SERVICE, STATUS_ACCOUNT, "status-doc", &store);
+        open(
+            LegacyApp::Wallpaper.service(),
+            LICENSE_ACCOUNT,
+            "wall-secret",
+            &store,
+        );
+        store.lock_delete(SERVICE, STATUS_ACCOUNT);
+        let err = clear_license(&store).unwrap_err();
+        assert!(matches!(err, LicenseError::NeedsInteraction));
+        assert!(store.value(SERVICE, LICENSE_ACCOUNT).is_none());
+        assert_eq!(
+            store.value(SERVICE, STATUS_ACCOUNT).as_deref(),
+            Some("status-doc")
+        );
+        assert_eq!(
+            store.value(SERVICE, CLEARED_ACCOUNT).as_deref(),
+            Some(CLEARED_MARK)
+        );
+        assert_eq!(
+            store
+                .value(LegacyApp::Wallpaper.service(), LICENSE_ACCOUNT)
+                .as_deref(),
+            Some("wall-secret")
+        );
+        assert_eq!(migrate(&store).unwrap(), Probe::Nothing);
+        let ops = store.ops();
+        let marked = ops.iter().position(|op| {
+            matches!(op, crate::vault::StoreOp::Set { account, .. } if account == CLEARED_ACCOUNT)
+        });
+        let deleted = ops.iter().position(|op| {
+            matches!(
+                op,
+                crate::vault::StoreOp::Delete { service, account, .. }
+                    if service == SERVICE && account == LICENSE_ACCOUNT
+            )
+        });
+        let (Some(marked), Some(deleted)) = (marked, deleted) else {
+            panic!("missing mark or delete: {ops:?}");
+        };
+        assert!(marked < deleted);
+    }
+
+    #[test]
     fn clear_license_does_not_delete_a_foreign_item() {
         let store = MemoryStore::new();
         open(SERVICE, LICENSE_ACCOUNT, "LIC1.here", &store);
@@ -1285,8 +1354,9 @@ mod tests {
             r#"{"ok":true,"status":"active","key":"example-signed-key"}"#,
         );
         let exchange = LaunchExchange::new();
-        let validity = ensure_licensed(&store, &url, &exchange).await.unwrap();
-        assert!(!validity.grace);
+        let ensured = ensure_licensed(&store, &url, &exchange).await.unwrap();
+        assert!(!ensured.grace);
+        assert_eq!(ensured.key, "example-signed-key");
         assert_eq!(hits.load(Ordering::SeqCst), 1);
         assert_eq!(
             store.value(SERVICE, LICENSE_ACCOUNT).as_deref(),

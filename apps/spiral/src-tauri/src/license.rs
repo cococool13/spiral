@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use spiral_license::migrate::{self, LegacyApp, Probe, ProviderId, ProviderProbe, Validity};
+use spiral_license::migrate::{self, Ensured, LegacyApp, Probe, ProviderId, ProviderProbe};
 use spiral_license::vault::{
     CredentialStore, DeleteOutcome, Existence, Interaction, Secret, VaultError,
 };
@@ -211,20 +211,20 @@ impl LicenseGate {
 
     pub async fn activate(&self, key: &str) -> Result<(), String> {
         let mut inner = self.inner.lock().await;
-        migrate::activate(&self.store, key, &validator_url())
+        let stored = migrate::activate(&self.store, key, &validator_url())
             .await
             .map_err(message)?;
-        inner.view = licensed_view(&self.store, false);
+        inner.view = licensed_view(&stored, false);
         inner.ready = true;
         Ok(())
     }
 
     pub async fn activate_email(&self, email: &str, code: &str) -> Result<(), String> {
         let mut inner = self.inner.lock().await;
-        migrate::activate_with_code(&self.store, email, code, &validator_url())
+        let stored = migrate::activate_with_code(&self.store, email, code, &validator_url())
             .await
             .map_err(message)?;
-        inner.view = licensed_view(&self.store, false);
+        inner.view = licensed_view(&stored, false);
         inner.ready = true;
         Ok(())
     }
@@ -237,10 +237,18 @@ impl LicenseGate {
 
     pub async fn clear(&self) -> Result<(), String> {
         let mut inner = self.inner.lock().await;
-        migrate::clear_license(&self.store).map_err(message)?;
-        inner.view = LicenseView::NeedsActivation { offer: None };
-        inner.ready = true;
-        Ok(())
+        match migrate::clear_license(&self.store) {
+            Ok(()) => {
+                inner.view = LicenseView::NeedsActivation { offer: None };
+                inner.ready = true;
+                Ok(())
+            }
+            Err(err) => {
+                inner.view = LicenseView::Checking;
+                inner.ready = false;
+                Err(message(err))
+            }
+        }
     }
 
     pub fn provider(&self, provider: ProviderId) -> Result<ProviderView, String> {
@@ -267,6 +275,17 @@ impl LicenseGate {
             LicenseView::Checking => Err("Spiral is still checking the license.".into()),
             LicenseView::Retry { message } => Err(message),
         }
+    }
+
+    #[cfg(test)]
+    async fn seed_licensed(&self) {
+        let mut inner = self.inner.lock().await;
+        inner.view = LicenseView::Licensed {
+            grace: false,
+            key: "LIC1…wxyz".into(),
+            device: "This computer · 00000000".into(),
+        };
+        inner.ready = true;
     }
 }
 
@@ -297,28 +316,14 @@ async fn ensure_view(
     exchange: &migrate::LaunchExchange,
     validator_url: &str,
 ) -> Checked {
-    classify_result(
-        store,
-        migrate::ensure_licensed(store, validator_url, exchange).await,
-    )
+    classify_result(migrate::ensure_licensed(store, validator_url, exchange).await)
 }
 
-fn licensed_view(store: &impl CredentialStore, grace: bool) -> LicenseView {
+fn licensed_view(key: &str, grace: bool) -> LicenseView {
     LicenseView::Licensed {
         grace,
-        key: mask_key(&stored_key(store)),
+        key: mask_key(key),
         device: spiral_license::device_label(),
-    }
-}
-
-fn stored_key(store: &impl CredentialStore) -> String {
-    match store.get(
-        migrate::SERVICE,
-        migrate::LICENSE_ACCOUNT,
-        Interaction::Silent,
-    ) {
-        Ok(Some(secret)) => secret.expose().to_string(),
-        _ => String::new(),
     }
 }
 
@@ -332,13 +337,10 @@ fn mask_key(key: &str) -> String {
     format!("{head}…{tail}")
 }
 
-fn classify_result(
-    store: &impl CredentialStore,
-    result: Result<Validity, LicenseError>,
-) -> Checked {
+fn classify_result(result: Result<Ensured, LicenseError>) -> Checked {
     match result {
-        Ok(Validity { grace }) => Checked {
-            view: licensed_view(store, grace),
+        Ok(ensured) => Checked {
+            view: licensed_view(&ensured.key, ensured.grace),
             settled: true,
         },
         Err(err) => classify(err),
@@ -485,7 +487,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use spiral_license::migrate::{LegacyApp, ProviderId, Validity};
+    use spiral_license::migrate::{Ensured, LegacyApp, ProviderId};
     use spiral_license::vault::{Access, MemoryStore};
 
     use super::*;
@@ -536,15 +538,11 @@ mod tests {
 
     #[test]
     fn a_licensed_view_names_this_computer_and_hides_the_key() {
-        let store = MemoryStore::new();
         let secret = "LIC1.do-not-print-this-middle.wxyz";
-        store.insert(
-            migrate::SERVICE,
-            migrate::LICENSE_ACCOUNT,
-            secret,
-            Access::Open,
-        );
-        let checked = classify_result(&store, Ok(Validity { grace: false }));
+        let checked = classify_result(Ok(Ensured {
+            grace: false,
+            key: secret.into(),
+        }));
         let LicenseView::Licensed { grace, key, device } = checked.view.clone() else {
             panic!("expected a licensed view");
         };
@@ -561,13 +559,7 @@ mod tests {
         assert!(!json.contains("do-not-print"));
         assert!(!json.contains(secret));
 
-        store.insert(
-            migrate::SERVICE,
-            migrate::LICENSE_ACCOUNT,
-            "short",
-            Access::Open,
-        );
-        let short_json = serde_json::to_string(&licensed_view(&store, true)).unwrap();
+        let short_json = serde_json::to_string(&licensed_view("short", true)).unwrap();
         assert!(short_json.contains("Key on file"));
         assert!(!short_json.contains("short"));
     }
@@ -632,6 +624,38 @@ mod tests {
         );
         let json = serde_json::to_string(&view).unwrap();
         assert!(!json.contains("resume-secret"));
+    }
+
+    #[tokio::test]
+    async fn a_partial_clear_does_not_leave_the_gate_licensed() {
+        let store = MemoryStore::new();
+        store.insert(
+            migrate::SERVICE,
+            migrate::LICENSE_ACCOUNT,
+            "LIC1.here",
+            Access::Open,
+        );
+        store.insert(
+            migrate::SERVICE,
+            migrate::STATUS_ACCOUNT,
+            "status-doc",
+            Access::Open,
+        );
+        store.lock_delete(migrate::SERVICE, migrate::STATUS_ACCOUNT);
+        store.insert(
+            LegacyApp::Wallpaper.service(),
+            migrate::LICENSE_ACCOUNT,
+            "wall-secret",
+            Access::Open,
+        );
+        let gate = LicenseGate::new(ShellStore::Memory(store));
+        gate.seed_licensed().await;
+        let err = gate.clear().await.unwrap_err();
+        assert_eq!(err, LicenseError::NeedsInteraction.user_message());
+        assert_eq!(
+            gate.view().await,
+            LicenseView::NeedsActivation { offer: None }
+        );
     }
 
     #[test]
