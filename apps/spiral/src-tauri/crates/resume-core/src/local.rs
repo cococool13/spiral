@@ -17,6 +17,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 /// One offline model the app can fetch.
 ///
@@ -251,6 +252,7 @@ pub async fn download(
         .map_err(|e| format!("Could not write to {}: {e}.", temp_path.display()))?;
     let mut received: u64 = 0;
     let mut last_percent = u8::MAX;
+    let mut last_report = Instant::now();
     let mut stream = response.bytes_stream();
     // Hashed as it arrives. Re-reading the finished file meant a second full
     // pass over 2.5 GB — tens of seconds on a slow disk — for bytes that had
@@ -266,10 +268,9 @@ pub async fn download(
         hasher.update(&chunk);
         received += chunk.len() as u64;
         let percent = (received.min(total) * 100).checked_div(total).unwrap_or(0) as u8;
-        // One event per whole percent: 2.5 GB in 8 KB chunks is 300,000 events
-        // otherwise, and the UI cannot use them.
-        if percent != last_percent {
+        if percent != last_percent || last_report.elapsed() >= Duration::from_secs(15) {
             last_percent = percent;
+            last_report = Instant::now();
             report(DownloadProgress {
                 received,
                 total,

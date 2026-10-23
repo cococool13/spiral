@@ -469,7 +469,7 @@ impl Session {
     }
 
     fn download(
-        &self,
+        &mut self,
         request: u64,
         id: String,
         host: &mut impl Events,
@@ -479,8 +479,9 @@ impl Session {
                 "This build does not offer that model. Use your own API key, or the free rule-based pass.",
             )
         })?;
-        self.runtime
-            .block_on(local::download(&self.root, &entry, |step| {
+        let cancel = Arc::clone(&self.cancelled);
+        let fetched = self.runtime.block_on(finish_or_cancel(
+            local::download(&self.root, &entry, |step| {
                 host.emit(
                     request,
                     Event::Progress {
@@ -488,11 +489,18 @@ impl Session {
                         total: 100,
                     },
                 );
-            }))
-            .map_err(UserError::new)?;
+            }),
+            cancel,
+        ));
+        if fetched.is_err() || self.cancelled.load(Ordering::SeqCst) {
+            self.host.stop();
+        }
+        fetched.map_err(UserError::new)?;
+        if self.cancelled.load(Ordering::SeqCst) {
+            return Err(UserError::new("Cancelled."));
+        }
         let mut stored = settings::load(&self.root);
-        stored.offline_model = entry.id.clone();
-        stored.setup_done = true;
+        mark_model_installed(&mut stored, &entry.id);
         settings::save(&self.root, &stored).map_err(|err| {
             UserError::new(format!(
                 "The model installed, but the choice could not be saved: {err}."
@@ -515,6 +523,22 @@ fn stamp(doc: &ResumeDoc, look: &str, accent: &str) -> String {
     look.hash(&mut hasher);
     accent.hash(&mut hasher);
     format!("{:016x}", hasher.finish())
+}
+
+fn mark_model_installed(stored: &mut EngineSettings, id: &str) {
+    stored.offline_model = id.to_string();
+    stored.setup_done = true;
+    stored.rules_only = false;
+}
+
+async fn finish_or_cancel<T>(
+    work: impl std::future::Future<Output = Result<T, String>>,
+    cancel: Arc<AtomicBool>,
+) -> Result<T, String> {
+    tokio::select! {
+        result = work => result,
+        _ = watch_cancel(cancel) => Err("Cancelled.".to_string()),
+    }
 }
 
 async fn watch_cancel(flag: Arc<AtomicBool>) {
@@ -602,7 +626,49 @@ mod tests {
         let loaded = settings::load(&dir);
         assert!(loaded.rules_only);
         assert_eq!(loaded.provider, "openai");
+        session
+            .handle(
+                3,
+                true,
+                Call::SaveEngine {
+                    provider: "local".into(),
+                    model: String::new(),
+                    base_url: String::new(),
+                    offline_model: "qwen3.5-4b".into(),
+                    rules_only: false,
+                },
+                &mut host,
+            )
+            .unwrap();
+        let chosen = settings::load(&dir);
+        assert!(!chosen.rules_only);
+        assert_eq!(chosen.offline_model, "qwen3.5-4b");
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn installing_a_model_clears_rules_only() {
+        let mut stored = EngineSettings {
+            provider: "local".into(),
+            model: String::new(),
+            base_url: String::new(),
+            offline_model: String::new(),
+            setup_done: false,
+            rules_only: true,
+        };
+        mark_model_installed(&mut stored, "qwen3.5-4b");
+        assert!(!stored.rules_only);
+        assert!(stored.setup_done);
+        assert_eq!(stored.offline_model, "qwen3.5-4b");
+    }
+
+    #[tokio::test]
+    async fn cancel_ends_a_download_that_has_not_finished() {
+        let flag = Arc::new(AtomicBool::new(true));
+        let err = finish_or_cancel(std::future::pending::<Result<(), String>>(), flag)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "Cancelled.");
     }
 
     #[test]
