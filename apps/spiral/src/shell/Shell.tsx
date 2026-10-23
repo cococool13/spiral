@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { check, type Update } from "@tauri-apps/plugin-updater";
+import { begin, noteToolChosen, setAnalyticsRoute, type AnalyticsRoute } from "./analytics/client";
 import { mark } from "../bench";
 import { readBoot, type ModuleId, type ModuleState } from "../boot";
 import { MODULES } from "../modules/registry";
@@ -37,15 +38,45 @@ export default function Shell() {
   const [license, setLicense] = useLicense();
   const setStatusLine = useCallback((line: string) => setStatus(line), []);
 
+  const screen = analyticsRoute(route, license.kind, boot.start.kind === "picker");
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+
   useEffect(() => {
     mark("first_paint");
   }, []);
 
   useEffect(() => {
+    setAnalyticsRoute(screen);
+  }, [screen]);
+
+  useEffect(() => {
+    let live = true;
     void generalView()
-      .then(setSettings)
-      .catch(() => setSettingsError(true));
-  }, []);
+      .then((next) => {
+        if (!live) return;
+        setSettings(next);
+        void begin({
+          optedOut: next.analyticsOptOut,
+          platform: boot.platform,
+          fallbackVersion: boot.version,
+          route: screenRef.current,
+        });
+      })
+      .catch(() => {
+        if (!live) return;
+        setSettingsError(true);
+        void begin({
+          optedOut: true,
+          platform: boot.platform,
+          fallbackVersion: boot.version,
+          route: screenRef.current,
+        });
+      });
+    return () => {
+      live = false;
+    };
+  }, [boot.platform, boot.start.kind, boot.version]);
 
   useEffect(() => {
     if (license.kind !== "licensed" || !settings?.autoUpdateCheck) return;
@@ -84,6 +115,7 @@ export default function Shell() {
     setError(null);
     try {
       await invoke("modules_set", { modules: ids });
+      for (const id of ids) noteToolChosen(id);
       const id = ids.includes("wallpaper") ? "wallpaper" : "resume";
       setEnabled(ids);
       setActive(id);
@@ -139,8 +171,10 @@ export default function Shell() {
         setRoute({ kind: "module", id });
       }}
       onTools={(next, nextActive) => {
+        const added = next.filter((id) => !enabled.includes(id));
         void invoke("modules_set", { modules: next })
           .then(() => {
+            for (const id of added) noteToolChosen(id);
             setEnabled(next);
             setActive(nextActive);
             setRoute((current) =>
@@ -294,6 +328,18 @@ function findModule(modules: ModuleState[], id: ModuleId): ModuleState {
 
 function isAvailable(modules: ModuleState[], id: ModuleId): boolean {
   return modules.find((module) => module.id === id)?.available ?? false;
+}
+
+function analyticsRoute(
+  route: Route,
+  licenseKind: LicenseView["kind"],
+  pickerFirst: boolean,
+): AnalyticsRoute {
+  if (route.kind === "picker" && pickerFirst) return "picker";
+  if (licenseKind === "needsActivation" || licenseKind === "locked") return "activate";
+  if (route.kind === "settings") return "settings";
+  if (route.kind === "module") return route.id;
+  return "picker";
 }
 
 function licenseFoot(view: LicenseView): string {

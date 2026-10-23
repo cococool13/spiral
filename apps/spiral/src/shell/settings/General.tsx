@@ -4,6 +4,7 @@ import { Button } from "../../ui/Button";
 import { Notice } from "../../ui/Notice";
 import { Segmented } from "../../ui/Segmented";
 import { Toggle } from "../../ui/Toggle";
+import { setSharing } from "../analytics/client";
 import { generalUpdate, type FitMode, type GeneralSettings } from "./api";
 import { renameApply, renameDecline, renameOffer, trashCopy, type RenameOffer } from "./rename";
 
@@ -39,11 +40,14 @@ export function General({ settings, onSettings }: GeneralProps) {
 
   async function patch(next: GeneralSettings) {
     const previous = settings;
+    const sharingChanged = next.analyticsOptOut !== previous.analyticsOptOut;
+    if (sharingChanged) setSharing(!next.analyticsOptOut);
     onSettings(next);
     setError(null);
     try {
       onSettings(await generalUpdate(next));
     } catch {
+      if (sharingChanged) setSharing(!previous.analyticsOptOut);
       onSettings(previous);
       setError("That setting did not save. Try again.");
     }
@@ -108,6 +112,20 @@ export function General({ settings, onSettings }: GeneralProps) {
   return (
     <div className="set">
       {error ? <Notice tone="error">{error}</Notice> : null}
+      <section className="set-row">
+        <div className="set-row__copy">
+          <h2>Share anonymous usage stats</h2>
+          <p className="notice" id="usage-stats">
+            Anonymous and privacy-safe. No personal data or content, IP discarded.
+          </p>
+        </div>
+        <Toggle
+          checked={!settings.analyticsOptOut}
+          label="Share anonymous usage stats"
+          describedBy="usage-stats"
+          onChange={(share) => void patch({ ...settings, analyticsOptOut: !share })}
+        />
+      </section>
       <section className="set-row">
         <div className="set-row__copy">
           <h2>Launch at login</h2>

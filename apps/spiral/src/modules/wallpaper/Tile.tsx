@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { ReturnGlyph } from "../../ui/glyphs";
+import { noteWallpaperApplied } from "../../shell/analytics/client";
 import { apply, stageFull } from "./api";
 import { errorCopy } from "./errors";
 import { renditionFor, thumbSrc, type ThumbPlatform } from "./thumbs";
@@ -72,6 +73,7 @@ export function Tile({ item, index, total, tabbable, platform, onDecoded }: Tile
     try {
       await apply(item.id);
       setState("applied");
+      noteWallpaperApplied();
       showMarks();
     } catch (err: unknown) {
       setError(errorCopy(err));

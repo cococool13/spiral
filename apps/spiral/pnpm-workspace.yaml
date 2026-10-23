@@ -1,2 +1,7 @@
 allowBuilds:
+  core-js: false
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@posthog/browser-common@0.9.9'
+  - '@posthog/core@1.60.0'
+  - posthog-js@1.438.19

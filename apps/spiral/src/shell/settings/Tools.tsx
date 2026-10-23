@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import resumePlate from "../../assets/picker/resume.webp";
+import { notePickerOpened } from "../analytics/client";
 import wallpaperPlate from "../../assets/picker/wallpaper.webp";
 import type { ModuleId, ModuleState } from "../../boot";
 import { Toggle } from "../../ui/Toggle";
@@ -21,6 +23,10 @@ export function Tools({ modules, enabled, active, onChange }: ToolsProps) {
     wallpaper: modules.find((item) => item.id === "wallpaper")?.available ?? true,
     resume: modules.find((item) => item.id === "resume")?.available ?? false,
   };
+
+  useEffect(() => {
+    notePickerOpened();
+  }, []);
 
   function toggle(id: ModuleId, on: boolean) {
     const next = nextModuleSet(enabled, available, id, on);

@@ -30,7 +30,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost thumb: http://thumb.localhost; connect-src 'self' ipc: http://ipc.localhost",
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost thumb: http://thumb.localhost; connect-src 'self' ipc: http://ipc.localhost https://us.i.posthog.com https://us-assets.i.posthog.com",
       "assetProtocol": {
         "enable": true,
         "scope": [

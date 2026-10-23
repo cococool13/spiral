@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import mark from "../assets/brand/mark-red.svg";
 import resumePlate from "../assets/picker/resume.webp";
 import wallpaperPlate from "../assets/picker/wallpaper.webp";
+import { notePickerOpened } from "./analytics/client";
 import { mark as benchMark } from "../bench";
 import type { ModuleId, ModuleState } from "../boot";
 import "./picker.css";
@@ -85,6 +86,10 @@ export function Picker({
     if (!focusable(go) || !plates.every((plate) => plate != null && focusable(plate))) return;
     benchMark("picker_ready");
   }, [painted]);
+
+  useEffect(() => {
+    notePickerOpened();
+  }, []);
 
   return (
     <main className="picker">
