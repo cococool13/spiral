@@ -833,7 +833,7 @@ The 2 second idle rule lives in `Machine::tick`. Milestone 4 ran that tick on th
 
 The codesign fixture signs three ad-hoc binaries with identity `-` and without `--timestamp`. A timestamp needs a Developer ID. The release path passes `--timestamp`.
 
-`models.ref.json` is per model. If `resume/models` already exists, migration leaves it and does not merge files by size. Byte comparison is for `resume.json` and `engine.json`.
+`models.ref.json` is per model. If `resume/models` already exists, migration moves each legacy file into it. A file whose name and size already match is left. A same name with a different size replaces the copy in `resume/models`. New references are merged into an existing `models.ref.json`. Byte comparison for `resume.json` and `engine.json` is unchanged.
 
 A leftover `resume.json.tmp` is recovered when it parses as a JSON object. The shell does not link `StoredDoc`.
 
@@ -907,7 +907,7 @@ The site download stays on the published Spiral Wallpaper 1.0.4 files. `update-c
 
 ### Milestone 5
 
-**Finding 4.** Settings, on the License tab, pastes a provider key into a password field. Save calls `provider_set`, then clears the field. The secret is not left in the DOM. `needsPaste` shows "Spiral could not read the saved key. Paste it again." A save error that contains the typed key is replaced with "Spiral could not save that key. Paste it again." The vault commands stay as recorded under milestones 2 and 4. Tests: "sends a pasted key, then clears it from the screen", "does not show a key that a failed save echoes".
+**Finding 4.** Settings pastes a provider key into a password field. Save calls `provider_set`, then clears the field. The secret is not left in the DOM. `needsPaste` shows "Spiral could not read the saved key. Paste it again." A save error that contains the typed key is replaced with "Spiral could not save that key. Paste it again." The vault commands stay as recorded under milestones 2 and 4. Fix pass 3 moved the fields from License to Tools. Tests: "sends a pasted key, then clears it from the screen", "does not show a key that a failed save echoes", "keeps the license key and email on License, and the API keys on Tools".
 
 ### Milestone 6
 
@@ -994,3 +994,13 @@ Resume fonts, templates, and `model-catalogue.json` are compiled from `apps/spir
 The checksum step in `release-app.yml` still rewrites spaces to dots. Installed Wallpaper asset names contain spaces, and GitHub stores those names with dots. The Slim filename was only an example of that rewrite. The rewrite stays.
 
 A release build calls autostart `enable()` after the page loads when `launch_at_login` is true. That plugin writes the Run value as the unquoted executable path plus a trailing space. The installer writes the same value in quotes, so a reboot before the first launch still finds the new exe. The first launch then replaces the quoted value with the plugin's own string. Debug builds do not call `enable()`.
+
+### Fix pass 3
+
+A model download used to keep a 45 minute total limit. The shell now stops a download only after 3 minutes with no engine output. The engine reports download bytes at least every 15 seconds while they arrive, and `local::download` sits in the same cancel `select!` as a build.
+
+Windows error 32 (sharing violation) is not treated as a cross-device rename. Adoption leaves the locked files in place and returns success, so opening Resume does not fail. The next launch tries the move again.
+
+Milestone 5 put provider key fields on Settings, License. Those fields are Resume engine settings. They now sit under Settings, Tools, on the Resume row. License keeps the license state, the license key, and the email code path.
+
+Choosing a local model, or finishing a model download, clears rules-only mode. Settings shows which mode tightening uses.
