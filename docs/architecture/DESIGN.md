@@ -1004,3 +1004,7 @@ Windows error 32 (sharing violation) is not treated as a cross-device rename. Ad
 Milestone 5 put provider key fields on Settings, License. Those fields are Resume engine settings. They now sit under Settings, Tools, on the Resume row. License keeps the license state, the license key, and the email code path.
 
 Choosing a local model, or finishing a model download, clears rules-only mode. Settings shows which mode tightening uses.
+
+### Fix pass 4
+
+`LicenseView::Licensed` now carries `key` and `device` as well as `grace`. Settings has to name the license on this computer, and the earlier type only had `grace`. `key` is a mask: the first four characters, an ellipsis, and the last four. A key shorter than 12 characters is shown as "Key on file". The full key stays in the keychain and is not put in the view. `device` comes from `device_label`, the words "This computer" and the first eight hex digits of the device hash. The activation form is shown only when the view is not licensed. A licensed view shows the mask, the device, Remove, and the lost-key link.

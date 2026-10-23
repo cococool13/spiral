@@ -2,7 +2,7 @@ export type LegacyApp = "wallpaper" | "resume" | "clean" | "slim";
 
 export type LicenseView =
   | { kind: "checking" }
-  | { kind: "licensed"; grace: boolean }
+  | { kind: "licensed"; grace: boolean; key: string; device: string }
   | { kind: "needsActivation"; offer: LegacyApp | null }
   | { kind: "retry"; message: string }
   | { kind: "locked"; message: string };
@@ -35,7 +35,12 @@ export function parseLicenseView(value: unknown): LicenseView {
   }
   if (value.kind === "checking") return { kind: "checking" };
   if (value.kind === "licensed" && typeof value.grace === "boolean") {
-    return { kind: "licensed", grace: value.grace };
+    return {
+      kind: "licensed",
+      grace: value.grace,
+      key: typeof value.key === "string" ? value.key : "",
+      device: typeof value.device === "string" ? value.device : "",
+    };
   }
   if (value.kind === "needsActivation" && (value.offer === null || isLegacy(value.offer))) {
     return { kind: "needsActivation", offer: value.offer };

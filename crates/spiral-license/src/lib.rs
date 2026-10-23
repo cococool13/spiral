@@ -434,6 +434,11 @@ pub(crate) fn device_id() -> String {
     hash_hex(&machine_id())
 }
 
+pub fn device_label() -> String {
+    let short: String = device_id().chars().take(8).collect();
+    format!("This computer · {short}")
+}
+
 fn http_client() -> Result<reqwest::Client, LicenseError> {
     reqwest::Client::builder()
         .user_agent(concat!("SpiralLicense/", env!("CARGO_PKG_VERSION")))
@@ -1263,6 +1268,16 @@ mod tests {
             activate_with_code(AppId::Wallpaper, "a@b.co", "123456", &url).await,
             Err(LicenseError::InvalidKey)
         );
+    }
+
+    #[test]
+    fn device_label_names_this_computer() {
+        let label = device_label();
+        let short = label
+            .strip_prefix("This computer · ")
+            .expect("device label");
+        assert_eq!(short.len(), 8);
+        assert!(short.chars().all(|c| c.is_ascii_hexdigit()));
     }
 
     /// Live check against a local `wrangler dev`, run by ../licensing/scripts/e2e-local.mjs keys:

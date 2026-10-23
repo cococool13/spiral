@@ -10,10 +10,20 @@ use tauri::Manager;
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum LicenseView {
     Checking,
-    Licensed { grace: bool },
-    NeedsActivation { offer: Option<LegacyApp> },
-    Retry { message: String },
-    Locked { message: String },
+    Licensed {
+        grace: bool,
+        key: String,
+        device: String,
+    },
+    NeedsActivation {
+        offer: Option<LegacyApp>,
+    },
+    Retry {
+        message: String,
+    },
+    Locked {
+        message: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -204,7 +214,7 @@ impl LicenseGate {
         migrate::activate(&self.store, key, &validator_url())
             .await
             .map_err(message)?;
-        inner.view = LicenseView::Licensed { grace: false };
+        inner.view = licensed_view(&self.store, false);
         inner.ready = true;
         Ok(())
     }
@@ -214,7 +224,7 @@ impl LicenseGate {
         migrate::activate_with_code(&self.store, email, code, &validator_url())
             .await
             .map_err(message)?;
-        inner.view = LicenseView::Licensed { grace: false };
+        inner.view = licensed_view(&self.store, false);
         inner.ready = true;
         Ok(())
     }
@@ -287,13 +297,48 @@ async fn ensure_view(
     exchange: &migrate::LaunchExchange,
     validator_url: &str,
 ) -> Checked {
-    classify_result(migrate::ensure_licensed(store, validator_url, exchange).await)
+    classify_result(
+        store,
+        migrate::ensure_licensed(store, validator_url, exchange).await,
+    )
 }
 
-fn classify_result(result: Result<Validity, LicenseError>) -> Checked {
+fn licensed_view(store: &impl CredentialStore, grace: bool) -> LicenseView {
+    LicenseView::Licensed {
+        grace,
+        key: mask_key(&stored_key(store)),
+        device: spiral_license::device_label(),
+    }
+}
+
+fn stored_key(store: &impl CredentialStore) -> String {
+    match store.get(
+        migrate::SERVICE,
+        migrate::LICENSE_ACCOUNT,
+        Interaction::Silent,
+    ) {
+        Ok(Some(secret)) => secret.expose().to_string(),
+        _ => String::new(),
+    }
+}
+
+fn mask_key(key: &str) -> String {
+    let chars: Vec<char> = key.chars().collect();
+    if chars.len() < 12 {
+        return "Key on file".into();
+    }
+    let head: String = chars[..4].iter().collect();
+    let tail: String = chars[chars.len() - 4..].iter().collect();
+    format!("{head}…{tail}")
+}
+
+fn classify_result(
+    store: &impl CredentialStore,
+    result: Result<Validity, LicenseError>,
+) -> Checked {
     match result {
         Ok(Validity { grace }) => Checked {
-            view: LicenseView::Licensed { grace },
+            view: licensed_view(store, grace),
             settled: true,
         },
         Err(err) => classify(err),
@@ -440,7 +485,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use spiral_license::migrate::{LegacyApp, ProviderId};
+    use spiral_license::migrate::{LegacyApp, ProviderId, Validity};
     use spiral_license::vault::{Access, MemoryStore};
 
     use super::*;
@@ -487,6 +532,44 @@ mod tests {
         assert!(matches!(moved.view, LicenseView::Locked { .. }));
         let json = serde_json::to_string(&retry.view).unwrap();
         assert!(json.contains("\"kind\":\"retry\""));
+    }
+
+    #[test]
+    fn a_licensed_view_names_this_computer_and_hides_the_key() {
+        let store = MemoryStore::new();
+        let secret = "LIC1.do-not-print-this-middle.wxyz";
+        store.insert(
+            migrate::SERVICE,
+            migrate::LICENSE_ACCOUNT,
+            secret,
+            Access::Open,
+        );
+        let checked = classify_result(&store, Ok(Validity { grace: false }));
+        let LicenseView::Licensed { grace, key, device } = checked.view.clone() else {
+            panic!("expected a licensed view");
+        };
+        assert!(checked.settled);
+        assert!(!grace);
+        assert_eq!(key, "LIC1…wxyz");
+        let short = device
+            .strip_prefix("This computer · ")
+            .expect("device label");
+        assert_eq!(short.len(), 8);
+        assert!(short.chars().all(|c| c.is_ascii_hexdigit()));
+        let json = serde_json::to_string(&checked.view).unwrap();
+        assert!(json.contains("\"kind\":\"licensed\""));
+        assert!(!json.contains("do-not-print"));
+        assert!(!json.contains(secret));
+
+        store.insert(
+            migrate::SERVICE,
+            migrate::LICENSE_ACCOUNT,
+            "short",
+            Access::Open,
+        );
+        let short_json = serde_json::to_string(&licensed_view(&store, true)).unwrap();
+        assert!(short_json.contains("Key on file"));
+        assert!(!short_json.contains("short"));
     }
 
     #[test]
