@@ -648,7 +648,7 @@ Identity string: `Developer ID Application: COHEN BENJAMIN COOLIOGE (CU8NTJWQ43)
 | `.github/workflows/license.yml` | Unchanged. |
 | `AGENTS.md`, `README.md`, `docs/PRODUCT.md`, `docs/DESIGN.md`, `docs/licensing.md` | One product, two modules, commands pointed at `apps/spiral`. |
 
-`latest.json` platform keys stay `darwin-aarch64`, `darwin-x86_64`, and `windows-x86_64`. Notes: "Spiral Wallpaper is now Spiral. Your wallpapers and license carry over. Resume is included."
+`latest.json` platform keys are `darwin-aarch64` and `windows-x86_64` only. No `darwin-x86_64` or `darwin-universal`: Wallpaper 1.0.4 runs on macOS 10.13-10.15 (Intel only) and its fixed-URL updater sends no OS version, while 2.0.0 needs macOS 11, so Intel Macs update via the DMG (see `apps/spiral/scripts/make-release-manifest.mjs`). Notes: "Spiral Wallpaper is now Spiral. Your wallpapers and license carry over. Resume is included."
 
 Windows NSIS `productName` becomes `Spiral`, so the install directory changes. `windows/hooks.nsh` runs the old "Spiral Wallpaper" uninstaller silent (`/S`) and does not delete `%APPDATA%\app.spiral.wallpaper`. The executable inside the new directory is still `spiral-wallpaper.exe`. The Windows `latest.json` entry is published in the same release as macOS once that hook has been rehearsed on a disposable 1.0.5 install (milestone 6). Until that rehearsal passes, the release job fails rather than omitting Windows quietly.
 

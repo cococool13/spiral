@@ -73,16 +73,34 @@ const url = (file) => `https://github.com/${repo}/releases/download/v${version}/
 const mac = { signature: signatureFor(macBundle), url: url(macBundle) };
 const win = { signature: signatureFor(winBundle), url: url(winBundle) };
 
-// darwin-aarch64 and darwin-x86_64 both point at the universal bundle: older
-// clients ask for their arch by name and would otherwise find nothing.
+// macOS gets exactly one key, "darwin-aarch64", pointing at the universal
+// bundle. tauri-plugin-updater 2.14.0 (what Wallpaper 1.0.4 ships) builds
+// its lookup list in `Updater::get_urls` (src/updater.rs:753-761) as
+// "{os}-{arch}-{installer}" then "{os}-{arch}" and returns TargetsNotFound
+// when neither exists; its src/ has no "universal" fallback, and neither
+// does 2.10.1 (Wallpaper 1.0.1-1.0.3; 1.0.0 has no updater). No release
+// calls `UpdaterBuilder::target`, the only way to ask for another key. So an
+// arm64 client reads "darwin-aarch64-app" or "darwin-aarch64", nothing else.
+// `{arch}` is the compiled slice, so the Intel slice under Rosetta (macOS
+// 11+ by definition) also misses; it can take the DMG like any Intel Mac.
+//
+// There is deliberately no "darwin-x86_64", and no "darwin-universal" a
+// later plugin could fall back to, in this manifest or any later one.
+// Spiral Wallpaper 1.0.4 runs on macOS 10.13-10.15, and every Mac on those
+// versions is Intel. Its updater polls a fixed GitHub URL and sends no OS
+// version, so the feed cannot tell a 10.15 Mac from an Intel Mac on 11+.
+// Spiral 2.0.0 needs macOS 11 (minimumSystemVersion 11.0); offered to
+// x86_64, it would install an app that will not launch on 10.13-10.15.
+// Without the key, 1.0.4's startup check gets TargetsNotFound, drops it, and
+// those people stay on a working 1.0.4. Intel Macs on 11+ update by
+// downloading the DMG, which is still universal. Put an Intel key back only
+// if 2.x moves to an update URL that 1.0.x never polls.
 const manifest = {
   version,
   notes,
   pub_date: pubDate,
   platforms: {
-    "darwin-universal": mac,
     "darwin-aarch64": mac,
-    "darwin-x86_64": mac,
     "windows-x86_64": win,
   },
 };
