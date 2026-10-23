@@ -16,7 +16,7 @@
 // Run it once before `pnpm tauri build`.
 
 import { execFileSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,7 +48,24 @@ if (platform !== "darwin" && platform !== "win32") {
   process.exit(1);
 }
 
-if (!existsSync(work)) {
+// The checkout lives under target/, which CI's rust-cache saves after
+// pruning everything it does not recognise as cargo output. What comes back
+// on the next run is the sidecar-src directory with its sources gone, so a
+// bare existsSync() would skip the clone and cmake would find no
+// CMakeLists.txt. Re-clone unless the checkout is whole and at TAG, so a
+// restored checkout of an older pin is not built either.
+const checkedOutTag = () => {
+  try {
+    return execFileSync("git", ["-C", work, "describe", "--tags", "--exact-match"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return null;
+  }
+};
+if (!existsSync(join(work, "CMakeLists.txt")) || checkedOutTag() !== TAG) {
+  rmSync(work, { recursive: true, force: true, maxRetries: 3 });
   mkdirSync(dirname(work), { recursive: true });
   run("git", ["clone", "--depth", "1", "--branch", TAG, REPO, work]);
 }
