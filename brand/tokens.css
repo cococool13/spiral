@@ -43,13 +43,6 @@
      Stadium pills are retired; CTAs are square fills. */
   --spiral-radius-ctl: 0px;
   --spiral-radius-pill: 0px;
-  --spiral-glass-blur: blur(16px) saturate(1.7);
-  --spiral-glass-edge: rgba(255, 255, 255, 0.45);
-  --spiral-glass-sheen: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0.55),
-    rgba(255, 255, 255, 0) 55%
-  );
 
   /* Proof Plate shell. Identity 03 names above stay for the existing screens. */
   --stock: #f4f4f1;

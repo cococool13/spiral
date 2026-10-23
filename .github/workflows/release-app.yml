@@ -30,7 +30,7 @@ on:
         required: true
         type: string
       artifact-prefix:
-        description: Prefix for uploaded artifact names, e.g. slim
+        description: Prefix for uploaded artifact names, e.g. spiral
         required: true
         type: string
       macos:
@@ -408,11 +408,13 @@ jobs:
 
       # Without an updater there is no manifest, but checksums are still what
       # someone verifies a download against.
-      # GitHub rewrites spaces to dots when it stores an asset, so "Spiral
-      # Slim_1.0.0_universal.dmg" is downloaded as "Spiral.Slim_1.0.0_...".
-      # Checksums have to name the file people actually receive or `shasum -c`
-      # reports every entry missing — the manifest script does the same
-      # substitution for the updater path, and this is the half without one.
+      # GitHub rewrites spaces to dots when it stores an asset, so
+      # "Spiral Wallpaper_1.0.4_universal.dmg" is downloaded as
+      # "Spiral.Wallpaper_1.0.4_...". Checksums have to name the file people
+      # actually receive or `shasum -c` reports every entry missing. The
+      # manifest script does the same substitution for the updater path, and
+      # this is the half without one. Installed Wallpaper releases use that
+      # spaced name, so the substitution stays.
       - name: Checksums only
         if: ${{ !inputs.updater }}
         run: |

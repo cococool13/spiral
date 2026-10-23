@@ -127,15 +127,7 @@ p {
   text-wrap: balance;
 }
 
-.type-eyebrow {
-  font-family: var(--spiral-font-mono);
-  font-weight: 500;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Sharp filled CTA — Instrument Utility. Class name kept for call sites. */
+/* Solid fill. The class name is historical. */
 .glass-pill {
   position: relative;
   isolation: isolate;

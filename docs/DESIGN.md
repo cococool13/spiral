@@ -65,8 +65,6 @@ one collection, so it is described here rather than in any single app.
 - **No rule under the bar.** The page and the bar are the same material.
 - **The panel**: flat lift, hairline border, radius 0, mono 12px items.
 
-Spiral Slim is the exception: wizard step ticks where the menu would be.
-
 ## Components
 
 - **Primary CTA** (`.glass-pill` class name retained): sharp rectangle, helix
