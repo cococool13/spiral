@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,6 +26,13 @@ export function tauriBuildArgs(argv) {
     args.push("--config", bundleConfig);
   }
   return { buildEngine, args };
+}
+
+// Run the CLI's own JS entry with this node. Spawning "tauri" by name fails on
+// Windows, where the shim on PATH is tauri.cmd and execFileSync uses no shell.
+export function tauriCommand(args) {
+  const cli = createRequire(import.meta.url).resolve("@tauri-apps/cli/tauri.js");
+  return { file: process.execPath, args: [cli, ...args] };
 }
 
 export function missingHelpers(app) {

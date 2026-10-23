@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -10,6 +10,7 @@ import {
   bundleConfig,
   missingHelpers,
   signFile,
+  tauriCommand,
   signHelpers,
   tauriBuildArgs,
   llamaEntitlements,
@@ -80,4 +81,14 @@ test("ad-hoc codesign gives llama the three keys and the other two none", () => 
 
   signFile(join(mac, "spiral-wallpaper"), llamaEntitlements, "-", { timestamp: false });
   assert.throws(() => assertHelperEntitlements(app), /spiral-wallpaper/);
+});
+
+test("the tauri CLI runs through node, so Windows needs no .cmd shim", () => {
+  const { file, args } = tauriCommand(["build", "--config", bundleConfig]);
+  assert.equal(file, process.execPath);
+  assert.equal(basename(args[0]), "tauri.js");
+  assert.equal(existsSync(args[0]), true);
+  assert.deepEqual(args.slice(1), ["build", "--config", bundleConfig]);
+  const source = readFileSync(new URL("./tauri.mjs", import.meta.url), "utf8");
+  assert.equal(source.includes('execFileSync("tauri"'), false);
 });

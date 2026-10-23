@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readTarget } from "./build-engine.mjs";
-import { tauriBuildArgs } from "./sign-helpers.mjs";
+import { tauriBuildArgs, tauriCommand } from "./sign-helpers.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -15,4 +15,5 @@ if (buildEngine) {
     stdio: "inherit",
   });
 }
-execFileSync("tauri", args, { stdio: "inherit" });
+const tauri = tauriCommand(args);
+execFileSync(tauri.file, tauri.args, { stdio: "inherit" });
