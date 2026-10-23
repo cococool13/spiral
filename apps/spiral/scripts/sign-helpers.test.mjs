@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
@@ -15,7 +16,8 @@ import {
   emptyEntitlements,
 } from "./sign-helpers.mjs";
 
-const scratch = "/Users/cococool/.agents/spiral-one-app/scratch/m4-sign";
+const scratch = mkdtempSync(join(tmpdir(), "spiral-sign-helpers-"));
+after(() => rmSync(scratch, { recursive: true, force: true }));
 
 test("the license crate points at the spiral workspace", () => {
   const text = readFileSync(

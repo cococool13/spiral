@@ -323,10 +323,7 @@ mod tests {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_nanos();
-            let root = std::env::var_os("HOME")
-                .map(PathBuf::from)
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join(".agents/spiral-one-app/scratch/m5-rename");
+            let root = std::env::temp_dir().join("spiral-bundle-rename");
             let path = root.join(format!("{}-{n}-{nanos}", std::process::id()));
             fs::create_dir_all(&path).unwrap();
             Self(path)
