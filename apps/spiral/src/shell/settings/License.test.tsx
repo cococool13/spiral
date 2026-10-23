@@ -60,11 +60,11 @@ describe("settings license and tools", () => {
   it("shows the license on this computer, and the API keys on Tools", async () => {
     show();
     fireEvent.click(screen.getByRole("tab", { name: "License" }));
-    expect(screen.getByText("This Mac is licensed.")).toBeTruthy();
+    expect(screen.getByText("This computer is licensed.")).toBeTruthy();
     expect(screen.getByText("LIC1…4f2a")).toBeTruthy();
     expect(screen.getByText("This computer · a1b2c3d4")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Lost your key?" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove from this computer" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Lost your key?" })).toBeNull();
     expect(screen.queryByLabelText("Email")).toBeNull();
     expect(screen.queryByLabelText("License key")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Anthropic" })).toBeNull();
@@ -79,14 +79,22 @@ describe("settings license and tools", () => {
   it("shows the activation form when this Mac is not licensed", () => {
     show({ kind: "needsActivation", offer: null });
     fireEvent.click(screen.getByRole("tab", { name: "License" }));
-    expect(screen.getByText("This Mac is not licensed.")).toBeTruthy();
+    expect(screen.getByText("This computer is not licensed.")).toBeTruthy();
     expect(screen.getByLabelText("Email")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove from this computer" })).toBeNull();
   });
 
-  it("remove returns to the activation form", async () => {
+  it("asks before it removes the license from this computer", async () => {
     show();
     fireEvent.click(screen.getByRole("tab", { name: "License" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove from this computer" }));
+    expect(invoke).not.toHaveBeenCalledWith("license_clear");
+    expect(screen.getByRole("alertdialog", { name: "Remove the license from this computer?" })).toBeTruthy();
+    expect(screen.getByText(/3-computer limit/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(invoke).not.toHaveBeenCalledWith("license_clear");
+    fireEvent.click(screen.getByRole("button", { name: "Remove from this computer" }));
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     expect(await screen.findByLabelText("Email")).toBeTruthy();
     expect(invoke).toHaveBeenCalledWith("license_clear");
@@ -97,6 +105,6 @@ describe("settings license and tools", () => {
     fireEvent.click(screen.getByRole("tab", { name: "License" }));
     expect(screen.getByText("Checking the license.")).toBeTruthy();
     expect(screen.queryByLabelText("Email")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove from this computer" })).toBeNull();
   });
 });
