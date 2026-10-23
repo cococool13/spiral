@@ -51,6 +51,7 @@ tauri-plugin-opener = "2"
 spiral-license = { path = "../../../crates/spiral-license" }
 resume-proto = { path = "crates/resume-proto" }
 tokio = { version = "1", features = ["macros", "rt", "sync"] }
+rfd = "0.15"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

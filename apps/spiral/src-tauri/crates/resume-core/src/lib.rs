@@ -1,4 +1,5 @@
 pub mod accent;
+pub mod ats;
 pub mod build;
 pub mod docx;
 pub mod engine_bench;

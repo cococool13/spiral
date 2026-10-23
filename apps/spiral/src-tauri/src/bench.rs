@@ -50,6 +50,7 @@ pub fn known(name: &str) -> bool {
             | "sidecar_spawn"
             | "sidecar_exit"
             | "apply_done"
+            | "ats_check:resume"
     )
 }
 

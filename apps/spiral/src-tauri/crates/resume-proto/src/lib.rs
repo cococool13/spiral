@@ -51,15 +51,17 @@ macro_rules! resume_calls {
 resume_calls! {
     ImportFile { path: String } => Licensed, Cancel;
     ParseText { text: String } => Licensed, Cancel;
-    Preview { doc: Value, look: String } => Licensed, Cancel;
+    Preview { doc: Value, look: String, accent: String } => Licensed, Cancel;
     Thumbnails { doc: Value, accent: String } => Licensed, Cancel;
     Build {
         doc: Value,
         look: String,
+        accent: String,
         aim: String,
         tighten: bool,
         format: String
     } => Licensed, Cancel;
+    Check { doc: Value, text: String } => Free, Cancel;
     ReviewWording { doc: Value } => Licensed, Cancel;
     SaveBuilt { path: String } => Licensed, Cancel;
     SaveDocument { stored: Value } => Licensed, Cancel;

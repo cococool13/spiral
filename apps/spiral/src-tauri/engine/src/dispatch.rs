@@ -6,7 +6,7 @@ use resume_core::model::ResumeDoc;
 use resume_core::model_host::ModelHost;
 use resume_core::settings::{self, EngineSettings};
 use resume_core::store::{Store, StoredDoc};
-use resume_core::{build, intake, local, templates, thumbs};
+use resume_core::{ats, build, intake, local, templates, thumbs};
 use resume_proto::{Call, Event, UserError};
 use serde_json::{json, Value};
 
@@ -24,6 +24,7 @@ pub struct Session {
 
 struct BuildSpec<'a> {
     look: &'a str,
+    accent: &'a str,
     aim: &'a str,
     tighten: bool,
     format: &'a str,
@@ -60,29 +61,52 @@ impl Session {
         self.cancelled = false;
         let result = match call {
             Call::ImportFile { path } => {
-                let doc = intake::import_file(Path::new(&path)).map_err(UserError::new)?;
-                Ok(serde_json::to_value(doc).map_err(|err| UserError::new(err.to_string()))?)
+                let (doc, text) =
+                    intake::import_with_text(Path::new(&path)).map_err(UserError::new)?;
+                let mut value =
+                    serde_json::to_value(doc).map_err(|err| UserError::new(err.to_string()))?;
+                if let Some(object) = value.as_object_mut() {
+                    object.insert("source".into(), Value::String(text));
+                }
+                Ok(value)
             }
             Call::ParseText { text } => Ok(serde_json::to_value(intake::parse_pasted(&text))
                 .map_err(|err| UserError::new(err.to_string()))?),
-            Call::Preview { doc, look } => self.preview(doc, &look),
+            Call::Preview { doc, look, accent } => self.preview(doc, &look, &accent),
             Call::Thumbnails { doc, accent } => {
                 let doc = doc_from(doc)?;
                 let cards = thumbs::render_all_thumbnails(&doc, &accent);
-                let mut paths = Vec::new();
+                let mut thumbs = Vec::new();
                 for (index, card) in cards.iter().enumerate() {
-                    if card.svg.is_empty() {
-                        continue;
-                    }
-                    let name = format!("cache/preview/thumb-{}-{index}.svg", card.id);
-                    write_cache(&self.root, &name, card.svg.as_bytes())?;
-                    paths.push(name);
+                    let file = if card.svg.is_empty() {
+                        String::new()
+                    } else {
+                        let name = format!("cache/preview/thumb-{}-{index}.svg", card.id);
+                        write_cache(&self.root, &name, card.svg.as_bytes())?;
+                        name
+                    };
+                    let error = if card.svg.is_empty() {
+                        if card.error.is_empty() {
+                            "Could not draw this style.".to_string()
+                        } else {
+                            card.error.clone()
+                        }
+                    } else {
+                        String::new()
+                    };
+                    thumbs.push(json!({
+                        "id": card.id,
+                        "name": card.name,
+                        "file": file,
+                        "error": error,
+                    }));
                 }
-                Ok(json!({ "thumbs": paths }))
+                Ok(json!({ "thumbs": thumbs }))
             }
             Call::Build {
                 doc,
                 look,
+                accent,
                 aim,
                 tighten,
                 format,
@@ -91,12 +115,18 @@ impl Session {
                 doc,
                 BuildSpec {
                     look: &look,
+                    accent: &accent,
                     aim: &aim,
                     tighten,
                     format: &format,
                 },
                 host,
             ),
+            Call::Check { doc, text } => {
+                let doc = doc_from(doc)?;
+                let findings = ats::check(&text, &doc, &[]);
+                Ok(json!({ "findings": findings }))
+            }
             Call::ReviewWording { doc } => self.review(id, doc, host),
             Call::SaveBuilt { path } => self.save_built(Path::new(&path)),
             Call::SaveDocument { stored } => {
@@ -158,11 +188,12 @@ impl Session {
         result
     }
 
-    fn preview(&self, doc: Value, look: &str) -> Result<Value, UserError> {
+    fn preview(&self, doc: Value, look: &str, accent: &str) -> Result<Value, UserError> {
         let doc = doc_from(doc)?;
         let template = templates::find(look)
             .ok_or_else(|| UserError::new("That style is no longer available."))?;
-        let pages = templates::to_svg_pages(template, &doc, "ink").map_err(UserError::new)?;
+        let accent = if accent.is_empty() { "ink" } else { accent };
+        let pages = templates::to_svg_pages(template, &doc, accent).map_err(UserError::new)?;
         let stamp = stamp(&doc, look);
         let mut paths = Vec::new();
         for (index, page) in pages.iter().enumerate() {
@@ -182,10 +213,12 @@ impl Session {
     ) -> Result<Value, UserError> {
         let BuildSpec {
             look,
+            accent,
             aim,
             tighten,
             format,
         } = spec;
+        let accent = if accent.is_empty() { "ink" } else { accent };
         let doc = doc_from(doc)?;
         let template = templates::find(look)
             .ok_or_else(|| UserError::new("That style is no longer available."))?;
@@ -222,7 +255,7 @@ impl Session {
             &rewritten.doc,
             template,
             format,
-            "ink",
+            accent,
             tighten && !(rewritten.used_model && rewritten.parsed),
             |step| build_progress.borrow_mut().push(step.percent),
         )

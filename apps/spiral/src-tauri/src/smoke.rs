@@ -25,6 +25,10 @@ async fn run(app: &tauri::AppHandle) -> Result<(), String> {
     use crate::wallpaper::{self, SearchParams};
     use tauri::Manager;
 
+    if std::env::var("SPIRAL_RESUME_SMOKE").as_deref() == Ok("1") {
+        return resume_pdf(app).await;
+    }
+
     if let Ok(restore) = std::env::var("SPIRAL_RESTORE") {
         wallpaper::set_wallpaper(app, restore.into(), FitMode::Fill)
             .map_err(|err| err.to_string())?;
@@ -83,6 +87,94 @@ async fn run(app: &tauri::AppHandle) -> Result<(), String> {
         None => println!("SMOKE WARN: no previous wallpaper was recorded, so none was restored."),
     }
 
+    println!("SMOKE OK");
+    Ok(())
+}
+
+#[cfg(debug_assertions)]
+async fn resume_pdf(app: &tauri::AppHandle) -> Result<(), String> {
+    use crate::shell::ModuleId;
+    use resume_proto::Call;
+    use serde_json::json;
+    use std::time::Instant;
+    use tauri::Manager;
+
+    let shell = app.state::<crate::shell::Shell>();
+    shell.set_modules(vec![ModuleId::Resume])?;
+    shell.set_active(ModuleId::Resume);
+    shell.resume_link().activate();
+    let dir = shell.root().resume_dir();
+    std::fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
+    let fixture = dir.join("fixture.txt");
+    let text = "Ada Lovelace\nada@example.com\n555-0100\nLondon\n\nEXPERIENCE\nAnalyst, Admiralty\nJan 2021 - Present\n- Wrote the first algorithm and filed the notes.\n";
+    std::fs::write(&fixture, text).map_err(|err| err.to_string())?;
+    let import_started = Instant::now();
+    let imported = {
+        let mut link = shell.resume_link();
+        link.dispatch(
+            &dir,
+            true,
+            &Call::ImportFile {
+                path: fixture.display().to_string(),
+            },
+            |_| Ok(None),
+            |_| {},
+        )?
+    };
+    println!(
+        "SMOKE resume import {} ms",
+        import_started.elapsed().as_millis()
+    );
+    if imported["contact"]["name"] != "Ada Lovelace" {
+        return Err(format!("import did not read the fixture: {imported}"));
+    }
+    let build_started = Instant::now();
+    let built = {
+        let mut link = shell.resume_link();
+        link.dispatch(
+            &dir,
+            true,
+            &Call::Build {
+                doc: json!({
+                    "contact": imported["contact"],
+                    "headline": imported["headline"],
+                    "summary": imported["summary"],
+                    "experience": imported["experience"],
+                    "education": imported["education"],
+                    "projects": imported["projects"],
+                    "leadership": imported["leadership"],
+                    "awards": imported["awards"],
+                    "interests": imported["interests"],
+                    "skills": imported["skills"],
+                }),
+                look: "column".into(),
+                accent: "ink".into(),
+                aim: "one_page".into(),
+                tighten: false,
+                format: "pdf".into(),
+            },
+            |_| Ok(None),
+            |_| {},
+        )?
+    };
+    println!(
+        "SMOKE resume build {} ms",
+        build_started.elapsed().as_millis()
+    );
+    let file = built["file"]
+        .as_str()
+        .ok_or("build did not return a file")?;
+    let path = if file.starts_with("cache/") {
+        dir.join(file)
+    } else {
+        std::path::PathBuf::from(file)
+    };
+    let bytes =
+        std::fs::read(&path).map_err(|err| format!("could not read {}: {err}", path.display()))?;
+    if !bytes.starts_with(b"%PDF") {
+        return Err(format!("{} is not a PDF", path.display()));
+    }
+    println!("SMOKE resume pdf {} bytes {}", path.display(), bytes.len());
     println!("SMOKE OK");
     Ok(())
 }

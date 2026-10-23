@@ -4,6 +4,10 @@ use crate::model::ResumeDoc;
 use crate::parse_text;
 
 pub fn import_file(path: &Path) -> Result<ResumeDoc, String> {
+    Ok(import_with_text(path)?.0)
+}
+
+pub fn import_with_text(path: &Path) -> Result<(ResumeDoc, String), String> {
     let text = crate::import::from_path(path)?;
     let doc = parse_text::parse_text(&text);
     if doc.contact.name.is_empty() && doc.experience.is_empty() && doc.education.is_empty() {
@@ -12,7 +16,7 @@ pub fn import_file(path: &Path) -> Result<ResumeDoc, String> {
             path.display()
         ));
     }
-    Ok(doc)
+    Ok((doc, text))
 }
 
 pub fn parse_pasted(text: &str) -> ResumeDoc {

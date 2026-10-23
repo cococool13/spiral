@@ -31,6 +31,10 @@ pub fn looks_bulleted(line: &str) -> bool {
     lines::is_bullet(line.trim())
 }
 
+pub fn known_heading(line: &str) -> bool {
+    headings::heading_of(line).is_some()
+}
+
 use dates::{parse_date_range, without_dates};
 use entries::{parse_lines, parse_skills, roles_of, schools_of};
 use headings::{merge_repeats, split_sections, Section};

@@ -416,6 +416,17 @@ impl Link {
         effects
     }
 
+    pub fn poll(&mut self) {
+        if self.child.is_none() {
+            return;
+        }
+        let effects = self.machine.tick();
+        if effects.is_empty() {
+            return;
+        }
+        self.apply(&effects);
+    }
+
     pub fn dispatch(
         &mut self,
         resume_dir: &Path,
@@ -789,6 +800,7 @@ mod tests {
         let call = Call::Preview {
             doc: Value::Null,
             look: "classic".into(),
+            accent: String::new(),
         };
         let err = exchange(
             &mut shell_read,
@@ -805,6 +817,56 @@ mod tests {
         .unwrap_err();
         assert!(err.contains("cache"), "{err}");
         worker.join().unwrap();
+    }
+
+    #[test]
+    fn poll_does_not_stop_an_engine_that_has_not_started() {
+        let mut link = Link::new();
+        link.activate();
+        link.poll();
+        assert!(matches!(link.machine.phase(), Phase::Spawning));
+        assert!(link.child.is_none());
+    }
+
+    #[test]
+    fn poll_shuts_the_child_down_about_two_seconds_after_the_last_reply() {
+        let mut link = Link::new();
+        link.activate();
+        assert!(link
+            .machine
+            .hello(env!("CARGO_PKG_VERSION"), PROTO)
+            .is_empty());
+        let dir = std::env::temp_dir().join(format!("spiral-resume-poll-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut child = Command::new("sleep")
+            .arg("30")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let stdin = child.stdin.take().unwrap();
+        let stdout = BufReader::new(child.stdout.take().unwrap());
+        link.child = Some(EngineProcess {
+            child,
+            stdin,
+            stdout,
+            resume_dir: dir.clone(),
+        });
+        let started = Instant::now();
+        loop {
+            link.poll();
+            if link.child.is_none() {
+                break;
+            }
+            if started.elapsed() > Duration::from_secs(4) {
+                panic!("idle shutdown did not fire");
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let elapsed = started.elapsed();
+        assert!(elapsed >= Duration::from_millis(1_500), "{elapsed:?}");
+        assert!(elapsed < Duration::from_secs(4), "{elapsed:?}");
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     fn send_from(output: &mut impl std::io::Write, message: &FromEngine) {

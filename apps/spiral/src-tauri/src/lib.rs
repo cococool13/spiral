@@ -57,6 +57,28 @@ async fn resume(
     if shell.active() != Some(ModuleId::Resume) || !shell.contains(ModuleId::Resume) {
         return Err("module_inactive".into());
     }
+    if matches!(call, resume_proto::Call::LoadDocument {}) {
+        return resume::snapshot::load(&shell.root().resume_dir());
+    }
+    let call = match call {
+        resume_proto::Call::ImportFile { path } if path.is_empty() => {
+            match resume::dialog::pick_open(&app)? {
+                None => return Ok(serde_json::Value::Null),
+                Some(path) => resume_proto::Call::ImportFile { path },
+            }
+        }
+        resume_proto::Call::SaveBuilt { path } if !std::path::Path::new(&path).is_absolute() => {
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("resume.pdf");
+            match resume::dialog::pick_save(&app, name)? {
+                None => return Ok(serde_json::Value::Null),
+                Some(path) => resume_proto::Call::SaveBuilt { path },
+            }
+        }
+        other => other,
+    };
     let licensed = if call.needs_license() {
         license::require(&app).await?;
         true
@@ -67,28 +89,35 @@ async fn resume(
         )
     };
     let gate = app.state::<license::LicenseGate>();
-    let mut link = shell.resume_link();
     let dir = shell.root().resume_dir();
-    link.dispatch(
-        &dir,
-        licensed,
-        &call,
-        |provider| {
-            let provider = match provider {
-                resume_proto::ProviderId::Anthropic => {
-                    spiral_license::migrate::ProviderId::Anthropic
-                }
-                resume_proto::ProviderId::OpenAi => spiral_license::migrate::ProviderId::OpenAI,
-                resume_proto::ProviderId::Compatible => {
-                    spiral_license::migrate::ProviderId::Compatible
-                }
-            };
-            gate.provider_secret(provider)
-        },
-        |event| {
-            let _ = events.send(event);
-        },
-    )
+    let mut value = {
+        let mut link = shell.resume_link();
+        link.dispatch(
+            &dir,
+            licensed,
+            &call,
+            |provider| {
+                let provider = match provider {
+                    resume_proto::ProviderId::Anthropic => {
+                        spiral_license::migrate::ProviderId::Anthropic
+                    }
+                    resume_proto::ProviderId::OpenAi => spiral_license::migrate::ProviderId::OpenAI,
+                    resume_proto::ProviderId::Compatible => {
+                        spiral_license::migrate::ProviderId::Compatible
+                    }
+                };
+                gate.provider_secret(provider)
+            },
+            |event| {
+                let _ = events.send(event);
+            },
+        )?
+    };
+    if matches!(call, resume_proto::Call::Check { .. }) {
+        bench::mark("ats_check:resume");
+    }
+    resume::publish::absolutize(&dir, &mut value);
+    Ok(value)
 }
 
 #[tauri::command]
@@ -449,6 +478,12 @@ pub fn run() {
             app.manage(SettingsState(std::sync::Mutex::new(wallpaper)));
             app.manage(shell::Shell::new(root, shell_settings));
             app.manage(license::LicenseGate::production());
+            let idle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                let shell = idle.state::<shell::Shell>();
+                shell.resume_link().poll();
+            });
             window::open(app.handle(), &boot)?;
             smoke::maybe_run(app.handle().clone());
             Ok(())
