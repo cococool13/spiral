@@ -1229,7 +1229,7 @@ mod tests {
     }
 
     fn accept_test_key(key: &str) -> Result<(), LicenseError> {
-        if key == "LIC1.signed-test" {
+        if key == "example-signed-key" {
             Ok(())
         } else {
             Err(LicenseError::InvalidKey)
@@ -1282,7 +1282,7 @@ mod tests {
         );
         let (url, hits) = serve(
             200,
-            r#"{"ok":true,"status":"active","key":"LIC1.signed-test"}"#,
+            r#"{"ok":true,"status":"active","key":"example-signed-key"}"#,
         );
         let exchange = LaunchExchange::new();
         let validity = ensure_licensed(&store, &url, &exchange).await.unwrap();
@@ -1290,10 +1290,10 @@ mod tests {
         assert_eq!(hits.load(Ordering::SeqCst), 1);
         assert_eq!(
             store.value(SERVICE, LICENSE_ACCOUNT).as_deref(),
-            Some("LIC1.signed-test")
+            Some("example-signed-key")
         );
         let status = store.value(SERVICE, STATUS_ACCOUNT).unwrap();
-        assert!(status_binds(&status, "LIC1.signed-test"), "{status}");
+        assert!(status_binds(&status, "example-signed-key"), "{status}");
         assert!(!status_binds(&status, "mem_buyer"));
     }
 
@@ -1304,18 +1304,18 @@ mod tests {
         let store = MemoryStore::new();
         let (url, _) = serve(
             200,
-            r#"{"ok":true,"status":"active","key":"LIC1.signed-test"}"#,
+            r#"{"ok":true,"status":"active","key":"example-signed-key"}"#,
         );
         activate_with_code(&store, "a@b.co", "123456", &url)
             .await
             .unwrap();
         assert_eq!(
             store.value(SERVICE, LICENSE_ACCOUNT).as_deref(),
-            Some("LIC1.signed-test")
+            Some("example-signed-key")
         );
         assert!(status_binds(
             &store.value(SERVICE, STATUS_ACCOUNT).unwrap(),
-            "LIC1.signed-test"
+            "example-signed-key"
         ));
         assert!(store
             .value(LegacyApp::Wallpaper.service(), LICENSE_ACCOUNT)
