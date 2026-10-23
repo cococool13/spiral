@@ -44,6 +44,7 @@ pub enum FileOutcome {
     Conflict,
     RecoveredTemp,
     LeftTemp,
+    Busy,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -52,6 +53,7 @@ pub enum ModelOutcome {
     Moved,
     Referenced { count: usize },
     Already,
+    Busy,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -129,15 +131,29 @@ fn adopt_doc(fs: &mut impl Fs, from: &Path, to: &Path) -> Result<FileOutcome, Mi
             if let Some(parent) = to.parent() {
                 fs.create_dir_all(parent)?;
             }
-            relocate_file(fs, from, to)?;
-            Ok(FileOutcome::Moved)
+            match relocate_file(fs, from, to) {
+                Ok(()) => Ok(FileOutcome::Moved),
+                Err(err) if sharing_violation(&err) => Ok(FileOutcome::Busy),
+                Err(err) => Err(err.into()),
+            }
         }
         (true, true) => {
-            let left = fs.read(to)?;
-            let right = fs.read(from)?;
+            let left = match fs.read(to) {
+                Ok(bytes) => bytes,
+                Err(err) if sharing_violation(&err) => return Ok(FileOutcome::Busy),
+                Err(err) => return Err(err.into()),
+            };
+            let right = match fs.read(from) {
+                Ok(bytes) => bytes,
+                Err(err) if sharing_violation(&err) => return Ok(FileOutcome::Busy),
+                Err(err) => return Err(err.into()),
+            };
             if left == right {
-                fs.remove_file(from)?;
-                Ok(FileOutcome::Identical)
+                match fs.remove_file(from) {
+                    Ok(()) => Ok(FileOutcome::Identical),
+                    Err(err) if sharing_violation(&err) => Ok(FileOutcome::Busy),
+                    Err(err) => Err(err.into()),
+                }
             } else {
                 Ok(FileOutcome::Conflict)
             }
@@ -156,8 +172,11 @@ fn adopt_temp(fs: &mut impl Fs, tmp: &Path, dest: &Path) -> Result<FileOutcome, 
     if let Some(parent) = dest.parent() {
         fs.create_dir_all(parent)?;
     }
-    relocate_file(fs, tmp, dest)?;
-    Ok(FileOutcome::RecoveredTemp)
+    match relocate_file(fs, tmp, dest) {
+        Ok(()) => Ok(FileOutcome::RecoveredTemp),
+        Err(err) if sharing_violation(&err) => Ok(FileOutcome::Busy),
+        Err(err) => Err(err.into()),
+    }
 }
 
 fn relocate_file(fs: &mut impl Fs, from: &Path, to: &Path) -> io::Result<()> {
@@ -210,6 +229,7 @@ fn adopt_models(
             write_refs(fs, &refs, &models)?;
             Ok(ModelOutcome::Referenced { count: files.len() })
         }
+        Err(err) if sharing_violation(&err) => Ok(ModelOutcome::Busy),
         Err(err) => Err(err.into()),
     }
 }
@@ -222,6 +242,7 @@ fn merge_models(
 ) -> Result<ModelOutcome, MigrateError> {
     let mut moved = 0usize;
     let mut referenced = Vec::new();
+    let mut busy = false;
     for path in fs.files_in(legacy)? {
         let Some(name) = path
             .file_name()
@@ -234,7 +255,14 @@ fn merge_models(
             if fs.file_len(&path)? == fs.file_len(&target)? {
                 continue;
             }
-            continue;
+            match fs.remove_file(&target) {
+                Ok(()) => {}
+                Err(err) if sharing_violation(&err) => {
+                    busy = true;
+                    continue;
+                }
+                Err(err) => return Err(err.into()),
+            }
         }
         match fs.rename_file(&path, &target) {
             Ok(()) => moved += 1,
@@ -244,16 +272,20 @@ fn merge_models(
                     path: path.display().to_string(),
                 })
             }
+            Err(err) if sharing_violation(&err) => busy = true,
             Err(err) => return Err(err.into()),
         }
     }
     if !referenced.is_empty() {
-        write_refs(fs, refs, &referenced)?;
-        if moved == 0 {
-            return Ok(ModelOutcome::Referenced {
-                count: referenced.len(),
-            });
-        }
+        store_refs(fs, refs, &referenced)?;
+    }
+    if busy && moved == 0 && referenced.is_empty() {
+        return Ok(ModelOutcome::Busy);
+    }
+    if !referenced.is_empty() && moved == 0 {
+        return Ok(ModelOutcome::Referenced {
+            count: referenced.len(),
+        });
     }
     if moved == 0 {
         Ok(ModelOutcome::Already)
@@ -280,6 +312,29 @@ fn valid_refs(fs: &impl Fs, path: &Path) -> bool {
         .ok()
         .and_then(|bytes| serde_json::from_slice::<ModelRefs>(&bytes).ok())
         .is_some()
+}
+
+fn load_refs(fs: &impl Fs, path: &Path) -> Vec<resume_proto::ModelRef> {
+    if !fs.is_file(path) || !valid_refs(fs, path) {
+        return Vec::new();
+    }
+    fs.read(path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<ModelRefs>(&bytes).ok())
+        .map(|parsed| parsed.models)
+        .unwrap_or_default()
+}
+
+fn store_refs(fs: &mut impl Fs, path: &Path, extra: &[resume_proto::ModelRef]) -> io::Result<()> {
+    let mut models = load_refs(fs, path);
+    for model in extra {
+        if let Some(found) = models.iter_mut().find(|item| item.id == model.id) {
+            found.path = model.path.clone();
+        } else {
+            models.push(model.clone());
+        }
+    }
+    write_refs(fs, path, &models)
 }
 
 fn write_refs(fs: &mut impl Fs, path: &Path, models: &[resume_proto::ModelRef]) -> io::Result<()> {
@@ -413,6 +468,10 @@ fn map_cross_device(result: io::Result<()>) -> io::Result<()> {
     }
 }
 
+fn sharing_violation(err: &io::Error) -> bool {
+    err.raw_os_error() == Some(32)
+}
+
 fn crosses_devices(err: &io::Error) -> bool {
     if err.kind() == ErrorKind::CrossesDevices {
         return true;
@@ -421,7 +480,7 @@ fn crosses_devices(err: &io::Error) -> bool {
         #[cfg(unix)]
         Some(18) => true,
         #[cfg(windows)]
-        Some(17 | 32) => true,
+        Some(17) => true,
         _ => false,
     }
 }
@@ -437,6 +496,7 @@ enum Node {
 pub struct MemFs {
     nodes: BTreeMap<String, Node>,
     cross_dir: bool,
+    busy: bool,
     pub copied: u64,
     fail_rename_at: Option<u32>,
     renames: u32,
@@ -448,6 +508,7 @@ impl MemFs {
         Self {
             nodes: BTreeMap::new(),
             cross_dir: false,
+            busy: false,
             copied: 0,
             fail_rename_at: None,
             renames: 0,
@@ -456,6 +517,11 @@ impl MemFs {
 
     pub fn cross_devices(mut self) -> Self {
         self.cross_dir = true;
+        self
+    }
+
+    pub fn sharing_violation(mut self) -> Self {
+        self.busy = true;
         self
     }
 
@@ -531,6 +597,9 @@ impl Fs for MemFs {
 
     fn rename_file(&mut self, from: &Path, to: &Path) -> io::Result<()> {
         self.renames += 1;
+        if self.busy {
+            return Err(io::Error::from_raw_os_error(32));
+        }
         if self.fail_rename_at == Some(self.renames) {
             return Err(io::Error::new(ErrorKind::Interrupted, "crash"));
         }
@@ -547,6 +616,9 @@ impl Fs for MemFs {
     }
 
     fn rename_dir(&mut self, from: &Path, to: &Path) -> io::Result<()> {
+        if self.busy {
+            return Err(io::Error::from_raw_os_error(32));
+        }
         if self.cross_dir {
             return Err(io::Error::new(
                 ErrorKind::CrossesDevices,
@@ -833,6 +905,65 @@ mod tests {
         assert_eq!(fs.read(&dest().join("models/one.gguf")).unwrap(), b"one");
         assert_eq!(fs.read(&dest().join("models/two.gguf")).unwrap(), b"two");
         assert_eq!(report.copied_model_bytes, 0);
+    }
+
+    #[test]
+    fn a_shorter_model_with_the_same_name_is_replaced() {
+        let mut fs = MemFs::new();
+        fs.dir(&dest().join("models"));
+        fs.file(&dest().join("models/one.gguf"), b"short");
+        fs.file(&legacy().join("models/one.gguf"), b"the full model");
+        let report = adopt(&mut fs, &dest(), &legacy(), false, Path::new("/real")).unwrap();
+        assert_eq!(report.models, ModelOutcome::Moved);
+        assert_eq!(
+            fs.read(&dest().join("models/one.gguf")).unwrap(),
+            b"the full model"
+        );
+        assert!(!fs.is_file(&legacy().join("models/one.gguf")));
+    }
+
+    #[test]
+    fn new_model_refs_are_merged_into_the_existing_list() {
+        let mut fs = MemFs::new().cross_devices();
+        fs.dir(&dest().join("models"));
+        fs.file(&dest().join("models/keep.gguf"), b"keep");
+        fs.file(&legacy().join("models/extra.gguf"), b"extra");
+        fs.file(
+            &dest().join("models.ref.json"),
+            br#"{"models":[{"id":"old","path":"/legacy/old.gguf"}]}"#,
+        );
+        let report = adopt(&mut fs, &dest(), &legacy(), false, Path::new("/real")).unwrap();
+        assert!(matches!(
+            report.models,
+            ModelOutcome::Referenced { count: 1 }
+        ));
+        let refs: ModelRefs =
+            serde_json::from_slice(&fs.read(&dest().join("models.ref.json")).unwrap()).unwrap();
+        assert!(refs.models.iter().any(|model| model.id == "old"));
+        assert!(refs.models.iter().any(|model| model.id == "extra.gguf"));
+        assert_eq!(fs.read(&dest().join("models/keep.gguf")).unwrap(), b"keep");
+        assert_eq!(
+            fs.read(&legacy().join("models/extra.gguf")).unwrap(),
+            b"extra"
+        );
+    }
+
+    #[test]
+    fn a_sharing_violation_leaves_the_files_for_the_next_launch() {
+        let mut fs = MemFs::new().sharing_violation();
+        fs.file(&legacy().join("resume.json"), br#"{"doc":{}}"#);
+        fs.dir(&legacy().join("models"));
+        fs.file(&legacy().join("models/one.gguf"), b"one");
+        let report = adopt(&mut fs, &dest(), &legacy(), false, Path::new("/real")).unwrap();
+        assert_eq!(report.resume, FileOutcome::Busy);
+        assert_eq!(report.models, ModelOutcome::Busy);
+        assert_eq!(
+            fs.read(&legacy().join("resume.json")).unwrap(),
+            br#"{"doc":{}}"#
+        );
+        assert!(!fs.is_file(&dest().join("resume.json")));
+        assert_eq!(fs.read(&legacy().join("models/one.gguf")).unwrap(), b"one");
+        assert!(!fs.is_dir(&dest().join("models")));
     }
 
     #[test]
