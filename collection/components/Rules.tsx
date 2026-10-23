@@ -1,8 +1,8 @@
 const rules = [
   {
     id: "NET",
-    title: "No telemetry",
-    body: "No usage data leaves the machine. Network calls are named in each app’s privacy details.",
+    title: "Anonymous usage stats",
+    body: "Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. Network calls are named in each app’s privacy details.",
   },
   {
     id: "PAY",

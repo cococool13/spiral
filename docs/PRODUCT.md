@@ -39,8 +39,10 @@ stated on screen, and has nothing still running afterwards.
 ## Positioning
 
 A neighbouring wallpaper or resume tool can copy a feature list. None of them
-can truthfully copy this: **no account, no telemetry, and every network host
-named on screen**. In Resume, a fact that moves is a rejected rewrite.
+can truthfully copy this: **no account, every network host named on
+screen, and anonymous usage stats you can turn off**. Usage stats are
+privacy-safe: no personal data or content, IP discarded, and you can turn
+them off in Settings. In Resume, a fact that moves is a rejected rewrite.
 
 The website is a separate product with a separate charter. It may use motion
 and video. The app may not import that ambition, and the site may not import
@@ -63,7 +65,8 @@ Settings names the thumbnail cache cap.
 
 Shared, and not treated as gaps:
 
-- No account, no analytics, no telemetry.
+- No account.
+- Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings.
 - Where Spiral talks to the internet, it names the host and talks to nothing else.
 - Nothing is uploaded for processing.
 - No undisclosed background process.
@@ -115,8 +118,7 @@ Visual recipes live in [`DESIGN.md`](DESIGN.md), not here.
   published.
 
 Do not fabricate testimonials, download counts, employer placements, ATS pass
-rates, or "users say" copy. The app has no telemetry, so those numbers do not
-exist here.
+rates, or "users say" copy. This repo does not contain those numbers.
 
 ## Product principles
 
@@ -130,10 +132,13 @@ exist here.
 
 ## Privacy position
 
-No account, no telemetry, and no network request the user did not ask for.
-Where Spiral talks to the internet, it names the host and talks to nothing else.
-Nothing is uploaded for processing. Where the work can stay on the machine, it does.
+No account. Anonymous, privacy-safe usage stats only: no personal data or
+content, IP discarded, and you can turn it off in Settings. Where Spiral talks
+to the internet, it names the host and talks to nothing else. Nothing is
+uploaded for processing. Where the work can stay on the machine, it does.
 
+- When Share anonymous usage stats is on, the window sends anonymous events to
+  `us.i.posthog.com`. Turn it off in Settings.
 - Wallpaper reaches Wallhaven's public API when you search or apply. On open
   it calls `license_ensure` against the spiral-license worker, and the updater
   may ask GitHub once for a newer build. It validates that a download is an

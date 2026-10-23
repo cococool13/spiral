@@ -912,3 +912,27 @@ The site download stays on the published Spiral Wallpaper 1.0.4 files. `update-c
 ### Milestone 6
 
 **Finding 10.** macOS relaunch does not re-exec the old executable path. The updater walks from `current_exe` to the `.app` and drops the archive's first path component, so an update stays inside `Spiral Wallpaper.app`. Relaunch is `/usr/bin/open` on that bundle, then `CFBundleExecutable` from the new Info.plist. The LaunchAgent stores `current_exe()` in `ProgramArguments`, so the basename stays `spiral-wallpaper`. On Windows the executable stays `spiral-wallpaper.exe` for that same login and shortcut constraint. The three rationale sentences that said relaunch runs the old path are corrected above. Tests: `updater_replacement_keeps_the_running_bundle_and_drops_the_archive_root`, `relaunch_opens_the_bundle_and_reads_the_plist_executable`, `login_launch_stores_the_executable_path`.
+
+### Analytics
+
+The shared spec's platform list is `web`, `macOS`, `iOS`, or `server`. This window reports `macOS` or `Windows`. The value comes from `BootState.platform`, then from `navigator.userAgent` when that field is missing. `tauri-plugin-os` is not added.
+
+`getVersion()` returns the semver and no build number. `versionLabel` can format `2.0.0 (N)`. The running app passes no build number, so the `version` super-property is the semver.
+
+posthog-js 1.438.19 logs that the `ip` init option has no effect. The client does not set it. Each event sets `$geoip_disable` true. Discarding a stored IP address remains the PostHog project setting "Discard client IP data".
+
+`before_send` also keeps `token`, `distinct_id`, and `$process_person_profile`. Removing `token` makes the SDK drop the event. Removing `distinct_id` drops the id used to join checkout. Removing `$process_person_profile` can make the server create a person profile. `$current_url`, `$pathname`, `$referrer`, and `$host` become the route name: `picker`, `wallpaper`, `resume`, `settings`, or `activate`. `$set`, `$set_once`, and `$unset` are removed.
+
+Autocapture, page views, page leave, and exceptions are off. The app sends no crash reports. The Settings label is "Share anonymous usage stats". The flag is `analytics_opt_out` on `spiral.json`, read and written by `general_view` and `general_update`. The default is false, which means sharing is on. A file that omits the key loads as false. The milestone 3 reply of three fields now also includes `analyticsOptOut`.
+
+`disable_external_dependency_loading` is true, so the window does not fetch `recorder.js` or `surveys.js`. `connect-src` adds `https://us.i.posthog.com` and `https://us-assets.i.posthog.com`. `script-src` stays `'self'` because the SDK is in the bundle.
+
+Spiral has no trial clock, so it does not send `trial_started`.
+
+The Resume screen still says "Resume is not in this build." It has no export control. `noteResumeExported` is the call an export success uses. That screen does not call it. `first_wallpaper_applied` is the activation that can fire in this build.
+
+`begin()` runs after `general_view` resolves, which is after `picker_ready` and `first_paint`. An opted-out launch does not import `posthog-js`. If settings fail to load, analytics stays off.
+
+`collection/lib/appPages.ts` is gone. The site loads no PostHog script. The privacy page says the app sends anonymous events to PostHog.
+
+The client does not call `identify` and does not capture `checkout_started`. The licensing Worker captures `checkout_started` and `purchase` from `?ph=`.

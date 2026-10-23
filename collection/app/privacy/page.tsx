@@ -5,7 +5,7 @@ import Nav from "@/components/Nav";
 export const metadata: Metadata = {
   title: "Privacy — Spiral",
   description:
-    "Spiral does not make an account, does not collect telemetry, and does not upload your files. This page states what it reaches.",
+    "Spiral does not make an account and does not upload your files. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings.",
   alternates: { canonical: "/privacy/" },
   openGraph: { url: "/privacy/" },
 };
@@ -17,10 +17,11 @@ export default function PrivacyPage() {
       <main id="content" className="information-page shell">
         <h1 className="type-display text-4xl text-paper sm:text-5xl">Privacy</h1>
         <p className="mt-8 text-lg text-gray">
-          Spiral does not make an account, send analytics, or run after you close the
-          window. Nothing leaves your computer for processing unless you choose that path
-          yourself. Where Spiral talks to the internet, it names the host and talks to
-          nothing else.
+          Spiral does not make an account, and it does not run after you close the window.
+          Anonymous, privacy-safe usage stats only: no personal data or content, IP
+          discarded, and you can turn it off in Settings. Nothing leaves your computer for
+          processing unless you choose that path yourself. Where Spiral talks to the
+          internet, it names the host and talks to nothing else.
         </p>
 
         <section className="mt-16 border-t border-gray/25 pt-10">
@@ -55,6 +56,15 @@ export default function PrivacyPage() {
             checks happen offline. The request sends your license key, a hash of a machine
             identifier, and the product name — nothing else. If the server is unreachable,
             Spiral keeps working for up to 30 days after the last good check.
+          </p>
+        </section>
+
+        <section className="mt-10 border-t border-gray/25 pt-10">
+          <h2 className="type-heading text-xl text-paper">Usage stats</h2>
+          <p className="mt-3 text-gray">
+            When Share anonymous usage stats is on, the app sends anonymous events to
+            PostHog in the US. There is no account. The events carry no personal data and
+            no content. PostHog discards IP addresses. Turn it off in Settings.
           </p>
         </section>
 

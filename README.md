@@ -24,9 +24,10 @@ brew install --cask cococool13/spiral/spiral-wallpaper
 
 Three promises:
 
-- **Privacy.** No account. No telemetry. No network request you did not ask
-  for. Where an app talks to the internet at all, it names the host it talks
-  to and talks to nothing else.
+- **Privacy.** No account. Anonymous, privacy-safe usage stats only: no
+  personal data or content, IP discarded, and you can turn it off in Settings.
+  Where an app talks to the internet at all, it names the host it talks to
+  and talks to nothing else.
 - **Ease.** One window, one job. Everything the app is about to do is on
   screen before it does it. Close the window and the app is gone — nothing
   keeps running.

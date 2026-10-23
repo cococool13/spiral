@@ -122,7 +122,7 @@ only in Documents or a sibling repo.
 - Wallhaven is the only source; a second provider needs explicit product approval.
 - State material background/network actions in plain language before they happen; errors name the problem and a next step.
 - Preserve keyboard nav, visible focus, and reduced-motion behavior.
-- Source-only, privacy-first: no telemetry, accounts, silent startup, or undisclosed background process. License validation is a named call to Spiral's validator on launch — see `docs/licensing.md`.
+- Source-only, privacy-first: no accounts, no silent startup, and no undisclosed background process. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. License validation is a named call to Spiral's validator on launch. See `docs/licensing.md`.
 - Wallpaper: Wallhaven SFW only; closing the window quits (no tray); static wallpapers only until approved otherwise.
 - Resume: **no fact may ever change** (`apps/spiral/src-tauri/crates/resume-core/src/gate.rs`). The parser lives in `parse_text/`. Typst is in the helper, so preview and PDF cannot disagree. New templates and fields must appear in both Typst and DOCX halves and in the shared `FACTS` list in `docx.rs`.
 - Native behavior must be verified on the affected OS; a frontend build alone does not prove wallpaper, signing, or installer behavior.

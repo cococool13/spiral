@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://spiralcc.tech"),
   title: "Spiral. Wallpaper and Resume.",
   description:
-    "Spiral. Wallpaper and Resume. One $15 license. No telemetry. The app quits when you close the window. Mac and Windows.",
+    "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
   alternates: { canonical: "/" },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "32x32" }],
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: "Spiral",
     title: "Spiral. Wallpaper and Resume.",
     description:
-      "Spiral. Wallpaper and Resume. One $15 license. No telemetry. The app quits when you close the window. Mac and Windows.",
+      "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
     images: [
       {
         url: "/brand/hero/hero-exit.webp",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Spiral. Wallpaper and Resume.",
     description:
-      "Spiral. Wallpaper and Resume. One $15 license. No telemetry. The app quits when you close the window. Mac and Windows.",
+      "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
     images: ["/brand/hero/hero-exit.webp"],
   },
 };

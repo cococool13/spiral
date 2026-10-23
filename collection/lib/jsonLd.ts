@@ -8,7 +8,7 @@ import { CHECKOUT_URL } from "@/lib/checkout";
 const SITE = "https://spiralcc.tech";
 
 const COLLECTION_DESCRIPTION =
-  "Spiral. Wallpaper and Resume. One $15 license. No telemetry. The app quits when you close the window. Mac and Windows.";
+  "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.";
 
 const OFFER = {
   "@type": "Offer",
@@ -57,7 +57,7 @@ export function homeJsonLd(): Record<string, unknown> {
           "Wallpaper",
           "Resume",
           "One $15 license",
-          "No telemetry",
+          "Anonymous usage stats you can turn off",
           "Nothing to sign in to",
         ],
         publisher: { "@id": `${SITE}/#org` },
