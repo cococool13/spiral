@@ -20,10 +20,18 @@ const IDLE: Duration = Duration::from_secs(2);
 const HELLO_LIMIT: Duration = Duration::from_secs(5);
 const CRASH_WINDOW: Duration = Duration::from_secs(10);
 const REQUEST_LIMIT: Duration = Duration::from_secs(6 * 60);
-const DOWNLOAD_LIMIT: Duration = Duration::from_secs(45 * 60);
+const QUIET_LIMIT: Duration = Duration::from_secs(3 * 60);
 const WAIT_SLICE: Duration = Duration::from_millis(200);
 const BAD_REPLY: &str = "Resume's engine sent a reply Spiral could not use. Try again.";
 const TOO_SLOW: &str = "Resume's engine did not answer in time. Try again.";
+
+fn exchange_expired(keeps_engine: bool, since_start: Duration, since_heard: Duration) -> bool {
+    if keeps_engine {
+        since_heard > QUIET_LIMIT
+    } else {
+        since_start > REQUEST_LIMIT
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
@@ -384,19 +392,28 @@ fn exchange<R: BufRead, W: Write>(
         if line.len() > DOCUMENT_MAX {
             return Err(ExchangeError::protocol(BAD_REPLY));
         }
-        if let Some(body) = accept_line(line.trim_end(), request, output, answer_key, on_event)? {
-            return Ok(body);
+        match classify_line(line.trim_end(), request, answer_key, on_event)? {
+            LineStep::Continue => {}
+            LineStep::Write(message) => {
+                write_frame(output, &message).map_err(ExchangeError::protocol)?;
+            }
+            LineStep::Done(body) => return Ok(body),
         }
     }
 }
 
-fn accept_line(
+enum LineStep {
+    Continue,
+    Write(ToEngine),
+    Done(Value),
+}
+
+fn classify_line(
     line: &str,
     request: &Exchange<'_>,
-    output: &mut impl Write,
     answer_key: &mut dyn FnMut(ProviderId) -> Result<Option<String>, String>,
     on_event: &mut dyn FnMut(Event),
-) -> Result<Option<Value>, ExchangeError> {
+) -> Result<LineStep, ExchangeError> {
     let message = decode_from(line).map_err(|_| ExchangeError::protocol(BAD_REPLY))?;
     match message {
         FromEngine::Event { id, event } => {
@@ -404,7 +421,7 @@ fn accept_line(
                 return Err(ExchangeError::protocol(BAD_REPLY));
             }
             on_event(event);
-            Ok(None)
+            Ok(LineStep::Continue)
         }
         FromEngine::Ask { id, ask, question } => {
             if id != request.id {
@@ -412,16 +429,11 @@ fn accept_line(
             }
             let resume_proto::Ask::ProviderKey { provider } = question;
             let key = answer_key(provider).map_err(ExchangeError::protocol)?;
-            write_frame(
-                output,
-                &ToEngine::Answer {
-                    id: request.id,
-                    ask,
-                    answer: resume_proto::Answer::ProviderKey { key },
-                },
-            )
-            .map_err(ExchangeError::protocol)?;
-            Ok(None)
+            Ok(LineStep::Write(ToEngine::Answer {
+                id: request.id,
+                ask,
+                answer: resume_proto::Answer::ProviderKey { key },
+            }))
         }
         FromEngine::Reply {
             id,
@@ -439,7 +451,7 @@ fn accept_line(
             }
             let body = body.unwrap_or(Value::Null);
             check_cache_paths(&body).map_err(ExchangeError::protocol)?;
-            Ok(Some(body))
+            Ok(LineStep::Done(body))
         }
         FromEngine::Hello { .. } => Err(ExchangeError::protocol(BAD_REPLY)),
     }
@@ -481,6 +493,8 @@ fn write_frame(output: &mut impl Write, message: &ToEngine) -> Result<(), String
 pub struct Link {
     state: Mutex<ProcessState>,
     stdin: Mutex<Option<Box<dyn Write + Send>>>,
+    exchange: Mutex<()>,
+    spawn: Mutex<()>,
 }
 
 struct ProcessState {
@@ -508,6 +522,8 @@ impl Link {
                 binary: None,
             }),
             stdin: Mutex::new(None),
+            exchange: Mutex::new(()),
+            spawn: Mutex::new(()),
         }
     }
 
@@ -552,6 +568,7 @@ impl Link {
         mut answer_key: impl FnMut(ProviderId) -> Result<Option<String>, String>,
         mut on_event: impl FnMut(Event),
     ) -> Result<Value, String> {
+        let _exchange = self.exchange.lock().expect("resume exchange");
         let request = {
             {
                 let mut state = self.lock();
@@ -624,14 +641,14 @@ impl Link {
             self.fail_protocol(request.epoch);
             return Err(err);
         }
-        let limit = if request.call.keeps_engine() {
-            DOWNLOAD_LIMIT
-        } else {
-            REQUEST_LIMIT
-        };
         let started = Instant::now();
+        let mut heard = started;
         let body = loop {
-            if started.elapsed() > limit {
+            if exchange_expired(
+                request.call.keeps_engine(),
+                started.elapsed(),
+                heard.elapsed(),
+            ) {
                 self.fail_protocol(request.epoch);
                 return Err(TOO_SLOW.into());
             }
@@ -641,26 +658,29 @@ impl Link {
             }
             match incoming.recv_timeout(WAIT_SLICE) {
                 Ok(Ok(line)) => {
+                    heard = Instant::now();
                     if line.len() > DOCUMENT_MAX {
                         self.fail_protocol(request.epoch);
                         return Err(BAD_REPLY.into());
                     }
-                    let step = {
-                        let mut stdin = self.stdin.lock().expect("resume stdin");
-                        match stdin.as_mut() {
-                            Some(stdin) => accept_line(
-                                line.trim_end(),
-                                &request,
-                                stdin,
-                                &mut answer_key,
-                                &mut on_event,
-                            ),
-                            None => Err(ExchangeError::failed(STOPPED)),
-                        }
-                    };
+                    let step =
+                        classify_line(line.trim_end(), &request, &mut answer_key, &mut on_event);
                     match step {
-                        Ok(Some(body)) => break body,
-                        Ok(None) => {}
+                        Ok(LineStep::Done(body)) => break body,
+                        Ok(LineStep::Continue) => {}
+                        Ok(LineStep::Write(message)) => {
+                            let wrote = {
+                                let mut stdin = self.stdin.lock().expect("resume stdin");
+                                match stdin.as_mut() {
+                                    Some(stdin) => write_frame(stdin, &message),
+                                    None => Err(STOPPED.to_string()),
+                                }
+                            };
+                            if let Err(err) = wrote {
+                                self.fail_protocol(request.epoch);
+                                return Err(err);
+                            }
+                        }
                         Err(err) if err.protocol => {
                             self.fail_protocol(request.epoch);
                             return Err(err.message);
@@ -701,6 +721,7 @@ impl Link {
     }
 
     fn ensure(&self, resume_dir: &Path) -> Result<(), String> {
+        let _spawn = self.spawn.lock().expect("resume spawn");
         if self.lock().child.is_some() {
             return Ok(());
         }
@@ -913,7 +934,22 @@ fn read_stdout(stdout: std::process::ChildStdout, tx: mpsc::Sender<Result<String
     }
 }
 
+#[cfg(test)]
+#[cfg(test)]
+thread_local! {
+    static TEST_ENGINE: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
 fn engine_binary() -> Option<PathBuf> {
+    #[cfg(test)]
+    {
+        let path = TEST_ENGINE.with(|slot| slot.borrow().clone());
+        if let Some(path) = path {
+            if path.is_file() {
+                return Some(path);
+            }
+        }
+    }
     if let Some(path) = std::env::var_os("SPIRAL_ENGINE") {
         let path = PathBuf::from(path);
         if path.is_file() {
@@ -1314,6 +1350,247 @@ mod tests {
         );
         worker.join().unwrap();
         drop(tx);
+    }
+
+    #[test]
+    fn a_download_expires_when_it_goes_quiet_not_when_it_runs_long() {
+        assert!(!exchange_expired(
+            true,
+            Duration::from_secs(50 * 60),
+            Duration::from_secs(10)
+        ));
+        assert!(exchange_expired(
+            true,
+            Duration::from_secs(1),
+            QUIET_LIMIT + Duration::from_secs(1)
+        ));
+        assert!(exchange_expired(
+            false,
+            REQUEST_LIMIT + Duration::from_secs(1),
+            Duration::ZERO
+        ));
+        assert!(!exchange_expired(
+            false,
+            REQUEST_LIMIT,
+            Duration::from_secs(50 * 60)
+        ));
+    }
+
+    #[test]
+    fn two_threads_can_dispatch_without_stopping_the_engine() {
+        let link = std::sync::Arc::new(Link::new());
+        link.activate();
+        assert!(link
+            .lock()
+            .machine
+            .hello(env!("CARGO_PKG_VERSION"), PROTO)
+            .is_empty());
+        let child = Command::new("sleep")
+            .arg("30")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        let (tx, rx) = mpsc::channel();
+        let (read, write) = std::io::pipe().unwrap();
+        {
+            let mut state = link.lock();
+            state.child = Some(child);
+            state.incoming = Some(rx);
+        }
+        *link.stdin.lock().expect("stdin") = Some(Box::new(write));
+        let engine = std::thread::spawn(move || {
+            let mut read = BufReader::new(read);
+            for _ in 0..2 {
+                let mut line = String::new();
+                assert!(read.read_line(&mut line).unwrap() > 0, "request");
+                let ToEngine::Request { id, .. } =
+                    resume_proto::decode_to(line.trim_end()).unwrap()
+                else {
+                    panic!("request");
+                };
+                let bytes = resume_proto::encode_from(&FromEngine::reply(
+                    id,
+                    Ok(serde_json::json!({ "n": id })),
+                ))
+                .unwrap();
+                tx.send(Ok(String::from_utf8(bytes).unwrap())).unwrap();
+            }
+        });
+        let mut workers = Vec::new();
+        for _ in 0..2 {
+            let worker_link = std::sync::Arc::clone(&link);
+            workers.push(std::thread::spawn(move || {
+                worker_link.dispatch(
+                    std::path::Path::new("."),
+                    true,
+                    &Call::EngineInfo {},
+                    |_| Ok(None),
+                    |_| {},
+                )
+            }));
+        }
+        let mut ids = Vec::new();
+        for worker in workers {
+            let body = worker.join().unwrap().expect("dispatch");
+            ids.push(body["n"].as_u64().unwrap());
+        }
+        assert_eq!(ids.len(), 2);
+        assert_ne!(ids[0], ids[1]);
+        assert!(link
+            .lock()
+            .child
+            .as_mut()
+            .unwrap()
+            .try_wait()
+            .unwrap()
+            .is_none());
+        engine.join().unwrap();
+        link.leave();
+    }
+
+    #[test]
+    fn a_key_prompt_does_not_hold_stdin() {
+        let link = std::sync::Arc::new(Link::new());
+        link.activate();
+        assert!(link
+            .lock()
+            .machine
+            .hello(env!("CARGO_PKG_VERSION"), PROTO)
+            .is_empty());
+        let child = Command::new("sleep")
+            .arg("30")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        let (tx, rx) = mpsc::channel();
+        let (mut read, write) = std::io::pipe().unwrap();
+        {
+            let mut state = link.lock();
+            state.child = Some(child);
+            state.incoming = Some(rx);
+        }
+        *link.stdin.lock().expect("stdin") = Some(Box::new(write));
+        let worker_link = std::sync::Arc::clone(&link);
+        let worker = std::thread::spawn(move || {
+            let held = std::sync::Arc::clone(&worker_link);
+            worker_link.dispatch(
+                std::path::Path::new("."),
+                true,
+                &Call::EngineInfo {},
+                move |_| {
+                    assert!(
+                        held.stdin.try_lock().is_ok(),
+                        "stdin held during the key prompt"
+                    );
+                    Ok(Some("sk-test".into()))
+                },
+                |_| {},
+            )
+        });
+        let mut line = String::new();
+        std::io::BufRead::read_line(&mut BufReader::new(&mut read), &mut line).unwrap();
+        let ToEngine::Request { id, .. } = resume_proto::decode_to(line.trim_end()).unwrap() else {
+            panic!("request");
+        };
+        let ask = resume_proto::encode_from(&FromEngine::Ask {
+            id,
+            ask: 0,
+            question: resume_proto::Ask::ProviderKey {
+                provider: ProviderId::Anthropic,
+            },
+        })
+        .unwrap();
+        tx.send(Ok(String::from_utf8(ask).unwrap())).unwrap();
+        line.clear();
+        std::io::BufRead::read_line(&mut BufReader::new(&mut read), &mut line).unwrap();
+        let ToEngine::Answer { .. } = resume_proto::decode_to(line.trim_end()).unwrap() else {
+            panic!("answer");
+        };
+        let reply = resume_proto::encode_from(&FromEngine::reply(
+            id,
+            Ok(serde_json::json!({ "hasKey": true })),
+        ))
+        .unwrap();
+        tx.send(Ok(String::from_utf8(reply).unwrap())).unwrap();
+        assert_eq!(worker.join().unwrap().unwrap()["hasKey"], true);
+        link.leave();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn two_calls_start_one_engine() {
+        let dir = std::env::temp_dir().join(format!(
+            "spiral-one-engine-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let script = dir.join("engine.py");
+        let pidfile = dir.join("pids");
+        let version = env!("CARGO_PKG_VERSION");
+        std::fs::write(
+            &script,
+            format!(
+                r#"#!/usr/bin/env python3
+import json, os, sys
+with open({pidfile:?}, "a") as handle:
+    handle.write(str(os.getpid()) + "\n")
+print(json.dumps({{"type": "hello", "version": {version:?}, "proto": 1, "v": 1}}), flush=True)
+while True:
+    line = sys.stdin.readline()
+    if not line:
+        break
+    line = line.strip()
+    if not line:
+        continue
+    msg = json.loads(line)
+    if msg.get("type") != "request":
+        continue
+    print(json.dumps({{"type": "reply", "id": msg["id"], "ok": True, "body": {{"n": msg["id"]}}, "v": 1}}), flush=True)
+"#
+            ),
+        )
+        .unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let link = std::sync::Arc::new(Link::new());
+        link.activate();
+        let mut workers = Vec::new();
+        for _ in 0..2 {
+            let worker_link = std::sync::Arc::clone(&link);
+            let resume_dir = dir.clone();
+            let engine = script.clone();
+            workers.push(std::thread::spawn(move || {
+                TEST_ENGINE.with(|slot| *slot.borrow_mut() = Some(engine));
+                worker_link.dispatch(
+                    &resume_dir,
+                    true,
+                    &Call::EngineInfo {},
+                    |_| Ok(None),
+                    |_| {},
+                )
+            }));
+        }
+        let mut ids = Vec::new();
+        for worker in workers {
+            let body = worker.join().unwrap().expect("dispatch");
+            ids.push(body["n"].as_u64().unwrap());
+        }
+        assert_eq!(ids.len(), 2);
+        assert_ne!(ids[0], ids[1]);
+        let pids = std::fs::read_to_string(&pidfile).unwrap();
+        let lines: Vec<_> = pids.lines().filter(|line| !line.is_empty()).collect();
+        assert_eq!(lines.len(), 1, "{pids}");
+        link.leave();
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     fn send_from(output: &mut impl std::io::Write, message: &FromEngine) {
