@@ -20,6 +20,7 @@ export function Activate({ onDone }: ActivateProps) {
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   async function submitKey(event: FormEvent) {
     event.preventDefault();
@@ -71,11 +72,12 @@ export function Activate({ onDone }: ActivateProps) {
           </Button>
         </form>
       )}
+      {openError ? <p className="notice notice--error" role="alert">{openError}</p> : null}
       <footer className="stage__links">
-        <button type="button" className="link" onClick={() => openExternal(CHECKOUT_URL)}>
+        <button type="button" className="link" onClick={() => openExternal(CHECKOUT_URL, setOpenError)}>
           Buy Spiral, $15
         </button>
-        <button type="button" className="link" onClick={() => openExternal(RESEND_URL)}>
+        <button type="button" className="link" onClick={() => openExternal(RESEND_URL, setOpenError)}>
           Lost your key?
         </button>
       </footer>

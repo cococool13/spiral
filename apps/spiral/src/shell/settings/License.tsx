@@ -11,7 +11,7 @@ export function License({ view }: LicenseProps) {
       ? "Spiral could not reach its license server. This Mac stays licensed for now."
       : view.kind === "licensed"
         ? "This Mac is licensed."
-        : view.kind === "locked"
+        : view.kind === "locked" || view.kind === "retry"
           ? view.message
           : "Checking the license.";
 

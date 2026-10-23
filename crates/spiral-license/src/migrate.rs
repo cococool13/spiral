@@ -12,6 +12,8 @@ pub const SERVICE: &str = "app.spiral";
 pub const LICENSE_ACCOUNT: &str = "license";
 pub const STATUS_ACCOUNT: &str = "license-status";
 pub const CLEANUP_ACCOUNT: &str = "wallpaper-cleanup";
+pub const CLEARED_ACCOUNT: &str = "license-cleared";
+const CLEARED_MARK: &str = "cleared";
 const CLEANUP_PENDING: &str = "pending";
 const WHOP_LICENSE: &str = "whop-license";
 const WHOP_STATUS: &str = "whop-license-status";
@@ -115,6 +117,10 @@ impl LaunchExchange {
     fn record(&self, err: LicenseError) {
         *self.unclear.lock().expect("exchange") = Some(err);
     }
+
+    pub fn forget(&self) {
+        *self.unclear.lock().expect("exchange") = None;
+    }
 }
 
 impl Default for LaunchExchange {
@@ -136,6 +142,9 @@ pub fn migrate(store: &impl CredentialStore) -> Result<Probe, LicenseError> {
             return Ok(Probe::Ready);
         }
         Existence::Absent => {}
+    }
+    if cleared_mark(store)? {
+        return probe_foreign(store);
     }
     match read_accounts(store, LegacyApp::Wallpaper.service(), Interaction::Silent)? {
         FoundKey::Value(key) => {
@@ -264,7 +273,20 @@ pub fn clear_license(store: &impl CredentialStore) -> Result<(), LicenseError> {
             DeleteOutcome::NeedsInteraction => return Err(LicenseError::NeedsInteraction),
         }
     }
-    Ok(())
+    let wallpaper = LegacyApp::Wallpaper.service();
+    for account in [LICENSE_ACCOUNT, WHOP_LICENSE, STATUS_ACCOUNT, WHOP_STATUS] {
+        match store.delete(wallpaper, account, Interaction::Silent)? {
+            DeleteOutcome::Removed | DeleteOutcome::Absent | DeleteOutcome::NeedsInteraction => {}
+        }
+    }
+    write_back(store, CLEARED_ACCOUNT, &Secret::new(CLEARED_MARK))
+}
+
+fn cleared_mark(store: &impl CredentialStore) -> Result<bool, LicenseError> {
+    match store.exists(SERVICE, CLEARED_ACCOUNT, Interaction::Silent)? {
+        Existence::Present | Existence::NeedsInteraction => Ok(true),
+        Existence::Absent => Ok(false),
+    }
 }
 
 pub fn provider_present(
@@ -344,9 +366,10 @@ fn probe_foreign(store: &impl CredentialStore) -> Result<Probe, LicenseError> {
 
 fn foreign_item(store: &impl CredentialStore, app: LegacyApp) -> Result<bool, LicenseError> {
     for account in [LICENSE_ACCOUNT, WHOP_LICENSE] {
-        match store.exists(app.service(), account, Interaction::Silent)? {
-            Existence::Present | Existence::NeedsInteraction => return Ok(true),
-            Existence::Absent => {}
+        match store.exists(app.service(), account, Interaction::Silent) {
+            Ok(Existence::Present | Existence::NeedsInteraction) => return Ok(true),
+            Ok(Existence::Absent) | Err(VaultError::Denied) => {}
+            Err(err) => return Err(err.into()),
         }
     }
     Ok(false)
@@ -372,7 +395,7 @@ fn read_one(
     match store.get(service, account, interaction) {
         Ok(Some(secret)) => Ok(FoundKey::Value(secret)),
         Ok(None) => Ok(FoundKey::Absent),
-        Err(VaultError::NeedsInteraction) => Ok(FoundKey::Locked),
+        Err(VaultError::NeedsInteraction | VaultError::Denied) => Ok(FoundKey::Locked),
         Err(err) => Err(err.into()),
     }
 }
@@ -853,6 +876,79 @@ mod tests {
         assert!(!format!("{err:?}").contains(secret));
         provider_clear(&store, ProviderId::Anthropic).unwrap();
         assert!(!provider_present(&store, ProviderId::Anthropic).unwrap());
+    }
+
+    #[test]
+    fn a_denied_wallpaper_key_is_offered_and_a_denied_foreign_probe_is_skipped() {
+        let wallpaper = MemoryStore::new();
+        wallpaper.insert(
+            LegacyApp::Wallpaper.service(),
+            LICENSE_ACCOUNT,
+            "wall-secret",
+            Access::Denied,
+        );
+        assert_eq!(
+            migrate(&wallpaper).unwrap(),
+            Probe::NeedsConsent(LegacyApp::Wallpaper)
+        );
+        assert_eq!(wallpaper.secret_gets(LegacyApp::Wallpaper.service()), 1);
+
+        let foreign = MemoryStore::new();
+        foreign.insert(
+            LegacyApp::Resume.service(),
+            LICENSE_ACCOUNT,
+            "resume-secret",
+            Access::Denied,
+        );
+        foreign.insert(
+            LegacyApp::Clean.service(),
+            LICENSE_ACCOUNT,
+            "clean-secret",
+            Access::Open,
+        );
+        assert_eq!(
+            migrate(&foreign).unwrap(),
+            Probe::NeedsConsent(LegacyApp::Clean)
+        );
+        assert_eq!(foreign.secret_gets(LegacyApp::Resume.service()), 0);
+    }
+
+    #[test]
+    fn clear_license_drops_wallpaper_and_a_blocked_delete_stays_cleared() {
+        let store = MemoryStore::new();
+        open(SERVICE, LICENSE_ACCOUNT, "LIC1.here", &store);
+        open(
+            LegacyApp::Wallpaper.service(),
+            LICENSE_ACCOUNT,
+            "wall-secret",
+            &store,
+        );
+        clear_license(&store).unwrap();
+        assert!(store.value(SERVICE, LICENSE_ACCOUNT).is_none());
+        assert!(store
+            .value(LegacyApp::Wallpaper.service(), LICENSE_ACCOUNT)
+            .is_none());
+        assert_eq!(migrate(&store).unwrap(), Probe::Nothing);
+        assert!(store.value(SERVICE, LICENSE_ACCOUNT).is_none());
+
+        let blocked = MemoryStore::new();
+        open(SERVICE, LICENSE_ACCOUNT, "LIC1.here", &blocked);
+        open(
+            LegacyApp::Wallpaper.service(),
+            LICENSE_ACCOUNT,
+            "wall-secret",
+            &blocked,
+        );
+        blocked.lock_delete(LegacyApp::Wallpaper.service(), LICENSE_ACCOUNT);
+        clear_license(&blocked).unwrap();
+        assert_eq!(
+            blocked
+                .value(LegacyApp::Wallpaper.service(), LICENSE_ACCOUNT)
+                .as_deref(),
+            Some("wall-secret")
+        );
+        assert_eq!(migrate(&blocked).unwrap(), Probe::Nothing);
+        assert!(blocked.value(SERVICE, LICENSE_ACCOUNT).is_none());
     }
 
     #[test]

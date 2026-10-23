@@ -90,6 +90,7 @@ pub trait CredentialStore: Send + Sync {
 pub enum Access {
     Open,
     Locked,
+    Denied,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -238,6 +239,9 @@ impl CredentialStore for MemoryStore {
         let Some(item) = items.get(&Self::key(service, account)) else {
             return Ok(None);
         };
+        if item.access == Access::Denied {
+            return Err(VaultError::Denied);
+        }
         if item.access == Access::Locked && interaction == Interaction::Silent {
             return Err(VaultError::NeedsInteraction);
         }
@@ -259,6 +263,9 @@ impl CredentialStore for MemoryStore {
         let Some(item) = items.get(&Self::key(service, account)) else {
             return Ok(Existence::Absent);
         };
+        if item.access == Access::Denied {
+            return Err(VaultError::Denied);
+        }
         if item.access == Access::Locked && interaction == Interaction::Silent {
             return Ok(Existence::NeedsInteraction);
         }

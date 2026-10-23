@@ -165,7 +165,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
                 type="button"
                 className="btn"
                 onClick={() => {
-                  openExternal(info.keyUrl);
+                  openExternal(info.keyUrl, setError);
                 }}
               >
                 Get your key

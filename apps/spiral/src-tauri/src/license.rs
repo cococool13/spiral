@@ -12,6 +12,7 @@ pub enum LicenseView {
     Checking,
     Licensed { grace: bool },
     NeedsActivation { offer: Option<LegacyApp> },
+    Retry { message: String },
     Locked { message: String },
 }
 
@@ -160,26 +161,42 @@ impl LicenseGate {
         if inner.ready {
             return inner.view.clone();
         }
-        let view = evaluate(&self.store, &self.exchange, &validator_url()).await;
-        inner.view = view.clone();
-        inner.ready = true;
-        view
+        let checked = evaluate(&self.store, &self.exchange, &validator_url()).await;
+        inner.view = checked.view.clone();
+        inner.ready = checked.settled;
+        checked.view
     }
 
-    pub async fn use_legacy(&self, app: LegacyApp) -> Result<LicenseView, String> {
+    pub async fn retry(&self) -> LicenseView {
+        self.exchange.forget();
+        {
+            let mut inner = self.inner.lock().await;
+            inner.ready = false;
+        }
+        self.view().await
+    }
+
+    pub fn adopt_legacy(&self, app: LegacyApp) -> Result<(), LicenseError> {
+        migrate::adopt_with_consent(&self.store, app)
+    }
+
+    pub async fn finish_legacy(
+        &self,
+        adopted: Result<(), LicenseError>,
+    ) -> Result<LicenseView, String> {
         let mut inner = self.inner.lock().await;
-        let view = match migrate::adopt_with_consent(&self.store, app) {
+        let checked = match adopted {
             Ok(()) => ensure_view(&self.store, &self.exchange, &validator_url()).await,
             Err(LicenseError::Denied | LicenseError::NeedsInteraction) => {
                 inner.view = LicenseView::NeedsActivation { offer: None };
                 inner.ready = true;
                 return Err(LicenseError::Denied.user_message());
             }
-            Err(err) => view_from_error(err),
+            Err(err) => classify(err),
         };
-        inner.view = view.clone();
-        inner.ready = true;
-        Ok(view)
+        inner.view = checked.view.clone();
+        inner.ready = checked.settled;
+        Ok(checked.view)
     }
 
     pub async fn activate(&self, key: &str) -> Result<(), String> {
@@ -238,21 +255,30 @@ impl LicenseGate {
             LicenseView::Locked { message } => Err(message),
             LicenseView::NeedsActivation { .. } => Err(LicenseError::EmptyKey.user_message()),
             LicenseView::Checking => Err("Spiral is still checking the license.".into()),
+            LicenseView::Retry { message } => Err(message),
         }
     }
 }
 
-pub async fn evaluate(
+struct Checked {
+    view: LicenseView,
+    settled: bool,
+}
+
+async fn evaluate(
     store: &impl CredentialStore,
     exchange: &migrate::LaunchExchange,
     validator_url: &str,
-) -> LicenseView {
+) -> Checked {
     match migrate::migrate(store) {
         Ok(probe) => match view_from_probe(probe) {
-            Some(view) => view,
+            Some(view) => Checked {
+                view,
+                settled: true,
+            },
             None => ensure_view(store, exchange, validator_url).await,
         },
-        Err(err) => view_from_error(err),
+        Err(err) => classify(err),
     }
 }
 
@@ -260,24 +286,40 @@ async fn ensure_view(
     store: &impl CredentialStore,
     exchange: &migrate::LaunchExchange,
     validator_url: &str,
-) -> LicenseView {
-    view_from_result(migrate::ensure_licensed(store, validator_url, exchange).await)
+) -> Checked {
+    classify_result(migrate::ensure_licensed(store, validator_url, exchange).await)
 }
 
-fn view_from_result(result: Result<Validity, LicenseError>) -> LicenseView {
+fn classify_result(result: Result<Validity, LicenseError>) -> Checked {
     match result {
-        Ok(Validity { grace }) => LicenseView::Licensed { grace },
-        Err(err) => view_from_error(err),
+        Ok(Validity { grace }) => Checked {
+            view: LicenseView::Licensed { grace },
+            settled: true,
+        },
+        Err(err) => classify(err),
     }
 }
 
-fn view_from_error(err: LicenseError) -> LicenseView {
+fn classify(err: LicenseError) -> Checked {
     match err {
-        LicenseError::InvalidKey | LicenseError::EmptyKey => {
-            LicenseView::NeedsActivation { offer: None }
-        }
-        err => LicenseView::Locked {
-            message: err.user_message(),
+        LicenseError::InvalidKey | LicenseError::EmptyKey => Checked {
+            view: LicenseView::NeedsActivation { offer: None },
+            settled: true,
+        },
+        LicenseError::Network(_)
+        | LicenseError::Keychain(_)
+        | LicenseError::NeedsInteraction
+        | LicenseError::Denied => Checked {
+            view: LicenseView::Retry {
+                message: err.user_message(),
+            },
+            settled: false,
+        },
+        err => Checked {
+            view: LicenseView::Locked {
+                message: err.user_message(),
+            },
+            settled: true,
         },
     }
 }
@@ -316,11 +358,21 @@ pub async fn license_view(gate: tauri::State<'_, LicenseGate>) -> Result<License
 }
 
 #[tauri::command]
+pub async fn license_retry(gate: tauri::State<'_, LicenseGate>) -> Result<LicenseView, String> {
+    Ok(gate.retry().await)
+}
+
+#[tauri::command]
 pub async fn license_use_legacy(
-    gate: tauri::State<'_, LicenseGate>,
-    app: LegacyApp,
+    app: tauri::AppHandle,
+    legacy: LegacyApp,
 ) -> Result<LicenseView, String> {
-    gate.use_legacy(app).await
+    let handle = app.clone();
+    let adopted =
+        tokio::task::spawn_blocking(move || handle.state::<LicenseGate>().adopt_legacy(legacy))
+            .await
+            .map_err(|_| "Spiral could not read that key. Use email instead.".to_string())?;
+    app.state::<LicenseGate>().finish_legacy(adopted).await
 }
 
 #[tauri::command]
@@ -351,28 +403,39 @@ pub async fn license_clear(gate: tauri::State<'_, LicenseGate>) -> Result<(), St
 }
 
 #[tauri::command]
-pub fn provider_view(
-    gate: tauri::State<'_, LicenseGate>,
+pub async fn provider_view(
+    app: tauri::AppHandle,
     provider: ProviderId,
 ) -> Result<ProviderView, String> {
-    gate.provider(provider)
+    spawn_vault(move || app.state::<LicenseGate>().provider(provider)).await
 }
 
 #[tauri::command]
-pub fn provider_set(
-    gate: tauri::State<'_, LicenseGate>,
+pub async fn provider_set(
+    app: tauri::AppHandle,
     provider: ProviderId,
     key: String,
 ) -> Result<ProviderView, String> {
-    gate.set_provider(provider, &key)
+    spawn_vault(move || app.state::<LicenseGate>().set_provider(provider, &key)).await
 }
 
 #[tauri::command]
-pub fn provider_clear(
-    gate: tauri::State<'_, LicenseGate>,
+pub async fn provider_clear(
+    app: tauri::AppHandle,
     provider: ProviderId,
 ) -> Result<ProviderView, String> {
-    gate.clear_provider(provider)
+    spawn_vault(move || app.state::<LicenseGate>().clear_provider(provider)).await
+}
+
+async fn spawn_vault<T>(
+    work: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> Result<T, String>
+where
+    T: Send + 'static,
+{
+    tokio::task::spawn_blocking(work)
+        .await
+        .map_err(|_| "Spiral could not reach this machine's keychain.".to_string())?
 }
 
 #[cfg(test)]
@@ -403,6 +466,27 @@ mod tests {
         assert_eq!(store.delete_count(), 0);
         let json = serde_json::to_string(&view_from_probe(probe).unwrap()).unwrap();
         assert!(!json.contains("resume-secret"));
+    }
+
+    #[test]
+    fn a_network_failure_can_be_retried_and_a_revoked_key_stays_locked() {
+        let retry = classify(LicenseError::Network("down".into()));
+        assert!(!retry.settled);
+        assert!(matches!(retry.view, LicenseView::Retry { .. }));
+        assert!(matches!(
+            classify(LicenseError::Keychain("locked".into())).view,
+            LicenseView::Retry { .. }
+        ));
+        assert!(!classify(LicenseError::Denied).settled);
+        assert!(!classify(LicenseError::NeedsInteraction).settled);
+        let locked = classify(LicenseError::NoAccess);
+        assert!(locked.settled);
+        assert!(matches!(locked.view, LicenseView::Locked { .. }));
+        let moved = classify(LicenseError::DeviceMismatch);
+        assert!(moved.settled);
+        assert!(matches!(moved.view, LicenseView::Locked { .. }));
+        let json = serde_json::to_string(&retry.view).unwrap();
+        assert!(json.contains("\"kind\":\"retry\""));
     }
 
     #[test]

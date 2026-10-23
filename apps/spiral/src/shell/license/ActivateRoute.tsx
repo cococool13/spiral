@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { BootState } from "../../boot";
-import { licenseUseLegacy, licenseView } from "./api";
+import { licenseRetry, licenseUseLegacy, licenseView } from "./api";
 import { Activate } from "./Activate";
 import { LegacyOffer } from "./LegacyOffer";
 import type { LicenseView } from "./types";
+import { Button } from "../../ui/Button";
 
 interface ActivateRouteProps {
   view: LicenseView;
@@ -15,7 +16,9 @@ export function ActivateRoute({ view, platform, onView }: ActivateRouteProps) {
   const offer = view.kind === "needsActivation" ? view.offer : null;
   const [emailInstead, setEmailInstead] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(view.kind === "locked" ? view.message : null);
+  const [error, setError] = useState<string | null>(
+    view.kind === "locked" || view.kind === "retry" ? view.message : null,
+  );
 
   async function refresh() {
     try {
@@ -25,6 +28,21 @@ export function ActivateRoute({ view, platform, onView }: ActivateRouteProps) {
         kind: "locked",
         message: "Spiral could not check the license. Close the window and open it again.",
       });
+    }
+  }
+
+  async function refreshRetry() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      onView(await licenseRetry());
+    } catch {
+      onView({
+        kind: "retry",
+        message: "Spiral could not check the license. Try again.",
+      });
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -42,14 +60,25 @@ export function ActivateRoute({ view, platform, onView }: ActivateRouteProps) {
     }
   }
 
-  if (view.kind === "locked" && !offer) {
+  if ((view.kind === "locked" || view.kind === "retry") && !offer) {
     return (
-      <main className="stage">
-        <h1>Activate Spiral</h1>
-        <p className="notice notice--error" role="alert">
+      <>
+        <p className="notice notice--error activate-route__notice" role="alert">
           {view.message}
         </p>
-      </main>
+        {view.kind === "retry" ? (
+          <p className="activate-route__retry">
+            <Button type="button" onClick={() => void refreshRetry()} disabled={busy}>
+              Try again
+            </Button>
+          </p>
+        ) : null}
+        <Activate
+          onDone={() => {
+            void refresh();
+          }}
+        />
+      </>
     );
   }
 

@@ -16,7 +16,16 @@
           "url": "https://licensing.cohencool.workers.dev/buy/spiral"
         },
         {
+          "url": "https://licensing.cohencool.workers.dev/buy/spiral?ph=*"
+        },
+        {
           "url": "https://licensing.cohencool.workers.dev/resend"
+        },
+        {
+          "url": "https://console.anthropic.com/settings/keys"
+        },
+        {
+          "url": "https://platform.openai.com/api-keys"
         }
       ]
     }

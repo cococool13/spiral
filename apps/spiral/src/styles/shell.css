@@ -658,3 +658,9 @@
   padding: var(--space-16) var(--space-24) 0;
   text-align: center;
 }
+
+.activate-route__retry {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-16) 0 0;
+}

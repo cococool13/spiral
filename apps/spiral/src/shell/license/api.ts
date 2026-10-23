@@ -12,6 +12,10 @@ export function licenseView(): Promise<LicenseView> {
   return invoke("license_view").then(parseLicenseView);
 }
 
+export function licenseRetry(): Promise<LicenseView> {
+  return invoke("license_retry").then(parseLicenseView);
+}
+
 export function licenseUseLegacy(app: LegacyApp): Promise<LicenseView> {
   return invoke("license_use_legacy", { app }).then(parseLicenseView);
 }

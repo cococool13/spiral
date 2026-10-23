@@ -4,6 +4,7 @@ export type LicenseView =
   | { kind: "checking" }
   | { kind: "licensed"; grace: boolean }
   | { kind: "needsActivation"; offer: LegacyApp | null }
+  | { kind: "retry"; message: string }
   | { kind: "locked"; message: string };
 
 export type ProviderId = "anthropic" | "openai" | "compatible";
@@ -38,6 +39,9 @@ export function parseLicenseView(value: unknown): LicenseView {
   }
   if (value.kind === "needsActivation" && (value.offer === null || isLegacy(value.offer))) {
     return { kind: "needsActivation", offer: value.offer };
+  }
+  if (value.kind === "retry" && typeof value.message === "string" && value.message.length > 0) {
+    return { kind: "retry", message: value.message };
   }
   if (value.kind === "locked" && typeof value.message === "string" && value.message.length > 0) {
     return { kind: "locked", message: value.message };

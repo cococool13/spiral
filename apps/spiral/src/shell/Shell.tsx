@@ -142,7 +142,7 @@ export default function Shell() {
     );
   }
 
-  if (license.kind === "needsActivation" || license.kind === "locked") {
+  if (license.kind === "needsActivation" || license.kind === "locked" || license.kind === "retry") {
     return <ActivateRoute view={license} platform={boot.platform} onView={setLicense} />;
   }
 
@@ -336,7 +336,7 @@ function analyticsRoute(
   pickerFirst: boolean,
 ): AnalyticsRoute {
   if (route.kind === "picker" && pickerFirst) return "picker";
-  if (licenseKind === "needsActivation" || licenseKind === "locked") return "activate";
+  if (licenseKind === "needsActivation" || licenseKind === "locked" || licenseKind === "retry") return "activate";
   if (route.kind === "settings") return "settings";
   if (route.kind === "module") return route.id;
   return "picker";
