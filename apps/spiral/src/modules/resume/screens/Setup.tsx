@@ -2,7 +2,7 @@ import { openExternal } from "../../../shell/license/open";
 import { useState } from "react";
 import { OfflineModel } from "../components/OfflineModel";
 import { Notice } from "../components/Notice";
-import { completeSetup, saveApiKey, saveEngine } from "../api";
+import { completeSetup, saveApiKey, saveEngine, useRulesOnly } from "../api";
 import type { EngineInfo } from "../lib/types";
 
 const KEY_URLS: Record<string, string> = {
@@ -56,7 +56,7 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
             type="button"
             className="btn"
             disabled={busy}
-            onClick={() => void finish(completeSetup)}
+            onClick={() => void finish(useRulesOnly)}
           >
             Continue with rules only
           </button>
@@ -120,7 +120,7 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
             onClick={() => {
               const url = KEY_URLS[provider];
               if (!url) return;
-              openExternal(url);
+              openExternal(url, setError);
             }}
           >
             Get your key
@@ -159,7 +159,7 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
           type="button"
           className="stage-tile"
           disabled={busy}
-          onClick={() => void finish(completeSetup)}
+          onClick={() => void finish(useRulesOnly)}
         >
           <span className="stage-tile__name">Rules only</span>
           <span className="stage-tile__note">

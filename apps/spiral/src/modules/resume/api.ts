@@ -163,6 +163,7 @@ export function saveEngine(
   model: string,
   baseUrl: string,
   offlineModel = "",
+  rulesOnly = false,
 ): Promise<EngineInfo> {
   return resume.call({
     type: "save_engine",
@@ -170,7 +171,12 @@ export function saveEngine(
     model,
     base_url: baseUrl,
     offline_model: offlineModel,
+    rules_only: rulesOnly,
   });
+}
+
+export function useRulesOnly(): Promise<EngineInfo> {
+  return saveEngine("", "", "", "", true);
 }
 
 export function offlineModelStatus(): Promise<ModelList> {

@@ -12,8 +12,20 @@ const completeSetup = vi.fn(async () => ({
   needsSetup: false,
 }));
 
+const useRulesOnly = vi.fn(async () => ({
+  provider: "anthropic",
+  model: "",
+  baseUrl: "",
+  hasKey: false,
+  host: "api.anthropic.com",
+  keyUrl: "",
+  needsSetup: false,
+  rulesOnly: true,
+}));
+
 vi.mock("../api", () => ({
   completeSetup: () => completeSetup(),
+  useRulesOnly: () => useRulesOnly(),
   saveApiKey: vi.fn(),
   saveEngine: vi.fn(),
   offlineModelStatus: async () => ({ available: false, models: [] }),
@@ -28,7 +40,8 @@ describe("Setup", () => {
     expect(screen.getByRole("button", { name: /Download a model/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Use an API key/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Rules only/ }));
-    await waitFor(() => expect(completeSetup).toHaveBeenCalled());
+    await waitFor(() => expect(useRulesOnly).toHaveBeenCalled());
+    expect(completeSetup).not.toHaveBeenCalled();
     expect(onDone).toHaveBeenCalled();
   });
 });

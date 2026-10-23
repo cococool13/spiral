@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { importDroppedFile, importResumeFile, parsePastedText } from "../api";
+import { importResumeFile, parsePastedText } from "../api";
 import { scratchDoc, type ResumeDoc } from "../lib/types";
 import { Notice } from "../components/Notice";
 
@@ -47,7 +47,8 @@ export function Input({
         setBusy(true);
         setError("");
         try {
-          onReady(await importDroppedFile(path));
+          const opened = await importResumeFile();
+          if (opened) onReady(opened);
         } catch (e) {
           setError(`${e}`);
         } finally {

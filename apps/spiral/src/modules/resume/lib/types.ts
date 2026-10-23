@@ -240,4 +240,6 @@ export interface EngineInfo {
   keyUrl: string;
   /** First launch has not yet chosen a wording path. */
   needsSetup: boolean;
+  /** Rules restyle the resume. A saved key or model stays on disk and is not called. */
+  rulesOnly?: boolean;
 }

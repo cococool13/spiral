@@ -102,6 +102,19 @@ describe("Resume editor", () => {
     });
   });
 
+  it("saves an edit that unmounts before the pause ends", async () => {
+    const view = show();
+    await waitFor(() => expect(screen.getByText(/Saved from/)).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByRole("button", { name: "Open it" }));
+    const headline = (await screen.findByLabelText("Headline")) as HTMLInputElement;
+    fireEvent.change(headline, { target: { value: "Analyst" } });
+    view.unmount();
+    await waitFor(() => expect(saveDocument).toHaveBeenCalledTimes(1));
+    expect(saveDocument.mock.calls[0]?.[0]).toMatchObject({
+      doc: expect.objectContaining({ headline: "Analyst" }),
+    });
+  });
+
   it("lets someone with no resume type the facts", async () => {
     loadDocument.mockResolvedValueOnce(null);
     show();
