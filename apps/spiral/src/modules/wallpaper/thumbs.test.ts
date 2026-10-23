@@ -12,4 +12,15 @@ describe("thumbs", () => {
     expect(thumbSrc("w-abc", "lg", "windows")).toBe("http://thumb.localhost/w-abc?r=lg");
     expect(thumbSrc("w-abc", "sm", "macos")).not.toMatch(/wallhaven/);
   });
+
+  it("uses the dev painter when browser QA installs one", () => {
+    const target = globalThis as { __SPIRAL_THUMB__?: (id: string) => string };
+    target.__SPIRAL_THUMB__ = (id) => `data:image/svg+xml,${id}`;
+    try {
+      expect(thumbSrc("w-abc", "sm", "macos")).toBe("data:image/svg+xml,w-abc");
+      expect(thumbSrc("w-abc", "sm", "macos")).not.toMatch(/wallhaven|http/);
+    } finally {
+      delete target.__SPIRAL_THUMB__;
+    }
+  });
 });

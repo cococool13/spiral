@@ -6,6 +6,11 @@
  * in production builds.
  */
 
+import { assertCommandArgs } from "./command-args";
+import { pageArt, plateThumb } from "./plate-art";
+
+(window as unknown as { __SPIRAL_THUMB__?: (id: string) => string }).__SPIRAL_THUMB__ = plateThumb;
+
 window.__SPIRAL_BOOT__ = {
   version: "2.0.0",
   platform: "macos",
@@ -58,30 +63,74 @@ function pageArg(args: Record<string, unknown>): number {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function pastedName(text: string): string {
+  const line = text
+    .split("\n")
+    .map((part) => part.trim())
+    .find((part) => part.length > 0);
+  if (!line || line.length > 80) return "Maya Okafor";
+  return line;
+}
+
+function sampleResume(name: string) {
+  return {
+    contact: {
+      name,
+      email: "maya.okafor@fastmail.com",
+      phone: "415 555 0148",
+      location: "Oakland, CA",
+      links: ["maya.okafor.dev"],
+    },
+    headline: "Operations lead",
+    summary: "",
+    experience: [
+      {
+        id: "exp-1",
+        title: "Operations lead",
+        organization: "Halden Health",
+        location: "Oakland",
+        start: { raw: "2022", year: 2022, month: 3, present: false },
+        end: { raw: "Present", year: null, month: null, present: true },
+        bullets: [{ id: "exp-1-b1", text: "Cut clinic wait time from 40 minutes to 18." }],
+      },
+      {
+        id: "exp-2",
+        title: "Logistics coordinator",
+        organization: "Ferro Logistics",
+        location: "Oakland",
+        start: { raw: "2019", year: 2019, month: 6, present: false },
+        end: { raw: "2022", year: 2022, month: 2, present: false },
+        bullets: [{ id: "exp-2-b1", text: "Scheduled 120 outbound loads a week." }],
+      },
+    ],
+    education: [
+      {
+        id: "edu-1",
+        institution: "Laney College",
+        credential: "A.S. Business",
+        location: "Oakland",
+        start: { raw: "2016", year: 2016, month: null, present: false },
+        end: { raw: "2018", year: 2018, month: null, present: false },
+        notes: [],
+      },
+    ],
+    projects: [],
+    leadership: [],
+    awards: [],
+    interests: [],
+    skills: [{ label: "Tools", items: ["Excel", "SQL"] }],
+  };
+}
+
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   module_activate: () => undefined,
   resume: (args) => {
     const call = args.call as { type?: string; text?: string } | undefined;
     if (!call) return null;
     if (call.type === "load_document") return { stored: null };
-    if (call.type === "parse_text") {
-      const text = call.text ?? "";
-      const name = text.split("\n")[0] ?? "";
-      return {
-        contact: { name, email: "", phone: "", location: "", links: [] },
-        headline: "",
-        summary: "",
-        experience: [],
-        education: [],
-        projects: [],
-        leadership: [],
-        awards: [],
-        interests: [],
-        skills: [],
-      };
-    }
-    if (call.type === "import_file") return null;
-    if (call.type === "preview") return { pages: [] };
+    if (call.type === "parse_text") return sampleResume(pastedName(call.text ?? ""));
+    if (call.type === "import_file") return sampleResume("Maya Okafor");
+    if (call.type === "preview") return { pages: [pageArt("Maya Okafor")] };
     if (call.type === "check") return { findings: [] };
     if (call.type === "list_accents") return [{ id: "ink", hex: "" }];
     if (call.type === "thumbnails") return { thumbs: [] };
@@ -174,7 +223,9 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   invoke: async (cmd: string, args?: Record<string, unknown>) => {
     const handler = handlers[cmd];
     if (!handler) throw `bad_response:no mock for ${cmd}`;
-    return handler(args ?? {});
+    const payload = args ?? {};
+    assertCommandArgs(cmd, payload);
+    return handler(payload);
   },
   transformCallback: () => 0,
   convertFileSrc: (path: string) => path,
