@@ -10,6 +10,8 @@ const hook = readFileSync(
 test("the installer removes Spiral Wallpaper quietly and leaves app data", () => {
   assert.match(hook, /Spiral Wallpaper/);
   assert.match(hook, /ExecWait '"\$R8" \/S _\?=\$OldDir'/);
+  assert.match(hook, /Delete "\$R8"/);
+  assert.match(hook, /RMDir "\$OldDir"/);
   assert.match(hook, /\$\{GetParent\} "\$R8" \$OldDir/);
   assert.match(
     hook,
@@ -18,8 +20,6 @@ test("the installer removes Spiral Wallpaper quietly and leaves app data", () =>
   assert.match(hook, /\$\{MAINBINARYNAME\}\.exe/);
   assert.doesNotMatch(hook, /APPDATA/i);
   assert.doesNotMatch(hook, /app\.spiral\.wallpaper/);
-  assert.doesNotMatch(hook, /RMDir/);
-  assert.doesNotMatch(hook, /Delete /);
   const conf = JSON.parse(
     readFileSync(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
   );

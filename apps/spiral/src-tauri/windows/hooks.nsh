@@ -29,6 +29,8 @@ Var OldDir
     ${If} $OldDir != ""
       DetailPrint "Removing the previous Spiral Wallpaper install."
       ExecWait '"$R8" /S _?=$OldDir'
+      Delete "$R8"
+      RMDir "$OldDir"
     ${EndIf}
   ${EndIf}
   DetailPrint "Copying files to your machine..."
