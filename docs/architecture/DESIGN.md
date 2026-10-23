@@ -865,7 +865,7 @@ Bare `v` tags with a major below 2 are retired Wallpaper tags. `version.mjs tag`
 
 Milestone 6 deleted `apps/Resume` and did not move the editor. The placeholder from milestone 5 stayed. Moving the editor was not a milestone 6 acceptance check.
 
-The Windows NSIS hook runs the old "Spiral Wallpaper" uninstaller with `/S` and does not delete `%APPDATA%\app.spiral.wallpaper`. The executable name stays `spiral-wallpaper.exe`. A disposable Windows install was not run on this Mac, and a signed updater install was not run. `rehearsal.json` is absent on purpose. The release job keeps `windows: true` and fails until that receipt says `windows` is `passed`. The notarize, disk-image rebuild, and updater repack steps are in `release-app.yml` and have not been executed against a Developer ID build.
+The Windows NSIS hook runs the old "Spiral Wallpaper" uninstaller with `/S _?=$OldDir` and does not delete `%APPDATA%\app.spiral.wallpaper`. `$OldDir` is the parent of the recorded uninstall executable, so `ExecWait` stays until that uninstall finishes. The executable name stays `spiral-wallpaper.exe`. If the HKCU Run value `Spiral Wallpaper` already exists, the installer points it at `$INSTDIR\spiral-wallpaper.exe`. A release build also calls autostart `enable()` after the page finishes loading when `launch_at_login` is true, which writes `current_exe()` into that same Run value. A disposable Windows install was not run on this Mac, and a signed updater install was not run. `rehearsal.json` is absent on purpose. The release job keeps `windows: true` and fails until that receipt says `windows` is `passed`. No rehearsal receipt was invented. The notarize, disk-image rebuild, and updater repack steps are in `release-app.yml` and have not been executed against a Developer ID build.
 
 The site download stays on the published Spiral Wallpaper 1.0.4 files. `update-catalogue` writes `Spiral_<version>_` asset names when a later bump runs. It was not run for 2.0.0.
 
@@ -980,3 +980,17 @@ A transient license error (`Network`, `Keychain`, `NeedsInteraction`, `Denied`) 
 Provider keychain commands and the legacy consent dialog run on `spawn_blocking`. The vault mutex stays held for the Security call, including across the system dialog, so the dialog is not on the UI thread.
 
 `llama-server` stays in the engine's process group. The engine writes `llama.pid`. On Windows the engine assigns llama-server to a job with `KILL_ON_JOB_CLOSE`. Dropping the sidecar kills that process only, not the engine group.
+
+### Fix pass 2
+
+The Windows hook rehearsal stays closed. `apps/spiral/src-tauri/windows/rehearsal.json` is not in the tree. The release job still requires `windows` to be `passed` and exits 1 when the file is missing. No receipt was written for a run that did not happen.
+
+`bundle_trash` moves only the path `rename_offer` returned. A request that contains `\`, `"`, or a newline is refused before AppleScript sees it. A different Spiral bundle on disk is refused too.
+
+`hard_stop` clears when Resume is entered again, and when a later call is more than 10 seconds after the last crash. A second crash inside that window still stops the engine.
+
+Resume fonts, templates, and `model-catalogue.json` are compiled from `apps/spiral/src-tauri/assets` and `apps/spiral/src-tauri/crates/resume-core/src/templates`. Nothing in the build reads `apps/Resume`.
+
+The checksum step in `release-app.yml` still rewrites spaces to dots. Installed Wallpaper asset names contain spaces, and GitHub stores those names with dots. The Slim filename was only an example of that rewrite. The rewrite stays.
+
+A release build calls autostart `enable()` after the page loads when `launch_at_login` is true. That plugin writes the Run value as the unquoted executable path plus a trailing space. The installer writes the same value in quotes, so a reboot before the first launch still finds the new exe. The first launch then replaces the quoted value with the plugin's own string. Debug builds do not call `enable()`.

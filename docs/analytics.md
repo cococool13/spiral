@@ -57,7 +57,8 @@ Mac and iOS (posthog-ios / PostHog Swift SDK, one `PostHogSDK.shared.setup` per 
 - The SDK sends the Mac model name (e.g. "MacBook Pro"), OS version, locale and app version; never the
   computer name.
 - IP: PostHog never stores client IPs once the project setting "Discard client IP data" is on (Cohen ticks it
-  when he creates the project). GeoIP country stays on.
+  when he creates the project). The Mac and iOS SDKs leave GeoIP country on. A desktop window that
+  sets `$geoip_disable` true does not. Spiral's window does that; see This repo.
 - Test runs (XCTest) never start the SDK.
 
 Web (posthog-js; `analytics.js` snippet for static sites, the npm package for bundled apps):
@@ -106,7 +107,7 @@ Code:
 - `apps/spiral/src/shell/settings/General.tsx` is the opt-out toggle.
 - Rust stores `analytics_opt_out` with the other general settings in `spiral.json`.
 
-`posthog-js` loads only when the key is non-empty, the stored opt-out is off, `navigator.doNotTrack` is not `1`, Global Privacy Control is off, and the run is not a test. Otherwise every call does nothing and the package is not imported.
+`posthog-js` loads only when the key is non-empty, the stored opt-out is off, `navigator.doNotTrack` is not `1`, Global Privacy Control is off, and the run is not a test. Otherwise every call does nothing and the package is not imported. The desktop window is WKWebView. That web view does not expose Do Not Track or Global Privacy Control, so those two gates stay open there. The same gates close the load in a browser that exposes either signal.
 
 Super-properties are `app` `spiral`, `platform` `macOS` or `Windows`, and `version` from `getVersion()`. There is no build number in this app, so the version is the semver. The client never calls `identify`. The distinct id stays anonymous.
 
@@ -124,7 +125,7 @@ A successful Resume export calls `noteResumeExported`. The first successful expo
 
 Init uses `person_profiles: 'identified_only'`, `persistence: 'localStorage'`, `respect_dnt: true`, `autocapture: false`, `capture_pageview: false`, `capture_pageleave: false`, `disable_session_recording: true`, `disable_surveys: true`, `advanced_disable_flags: true`, `capture_exceptions: false`, and `disable_external_dependency_loading: true`. Autocapture is off because a button can contain a wallpaper title or resume text. There is no `$pageview`, no `Application Opened`, and no `$exception`.
 
-`before_send` replaces `$current_url`, `$pathname`, `$referrer`, and `$host` with the route name: `picker`, `wallpaper`, `resume`, `settings`, or `activate`. It drops every property that is not on the allowlist. The allowlist is `token`, `distinct_id`, `$process_person_profile`, `$geoip_disable`, `app`, `platform`, `version`, `activation`, `tool`, and the four URL keys after they are replaced. `$set`, `$set_once`, and `$unset` are removed. Events set `$geoip_disable` true. This posthog-js version ignores an `ip` init flag, so the client does not set one. Discarding stored IP addresses is the PostHog project setting.
+`before_send` replaces `$current_url`, `$pathname`, `$referrer`, and `$host` with the route name: `picker`, `wallpaper`, `resume`, `settings`, or `activate`. It drops every property that is not on the allowlist. The allowlist is `token`, `distinct_id`, `$process_person_profile`, `$geoip_disable`, `app`, `platform`, `version`, `activation`, `tool`, and the four URL keys after they are replaced. `$set`, `$set_once`, and `$unset` are removed. Every event sets `$geoip_disable` true, so PostHog does not add a country from the IP. This posthog-js version ignores an `ip` init flag, so the client does not set one. Discarding a stored IP address remains the PostHog project setting "Discard client IP data". The "GeoIP country stays on" line in section 5 is the Mac and iOS SDK. It does not apply to this window.
 
 No event property carries an email, a name, a file name, a path, document text, a wallpaper title or id, a search query, a hostname, or a license key.
 
