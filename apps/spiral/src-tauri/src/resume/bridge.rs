@@ -132,6 +132,8 @@ impl<C: Clock> Machine<C> {
     pub fn activate(&mut self) -> Vec<Effect> {
         self.epoch = self.epoch.saturating_add(1);
         self.pending = None;
+        self.hard_stop = false;
+        self.crashes.clear();
         self.spawn()
     }
 
@@ -155,7 +157,7 @@ impl<C: Clock> Machine<C> {
     }
 
     pub fn call(&mut self, keeps_engine: bool) -> Vec<Effect> {
-        if self.hard_stop {
+        if self.hold_hard_stop() {
             return vec![Effect::Tell(STOPPED)];
         }
         match self.phase {
@@ -253,7 +255,7 @@ impl<C: Clock> Machine<C> {
     }
 
     fn spawn(&mut self) -> Vec<Effect> {
-        if self.hard_stop {
+        if self.hold_hard_stop() {
             return vec![Effect::Tell(STOPPED)];
         }
         self.phase = Phase::Spawning;
@@ -274,6 +276,23 @@ impl<C: Clock> Machine<C> {
         self.idle_at = None;
         if keeps_engine {
             self.drain = true;
+        }
+    }
+
+    fn hold_hard_stop(&mut self) -> bool {
+        if !self.hard_stop {
+            return false;
+        }
+        let cooled = self
+            .crashes
+            .last()
+            .is_none_or(|last| self.clock.now().saturating_duration_since(*last) > CRASH_WINDOW);
+        if cooled {
+            self.hard_stop = false;
+            self.crashes.clear();
+            false
+        } else {
+            true
         }
     }
 
@@ -436,6 +455,16 @@ fn check_cache_paths(body: &Value) -> Result<(), String> {
     }
     if let Some(file) = body.get("file").and_then(Value::as_str) {
         cache_relative(file).map_err(|err| err.message)?;
+    }
+    if let Some(thumbs) = body.get("thumbs").and_then(Value::as_array) {
+        for thumb in thumbs {
+            if let Some(path) = thumb.get("file").and_then(Value::as_str) {
+                if path.is_empty() {
+                    continue;
+                }
+                cache_relative(path).map_err(|err| err.message)?;
+            }
+        }
     }
     Ok(())
 }
@@ -971,6 +1000,37 @@ mod tests {
         let second = machine.child_exit();
         assert_eq!(second, vec![Effect::Tell(STOPPED)]);
         assert_eq!(machine.call(false), vec![Effect::Tell(STOPPED)]);
+    }
+
+    #[test]
+    fn a_hard_stop_lifts_after_the_crash_window_and_on_the_next_entry() {
+        let mut machine = ready();
+        assert!(machine.child_exit().is_empty());
+        machine.call(false);
+        assert_eq!(machine.child_exit(), vec![Effect::Tell(STOPPED)]);
+        machine.clock_mut().advance(CRASH_WINDOW);
+        assert_eq!(machine.call(false), vec![Effect::Tell(STOPPED)]);
+        machine.clock_mut().advance(Duration::from_millis(1));
+        assert_eq!(machine.call(false), vec![Effect::Spawn]);
+
+        let mut again = ready();
+        again.child_exit();
+        again.call(false);
+        again.child_exit();
+        assert_eq!(again.activate(), vec![Effect::Spawn]);
+    }
+
+    #[test]
+    fn thumbnail_files_must_stay_in_the_cache() {
+        let ok = serde_json::json!({
+            "thumbs": [{ "file": "cache/preview/thumb-a-0.svg" }, { "file": "" }]
+        });
+        assert!(check_cache_paths(&ok).is_ok());
+        let escaped = serde_json::json!({ "thumbs": [{ "file": "cache/../resume.json" }] });
+        assert!(check_cache_paths(&escaped).is_err());
+        let prose =
+            serde_json::json!({ "notes": ["cache/not-a-path"], "source": "cache/in the text" });
+        assert!(check_cache_paths(&prose).is_ok());
     }
 
     #[test]

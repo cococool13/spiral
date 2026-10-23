@@ -237,14 +237,27 @@ impl Session {
         let stored = settings::load(&self.root);
         let provider = resume_core::provider::Provider::parse(&stored.provider, &stored.base_url)
             .map_err(UserError::new)?;
-        let progress = std::cell::RefCell::new(Vec::new());
-        let cancel = Arc::clone(&self.cancelled);
-        let mut report = |step: resume_core::build::Progress| {
-            progress.borrow_mut().push(step.percent);
+        let key = if tighten
+            && !stored.rules_only
+            && stored.provider != "local"
+            && provider.needs_key()
+        {
+            host.key(provider.id()).map_err(UserError::new)?
+        } else {
+            None
         };
-        let rewritten = self
-            .runtime
-            .block_on(async {
+        let cancel = Arc::clone(&self.cancelled);
+        let rewritten = {
+            let mut report = |step: resume_core::build::Progress| {
+                host.emit(
+                    id,
+                    Event::Progress {
+                        done: u32::from(step.percent),
+                        total: 100,
+                    },
+                );
+            };
+            self.runtime.block_on(async {
                 tokio::select! {
                     result = rewrite_wording(WordingJob {
                         root: &self.root,
@@ -253,46 +266,38 @@ impl Session {
                         doc,
                         aim,
                         tighten,
-                        keys: host,
+                        key,
                         host: &mut self.host,
                         on_progress: &mut report,
                     }) => result,
                     _ = watch_cancel(cancel) => Err("Cancelled.".to_string()),
                 }
             })
-            .map_err(UserError::new)?;
-        if self.cancelled.load(Ordering::SeqCst) {
+        };
+        if rewritten.is_err() || self.cancelled.load(Ordering::SeqCst) {
             self.host.stop();
+        }
+        let rewritten = rewritten.map_err(UserError::new)?;
+        if self.cancelled.load(Ordering::SeqCst) {
             return Err(UserError::new("Cancelled."));
         }
-        for percent in progress.into_inner() {
-            host.emit(
-                id,
-                Event::Progress {
-                    done: u32::from(percent),
-                    total: 100,
-                },
-            );
-        }
-        let build_progress = std::cell::RefCell::new(Vec::new());
         let built = build::build(
             &rewritten.doc,
             template,
             format,
             accent,
             tighten && !(rewritten.used_model && rewritten.parsed),
-            |step| build_progress.borrow_mut().push(step.percent),
+            |step| {
+                host.emit(
+                    id,
+                    Event::Progress {
+                        done: u32::from(step.percent),
+                        total: 100,
+                    },
+                );
+            },
         )
         .map_err(UserError::new)?;
-        for percent in build_progress.into_inner() {
-            host.emit(
-                id,
-                Event::Progress {
-                    done: u32::from(percent),
-                    total: 100,
-                },
-            );
-        }
         let file_name = format!("cache/build/{}", built.suggested_name);
         write_cache(&self.root, &file_name, &built.bytes)?;
         let manifest = serde_json::to_vec(&json!({
@@ -474,21 +479,17 @@ impl Session {
                 "This build does not offer that model. Use your own API key, or the free rule-based pass.",
             )
         })?;
-        let progress = std::cell::RefCell::new(Vec::new());
         self.runtime
             .block_on(local::download(&self.root, &entry, |step| {
-                progress.borrow_mut().push(step.percent);
+                host.emit(
+                    request,
+                    Event::Progress {
+                        done: u32::from(step.percent),
+                        total: 100,
+                    },
+                );
             }))
             .map_err(UserError::new)?;
-        for percent in progress.into_inner() {
-            host.emit(
-                request,
-                Event::Progress {
-                    done: u32::from(percent),
-                    total: 100,
-                },
-            );
-        }
         let mut stored = settings::load(&self.root);
         stored.offline_model = entry.id.clone();
         stored.setup_done = true;

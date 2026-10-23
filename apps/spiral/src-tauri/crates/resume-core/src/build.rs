@@ -161,7 +161,7 @@ pub fn build(
     format: Format,
     accent: &str,
     tighten: bool,
-    report: impl Fn(Progress),
+    mut report: impl FnMut(Progress),
 ) -> Result<Built, String> {
     report(progress("Reading structure", 15));
 

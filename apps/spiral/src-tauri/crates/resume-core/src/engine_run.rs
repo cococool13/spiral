@@ -3,7 +3,7 @@ use crate::model::ResumeDoc;
 use crate::model_host::ModelHost;
 use crate::provider::Provider;
 use crate::settings::EngineSettings;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub const OFFLINE_ENGINE: &str = "Built offline, no network used";
 pub const LOCAL_ENGINE: &str = "Rewritten on this computer. Nothing left it.";
@@ -46,9 +46,27 @@ pub struct WordingJob<'a> {
     pub doc: ResumeDoc,
     pub aim: &'a str,
     pub tighten: bool,
-    pub keys: &'a mut dyn ProviderKey,
+    pub key: Option<String>,
     pub host: &'a mut ModelHost,
     pub on_progress: &'a mut dyn FnMut(Progress),
+}
+
+struct StopHost<'a> {
+    host: &'a mut ModelHost,
+    pid: PathBuf,
+}
+
+impl Drop for StopHost<'_> {
+    fn drop(&mut self) {
+        self.host.stop();
+        let _ = std::fs::remove_file(&self.pid);
+    }
+}
+
+impl<'a> StopHost<'a> {
+    fn host(&mut self) -> &mut ModelHost {
+        self.host
+    }
 }
 
 pub async fn rewrite_wording(job: WordingJob<'_>) -> Result<Rewritten, String> {
@@ -59,7 +77,7 @@ pub async fn rewrite_wording(job: WordingJob<'_>) -> Result<Rewritten, String> {
         doc,
         aim,
         tighten,
-        keys,
+        key,
         host,
         on_progress,
     } = job;
@@ -81,24 +99,18 @@ pub async fn rewrite_wording(job: WordingJob<'_>) -> Result<Rewritten, String> {
         let model = crate::local::model_path(root, &entry);
         on_progress(stage("Starting the offline engine", 5, LOCAL_ENGINE));
         let running = host.run(&binary, &model)?;
-        let _ = std::fs::write(
-            root.join("llama.pid"),
-            resume_proto::format_pid(running.pid, &binary),
-        );
-        if let Err(err) = host.wait_ready().await {
-            host.stop();
-            let _ = std::fs::remove_file(root.join("llama.pid"));
-            return Err(err);
-        }
+        let pid = root.join("llama.pid");
+        let _ = std::fs::write(&pid, resume_proto::format_pid(running.pid, &binary));
+        let mut guard = StopHost { host, pid };
+        guard.host().wait_ready().await?;
         on_progress(stage("Rewriting wording", 10, LOCAL_ENGINE));
         let local = Provider::Local {
             base_url: running.url,
         };
         let rewritten =
             crate::rewrite::rewrite_doc(&doc, &local, &running.api_key, &stored.model, aim).await;
-        host.stop();
-        let _ = std::fs::remove_file(root.join("llama.pid"));
         let (doc, outcome) = rewritten?;
+        drop(guard);
         on_progress(stage("Checking facts", 12, LOCAL_ENGINE));
         return Ok(Rewritten {
             doc,
@@ -112,7 +124,7 @@ pub async fn rewrite_wording(job: WordingJob<'_>) -> Result<Rewritten, String> {
     if !provider.needs_key() {
         return Ok(free(doc));
     }
-    let Some(key) = keys.key(provider.id())? else {
+    let Some(key) = key else {
         return Ok(free(doc));
     };
     let named = format!("Rewritten with your key at {}", provider.host());

@@ -225,7 +225,7 @@ pub struct DownloadProgress {
 pub async fn download(
     root: &Path,
     entry: &Catalogue,
-    report: impl Fn(DownloadProgress),
+    mut report: impl FnMut(DownloadProgress),
 ) -> Result<PathBuf, String> {
     use futures_util::StreamExt;
     use std::io::Write;
