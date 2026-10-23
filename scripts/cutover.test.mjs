@@ -86,3 +86,22 @@ test("the spiral release caller passes the helper bundle config", () => {
   assert.match(release, /Windows hook rehearsal has not passed/);
   assert.equal(existsSync(new URL("../apps/spiral/src-tauri/windows/rehearsal.json", import.meta.url)), false);
 });
+
+test("the per-push Windows build makes the sidecar the bundle config needs", () => {
+  const build = readFileSync(new URL("../.github/workflows/build.yml", import.meta.url), "utf8");
+  const windows = build.slice(build.indexOf("\n  windows:"));
+  const sidecar = windows.indexOf("run: pnpm build-sidecar");
+  assert.notEqual(sidecar, -1);
+  assert.ok(sidecar < windows.indexOf("run: pnpm tauri build"));
+});
+
+test("the updater tarball is packed without AppleDouble files", () => {
+  const release = readFileSync(new URL("../.github/workflows/release-app.yml", import.meta.url), "utf8");
+  const packs = release.split("\n").filter((line) => /\btar -c/.test(line) || /\btar .*-czf/.test(line));
+  assert.ok(packs.length > 0);
+  for (const line of packs) {
+    assert.match(line, /COPYFILE_DISABLE=1/);
+    assert.match(line, /--no-mac-metadata/);
+    assert.match(line, /--no-xattrs/);
+  }
+});

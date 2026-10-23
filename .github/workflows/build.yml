@@ -211,6 +211,12 @@ jobs:
       - name: Build the frontend
         run: pnpm build
 
+      # `pnpm tauri build` adds the helper bundle config, whose externalBin
+      # includes llama-server, so the sidecar has to exist first. Same step as
+      # the Windows job in release-app.yml.
+      - name: Build the sidecar
+        run: pnpm build-sidecar
+
       - name: Build Tauri app (signed)
         if: env.TAURI_KEY != ''
         run: pnpm tauri build
