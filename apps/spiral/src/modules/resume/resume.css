@@ -88,7 +88,10 @@
   transition: border-color var(--dur-state) var(--ease-out);
 }
 
-.stage-tile:hover:not(:disabled),
+.stage-tile:hover:not(:disabled):not([aria-checked="true"]) {
+  border-color: var(--ink);
+}
+
 .stage-tile[aria-checked="true"] {
   border-color: var(--red);
 }
@@ -436,8 +439,7 @@ textarea.field__input {
 }
 
 .accent[aria-checked="true"] {
-  outline: 2px solid var(--red);
-  outline-offset: 3px;
+  box-shadow: inset 0 0 0 3px var(--stock);
 }
 
 .build__stage {
@@ -585,16 +587,5 @@ textarea.field__input {
 
   .entry__grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .proof {
-    position: static;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stage-tile,
-  .stepper__step {
-    transition: none;
   }
 }
