@@ -1,6 +1,0 @@
-node_modules/
-dist/
-src/assets/brand/
-src/assets/fonts/
-src/styles/tokens.css
-*.tsbuildinfo

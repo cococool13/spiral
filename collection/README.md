@@ -60,19 +60,17 @@ preview, ownership cells, and a license close. Lock:
 `../docs/reference/spiral-redesign-lock.md`. Sleeve informs the product selector
 only. Helix stays the sole chromatic CTA.
 
-`ProductVisual` shows actual Resume exports, real Slim policy identifiers, a
-labelled illustrative wallpaper, and Clean's removal rules. Do not present
-illustrations as application screenshots. `HeroShowcase` changes only on selection;
-there is no automatic carousel, canvas, or scroll animation on the home page.
+`ProductVisual` shows Resume exports and a labelled illustrative wallpaper.
+Do not present illustrations as application screenshots. `HeroShowcase` changes
+only on selection. There is no automatic carousel, canvas, or scroll animation
+on the home page.
 
-`AppPageLayout` shares the product preview, split editorial sections, download
-routing, and native FAQ disclosures. Resume's template gallery retains its
-four-layout preview and explicit All 12 control. Slim's policy list remains
-expandable. Both are useful product evidence, not decorative imagery.
+Wallpaper and Resume are sections on the home page. `/wallpaper/` and `/resume/`
+redirect there. Clean and Slim are not offered.
 
 The main navigation has a mobile disclosure with Escape and outside-click
-closing. All four products remain reachable on narrow screens. Purchase goes
-to Stripe checkout; downloads use the catalogue's platform-aware offers.
+closing. Purchase goes to Stripe checkout. Downloads use the catalogue's
+platform-aware offer.
 
 ### The budgets that do apply
 

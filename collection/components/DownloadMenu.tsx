@@ -25,8 +25,8 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
   const hero = variant === "hero";
 
   const downloadable = apps.filter((a) => a.downloads);
-  const wallpaper = apps.find((a) => a.slug === "wallpaper");
-  const closedOffer = ready && wallpaper ? offerFor(wallpaper, os) : null;
+  const product = apps.find((a) => a.slug === "spiral");
+  const closedOffer = ready && product ? offerFor(product, os) : null;
 
   useEffect(() => {
     if (!open || !hero) return;
@@ -69,7 +69,7 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
         ref={button}
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label="Download — choose an app"
+        aria-label="Download Spiral"
         onClick={() => setOpen((v) => !v)}
         className={
           hero ? "glass-pill glass-pill--secondary" : "glass-pill glass-pill--nav"
@@ -130,8 +130,7 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
         {os === "windows" &&
         downloadable.some((a) => a.downloads && !a.noWindowsBinary) ? (
           <p className="px-4 py-3 text-sm leading-relaxed text-paper">
-            Wallpaper and Resume Windows builds are not code-signed yet. Windows warns on
-            first run. Slim has no Windows installer — use the source link.
+            The Windows installer is not code-signed yet. Windows warns on the first run.
           </p>
         ) : null}
       </div>

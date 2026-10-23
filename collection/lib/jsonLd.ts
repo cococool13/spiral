@@ -1,6 +1,5 @@
 /**
- * JSON-LD for the home page. Every string is already on the site (layout
- * metadata, the hero, the app catalogue, the rules board, or the manifesto).
+ * JSON-LD for the home page. Every string is already on the site.
  * No ratings, review counts, or other figures we do not have.
  */
 import { apps } from "@/lib/apps";
@@ -8,39 +7,22 @@ import { CHECKOUT_URL } from "@/lib/checkout";
 
 const SITE = "https://spiralcc.tech";
 
-/** Same sentence as `app/layout.tsx` metadata.description. */
 const COLLECTION_DESCRIPTION =
-  "Spiral Collection — Wallpaper, Slim, Resume, and Clean. One $15 license. No telemetry, no background processes. Mac, and Windows where each app ships.";
-
-/**
- * Live apps the home page and checkout actually sell. Clean has a page but
- * is not released — it is not in this list and has no Offer.
- */
-const LISTED = ["wallpaper", "slim", "resume"] as const;
+  "Spiral. Wallpaper and Resume. One $15 license. No telemetry. The app quits when you close the window. Mac and Windows.";
 
 const OFFER = {
   "@type": "Offer",
-  name: "Spiral Collection license",
-  description: "One $15 license. Unlocks Wallpaper, Slim, Resume, and Clean.",
+  name: "Spiral license",
+  description: "One $15 license for Spiral. It covers Wallpaper and Resume.",
   price: "15.00",
   priceCurrency: "USD",
   url: CHECKOUT_URL,
   availability: "https://schema.org/InStock",
 };
 
-function operatingSystem(slug: string): string {
-  // Slim's only shipped binary is the macOS wizard. The tagline already
-  // states that scripts cover the other browsers and platforms.
-  if (slug === "slim") return "macOS";
-  return "macOS, Windows";
-}
-
 export function homeJsonLd(): Record<string, unknown> {
-  const listedApps = LISTED.map((slug) => {
-    const app = apps.find((entry) => entry.slug === slug);
-    if (!app) throw new Error(`JSON-LD: catalogue is missing "${slug}".`);
-    return app;
-  });
+  const product = apps.find((entry) => entry.slug === "spiral");
+  if (!product) throw new Error('JSON-LD: catalogue is missing "spiral".');
 
   return {
     "@context": "https://schema.org",
@@ -62,43 +44,34 @@ export function homeJsonLd(): Record<string, unknown> {
       },
       {
         "@type": "SoftwareApplication",
-        "@id": `${SITE}/#collection`,
-        name: "Spiral Collection",
+        "@id": `${SITE}/#spiral`,
+        name: "Spiral",
         url: `${SITE}/`,
         description: COLLECTION_DESCRIPTION,
         applicationCategory: "DesktopApplication",
         operatingSystem: "macOS, Windows",
+        softwareVersion: product.version,
+        downloadUrl: product.downloads?.mac.url,
         offers: OFFER,
         featureList: [
+          "Wallpaper",
+          "Resume",
           "One $15 license",
           "No telemetry",
-          "No background processes",
           "Nothing to sign in to",
-          "Source you can read",
         ],
         publisher: { "@id": `${SITE}/#org` },
       },
       {
         "@type": "ItemList",
         "@id": `${SITE}/#apps`,
-        name: "Spiral Collection apps",
-        numberOfItems: listedApps.length,
-        itemListElement: listedApps.map((app, i) => ({
+        name: "Spiral",
+        numberOfItems: product.sections.length,
+        itemListElement: product.sections.map((section, i) => ({
           "@type": "ListItem",
           position: i + 1,
-          item: {
-            "@type": "SoftwareApplication",
-            "@id": `${SITE}${app.page}#app`,
-            name: app.name,
-            url: `${SITE}${app.page}`,
-            description: app.tagline,
-            applicationCategory: "DesktopApplication",
-            operatingSystem: operatingSystem(app.slug),
-            softwareVersion: app.version,
-            downloadUrl: app.downloads?.mac.url,
-            offers: OFFER,
-            publisher: { "@id": `${SITE}/#org` },
-          },
+          name: section.name,
+          url: `${SITE}/#${section.id}`,
         })),
       },
     ],

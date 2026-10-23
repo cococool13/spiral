@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // After a release bump, rewrite the site catalogue so download URLs cannot
-// lag the tagged version.
+// lag the tagged version. Asset names come from the manifest
+// (`Spiral_<version>_…`), not from substituting digits inside an older filename.
 //
-//   node scripts/update-catalogue.mjs wallpaper 1.0.4
+//   node scripts/update-catalogue.mjs spiral 2.0.0
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APPS } from "./apps.manifest.mjs";
+import { APPS, RETIRED } from "./apps.manifest.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -15,11 +16,9 @@ const die = (message) => {
   process.exit(1);
 };
 
-/** Slice from `slug: "…"` through the next sibling slug (or end of array). */
 function objectForSlug(src, slug) {
   const start = src.indexOf(`slug: "${slug}"`);
   if (start < 0) die(`slug "${slug}" not found`);
-  // Walk back to the opening `{` of this object literal.
   let open = start;
   while (open > 0 && src[open] !== "{") open -= 1;
   const next = src.indexOf(`\n  {\n    slug:`, start + 1);
@@ -27,56 +26,43 @@ function objectForSlug(src, slug) {
   return { open, end, block: src.slice(open, end) };
 }
 
-/** Replace every occurrence of `from` with `to` inside one object literal. */
-function rewriteSlugObject(src, slug, from, to) {
-  const { open, end, block } = objectForSlug(src, slug);
-  if (!block.includes(from) && !block.includes(to)) {
-    die(`neither "${from}" nor "${to}" found in ${slug} block`);
-  }
-  return src.slice(0, open) + block.split(from).join(to) + src.slice(end);
-}
-
-/**
- * @param {string} app
- * @param {string} version
- */
-export function updateCatalogue(app, version) {
+export function rewriteCatalogue(src, app, version) {
+  if (RETIRED[app]) die(`${app} is retired`);
   const cfg = APPS[app];
   if (!cfg) die(`unknown app "${app}"`);
   const site = cfg.site;
-  if (!site?.live) {
-    console.log(`update-catalogue: ${app} is not live on the site — skipped`);
-    return;
-  }
+  if (!site?.live) return src;
 
   const downloadTag = site.downloadTag(version);
   const base = `https://github.com/${site.owner}/${site.repo}/releases/download/${downloadTag}`;
-
-  let appsTs = readFileSync(resolve(ROOT, "collection/lib/apps.ts"), "utf8");
-
   const constRe = new RegExp(`(const ${site.releaseConst} =\\s*")[^"]+(")`);
-  if (!constRe.test(appsTs)) die(`${site.releaseConst} constant not found`);
-  appsTs = appsTs.replace(constRe, `$1${base}$2`);
+  if (!constRe.test(src)) die(`${site.releaseConst} constant not found`);
+  const next = src.replace(constRe, `$1${base}$2`);
 
-  const { block } = objectForSlug(appsTs, site.slug);
-  const oldVersion = block.match(/version:\s*"(\d+\.\d+\.\d+)"/)?.[1];
-  if (!oldVersion) die(`version field for ${site.slug}`);
+  const { open, end, block } = objectForSlug(next, site.slug);
+  if (!/version:\s*"\d+\.\d+\.\d+"/.test(block)) die(`version field for ${site.slug}`);
+  let updated = block.replace(/version:\s*"\d+\.\d+\.\d+"/, `version: "${version}"`);
+  updated = updated.replace(
+    /\$\{RELEASE\}\/[^`"']+_universal\.dmg/,
+    `\${RELEASE}/${site.assets.mac(version)}`,
+  );
+  updated = updated.replace(
+    /\$\{RELEASE\}\/[^`"']+_x64-setup\.exe/,
+    `\${RELEASE}/${site.assets.windows(version)}`,
+  );
+  return next.slice(0, open) + updated + next.slice(end);
+}
 
-  // One pass inside the app object: version field, asset filenames, and any
-  // tag URL that embeds the same digits (e.g. resume-v0.1.1).
-  if (oldVersion !== version) {
-    appsTs = rewriteSlugObject(appsTs, site.slug, oldVersion, version);
+export function updateCatalogue(app, version) {
+  const path = resolve(ROOT, "collection/lib/apps.ts");
+  const src = readFileSync(path, "utf8");
+  const next = rewriteCatalogue(src, app, version);
+  if (next === src) {
+    console.log(`update-catalogue: ${app} is not live on the site — skipped`);
+    return;
   }
-
-  writeFileSync(resolve(ROOT, "collection/lib/apps.ts"), appsTs);
-
-  if (site.appPages && oldVersion !== version) {
-    let appPages = readFileSync(resolve(ROOT, "collection/lib/appPages.ts"), "utf8");
-    appPages = rewriteSlugObject(appPages, site.slug, oldVersion, version);
-    writeFileSync(resolve(ROOT, "collection/lib/appPages.ts"), appPages);
-  }
-
-  console.log(`update-catalogue: ${site.slug} → ${version}`);
+  writeFileSync(path, next);
+  console.log(`update-catalogue: ${app} → ${version}`);
 }
 
 const invoked =

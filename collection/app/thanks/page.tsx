@@ -5,15 +5,14 @@ import Nav from "@/components/Nav";
 import { apps } from "@/lib/apps";
 
 export const metadata: Metadata = {
-  title: "You're in — Spiral",
+  title: "You are in. Spiral",
   robots: { index: false, follow: false },
-  description:
-    "Download Wallpaper, Slim, and Resume. Paste your license key on the Activate screen.",
+  description: "Download Spiral. Paste your license key on the Activate screen.",
   alternates: { canonical: "/thanks/" },
   openGraph: { url: "/thanks/" },
 };
 
-const live = apps.filter((a) => a.status === "live" && a.downloads);
+const product = apps[0];
 
 export default function ThanksPage() {
   return (
@@ -22,36 +21,35 @@ export default function ThanksPage() {
       <main id="content" className="information-page setup-page shell">
         <h1 className="type-display text-4xl text-paper sm:text-5xl">You are in.</h1>
         <p className="mt-8 text-lg text-gray">
-          One $15 license unlocks the shipping apps. Open each app, paste the key from
-          your purchase email on Activate, then it stays in the keychain. Clean is not a
-          download yet; the same key will cover it when it ships.
+          One $15 key covers Spiral. Open the app and paste the key from your purchase
+          email on Activate. The key stays in the keychain.
         </p>
 
         <ol className="mt-10 list-decimal space-y-3 pl-5 text-gray">
+          <li>Download the build for this machine.</li>
           <li>
-            Download the build for this machine (Mac disk image or Windows installer where
-            one exists).
-          </li>
-          <li>
-            Mac: drag the app to Applications, then open it from there. Windows: More info
-            → Run anyway — the file is not code-signed yet.
+            Mac: drag the app to Applications, then open it from there. Windows: More
+            info, then Run anyway. The installer is not code-signed yet.
           </li>
           <li>
             On Activate, paste the license key from your purchase email. It starts with
-            LIC1. A key from an earlier purchase (it starts with mem_) still works.
+            LIC1. A key from an earlier purchase still works when it starts with mem_.
           </li>
         </ol>
 
+        <p className="mt-8 text-gray">
+          The files below are Spiral Wallpaper 1.0.4, the build that is published. Resume
+          0.1.2 stays at its release tag.
+        </p>
+
         <ul className="setup-downloads">
-          {live.map((app) => (
-            <li key={app.slug} className="border-t border-gray/25 pt-4">
-              <p className="text-paper">{app.name}</p>
-              <p className="mt-1 text-sm text-gray">{app.tagline}</p>
-              <div className="mt-3 flex flex-wrap gap-3">
-                <GlassPillCTA app={app} />
-              </div>
-            </li>
-          ))}
+          <li className="border-t border-gray/25 pt-4">
+            <p className="text-paper">{product.name}</p>
+            <p className="mt-1 text-sm text-gray">{product.tagline}</p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <GlassPillCTA app={product} />
+            </div>
+          </li>
         </ul>
 
         <p className="mt-12 text-gray">

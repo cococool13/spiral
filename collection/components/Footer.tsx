@@ -6,7 +6,7 @@ const EMAIL = "cohenbcoolidge@gmail.com";
 const GITHUB = "https://github.com/cococool13";
 const year = 2026;
 
-const appLinks = apps.filter((a) => a.page);
+const sections = apps[0].sections;
 
 /** Product index and ownership details, followed by the collection signature. */
 export default function Footer() {
@@ -14,16 +14,14 @@ export default function Footer() {
     <footer className="close">
       <div className="close-shell">
         <div className="close-cols">
-          <Col title="Apps">
-            {appLinks.map((app) =>
-              app.page ? (
-                <li key={app.slug}>
-                  <a href={app.page} className="close-link">
-                    {app.name.replace("Spiral ", "")}
-                  </a>
-                </li>
-              ) : null,
-            )}
+          <Col title="Spiral">
+            {sections.map((section) => (
+              <li key={section.id}>
+                <a href={`/#${section.id}`} className="close-link">
+                  {section.name}
+                </a>
+              </li>
+            ))}
           </Col>
           <Col title="Contact">
             <li>

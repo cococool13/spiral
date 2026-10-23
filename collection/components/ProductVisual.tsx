@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { SLIM_POLICIES } from "@/lib/slimPolicies";
 
 /** Actual document output or explicitly labelled explanatory material. */
 export default function ProductVisual({
@@ -56,49 +55,5 @@ export default function ProductVisual({
       </div>
     );
   }
-  if (slug === "slim") {
-    return (
-      <div className="product-visual visual-slim">
-        <span className="visual-label">Policy preview / Brave</span>
-        <div className="policy-specimen">
-          <p className="policy-heading">
-            Less browser.
-            <br />
-            More control.
-          </p>
-          {SLIM_POLICIES.slice(0, 3).map((policy) => (
-            <div className="policy-specimen-row" key={policy}>
-              <span>{policy}</span>
-              <span aria-hidden="true">↗</span>
-            </div>
-          ))}
-          <p className="policy-total">
-            {SLIM_POLICIES.length} policies. Review before applying.
-          </p>
-        </div>
-        <span className="visual-foot">
-          See every change <span>Then approve it.</span>
-        </span>
-      </div>
-    );
-  }
-  return (
-    <div className="product-visual visual-clean">
-      <span className="visual-label">Removal rules / in development</span>
-      <div className="removal-specimen">
-        <p>
-          <span>01</span>Safe catalogue<strong>Delete</strong>
-        </p>
-        <p>
-          <span>02</span>Other removals<strong>Trash</strong>
-        </p>
-        <p>
-          <span>03</span>Your files<strong>Never touch</strong>
-        </p>
-      </div>
-      <span className="visual-foot">
-        Defined before a scan <span>Not released.</span>
-      </span>
-    </div>
-  );
+  return null;
 }

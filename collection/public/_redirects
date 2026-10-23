@@ -1,3 +1,15 @@
+# Wallpaper and Resume are sections of the home page.
+/wallpaper /#wallpaper 301
+/wallpaper/ /#wallpaper 301
+/resume /#resume 301
+/resume/ /#resume 301
+
+# Clean and Slim are not offered.
+/clean / 301
+/clean/ / 301
+/slim / 301
+/slim/ / 301
+
 # Old /cool ride. The page is gone; send people home.
 /cool / 301
 /cool/ / 301
