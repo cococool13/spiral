@@ -9,7 +9,12 @@ const hook = readFileSync(
 
 test("the installer removes Spiral Wallpaper quietly and leaves app data", () => {
   assert.match(hook, /Spiral Wallpaper/);
-  assert.match(hook, /ExecWait '\$R9 \/S'/);
+  assert.match(hook, /ExecWait '"\$R8" \/S _\?=\$OldDir'/);
+  assert.match(hook, /\$\{GetParent\} "\$R8" \$OldDir/);
+  assert.match(
+    hook,
+    /WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "Spiral Wallpaper"/,
+  );
   assert.match(hook, /\$\{MAINBINARYNAME\}\.exe/);
   assert.doesNotMatch(hook, /APPDATA/i);
   assert.doesNotMatch(hook, /app\.spiral\.wallpaper/);
