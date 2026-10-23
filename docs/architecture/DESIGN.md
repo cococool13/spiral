@@ -1008,3 +1008,23 @@ Choosing a local model, or finishing a model download, clears rules-only mode. S
 ### Fix pass 4
 
 `LicenseView::Licensed` now carries `key` and `device` as well as `grace`. Settings has to name the license on this computer, and the earlier type only had `grace`. `key` is a mask: the first four characters, an ellipsis, and the last four. A key shorter than 12 characters is shown as "Key on file". The full key stays in the keychain and is not put in the view. `device` comes from `device_label`, the words "This computer" and the first eight hex digits of the device hash. The activation form is shown only when the view is not licensed. A licensed view shows the mask, the device, Remove, and the lost-key link.
+
+### Fix pass 5
+
+`.set-row p` sets margin only. Color and size apply to a paragraph with no class, so `.notice` and `.notice--error` keep 11px type and error text stays red. The license key line keeps `.tile__line--hot`.
+
+`.btn` hover uses `:where()` and skips `.btn--inline`, so a text button stays transparent.
+
+Settings, License says "This computer is licensed." The remove control is "Remove from this computer". The confirm says you will need the key or the purchase email to unlock Spiral again, and that this does not free this computer from the 3-computer limit. The licensed screen does not show "Lost your key?".
+
+`clear_license` writes `license-cleared` before it deletes the key. If a later delete needs interaction, the key may already be gone, and migrate does not adopt the Wallpaper key. `LicenseGate::clear` drops the ready flag on that error, so the next check does not stay Licensed.
+
+`ensure_licensed`, `activate`, and `activate_with_code` return the key they already hold. The licensed view masks that string. It does not read the keychain again to paint the mask.
+
+The mask stays the first four characters, an ellipsis, and the last four. Signed keys start with LIC1, so the last four are what differ. Showing a longer slice of the key is unchanged from pass 4.
+
+Settings fields fill their column. The activation form stays at most 360px wide. Both were checked in the browser and left.
+
+A selected accent swatch uses an inset stock ring. The focus ring stays the red outline. A hovered stage tile uses an ink border. A selected tile uses red. The dead `.proof { position: static }` rule and the reduced-motion block in `resume.css` are gone. Reduced motion already comes from `base.css`.
+
+The licensing Worker has no deactivate route. Remove deletes the key on this computer and does not free a device seat. A later licensing PR should add a deactivate route. This PR does not change the Worker.
