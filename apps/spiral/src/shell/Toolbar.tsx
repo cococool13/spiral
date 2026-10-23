@@ -39,7 +39,7 @@ export function Toolbar({
       ) : null}
       <h1>{title}</h1>
       <div className="toolbar__slot">{children}</div>
-      <Button aria-pressed={settingsOn} onClick={onSettings}>
+      <Button aria-pressed={settingsOn} aria-keyshortcuts="Meta+," onClick={onSettings}>
         Settings
       </Button>
     </header>

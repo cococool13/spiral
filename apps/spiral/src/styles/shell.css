@@ -222,7 +222,7 @@
 }
 
 .search kbd {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-family: var(--font-mono);
   font-size: 11px;
 }

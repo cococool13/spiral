@@ -164,11 +164,6 @@ export function Details({
   return (
     <section className="panel panel--wide">
       <h2 className="panel__title">{fromScratch ? "Fill in the facts" : "Details"}</h2>
-      <p className="panel__lede">
-        {fromScratch
-          ? "Type what belongs on the page. Optional sections stay off until you add them."
-          : "Titles, dates, and numbers stay as they are here. A style changes the page. Tightening wording is optional."}
-      </p>
 
       <div className="entry__grid">
         <Field

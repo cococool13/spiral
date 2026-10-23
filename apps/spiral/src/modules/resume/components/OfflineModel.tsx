@@ -72,10 +72,7 @@ export function OfflineModel({ onInstalled }: { onInstalled?: () => void } = {})
   return (
     <>
       <h3 className="panel__heading">Offline model</h3>
-      <p className="panel__lede">
-        One download, once. After that, wording is rewritten on this computer and nothing leaves
-        it. Bigger models write better and need more memory; the smallest runs almost anywhere.
-      </p>
+      <p className="panel__lede">Nothing leaves this computer.</p>
 
       <ul className="models">
         {list.models.map((model) => (
@@ -132,7 +129,7 @@ export function OfflineModel({ onInstalled }: { onInstalled?: () => void } = {})
                     disabled={busy !== ""}
                     onClick={() => download(model)}
                   >
-                    Download ({model.size})
+                    Download, {model.size}
                   </button>
                 )}
               </div>

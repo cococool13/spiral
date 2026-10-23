@@ -62,19 +62,19 @@ describe("OfflineModel", () => {
       ["Qwen3.5 9B", "5.7 GB"],
     ]) {
       expect(screen.getByText(name)).toBeTruthy();
-      expect(screen.getByRole("button", { name: `Download (${size})` })).toBeTruthy();
+      expect(screen.getByRole("button", { name: `Download, ${size}` })).toBeTruthy();
     }
     expect(downloadOfflineModel).not.toHaveBeenCalled();
   });
 
   it("says nothing leaves the computer", async () => {
     render(<OfflineModel />);
-    await waitFor(() => expect(screen.getByText(/nothing leaves it/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Nothing leaves this computer.")).toBeTruthy());
   });
 
   it("downloads the one that was asked for, and shows real progress", async () => {
     render(<OfflineModel />);
-    fireEvent.click(await screen.findByRole("button", { name: "Download (5.7 GB)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Download, 5.7 GB" }));
     await waitFor(() => expect(screen.getByText("In use")).toBeTruthy());
     expect(downloadOfflineModel).toHaveBeenCalledTimes(1);
     expect(downloadOfflineModel.mock.calls[0][0]).toBe("qwen3.5-9b");
@@ -133,7 +133,7 @@ describe("OfflineModel", () => {
       "The downloaded file did not match its checksum, so it was deleted. Try again.",
     );
     render(<OfflineModel />);
-    fireEvent.click(await screen.findByRole("button", { name: "Download (2.7 GB)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Download, 2.7 GB" }));
     await waitFor(() => expect(screen.getByText(/did not match its checksum/)).toBeTruthy());
   });
 });

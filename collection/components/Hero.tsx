@@ -15,7 +15,7 @@ export default function Hero() {
         </p>
         <div className="hero-actions">
           <a href={CHECKOUT_URL} className="glass-pill" rel="noopener noreferrer">
-            Buy — $15 <span aria-hidden="true">↗</span>
+            Buy, $15 <span aria-hidden="true">↗</span>
           </a>
           <a href="#apps" className="text-link">
             Open the parts list <span aria-hidden="true">↓</span>

@@ -10,7 +10,7 @@ const FORMATS: { id: ExportFormat; name: string; note: string }[] = [
   },
   {
     id: "docx",
-    name: "Word (.docx)",
+    name: "Word, .docx",
     note: "Editable in Word. Some career centres and job boards require it.",
   },
 ];

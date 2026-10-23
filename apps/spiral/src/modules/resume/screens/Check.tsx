@@ -51,7 +51,6 @@ export function Check({
   return (
     <section className="panel">
       <h2 className="panel__title">Check</h2>
-      <p className="panel__lede">Spiral reads the file for problems a parser or an applicant tracker would hit. Nothing is sent.</p>
       {error ? <Notice tone="warn">{error}</Notice> : null}
       {findings && findings.length === 0 ? <Notice>No problems found.</Notice> : null}
       {findings && findings.length > 0 ? (

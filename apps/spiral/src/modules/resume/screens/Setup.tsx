@@ -35,9 +35,6 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
     return (
       <section className="stage">
         <h2 className="panel__title">Download a model</h2>
-        <p className="panel__lede">
-          Pick the 4B model if it fits. After it is on this computer, wording is rewritten here and nothing leaves.
-        </p>
         <OfflineModel
           onInstalled={() =>
             void finish(async () => {
@@ -70,8 +67,7 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
       <section className="stage">
         <h2 className="panel__title">Use your own key</h2>
         <p className="panel__lede">
-          This is an API key. A Claude or ChatGPT subscription is billed separately.
-          The key stays in this computer&apos;s keychain.
+          This is an API key. A Claude or ChatGPT subscription is billed separately. The key stays in this computer&apos;s keychain.
         </p>
         <label className="field">
           <span className="field__label">Service</span>
@@ -135,11 +131,7 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
 
   return (
     <section className="stage">
-      <h2 className="panel__title">Optional: a model for tightening</h2>
-      <p className="panel__lede">
-        A style restyles the page. Facts never change. Tightening is a switch on Details.
-        A model on this computer, if you download one, does that work here.
-      </p>
+      <h2 className="panel__title">A model for tightening</h2>
       <div className="stage-tiles">
         <button type="button" className="stage-tile" onClick={() => setPath("local")}>
           <span className="stage-tile__name">Download a model</span>
@@ -151,8 +143,7 @@ export function Setup({ onDone }: { onDone: (info: EngineInfo) => void }) {
         <button type="button" className="stage-tile" onClick={() => setPath("key")}>
           <span className="stage-tile__name">Use an API key</span>
           <span className="stage-tile__note">
-            Your own API key. Cleaner writing than the on-computer models. Billed by them, not by
-            Spiral.
+            Your own API key. Billed by Claude or ChatGPT, not by Spiral.
           </span>
         </button>
         <button

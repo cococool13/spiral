@@ -46,12 +46,10 @@ export function WindowsMark() {
 }
 
 /**
- * The one glassmorphism moment on the site. What it offers is decided by
- * `offerFor` — see there for why that decision has exactly one home.
+ * What it offers is decided by `offerFor`.
  *
- * On a platform with a mark, the OS name is replaced by its glyph ("Download
- * for" + glyph). The full label stays on aria-label, so assistive tech still
- * hears "Download for Mac" — the glyph is decoration, never the only signal.
+ * On a platform with a mark, the OS name is replaced by its glyph. The full
+ * label stays on aria-label, so assistive tech still hears "Download for Mac".
  */
 export default function GlassPillCTA({ app }: Props) {
   const { os, ready } = useOS();

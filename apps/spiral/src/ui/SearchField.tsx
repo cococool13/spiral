@@ -16,6 +16,7 @@ export function SearchField({ value, inputRef, onChange }: SearchFieldProps) {
         type="search"
         placeholder="Search Wallhaven"
         aria-label="Search Wallhaven"
+        aria-keyshortcuts="/"
         spellCheck={false}
         value={value}
         onChange={(event) => onChange(event.target.value)}

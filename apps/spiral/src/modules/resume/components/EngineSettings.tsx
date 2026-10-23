@@ -50,11 +50,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
   return (
     <>
       <h3 className="panel__heading">Wording engine</h3>
-      <p className="panel__lede">
-        Spiral restyles a resume with no key at all. Tightening is a switch on Details. A
-        model on this computer, or a Claude or ChatGPT key, does that rewriting. Names, dates and
-        numbers never change.
-      </p>
+      <p className="panel__lede">Spiral restyles a resume with no key at all.</p>
 
       <div className="entry__grid">
         <label className="field">
@@ -80,7 +76,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
 
         {info.provider === "compatible" ? (
           <Field
-            label="Model (blank uses the recommended one)"
+            label="Model, blank for the recommended one"
             value={info.model}
             onChange={(model) => setInfo({ ...info, model })}
           />
@@ -111,7 +107,7 @@ export function EngineSettings({ onChanged }: { onChanged: (info: EngineInfo) =>
         <>
           <h3 className="panel__heading">Your API key</h3>
           <p className="panel__lede">
-            This is an API key. A Claude or ChatGPT subscription is billed separately. The key is stored in this computer&apos;s keychain and is sent only to {info.host}.
+            This is an API key. A Claude or ChatGPT subscription is billed separately. The key stays in this computer&apos;s keychain and is sent only to {info.host}.
           </p>
 
           {info.hasKey ? (

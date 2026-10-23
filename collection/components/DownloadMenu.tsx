@@ -115,7 +115,7 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
                   className="flex min-h-11 items-center px-4 text-sm text-paper transition-colors hover:bg-paper/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-red"
                 >
                   {offer.source
-                    ? `${app.name.replace("Spiral ", "")} — ${offer.label}`
+                    ? `${app.name.replace("Spiral ", "")}, ${offer.label}`
                     : app.name.replace("Spiral ", "")}
                 </a>
                 {brew ? (

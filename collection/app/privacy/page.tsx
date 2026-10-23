@@ -3,7 +3,7 @@ import Footer from "@/components/Footer";
 import Nav from "@/components/Nav";
 
 export const metadata: Metadata = {
-  title: "Privacy — Spiral",
+  title: "Privacy, Spiral",
   description:
     "Spiral does not make an account and does not upload your files. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings.",
   alternates: { canonical: "/privacy/" },
@@ -29,9 +29,10 @@ export default function PrivacyPage() {
           <p className="mt-3 text-gray">
             Reaches Wallhaven&apos;s public SFW API when you search or apply. On launch it
             calls license_ensure against the spiral-license worker. On open it may ask
-            GitHub once whether a newer build exists — named in Settings, and switchable
-            off. It validates an image before writing or applying it, and keeps thumbnails
-            on disk behind a cap you can see in Settings. Closing the window quits.
+            GitHub once whether a newer build exists. Settings names that check, and you
+            can turn it off. It validates an image before writing or applying it, and
+            keeps thumbnails on disk behind a cap you can see in Settings. Closing the
+            window quits.
           </p>
         </section>
 
@@ -40,7 +41,7 @@ export default function PrivacyPage() {
           <p className="mt-3 text-gray">
             The free pass never opens a connection. A model runs only if you add your own
             API key or download one to disk, and the app names which engine did the work.
-            Remote keys talk to the host you chose — Anthropic, OpenAI, or a custom base
+            Remote keys talk to the host you chose: Anthropic, OpenAI, or a custom base
             URL you set. Offline models are fetched from Hugging Face when you press
             Download. Titles, employers, dates, schools and numbers are extracted before a
             model sees anything and checked afterwards. A fact that moves is discarded.
@@ -54,7 +55,7 @@ export default function PrivacyPage() {
             <span className="text-paper">licensing.cohencool.workers.dev</span> when you
             activate and then about once a week. The key is signed, so launches between
             checks happen offline. The request sends your license key, a hash of a machine
-            identifier, and the product name — nothing else. If the server is unreachable,
+            identifier, and the product name. Nothing else. If the server is unreachable,
             Spiral keeps working for up to 30 days after the last good check.
           </p>
         </section>
