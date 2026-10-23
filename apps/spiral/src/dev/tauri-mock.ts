@@ -60,6 +60,60 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   module_activate: () => undefined,
+  resume: (args) => {
+    const call = args.call as { type?: string; text?: string } | undefined;
+    if (!call) return null;
+    if (call.type === "load_document") return { stored: null };
+    if (call.type === "parse_text") {
+      const text = call.text ?? "";
+      const name = text.split("\n")[0] ?? "";
+      return {
+        contact: { name, email: "", phone: "", location: "", links: [] },
+        headline: "",
+        summary: "",
+        experience: [],
+        education: [],
+        projects: [],
+        leadership: [],
+        awards: [],
+        interests: [],
+        skills: [],
+      };
+    }
+    if (call.type === "import_file") return null;
+    if (call.type === "preview") return { pages: [] };
+    if (call.type === "check") return { findings: [] };
+    if (call.type === "list_accents") return [{ id: "ink", hex: "" }];
+    if (call.type === "thumbnails") return { thumbs: [] };
+    if (call.type === "build") {
+      return {
+        pages: [],
+        file: "",
+        suggestedName: "resume.pdf",
+        engine: "Built offline, no network used",
+        notes: [],
+      };
+    }
+    if (call.type === "save_built") return null;
+    if (call.type === "review_wording") return [];
+    if (call.type === "engine_info") {
+      return {
+        provider: "local",
+        model: "",
+        baseUrl: "",
+        hasKey: false,
+        host: "",
+        keyUrl: "",
+        needsSetup: false,
+      };
+    }
+    if (call.type === "offline_models") return { available: false, models: [] };
+    if (call.type === "save_document" || call.type === "save_engine" || call.type === "delete_stored_data") {
+      return { saved: true };
+    }
+    if (call.type === "storage_info") return { path: "", exists: false };
+    return { saved: true };
+  },
   modules_set: () => undefined,
   bench_mark: () => undefined,
   license_view: () => ({ kind: "licensed", grace: false }),

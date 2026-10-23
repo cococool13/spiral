@@ -1,0 +1,120 @@
+.resume {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--space-24);
+  min-height: 0;
+  padding: var(--space-16);
+}
+
+.resume--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.resume-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.stepper {
+  display: flex;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.stepper__step {
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  padding: 4px 8px;
+  border-radius: var(--radius-ctl);
+}
+
+.stepper__step--on {
+  color: var(--ink);
+}
+
+.stepper__step:disabled {
+  color: var(--ink-3);
+}
+
+.stepper__step:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.resume-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.fact--edited .field > span::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  background: var(--red);
+  vertical-align: middle;
+}
+
+.fact-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  background: var(--red);
+  vertical-align: middle;
+}
+
+.proof__pages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+  background: var(--stock-2);
+}
+
+.proof__pages img,
+.result__page,
+.style-card__page {
+  width: 100%;
+  height: auto;
+  background: var(--stock);
+}
+
+.field textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-ctl);
+  background: var(--stock-3);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.findings {
+  margin: var(--space-12) 0;
+  padding-left: var(--space-16);
+}
+
+.findings li + li {
+  margin-top: var(--space-8);
+}
+
+@media (max-width: 800px) {
+  .resume {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepper__step {
+    transition: none;
+  }
+}
