@@ -42,7 +42,12 @@ describe("shell license", () => {
     invoke.mockImplementation(async (cmd: string) => {
       if (cmd === "license_view") return pending;
       if (cmd === "general_view") {
-        return { launchAtLogin: false, autoUpdateCheck: false, fitMode: "fill" };
+        return {
+          launchAtLogin: false,
+          autoUpdateCheck: false,
+          fitMode: "fill",
+          analyticsOptOut: false,
+        };
       }
       return undefined;
     });

@@ -45,6 +45,8 @@ pub struct GeneralSettings {
     pub launch_at_login: bool,
     pub auto_update_check: bool,
     pub fit_mode: FitMode,
+    #[serde(default)]
+    pub analytics_opt_out: bool,
 }
 
 impl GeneralSettings {
@@ -53,6 +55,7 @@ impl GeneralSettings {
             launch_at_login: shell.launch_at_login,
             auto_update_check: shell.auto_update_check,
             fit_mode: wallpaper.fit_mode,
+            analytics_opt_out: shell.analytics_opt_out,
         }
     }
 }
@@ -64,10 +67,12 @@ pub fn apply_general(
     next: &GeneralSettings,
 ) -> Result<GeneralSettings, String> {
     let shell_changed = shell.launch_at_login != next.launch_at_login
-        || shell.auto_update_check != next.auto_update_check;
+        || shell.auto_update_check != next.auto_update_check
+        || shell.analytics_opt_out != next.analytics_opt_out;
     let fit_changed = wallpaper.fit_mode != next.fit_mode;
     shell.launch_at_login = next.launch_at_login;
     shell.auto_update_check = next.auto_update_check;
+    shell.analytics_opt_out = next.analytics_opt_out;
     wallpaper.fit_mode = next.fit_mode;
     if fit_changed {
         save(root, wallpaper)?;
@@ -112,6 +117,8 @@ pub struct ShellSettings {
     pub last_module: ModuleId,
     pub launch_at_login: bool,
     pub auto_update_check: bool,
+    #[serde(default)]
+    pub analytics_opt_out: bool,
     pub rename_choice: RenameChoice,
 }
 
@@ -175,6 +182,7 @@ fn derive(root: &Root, legacy: &LegacyRoots) -> ShellSettings {
         picker_done: false,
         launch_at_login: wallpaper.launch_at_login,
         auto_update_check: wallpaper.auto_update_check,
+        analytics_opt_out: false,
         rename_choice: RenameChoice::Pending,
     }
 }
@@ -339,6 +347,7 @@ mod tests {
             launch_at_login: true,
             auto_update_check: false,
             fit_mode: FitMode::Fit,
+            analytics_opt_out: false,
         };
         let stored = apply_general(&root, &mut shell, &mut wallpaper, &next).unwrap();
         assert_eq!(stored, next);
@@ -354,10 +363,39 @@ mod tests {
         let json = serde_json::to_string(&again).unwrap();
         assert_eq!(
             json,
-            r#"{"launchAtLogin":true,"autoUpdateCheck":false,"fitMode":"fit"}"#
+            r#"{"launchAtLogin":true,"autoUpdateCheck":false,"fitMode":"fit","analyticsOptOut":false}"#
         );
         assert!(!json.contains("license"));
         assert!(!json.contains("key"));
+    }
+
+    #[test]
+    fn general_settings_round_trip_the_opt_out_flag() {
+        let (_root_dir, _legacy_dir, root, legacy) = pair();
+        fs::create_dir_all(root.spiral_json().parent().unwrap()).unwrap();
+        let missing = r#"{"schema":1,"modules":["wallpaper"],"picker_done":true,"last_module":"wallpaper","launch_at_login":false,"auto_update_check":true,"rename_choice":"pending"}"#;
+        fs::write(root.spiral_json(), missing).unwrap();
+        let mut shell = ShellSettings::load_or_derive(&root, &legacy);
+        assert!(!shell.analytics_opt_out);
+        let mut wallpaper = load(&root);
+        let opted_out = GeneralSettings {
+            launch_at_login: false,
+            auto_update_check: true,
+            fit_mode: FitMode::Fill,
+            analytics_opt_out: true,
+        };
+        let stored = apply_general(&root, &mut shell, &mut wallpaper, &opted_out).unwrap();
+        assert!(stored.analytics_opt_out);
+        assert!(ShellSettings::load_or_derive(&root, &legacy).analytics_opt_out);
+        let mut shell = ShellSettings::load_or_derive(&root, &legacy);
+        let sharing = GeneralSettings {
+            launch_at_login: false,
+            auto_update_check: true,
+            fit_mode: FitMode::Fill,
+            analytics_opt_out: false,
+        };
+        apply_general(&root, &mut shell, &mut wallpaper, &sharing).unwrap();
+        assert!(!ShellSettings::load_or_derive(&root, &legacy).analytics_opt_out);
     }
 
     #[test]

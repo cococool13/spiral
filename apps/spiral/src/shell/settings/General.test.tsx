@@ -13,6 +13,7 @@ const settings: GeneralSettings = {
   launchAtLogin: false,
   autoUpdateCheck: true,
   fitMode: "fill",
+  analyticsOptOut: false,
 };
 
 function offer(visible: boolean) {

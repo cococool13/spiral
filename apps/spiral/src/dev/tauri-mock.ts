@@ -21,12 +21,14 @@ interface MockGeneral {
   launchAtLogin: boolean;
   autoUpdateCheck: boolean;
   fitMode: "fill" | "fit" | "center";
+  analyticsOptOut: boolean;
 }
 
 const general: MockGeneral = {
   launchAtLogin: false,
   autoUpdateCheck: true,
   fitMode: "fill",
+  analyticsOptOut: false,
 };
 
 const mockUpdate = () =>
@@ -81,6 +83,7 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
       const patch = next as Partial<MockGeneral>;
       if (typeof patch.launchAtLogin === "boolean") general.launchAtLogin = patch.launchAtLogin;
       if (typeof patch.autoUpdateCheck === "boolean") general.autoUpdateCheck = patch.autoUpdateCheck;
+      if (typeof patch.analyticsOptOut === "boolean") general.analyticsOptOut = patch.analyticsOptOut;
       if (patch.fitMode === "fill" || patch.fitMode === "fit" || patch.fitMode === "center") {
         general.fitMode = patch.fitMode;
       }

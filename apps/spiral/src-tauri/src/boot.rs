@@ -148,6 +148,7 @@ mod tests {
             last_module: last,
             launch_at_login: false,
             auto_update_check: true,
+            analytics_opt_out: false,
             rename_choice: crate::settings::RenameChoice::Pending,
         }
     }
