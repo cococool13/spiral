@@ -30,8 +30,8 @@ describe("analytics gates", () => {
     expect(mayLoad({ ...open, testRun: true })).toBe(false);
   });
 
-  it("ships an empty project key and the US host", () => {
-    expect(POSTHOG_KEY).toBe("");
+  it("ships an empty or phc_ project key and the US host", () => {
+    expect(POSTHOG_KEY).toMatch(/^(phc_[A-Za-z0-9_-]+)?$/);
     expect(POSTHOG_HOST).toBe("https://us.i.posthog.com");
     expect(POSTHOG_KEY).not.toContain("phx_");
   });

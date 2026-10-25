@@ -13,6 +13,9 @@ vi.mock("posthog-js", () => {
   };
 });
 
+// The shipped config carries the real key; this test is about the empty-key path.
+vi.mock("./config", () => ({ POSTHOG_KEY: "", POSTHOG_HOST: "https://us.i.posthog.com" }));
+
 it("does not import posthog or call fetch when the key is empty", async () => {
   const fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
