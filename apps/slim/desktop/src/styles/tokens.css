@@ -1,0 +1,53 @@
+/* Spiral Identity 03 — Instrument Utility.
+   Color from Cron/Dark Instrument. Chrome grammar from Control/Signal Utility.
+   Consumed via `node scripts/sync-brand.mjs <surface>` (allowlists in
+   scripts/brand-manifest.mjs). Do not hardcode these values anywhere else. */
+
+:root {
+  /* Materials — warm near-black instrument panel */
+  --spiral-void: #0f0d0a; /* page */
+  --spiral-paper: #f5f2eb; /* type on void; labels on helix */
+  --spiral-helix: #d52e2b; /* mark, the one action, warnings. Never a page fill. */
+  --spiral-mute: #a39e94; /* secondary on void */
+  --spiral-lift: #161412; /* one step up from void */
+
+  /* Aliases so existing CSS keeps compiling. Prefer the names above on new work. */
+  --spiral-black: var(--spiral-void);
+  --spiral-gray: var(--spiral-mute);
+  --spiral-concrete: #d8d4c8;
+  --spiral-conc-01: var(--spiral-void);
+  --spiral-conc-02: var(--spiral-lift);
+  --spiral-conc-03: #2a2622; /* warm hairline */
+  --spiral-ink: #121214; /* text on paper islands only */
+  --spiral-steel: #66645e; /* secondary on paper only */
+  --spiral-red: var(--spiral-helix);
+  --spiral-oxblood: #8b1a18; /* pressed/hover deepen */
+  --spiral-red-fill: color-mix(in srgb, var(--spiral-oxblood) 12%, var(--spiral-red));
+
+  /* type — Host Grotesk display/UI; mono for labels, nav, data */
+  --spiral-font-display: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --spiral-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --spiral-wdth-display: 100;
+  --spiral-wght-display: 600;
+  --spiral-wdth-heading: 100;
+  --spiral-wght-heading: 500;
+
+  /* rhythm */
+  --spiral-unit: 8px;
+  --spiral-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spiral-dur-fast: 150ms;
+  --spiral-dur-slow: 400ms;
+
+  /* chrome — Instrument Utility: sharp everywhere (Control grammar).
+     Stadium pills are retired; CTAs are square fills. */
+  --spiral-radius-ctl: 0px;
+  --spiral-radius-pill: 0px;
+  --spiral-glass-blur: blur(16px) saturate(1.7);
+  --spiral-glass-edge: rgba(255, 255, 255, 0.45);
+  --spiral-glass-sheen: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0) 55%
+  );
+}

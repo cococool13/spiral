@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Capability for the main window. Spiral Slim needs nothing beyond core: no filesystem plugin, no shell plugin, no HTTP.","local":true,"windows":["main"],"permissions":["core:default"]}}
