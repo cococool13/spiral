@@ -50,17 +50,45 @@ pub struct BootState {
     pub modules: Vec<ModuleState>,
     pub start: Start,
     pub bench: bool,
+    pub capabilities: Capabilities,
+}
+
+/// Native features whose availability depends on this machine, known at
+/// first paint so the UI never shows a switch that cannot work here.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Capabilities {
+    /// Pin still to all Spaces (Spiral Live): macOS 13+ with the helper.
+    pub pin_all_spaces: bool,
+    pub pin_reason: Option<String>,
+}
+
+impl Capabilities {
+    pub fn detect() -> Self {
+        match crate::live::availability() {
+            Ok(_) => Self {
+                pin_all_spaces: true,
+                pin_reason: None,
+            },
+            Err(reason) => Self {
+                pin_all_spaces: false,
+                pin_reason: Some(reason.to_string()),
+            },
+        }
+    }
 }
 
 impl BootState {
     pub fn from(settings: &ShellSettings, resume_supported: bool) -> Self {
-        Self::with_context(
+        let mut boot = Self::with_context(
             settings,
             resume_supported,
             env!("CARGO_PKG_VERSION"),
             Platform::host(),
             crate::bench::enabled(),
-        )
+        );
+        boot.capabilities = Capabilities::detect();
+        boot
     }
 
     pub(crate) fn with_context(
@@ -95,6 +123,7 @@ impl BootState {
             modules,
             start,
             bench,
+            capabilities: Capabilities::default(),
         }
     }
 }
@@ -126,6 +155,18 @@ pub fn resume_supported() -> bool {
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn resume_supported() -> bool {
     true
+}
+
+/// The macOS version, or None on any other OS.
+pub fn macos_version_opt() -> Option<(u64, u64)> {
+    #[cfg(target_os = "macos")]
+    {
+        Some(macos_version())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        None
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -211,5 +252,7 @@ mod tests {
         assert!(json["modules"][0]["unavailableReason"].is_null());
         assert_eq!(json["version"], "2.0.0");
         assert!(!json["bench"].as_bool().unwrap());
+        assert_eq!(json["capabilities"]["pinAllSpaces"], false);
+        assert!(json["capabilities"]["pinReason"].is_null());
     }
 }

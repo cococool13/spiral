@@ -1,9 +1,11 @@
+mod activity;
 mod bench;
 mod boot;
 mod bundle;
 
 pub use bundle::payload_after_archive_root;
 mod license;
+mod live;
 mod paths;
 mod resume;
 mod settings;
@@ -179,12 +181,70 @@ async fn wallpaper_apply(
         .lock()
         .expect("settings")
         .fit_mode;
+    let root = shell.root().clone();
     engine
         .apply(id, fit, |path, fit| {
-            wallpaper::set_wallpaper(&app, path, fit)
+            let applied = wallpaper::set_wallpaper(&app, path.clone(), fit)?;
+            live::follow_apply(&root, &path, fit);
+            Ok(applied)
         })
         .await
         .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn wallpaper_pin_state(shell: State<'_, shell::Shell>) -> live::PinState {
+    live::state(shell.root())
+}
+
+/// On: pin the picture on this Space to every Space through Spiral Live.
+/// Off: Spiral Live unpins, removes its login item and exits.
+#[tauri::command]
+async fn wallpaper_pin_all_spaces(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+    enabled: bool,
+) -> Result<live::PinState, String> {
+    let root = shell.root().clone();
+    if !enabled {
+        return tokio::task::spawn_blocking(move || live::unpin(&root))
+            .await
+            .map_err(|_| "pin_failed".to_string())?;
+    }
+    license::require(&app).await?;
+    let source = live::current_desktop(&app)?;
+    let fit = app
+        .state::<SettingsState>()
+        .0
+        .lock()
+        .expect("settings")
+        .fit_mode;
+    tokio::task::spawn_blocking(move || live::pin(&root, &source, fit))
+        .await
+        .map_err(|_| "pin_failed".to_string())?
+}
+
+#[tauri::command]
+async fn wallpaper_pin_keep(
+    shell: State<'_, shell::Shell>,
+    enabled: bool,
+) -> Result<live::PinState, String> {
+    let root = shell.root().clone();
+    tokio::task::spawn_blocking(move || live::set_keep(&root, enabled))
+        .await
+        .map_err(|_| "pin_failed".to_string())?
+}
+
+#[tauri::command]
+async fn wallpaper_pin_resume(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+) -> Result<live::PinState, String> {
+    license::require(&app).await?;
+    let root = shell.root().clone();
+    tokio::task::spawn_blocking(move || live::resume(&root))
+        .await
+        .map_err(|_| "pin_failed".to_string())?
 }
 
 fn suggested_save_name(path: &str) -> String {
@@ -454,6 +514,10 @@ pub fn run() {
             wallpaper_prefetch_page,
             wallpaper_stage_full,
             wallpaper_apply,
+            wallpaper_pin_state,
+            wallpaper_pin_all_spaces,
+            wallpaper_pin_keep,
+            wallpaper_pin_resume,
             general_view,
             general_update,
             thumb_cache_size,
