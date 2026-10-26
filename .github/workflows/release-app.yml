@@ -418,7 +418,8 @@ jobs:
             --dir "$GITHUB_WORKSPACE/artifacts" \
             --version "${GITHUB_REF_NAME##*v}" \
             --repo "$GITHUB_REPOSITORY" \
-            --notes "Spiral Wallpaper is now Spiral. Your wallpapers and license carry over. Resume is included."
+            --notes "Spiral Wallpaper is now Spiral. Your wallpapers and license carry over. Resume is included." \
+            ${{ !inputs.windows && '--no-windows' || '' }}
 
       # Without an updater there is no manifest, but checksums are still what
       # someone verifies a download against.
