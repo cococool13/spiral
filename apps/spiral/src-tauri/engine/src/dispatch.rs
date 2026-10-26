@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use resume_core::engine_run::{rewrite_wording, ProviderKey, WordingJob};
+use resume_core::engine_run::{rewrite_wording, ProviderKey, Rewritten, WordingJob};
 use resume_core::model::ResumeDoc;
 use resume_core::model_host::ModelHost;
 use resume_core::settings::{self, EngineSettings};
@@ -138,6 +138,28 @@ impl Session {
             }
             Call::ReviewWording { doc } => self.review(id, doc, host),
             Call::SaveBuilt { path } => self.save_built(Path::new(&path)),
+            Call::ExportBoth {
+                doc,
+                look,
+                accent,
+                aim,
+                tighten,
+                dir,
+                replace,
+            } => self.export_both(
+                id,
+                doc,
+                BuildSpec {
+                    look: &look,
+                    accent: &accent,
+                    aim: &aim,
+                    tighten,
+                    format: "",
+                },
+                Path::new(&dir),
+                replace,
+                host,
+            ),
             Call::SaveDocument { stored } => {
                 let stored: StoredDoc = serde_json::from_value(stored)
                     .map_err(|_| UserError::new("That resume could not be saved."))?;
@@ -215,25 +237,18 @@ impl Session {
         Ok(json!({ "pages": paths }))
     }
 
-    fn build(
+    /// The wording pass. Every model rewrite goes through the fact gate
+    /// (`resume_core::gate`) inside `rewrite_wording`; what comes back is the
+    /// document every file is built from. Progress is reported inside `span`.
+    fn rewrite(
         &mut self,
         id: u64,
-        doc: Value,
-        spec: BuildSpec<'_>,
+        doc: ResumeDoc,
+        aim: &str,
+        tighten: bool,
+        span: (u32, u32),
         host: &mut (impl ProviderKey + Events),
-    ) -> Result<Value, UserError> {
-        let BuildSpec {
-            look,
-            accent,
-            aim,
-            tighten,
-            format,
-        } = spec;
-        let accent = if accent.is_empty() { "ink" } else { accent };
-        let doc = doc_from(doc)?;
-        let template = templates::find(look)
-            .ok_or_else(|| UserError::new("That style is no longer available."))?;
-        let format = build::Format::parse(format).map_err(UserError::new)?;
+    ) -> Result<Rewritten, UserError> {
         let stored = settings::load(&self.root);
         let provider = resume_core::provider::Provider::parse(&stored.provider, &stored.base_url)
             .map_err(UserError::new)?;
@@ -252,7 +267,7 @@ impl Session {
                 host.emit(
                     id,
                     Event::Progress {
-                        done: u32::from(step.percent),
+                        done: within(span, step.percent),
                         total: 100,
                     },
                 );
@@ -281,6 +296,144 @@ impl Session {
         if self.cancelled.load(Ordering::SeqCst) {
             return Err(UserError::new("Cancelled."));
         }
+        Ok(rewritten)
+    }
+
+    /// One export, both formats. The wording pass runs once, so the PDF and
+    /// the Word file carry the same words, then both files are written into
+    /// `dir` as `<Name> Resume.pdf` and `.docx`. Existing files are never
+    /// replaced unless `replace` is set: the first answer lists them instead,
+    /// before anything is built.
+    fn export_both(
+        &mut self,
+        id: u64,
+        doc: Value,
+        spec: BuildSpec<'_>,
+        dir: &Path,
+        replace: bool,
+        host: &mut (impl ProviderKey + Events),
+    ) -> Result<Value, UserError> {
+        let BuildSpec {
+            look,
+            accent,
+            aim,
+            tighten,
+            format: _,
+        } = spec;
+        let accent = if accent.is_empty() { "ink" } else { accent };
+        let doc = doc_from(doc)?;
+        let template = templates::find(look)
+            .ok_or_else(|| UserError::new("That style is no longer available."))?;
+        if !dir.is_dir() {
+            return Err(UserError::new(
+                "That folder is no longer there. Export again and choose another folder.",
+            ));
+        }
+        let stem = build::export_stem(&doc);
+        let formats = [build::Format::Pdf, build::Format::Docx];
+        let targets: Vec<PathBuf> = formats
+            .iter()
+            .map(|format| dir.join(format!("{stem}.{}", format.extension())))
+            .collect();
+        let taken: Vec<String> = targets
+            .iter()
+            .filter(|path| path.exists())
+            .filter_map(|path| path.file_name().map(|n| n.to_string_lossy().into_owned()))
+            .collect();
+        if !taken.is_empty() && !replace {
+            return Ok(json!({ "conflict": taken, "dir": dir.display().to_string() }));
+        }
+
+        let rewritten = self.rewrite(id, doc, aim, tighten, (0, 40), host)?;
+        let tighten_rules = tighten && !(rewritten.used_model && rewritten.parsed);
+        let mut built = Vec::new();
+        for (index, format) in formats.into_iter().enumerate() {
+            let span = if index == 0 { (40, 70) } else { (70, 100) };
+            let file = build::build(
+                &rewritten.doc,
+                template,
+                format,
+                accent,
+                tighten_rules,
+                |step| {
+                    host.emit(
+                        id,
+                        Event::Progress {
+                            done: within(span, step.percent),
+                            total: 100,
+                        },
+                    );
+                },
+            )
+            .map_err(UserError::new)?;
+            if self.cancelled.load(Ordering::SeqCst) {
+                return Err(UserError::new("Cancelled."));
+            }
+            built.push(file);
+        }
+
+        // Both files land, or neither: write both beside their targets first,
+        // then move them into place.
+        let parts: Vec<PathBuf> = targets
+            .iter()
+            .map(|path| path.with_extension(format!("{}.part", ext_of(path))))
+            .collect();
+        for (part, file) in parts.iter().zip(&built) {
+            if let Err(err) = std::fs::write(part, &file.bytes) {
+                for part in &parts {
+                    let _ = std::fs::remove_file(part);
+                }
+                return Err(UserError::new(format!(
+                    "Could not write into {}: {err}. Check the folder lets you save files, then export again.",
+                    dir.display()
+                )));
+            }
+        }
+        for (part, target) in parts.iter().zip(&targets) {
+            std::fs::rename(part, target).map_err(|err| {
+                UserError::new(format!(
+                    "Could not save {}: {err}. Export again.",
+                    target.display()
+                ))
+            })?;
+        }
+
+        let mut notes = rewritten.notes;
+        for file in built {
+            for note in file.notes {
+                if !notes.contains(&note) {
+                    notes.push(note);
+                }
+            }
+        }
+        Ok(json!({
+            "files": targets.iter().map(|path| path.display().to_string()).collect::<Vec<_>>(),
+            "dir": dir.display().to_string(),
+            "engine": rewritten.engine,
+            "notes": notes,
+        }))
+    }
+
+    fn build(
+        &mut self,
+        id: u64,
+        doc: Value,
+        spec: BuildSpec<'_>,
+        host: &mut (impl ProviderKey + Events),
+    ) -> Result<Value, UserError> {
+        let BuildSpec {
+            look,
+            accent,
+            aim,
+            tighten,
+            format,
+        } = spec;
+        let accent = if accent.is_empty() { "ink" } else { accent };
+        let doc = doc_from(doc)?;
+        let template = templates::find(look)
+            .ok_or_else(|| UserError::new("That style is no longer available."))?;
+        let format = build::Format::parse(format).map_err(UserError::new)?;
+        let rewritten = self.rewrite(id, doc, aim, tighten, (0, 100), host)?;
         let built = build::build(
             &rewritten.doc,
             template,
@@ -511,6 +664,18 @@ impl Session {
     }
 }
 
+/// `percent` of a step, placed inside the `span` of the whole job.
+fn within(span: (u32, u32), percent: u8) -> u32 {
+    let (from, to) = span;
+    from + (to.saturating_sub(from) * u32::from(percent.min(100))) / 100
+}
+
+fn ext_of(path: &Path) -> String {
+    path.extension()
+        .map(|ext| ext.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
 fn doc_from(value: Value) -> Result<ResumeDoc, UserError> {
     serde_json::from_value(value).map_err(|_| UserError::new("That resume could not be read."))
 }
@@ -713,5 +878,67 @@ mod tests {
         let bytes = std::fs::read(&out).unwrap();
         assert!(bytes.starts_with(b"%PDF"), "export was not a pdf");
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    fn export_call(dir: &Path, replace: bool) -> Call {
+        let mut doc = ResumeDoc::empty();
+        doc.contact.name = "Ada Lovelace".into();
+        Call::ExportBoth {
+            doc: serde_json::to_value(doc).unwrap(),
+            look: "column".into(),
+            accent: "ink".into(),
+            aim: String::new(),
+            tighten: false,
+            dir: dir.display().to_string(),
+            replace,
+        }
+    }
+
+    #[test]
+    fn one_export_writes_both_formats_and_never_overwrites_without_asking() {
+        let root = std::env::temp_dir().join(format!("spiral-both-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let out = root.join("out");
+        std::fs::create_dir_all(&out).unwrap();
+        let mut host = Silent;
+        let mut session = Session::open(&root);
+
+        let done = session
+            .handle(1, true, export_call(&out, false), &mut host)
+            .unwrap();
+        let pdf = out.join("Ada Lovelace Resume.pdf");
+        let docx = out.join("Ada Lovelace Resume.docx");
+        assert_eq!(done["files"][0], pdf.display().to_string());
+        assert_eq!(done["files"][1], docx.display().to_string());
+        assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF"));
+        assert!(std::fs::read(&docx).unwrap().starts_with(b"PK"));
+
+        std::fs::write(&pdf, b"mine").unwrap();
+        let asked = session
+            .handle(2, true, export_call(&out, false), &mut host)
+            .unwrap();
+        assert_eq!(asked["conflict"][0], "Ada Lovelace Resume.pdf");
+        assert_eq!(asked["conflict"][1], "Ada Lovelace Resume.docx");
+        assert_eq!(std::fs::read(&pdf).unwrap(), b"mine");
+
+        session
+            .handle(3, true, export_call(&out, true), &mut host)
+            .unwrap();
+        assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF"));
+        let leftovers: Vec<_> = std::fs::read_dir(&out)
+            .unwrap()
+            .flatten()
+            .filter(|entry| entry.file_name().to_string_lossy().ends_with(".part"))
+            .collect();
+        assert!(leftovers.is_empty());
+
+        let err = session
+            .handle(4, true, export_call(&root.join("gone"), false), &mut host)
+            .unwrap_err();
+        assert!(format!("{err:?}").contains("no longer there"));
+        assert!(session
+            .handle(5, false, export_call(&out, true), &mut host)
+            .is_err());
+        let _ = std::fs::remove_dir_all(root);
     }
 }

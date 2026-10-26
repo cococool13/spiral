@@ -71,7 +71,11 @@ export function Editor() {
             onPaint={session.painted}
             action={<ExportButton busy={exporter.phase.kind === "working"} onClick={() => void exporter.run()} />}
           />
-          <ExportSheet phase={exporter.phase} onClose={exporter.dismiss} />
+          <ExportSheet
+            phase={exporter.phase}
+            onClose={exporter.dismiss}
+            onReplace={() => void exporter.replace()}
+          />
         </div>
       </div>
       <Templates

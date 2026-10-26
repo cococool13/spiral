@@ -130,10 +130,50 @@ export function checkResume(doc: ResumeDoc, text: string): Promise<{ findings: F
   return resume.call({ type: "check", doc, text });
 }
 
-export async function saveBuiltDocument(name = "resume.pdf"): Promise<string | null> {
-  const reply = await resume.call<{ path?: string } | null>({ type: "save_built", path: name });
-  if (!reply?.path) return null;
-  return reply.path;
+/** What one export answered: the files it wrote, or the files it would replace. */
+export type ExportReply =
+  | { kind: "saved"; files: string[]; dir: string; engine: string; notes: string[] }
+  | { kind: "conflict"; files: string[]; dir: string };
+
+/**
+ * One export, both formats. An empty `dir` opens a folder picker; a `dir` is
+ * only accepted again for the folder the person just chose. Rust writes
+ * `<Name> Resume.pdf` and `.docx` side by side and never replaces a file
+ * unless `replace` is set. `null` means the picker was cancelled.
+ */
+export async function exportBoth(
+  draft: Draft,
+  dir: string,
+  replace: boolean,
+  onProgress: (percent: number) => void,
+): Promise<ExportReply | null> {
+  const reply = await resume.call<Record<string, unknown> | null>(
+    {
+      type: "export_both",
+      doc: draft.doc,
+      look: draft.template,
+      accent: draft.accent,
+      aim: "one_page",
+      tighten: draft.tighten,
+      dir,
+      replace,
+    },
+    (event) => {
+      if (event.total > 0) onProgress(Math.round((event.done / event.total) * 100));
+    },
+  );
+  if (!reply) return null;
+  const strings = (value: unknown) =>
+    Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  const folder = typeof reply.dir === "string" ? reply.dir : "";
+  if (Array.isArray(reply.conflict)) return { kind: "conflict", files: strings(reply.conflict), dir: folder };
+  return {
+    kind: "saved",
+    files: strings(reply.files),
+    dir: folder,
+    engine: typeof reply.engine === "string" ? reply.engine : "",
+    notes: strings(reply.notes),
+  };
 }
 
 export async function loadDocument(): Promise<StoredDoc | null> {

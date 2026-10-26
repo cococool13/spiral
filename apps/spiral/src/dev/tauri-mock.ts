@@ -69,6 +69,7 @@ let mockRecent: { id: string; resolution: string }[] = [
   { id: "w-p1i7", resolution: "3840x2160" },
 ];
 let mockUndo = 0;
+let mockExported = false;
 
 const mockUpdate = () =>
   (window as unknown as Record<string, unknown>).__SPIRAL_MOCK_UPDATE__
@@ -242,6 +243,26 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
       })();
     }
     if (call.type === "save_built") return null;
+    if (call.type === "export_both") {
+      const both = call as { dir?: string; replace?: boolean };
+      const dir = both.dir || "/Users/maya/Documents";
+      const files = ["Maya Okafor Resume.pdf", "Maya Okafor Resume.docx"];
+      if (mockExported && !both.replace) return { conflict: files, dir };
+      return (async () => {
+        const events = args.events as { onmessage?: (event: { type: string; done: number; total: number }) => void };
+        for (const done of [20, 55, 85]) {
+          events.onmessage?.({ type: "progress", done, total: 100 });
+          await delay(300);
+        }
+        mockExported = true;
+        return {
+          files: files.map((name) => `${dir}/${name}`),
+          dir,
+          engine: "Built offline, no network used",
+          notes: [],
+        };
+      })();
+    }
     if (call.type === "review_wording") return [];
     if (call.type === "engine_info") {
       return {

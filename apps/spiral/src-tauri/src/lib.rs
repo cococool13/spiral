@@ -61,10 +61,39 @@ async fn resume(
         return resume::snapshot::load(&shell.root().resume_dir());
     }
     let call = match call {
+        // A path means a file dropped on the window; an empty one means the
+        // person clicked Open, so the picker asks.
+        resume_proto::Call::ImportFile { path } if !path.is_empty() => {
+            resume_proto::Call::ImportFile {
+                path: resume::dialog::dropped(&path)?,
+            }
+        }
         resume_proto::Call::ImportFile { .. } => match resume::dialog::pick_open(&app)? {
             None => return Ok(serde_json::Value::Null),
             Some(path) => resume_proto::Call::ImportFile { path },
         },
+        resume_proto::Call::ExportBoth {
+            doc,
+            look,
+            accent,
+            aim,
+            tighten,
+            dir,
+            replace,
+        } => {
+            let Some(dir) = resume::dialog::export_dir(&app, &dir)? else {
+                return Ok(serde_json::Value::Null);
+            };
+            resume_proto::Call::ExportBoth {
+                doc,
+                look,
+                accent,
+                aim,
+                tighten,
+                dir,
+                replace,
+            }
+        }
         resume_proto::Call::SaveBuilt { path } => {
             match resume::dialog::pick_save(&app, &suggested_save_name(&path))? {
                 None => return Ok(serde_json::Value::Null),
@@ -115,6 +144,14 @@ async fn resume(
     .map_err(|_| "Resume's engine did not answer in time. Try again.".to_string())??;
     if is_check {
         bench::mark("ats_check:resume");
+    }
+    if let Some(files) = value.get("files").and_then(|files| files.as_array()) {
+        let written: Vec<std::path::PathBuf> = files
+            .iter()
+            .filter_map(|file| file.as_str().map(std::path::PathBuf::from))
+            .collect();
+        // Shows both new files selected in Finder (Explorer on Windows).
+        let _ = tauri_plugin_opener::reveal_items_in_dir(&written);
     }
     resume::publish::absolutize(&dir, &mut value);
     Ok(value)
