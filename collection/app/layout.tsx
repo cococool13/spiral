@@ -1,8 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import tokens from "@/lib/brand-tokens.json";
 import "./globals.css";
-
-const VOID = tokens.color.void;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://spiralcc.tech"),
@@ -39,8 +36,9 @@ export const metadata: Metadata = {
   },
 };
 
+// The hero's top edge: --glass-400 from brand/tokens.css. Metadata cannot read CSS.
 export const viewport: Viewport = {
-  themeColor: VOID,
+  themeColor: "rgb(195 56 63)",
 };
 
 export default function RootLayout({
@@ -51,7 +49,7 @@ export default function RootLayout({
       <head>
         <link
           rel="preload"
-          href="/brand/fonts/host-grotesk-400.woff2"
+          href="/brand/fonts/familjen-grotesk-var.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

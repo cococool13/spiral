@@ -1,25 +1,15 @@
-import AppIndex from "@/components/AppIndex";
 import Footer from "@/components/Footer";
-import Hero from "@/components/Hero";
 import JsonLd from "@/components/JsonLd";
-import Manifesto from "@/components/Manifesto";
-import Nav from "@/components/Nav";
-import Rules from "@/components/Rules";
+import Landing from "@/components/Landing";
+import PriceBand from "@/components/PriceBand";
 
 export default function Home() {
-  // Nav and Footer sit outside <main>. Nested inside it they were generic
-  // divs, not banner and contentinfo landmarks — so the page had no site
-  // chrome to jump to, and <main> claimed the header and footer as content.
   return (
     <>
       <JsonLd />
-      <Nav />
-      <main id="content">
-        <Hero />
-        <AppIndex />
-        <Rules />
-        <Manifesto />
-      </main>
+      <Landing>
+        <PriceBand />
+      </Landing>
       <Footer />
     </>
   );

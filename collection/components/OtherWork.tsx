@@ -133,9 +133,9 @@ export default function OtherWork() {
 
 function Meta({ project, index }: { project: OtherProject; index: number }) {
   return (
-    <span className="font-mono text-micro uppercase tracking-widest text-steel">
-      {pad(index + 1)} · {project.kind}
-      {project.where ? ` · ${project.where}` : ""}
+    <span className="text-sm text-steel">
+      {pad(index + 1)}, {project.kind}
+      {project.where ? `, ${project.where}` : ""}
     </span>
   );
 }
@@ -158,16 +158,16 @@ function IndexRow({
         {pad(index + 1)}
       </span>
       <span className="min-w-0">
-        <span className="block font-mono text-micro uppercase tracking-widest text-steel">
+        <span className="block text-sm text-steel">
           {project.kind}
-          {project.where ? ` · ${project.where}` : ""}
+          {project.where ? `, ${project.where}` : ""}
         </span>
         <span className="type-heading mt-1 block text-xl text-ink">{project.name}</span>
         <span className="mt-1 block text-sm leading-relaxed text-steel">
           {project.description}
         </span>
       </span>
-      <span className="shrink-0 pt-1 font-mono text-micro uppercase tracking-widest text-steel">
+      <span className="shrink-0 pt-1 text-sm text-steel">
         {project.href ? "Open" : "Not public"}
       </span>
     </>
@@ -240,11 +240,9 @@ function Plate({ project, index }: { project: OtherProject; index: number }) {
       </div>
       <div className="px-5 py-5">
         <Meta project={project} index={index} />
-        <h3 className="type-heading mt-2 text-2xl text-ink">{project.name}</h3>
+        <h2 className="type-heading mt-2 text-2xl text-ink">{project.name}</h2>
         <p className="mt-2 text-sm leading-relaxed text-steel">{project.description}</p>
-        <p className="mt-4 font-mono text-micro uppercase tracking-widest text-steel">
-          {project.href ? "Open" : "Not public"}
-        </p>
+        <p className="mt-4 text-sm text-steel">{project.href ? "Open" : "Not public"}</p>
       </div>
     </>
   );
