@@ -9,10 +9,19 @@
   gap: 40px;
   padding: 40px;
   overflow: auto;
-  background: var(--stock);
-  color: var(--ink);
-  color-scheme: light dark;
-  font-family: var(--spiral-font-sans);
+  /* The picker sits in the same dark room as the app, in either appearance. */
+  --stock: var(--room);
+  --stock-2: var(--room-panel);
+  --stock-3: var(--room-panel-2);
+  --ink: var(--room-paper);
+  --ink-2: var(--room-mute);
+  --ink-3: var(--room-mute);
+  --rule: var(--room-line);
+  --red-text: var(--room-red-text);
+  background: var(--room);
+  color: var(--room-paper);
+  color-scheme: dark;
+  font-family: var(--font-system);
   font-size: 13px;
   line-height: 18px;
 }
@@ -44,9 +53,10 @@
 
 .picker h1 {
   margin: 0;
-  font-size: 32px;
-  line-height: 40px;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 400;
   text-align: center;
   text-wrap: balance;
 }
@@ -103,85 +113,14 @@
   color: var(--ink-2);
 }
 
-.art-wall {
-  position: absolute;
-  inset: 0;
-  background: var(--stock-3);
-}
 
-.art-wall__ridge {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 62%;
-  background: var(--ink);
-  clip-path: polygon(
-    0 78%,
-    16% 46%,
-    34% 64%,
-    52% 28%,
-    70% 58%,
-    86% 36%,
-    100% 52%,
-    100% 100%,
-    0 100%
-  );
-}
 
-.art-wall__field {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 22%;
-  background: var(--rule);
-}
 
-.art-page {
-  position: absolute;
-  top: 18px;
-  bottom: 0;
-  left: 50%;
-  width: 62%;
-  transform: translateX(-50%);
-  padding: 16px 14px 0;
-  background: var(--stock-3);
-  color: var(--ink);
-  font-family: Charter, Georgia, serif;
-}
 
-.art-page__name {
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 700;
-}
 
-.art-page__label {
-  margin-top: 10px;
-  font-family: var(--spiral-font-sans);
-  font-size: 8px;
-  line-height: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
-.art-page__rule {
-  height: 1px;
-  margin: 4px 0 6px;
-  background: var(--rule);
-}
 
-.art-page__row {
-  height: 6px;
-  margin: 5px 0;
-  background: var(--ink);
-}
 
-.art-page__row--short {
-  width: 62%;
-}
 
 .picker__marks {
   position: absolute;
@@ -293,7 +232,7 @@
 .picker__later,
 .picker__error {
   margin: 0;
-  font-family: var(--spiral-font-mono);
+  font-family: var(--font-system);
   font-size: 11px;
   line-height: 16px;
   font-weight: 400;
@@ -349,7 +288,7 @@
   border: 0;
   background: none;
   color: var(--ink);
-  font-family: var(--spiral-font-mono);
+  font-family: var(--font-system);
   font-size: 11px;
   line-height: 16px;
   text-decoration: underline;
