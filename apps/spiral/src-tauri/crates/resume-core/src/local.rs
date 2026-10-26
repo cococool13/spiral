@@ -481,11 +481,22 @@ mod tests {
     /// A one-response HTTP server, so the download path is exercised without
     /// reaching the internet or fetching gigabytes.
     async fn tiny_server(body: &'static [u8]) -> TinyServer {
-        use tokio::io::AsyncWriteExt;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
         tokio::spawn(async move {
             if let Ok((mut socket, _)) = listener.accept().await {
+                // Read the whole request first. Closing a socket with unread
+                // bytes sends a reset, and the client can see that before the
+                // reply, which made these tests fail now and then.
+                let mut request = Vec::new();
+                let mut chunk = [0u8; 1024];
+                while !request.windows(4).any(|w| w == b"\r\n\r\n") {
+                    match socket.read(&mut chunk).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => request.extend_from_slice(&chunk[..n]),
+                    }
+                }
                 let header = format!(
                     "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
                     body.len()
