@@ -155,6 +155,30 @@ pub fn suggested_name(doc: &ResumeDoc, format: Format) -> String {
     }
 }
 
+/// `Ada Lovelace` → `Ada Lovelace Resume`, the stem both exported files share.
+/// Only letters, digits, hyphens and apostrophes survive inside a word, so a
+/// name cannot carry a path separator, a dot or a control character into the
+/// folder the person chose.
+pub fn export_stem(doc: &ResumeDoc) -> String {
+    let name = doc
+        .contact
+        .name
+        .split_whitespace()
+        .map(|word| {
+            word.chars()
+                .filter(|c| c.is_alphanumeric() || matches!(c, '-' | '\'' | '’'))
+                .collect::<String>()
+        })
+        .filter(|word| word.chars().any(char::is_alphanumeric))
+        .collect::<Vec<_>>()
+        .join(" ");
+    if name.is_empty() {
+        "Resume".to_string()
+    } else {
+        format!("{name} Resume")
+    }
+}
+
 pub fn build(
     doc: &ResumeDoc,
     template: &Template,
@@ -400,5 +424,18 @@ mod tests {
     fn an_unknown_format_is_rejected_with_a_next_step() {
         let err = Format::parse("rtf").unwrap_err();
         assert!(err.contains("Choose PDF or Word"), "got {err}");
+    }
+
+    #[test]
+    fn the_export_stem_is_the_name_and_cannot_leave_the_folder() {
+        let mut doc = ResumeDoc::empty();
+        doc.contact.name = "  Ada   Lovelace ".into();
+        assert_eq!(export_stem(&doc), "Ada Lovelace Resume");
+        doc.contact.name = "Seán O'Brien-Ní".into();
+        assert_eq!(export_stem(&doc), "Seán O'Brien-Ní Resume");
+        doc.contact.name = "../../etc/passwd .. \u{0007}".into();
+        assert_eq!(export_stem(&doc), "etcpasswd Resume");
+        doc.contact.name = " -- ".into();
+        assert_eq!(export_stem(&doc), "Resume");
     }
 }

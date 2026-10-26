@@ -1,54 +1,63 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { noteResumeExported } from "../../../shell/analytics/client";
-import { buildDocument, saveBuiltDocument } from "../api";
-import type { BuildResult, Draft, ExportFormat } from "../lib/types";
+import { exportBoth, type ExportReply } from "../api";
+import type { Draft } from "../lib/types";
 
-type Phase =
+export type Phase =
   | { kind: "idle" }
   | { kind: "working"; line: string; percent: number }
-  | { kind: "done"; saved: string[]; engine: string; notes: string[] }
+  | { kind: "confirm"; files: string[]; dir: string }
+  | { kind: "done"; saved: string[]; dir: string; engine: string; notes: string[] }
   | { kind: "error"; message: string };
 
-const NAMES: Record<ExportFormat, string> = { pdf: "PDF", docx: "Word file" };
+const TYPESETTING = "Typesetting the PDF and the Word file on this Mac";
 
-/** One Export. Builds the PDF, asks where to save it, then the Word file.
- *  Cancelling a save stops there and says what was saved. */
+/** One Export: one folder, both formats, named after the person on the resume.
+ *  Files already there are only replaced after an in-app yes. */
 export function useExport(draft: Draft) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 
-  async function run() {
-    if (phase.kind === "working") return;
-    const saved: string[] = [];
-    let last: BuildResult | null = null;
-    const notes = new Set<string>();
+  async function attempt(dir: string, replace: boolean) {
+    setPhase({
+      kind: "working",
+      line: dir ? TYPESETTING : "Choose a folder for the PDF and the Word file",
+      percent: 0,
+    });
+    let reply: ExportReply | null;
     try {
-      for (const format of ["pdf", "docx"] as const) {
-        setPhase({ kind: "working", line: `Typesetting the ${NAMES[format]} on this Mac`, percent: 0 });
-        const built = await buildDocument({ ...draft, format }, (progress) =>
-          setPhase({
-            kind: "working",
-            line: `Typesetting the ${NAMES[format]} on this Mac`,
-            percent: progress.percent,
-          }),
-        );
-        last = built;
-        for (const note of built.notes) notes.add(note);
-        setPhase({ kind: "working", line: `Choose where to save the ${NAMES[format]}`, percent: 100 });
-        const path = await saveBuiltDocument(built.suggestedName);
-        if (!path) break;
-        saved.push(path);
-      }
-      if (saved.length > 0) noteResumeExported();
-      setPhase({ kind: "done", saved, engine: last?.engine ?? "", notes: [...notes] });
+      reply = await exportBoth(draft, dir, replace, (percent) =>
+        setPhase({ kind: "working", line: TYPESETTING, percent }),
+      );
     } catch (err: unknown) {
       setPhase({
         kind: "error",
-        message: `${err instanceof Error ? err.message : String(err)} Nothing else was saved. Try Export again.`,
+        message: `${err instanceof Error ? err.message : String(err)} Nothing was saved. Try Export again.`,
       });
+      return;
     }
+    if (!reply) {
+      setPhase({ kind: "idle" });
+      return;
+    }
+    if (reply.kind === "conflict") {
+      setPhase({ kind: "confirm", files: reply.files, dir: reply.dir });
+      return;
+    }
+    noteResumeExported();
+    setPhase({ kind: "done", saved: reply.files, dir: reply.dir, engine: reply.engine, notes: reply.notes });
   }
 
-  return { phase, run, dismiss: () => setPhase({ kind: "idle" }) };
+  async function run() {
+    if (phase.kind === "working") return;
+    await attempt("", false);
+  }
+
+  async function replace() {
+    if (phase.kind !== "confirm") return;
+    await attempt(phase.dir, true);
+  }
+
+  return { phase, run, replace, dismiss: () => setPhase({ kind: "idle" }) };
 }
 
 export function ExportButton({ busy, onClick }: { busy: boolean; onClick: () => void }) {
@@ -65,27 +74,65 @@ export function ExportButton({ busy, onClick }: { busy: boolean; onClick: () => 
   );
 }
 
-export function ExportSheet({ phase, onClose }: { phase: Phase; onClose: () => void }) {
+function both(files: string[]): string {
+  return files.length === 2 ? `${files[0]} and ${files[1]}` : files.join(", ");
+}
+
+export function ExportSheet({
+  phase,
+  onClose,
+  onReplace,
+}: {
+  phase: Phase;
+  onClose: () => void;
+  onReplace: () => void;
+}) {
+  const keepRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    // The safe answer has focus, so Return never replaces a file by accident.
+    if (phase.kind === "confirm") keepRef.current?.focus();
+  }, [phase.kind]);
+
   if (phase.kind === "idle") return null;
   return (
-    <div className="export" role={phase.kind === "error" ? "alert" : "status"}>
+    <div
+      className="export"
+      role={phase.kind === "error" ? "alert" : phase.kind === "confirm" ? "alertdialog" : "status"}
+      aria-labelledby={phase.kind === "confirm" ? "export-confirm" : undefined}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || phase.kind === "working") return;
+        event.stopPropagation();
+        onClose();
+      }}
+    >
       {phase.kind === "working" ? (
         <>
           <p className="export__line">{phase.line}</p>
           <progress className="export__bar" max={100} value={phase.percent} aria-label="Export progress" />
         </>
       ) : null}
+      {phase.kind === "confirm" ? (
+        <>
+          <p className="export__line" id="export-confirm">
+            {phase.files.length === 1 ? `${phase.files[0]} is` : `${both(phase.files)} are`} already in that folder.
+            Replace {phase.files.length === 1 ? "it" : "them"}?
+          </p>
+          <p className="export__path">{phase.dir}</p>
+          <div className="export__actions">
+            <button type="button" className="btn" ref={keepRef} onClick={onClose}>
+              Keep the old files
+            </button>
+            <button type="button" className="btn btn--primary" onClick={onReplace}>
+              Replace
+            </button>
+          </div>
+        </>
+      ) : null}
       {phase.kind === "done" ? (
         <>
-          <p className="export__line">
-            {phase.saved.length === 0
-              ? "Nothing was saved."
-              : phase.saved.length === 1
-                ? "Saved one file. The Word file was not saved."
-                : "Saved the PDF and the Word file."}
-          </p>
+          <p className="export__line">Saved the PDF and the Word file. Finder shows them.</p>
           {phase.saved.map((path) => (
-            <p className="export__path" key={path}>
+            <p className="export__path" key={path} title={path}>
               {path}
             </p>
           ))}

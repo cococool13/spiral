@@ -1,6 +1,8 @@
 mod cache;
+mod history;
 mod model;
 mod net;
+mod recent;
 mod setter;
 mod wallhaven;
 
@@ -13,8 +15,20 @@ use tokio::sync::watch;
 use crate::paths::Root;
 use crate::settings::FitMode;
 
-pub use model::{Applied, DisplaySize, Rendition, SearchPage, SearchParams, UserError, WallId};
-pub use setter::{largest_display, set_wallpaper};
+pub use history::{restore_original, undo, Desktop, HistoryView, Restored};
+pub use model::{
+    Applied, DisplaySize, GalleryItem, Rendition, SearchPage, SearchParams, UserError, WallId,
+};
+pub use setter::{largest_display, set_wallpaper, NativeDesktop};
+
+/// The recent row, read from disk so it shows before Wallpaper finishes opening.
+pub fn recent_items(root: &Root) -> Vec<GalleryItem> {
+    recent::load(root).public()
+}
+
+pub fn history_view(root: &Root, desktop: &dyn Desktop) -> HistoryView {
+    history::load(root).view(desktop.supported())
+}
 
 pub fn stored_thumb_bytes(root: &Root) -> u64 {
     cache::thumb_cache_size(root)
@@ -200,8 +214,34 @@ impl WallpaperEngine {
             .await?
         };
         let applied = set(path.clone(), fit)?;
-        cache::prune_wallpapers(&self.root.wallpapers(), &path);
+        let mut keep = history::load(&self.root).pinned();
+        keep.push(path);
+        cache::prune_wallpapers(&self.root.wallpapers(), &keep);
+        let mut recent = recent::load(&self.root);
+        recent.add(item);
+        let _ = recent::save(&self.root, &recent);
         Ok(applied)
+    }
+
+    /// `apply`, plus a snapshot of the desktop it replaces for undo and
+    /// restore. A desktop Spiral cannot read is applied over without one.
+    pub async fn apply_tracked(
+        &self,
+        id: WallId,
+        fit: FitMode,
+        desktop: &dyn Desktop,
+    ) -> Result<Applied, UserError> {
+        let root = self.root.clone();
+        self.apply(id, fit, move |path, fit| {
+            let _guard = history::lock();
+            let before = desktop.capture().unwrap_or_default();
+            let applied = desktop.set(path, fit)?;
+            let mut stored = history::load(&root);
+            stored.record(before, &root.wallpapers());
+            let _ = history::save(&root, &stored);
+            Ok(applied)
+        })
+        .await
     }
 
     pub async fn thumb(&self, id: &WallId, rendition: Rendition) -> Result<Vec<u8>, UserError> {
@@ -251,12 +291,12 @@ impl WallpaperEngine {
         }
     }
 
+    /// This session's search results first, then the recent row saved on
+    /// disk, so an item set in an earlier launch can be set again.
     fn item(&self, id: &WallId) -> Result<StoredItem, UserError> {
-        self.catalog
-            .lock()
-            .expect("catalog")
-            .get(id)
-            .cloned()
+        let known = self.catalog.lock().expect("catalog").get(id).cloned();
+        known
+            .or_else(|| recent::load(&self.root).find(id))
             .ok_or_else(UserError::unknown)
     }
 }
@@ -492,5 +532,140 @@ mod tests {
         assert_eq!(script.hits.load(Ordering::Relaxed), hits);
         assert!(outside.is_file());
         assert_eq!(fs::read(&outside).unwrap(), b"outside");
+    }
+
+    /// One screen whose picture is whatever was last set or restored.
+    struct FakeDesktop(Mutex<history::Screen>);
+
+    impl FakeDesktop {
+        fn showing(path: &std::path::Path) -> Self {
+            Self(Mutex::new(history::Screen {
+                name: "Built-in Display".into(),
+                index: 0,
+                path: path.to_path_buf(),
+                scaling: Some(3),
+                clipping: Some(true),
+            }))
+        }
+
+        fn path(&self) -> std::path::PathBuf {
+            self.0.lock().unwrap().path.clone()
+        }
+    }
+
+    impl Desktop for FakeDesktop {
+        fn capture(&self) -> Result<Vec<history::Screen>, UserError> {
+            Ok(vec![self.0.lock().unwrap().clone()])
+        }
+
+        fn set(&self, path: std::path::PathBuf, _fit: FitMode) -> Result<Applied, UserError> {
+            let mut screen = self.0.lock().unwrap();
+            screen.path = path;
+            screen.scaling = Some(3);
+            Ok(Applied::here(1))
+        }
+
+        fn restore(&self, screens: &[history::Screen]) -> Result<u32, UserError> {
+            *self.0.lock().unwrap() = screens[0].clone();
+            Ok(1)
+        }
+    }
+
+    fn jpeg_engine(dir: &Dir) -> (Arc<WallpaperEngine>, Arc<Script>) {
+        let script = Arc::new(Script {
+            hits: AtomicUsize::new(0),
+            body: vec![0xFF, 0xD8, 0xFF, 0x00],
+            fail: false,
+        });
+        let transport: SharedTransport = script.clone();
+        let engine = WallpaperEngine::with_transport(dir.0.clone(), transport, None);
+        (engine, script)
+    }
+
+    #[tokio::test]
+    async fn undo_walks_back_through_applies_and_restore_puts_back_the_original() {
+        let dir = scratch("undo");
+        seed(&dir.0, 3);
+        let original = dir.0.dir().join("beach.jpg");
+        fs::write(&original, b"mine").unwrap();
+        let desktop = FakeDesktop::showing(&original);
+        let (engine, _) = jpeg_engine(&dir);
+        engine.cached_first_page().unwrap();
+        let first = WallId::parse("w-0").unwrap();
+        let second = WallId::parse("w-1").unwrap();
+        engine
+            .apply_tracked(first.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        engine
+            .apply_tracked(second.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-1.jpg"));
+        assert!(
+            dir.0.wallpapers().join("w-0.jpg").is_file(),
+            "a file undo may put back is pinned"
+        );
+        let view = history_view(&dir.0, &desktop);
+        assert_eq!(view.undo, 2);
+        assert_eq!(view.original.unwrap().name, "beach.jpg");
+
+        let back = undo(&dir.0, &desktop).unwrap();
+        assert_eq!(back.current, Some(first));
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-0.jpg"));
+
+        let restored = restore_original(&dir.0, &desktop).unwrap();
+        assert_eq!(restored.current, None);
+        assert_eq!(desktop.path(), original);
+        undo(&dir.0, &desktop).unwrap();
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-0.jpg"));
+
+        fs::remove_file(&original).unwrap();
+        let err = restore_original(&dir.0, &desktop).unwrap_err();
+        assert_eq!(err.to_string(), "restore_missing:beach.jpg");
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-0.jpg"));
+    }
+
+    #[tokio::test]
+    async fn undo_with_nothing_recorded_says_so() {
+        let dir = scratch("empty-undo");
+        let desktop = FakeDesktop::showing(std::path::Path::new("/nowhere.jpg"));
+        assert_eq!(
+            undo(&dir.0, &desktop).unwrap_err().to_string(),
+            "nothing_to_undo"
+        );
+        assert_eq!(
+            restore_original(&dir.0, &desktop).unwrap_err().to_string(),
+            "no_original"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_recent_item_from_an_earlier_launch_applies_and_downloads_again_if_evicted() {
+        let dir = scratch("recent");
+        seed(&dir.0, 3);
+        let desktop = FakeDesktop::showing(std::path::Path::new("/nowhere.jpg"));
+        let (engine, _) = jpeg_engine(&dir);
+        engine.cached_first_page().unwrap();
+        let id = WallId::parse("w-2").unwrap();
+        engine
+            .apply_tracked(id.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        assert_eq!(recent_items(&dir.0)[0].id, id);
+
+        fs::remove_file(dir.0.last_page()).unwrap();
+        fs::remove_dir_all(dir.0.wallpapers()).unwrap();
+        let (fresh, script) = jpeg_engine(&dir);
+        fresh
+            .apply_tracked(id.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        assert_eq!(script.hits.load(Ordering::Relaxed), 1);
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-2.jpg"));
+        assert!(fresh
+            .apply_tracked(WallId::parse("w-9").unwrap(), FitMode::Fill, &desktop)
+            .await
+            .is_err());
     }
 }

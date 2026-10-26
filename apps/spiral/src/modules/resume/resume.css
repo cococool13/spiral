@@ -380,6 +380,12 @@
   font-size: 12px;
 }
 
+.export__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
 .setup-card {
   display: flex;
   flex-direction: column;

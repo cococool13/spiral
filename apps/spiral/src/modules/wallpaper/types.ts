@@ -74,6 +74,46 @@ export function parseApplied(value: unknown): Applied {
   return { displays: value.displays, spaces: "current" };
 }
 
+/** What an undo or a restore put back. */
+export interface Restored {
+  displays: number;
+  /** File names that were gone, so those screens were left as they were. */
+  missing: string[];
+  /** The Spiral wallpaper now showing, or null for the person's own picture. */
+  current: string | null;
+}
+
+export interface HistoryView {
+  /** False where Spiral cannot read the desktop. The controls stay hidden. */
+  supported: boolean;
+  undo: number;
+  original: { name: string; exists: boolean } | null;
+}
+
+export function parseRestored(value: unknown): Restored {
+  if (!isRecord(value) || typeof value.displays !== "number" || !Array.isArray(value.missing)) {
+    throw new Error("Spiral could not read what it put back.");
+  }
+  const current = typeof value.current === "string" && WALL_ID.test(value.current) ? value.current : null;
+  return {
+    displays: value.displays,
+    missing: value.missing.filter((name): name is string => typeof name === "string"),
+    current,
+  };
+}
+
+export function parseHistory(value: unknown): HistoryView {
+  if (!isRecord(value) || typeof value.supported !== "boolean" || typeof value.undo !== "number") {
+    throw new Error("Spiral could not read the wallpaper history.");
+  }
+  const raw = value.original;
+  const original =
+    isRecord(raw) && typeof raw.name === "string" && typeof raw.exists === "boolean"
+      ? { name: raw.name, exists: raw.exists }
+      : null;
+  return { supported: value.supported, undo: value.undo, original };
+}
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }

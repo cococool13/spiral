@@ -70,6 +70,15 @@ resume_calls! {
     Check { doc: Value, text: String } => Free, Cancel;
     ReviewWording { doc: Value } => Licensed, Cancel;
     SaveBuilt { path: String } => Licensed, Cancel;
+    ExportBoth {
+        doc: Value,
+        look: String,
+        accent: String,
+        aim: String,
+        tighten: bool,
+        dir: String,
+        replace: bool
+    } => Licensed, Cancel;
     SaveDocument { stored: Value } => Licensed, Cancel;
     LoadDocument {} => Free, Cancel;
     StorageInfo {} => Free, Cancel;

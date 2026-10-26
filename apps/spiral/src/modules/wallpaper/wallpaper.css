@@ -563,6 +563,14 @@
   font-size: 12px;
 }
 
+.activity__restore {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-8);
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--room-line);
+}
+
 .activity__list {
   list-style: none;
 }
