@@ -436,7 +436,7 @@ weights cut to 3. Kept, with reasons:
   lighting, Windows ClearType and real devices are not checked.
 - Cobalt and Ink shader swatches are `rgb()` literals: product content, not brand tokens.
 - `themeColor` is an `rgb()` literal equal to `--glass-400`, because metadata cannot read CSS.
-- The OG image is still the old `hero-exit.webp`.
+- The OG image is now `brand/hero/og-card.png`, rendered from the live hero by `scripts/render-og.mjs` (was the old `hero-exit.webp`).
 - Finishing pass: weights cut to three (400/500/600), panel-in 280 ms, `scroll-margin-top` for anchored sections, the brew command wraps on a phone. Sloplint's closed-menu overflow at 375 is a false positive (panel hidden and inert).
 
 ### What makes this unmistakably Spiral?

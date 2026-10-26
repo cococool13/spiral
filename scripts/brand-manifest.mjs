@@ -37,7 +37,7 @@ export const SURFACES = {
       { from: "tokens.json", to: "tokens.json", mode: "tree" },
       { from: "tokens.json", to: "lib/brand-tokens.json", mode: "file" },
       { from: "fonts", to: "fonts", mode: "tree" },
-      { from: "hero/hero-exit.webp", to: "hero/hero-exit.webp", mode: "tree" },
+      { from: "hero/og-card.png", to: "hero/og-card.png", mode: "tree" },
     ],
     hex: {
       scan: ["app", "components", "lib"],
