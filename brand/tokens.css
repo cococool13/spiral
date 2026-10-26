@@ -95,3 +95,43 @@
     --on-red: #ffffff;
   }
 }
+
+/* Identity 04 — Red Glass (site) + Nocturnal (app). 2026-10-26.
+   One deep-red material ramp shared by both surfaces. Helix #d52e2b stays the mark.
+   Older Identity 03 / Proof Plate tokens above remain until every screen moves over.
+   Fonts: each surface declares its own @font-face (paths differ); files ship via sync-brand. */
+
+
+:root {
+  /* Deep-red glass material ramp (inspora "Liquid glass"). */
+  --glass-950: #2a0508;
+  --glass-900: #3f060b;
+  --glass-850: #520910;
+  --glass-800: #6a0c13;
+  --glass-700: #861017; /* deepest edge */
+  --glass-600: #a01a22;
+  --glass-500: #b8222c; /* the red */
+  --glass-400: #c3383f; /* rim highlight */
+  --glass-capsule: #9d1f27; /* selected capsule fill */
+
+  /* Site (Red Glass): paper band + ink on paper. */
+  --site-paper: #f7f0e9;
+  --site-paper-2: #ecdfd5;
+  --site-ink: #230306;
+  --site-mute: #d8aaa6;
+
+  /* App (Nocturnal): a dark room lit by the wallpaper. */
+  --room: #0b0706;
+  --room-panel: #120c0a;
+  --room-panel-2: #1a1210;
+  --room-paper: #efe4d7;
+  --room-mute: #a1948a;
+  --room-line: rgb(239 228 215 / 0.12);
+  --on-glass: #ffffff;
+
+  --font-site-display: "Familjen Grotesk", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Bodoni Moda", "Bodoni 72", Didot, Georgia, serif;
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
+
+  --spring-capsule: 280ms;
+}

@@ -6,6 +6,9 @@ export const BRAND_FONTS = [
   "host-grotesk-400-italic.woff2",
   "host-grotesk-500.woff2",
   "host-grotesk-600.woff2",
+  "familjen-grotesk-var.woff2",
+  "bodoni-moda-var.woff2",
+  "bodoni-moda-italic-var.woff2",
 ];
 
 const APP_MARKS = [
