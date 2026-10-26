@@ -180,11 +180,47 @@ async fn wallpaper_apply(
         .expect("settings")
         .fit_mode;
     engine
-        .apply(id, fit, |path, fit| {
-            wallpaper::set_wallpaper(&app, path, fit)
-        })
+        .apply_tracked(id, fit, &wallpaper::NativeDesktop(&app))
         .await
         .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn wallpaper_recent(shell: State<'_, shell::Shell>) -> Vec<wallpaper::GalleryItem> {
+    wallpaper::recent_items(shell.root())
+}
+
+#[tauri::command]
+fn wallpaper_history(app: AppHandle, shell: State<'_, shell::Shell>) -> wallpaper::HistoryView {
+    wallpaper::history_view(shell.root(), &wallpaper::NativeDesktop(&app))
+}
+
+#[tauri::command]
+async fn wallpaper_undo(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+) -> Result<wallpaper::Restored, String> {
+    let root = shell.root().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        wallpaper::undo(&root, &wallpaper::NativeDesktop(&app))
+    })
+    .await
+    .map_err(|_| "apply_failed".to_string())?
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+async fn wallpaper_restore_original(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+) -> Result<wallpaper::Restored, String> {
+    let root = shell.root().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        wallpaper::restore_original(&root, &wallpaper::NativeDesktop(&app))
+    })
+    .await
+    .map_err(|_| "apply_failed".to_string())?
+    .map_err(|err| err.to_string())
 }
 
 fn suggested_save_name(path: &str) -> String {
@@ -454,6 +490,10 @@ pub fn run() {
             wallpaper_prefetch_page,
             wallpaper_stage_full,
             wallpaper_apply,
+            wallpaper_recent,
+            wallpaper_history,
+            wallpaper_undo,
+            wallpaper_restore_original,
             general_view,
             general_update,
             thumb_cache_size,
