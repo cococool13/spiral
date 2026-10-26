@@ -28,7 +28,7 @@ export interface SpiralApp {
   sections: SpiralSection[];
 }
 
-const RELEASE = "https://github.com/cococool13/spiral/releases/download/v2.0.1";
+const RELEASE = "https://github.com/cococool13/spiral/releases/download/v2.0.2";
 
 export const apps: SpiralApp[] = [
   {
@@ -36,11 +36,11 @@ export const apps: SpiralApp[] = [
     name: "Spiral",
     tagline: "Wallpaper and Resume. One window.",
     status: "live",
-    version: "2.0.1",
+    version: "2.0.2",
     brewCask: "spiral-wallpaper",
     downloads: {
       mac: {
-        url: `${RELEASE}/Spiral_2.0.1_universal.dmg`,
+        url: `${RELEASE}/Spiral_2.0.2_universal.dmg`,
         label: "Download for Mac",
       },
       windows: {

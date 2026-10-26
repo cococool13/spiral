@@ -4737,7 +4737,7 @@ dependencies = [
 
 [[package]]
 name = "resume-core"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "docx-rs",
  "futures-util",
@@ -4761,7 +4761,7 @@ dependencies = [
 
 [[package]]
 name = "resume-proto"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -5556,7 +5556,7 @@ dependencies = [
 
 [[package]]
 name = "spiral-resume-engine"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "resume-core",
  "resume-proto",
@@ -5567,7 +5567,7 @@ dependencies = [
 
 [[package]]
 name = "spiral-wallpaper"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "objc2",
  "objc2-app-kit",
