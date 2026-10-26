@@ -52,7 +52,7 @@ app restraint. See [`collection/README.md`](../collection/README.md).
 
 Spiral is a desktop window on macOS and Windows. `apps/spiral` and `collection`
 are independent pnpm projects, not a root workspace. Closing the window quits.
-There is no tray and no background process.
+There is no tray. Nothing runs in the background except Spiral Live while a live wallpaper is on (approved 2026-10-26, ships in 2.1), always shown in the menu bar.
 
 Work happens on the person's machine, on their files. Homebrew casks in
 `cococool13/homebrew-spiral` are how macOS installs stay current. Releases are

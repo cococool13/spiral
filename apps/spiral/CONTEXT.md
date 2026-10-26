@@ -8,25 +8,25 @@ the file is given — those two must not drift apart.
 | Term | Meaning |
 | --- | --- |
 | **Spiral Wallpaper** | The first app in the Spiral collection: click a wallpaper, it downloads and applies. macOS and Windows. _Avoid_: the wallpaper changer, Spiral Wallpapers. |
-| **The errand** | What a session is. Open, browse, click, done — under a minute. Anything that turns the errand into a workflow is out of scope, which is why there is no library, no favourites sync and no account. |
-| **Closing the window quits** | Not a preference. There is no tray, no background process and nothing left running once the window is gone. |
+| **The errand** | What a session is. Open, browse, click, done — under a minute. Anything that turns the errand into a workflow is out of scope, which is why there is no favourites list, no sync and no account. |
+| **Closing the window quits** | The app always quits with its window. Only **Spiral Live** (approved, not built yet) can stay, only while a live wallpaper runs, and it always shows a menu-bar item. A still leaves nothing running. |
 | **Spiral Collection license** | One purchase unlocks every app. On boot, `license_ensure` verifies the signed key offline and asks Spiral's licensing server about once a week (30-day grace when it cannot be reached). Without a stored key, **Activate** blocks the main UI until a key validates. Buy link: `src/lib/checkout.ts`. See [`docs/licensing.md`](../../docs/licensing.md). |
 
 ## Sources
 
 | Term | Meaning |
 | --- | --- |
-| **Source** | Wallhaven, via `search` / `getThumb` / `apply` in `src/sources/index.ts`. |
-| **Wallhaven** | The only source that ships. SFW search only; there is no API-key path and no NSFW category, by product decision rather than by omission. |
-| **Adding a source** | A product decision, not a missing interface. Unsplash and Pexels shipped briefly and were removed. |
-| **Wallpaper** | One image as a source describes it: an id, a resolution, a thumbnail URL and a full-resolution URL (`WallpaperItem` in `src-tauri/src/net.rs`). |
+| **Source** | Wallhaven, via `src-tauri/src/wallpaper/wallhaven.rs`. New sources become adapters behind one `Source` trait (see the 2026-10-26 spec §7). |
+| **Wallhaven** | The default still source; today the only one that ships. SFW search only; there is no API-key path and no NSFW category, by product decision rather than by omission. |
+| **Adding a source** | A product decision. The approved list is in `docs/specs/2026-10-26-live-wallpaper-and-sources.md` §7. Unsplash and Pexels shipped briefly and were removed; Pexels terms forbid wallpaper apps. |
+| **Wallpaper** | One image as a source describes it: an id, a resolution, a thumbnail URL and a full-resolution URL (`WallpaperItem` in `src-tauri/src/wallpaper/net.rs`). |
 | **Prefixed id** | Every id carries its source's prefix (`w-…` for Wallhaven) so two sources can never collide in the same cache directory. |
 
 ## Network and disk
 
 | Term | Meaning |
 | --- | --- |
-| **The Rust boundary** | Wallhaven traffic goes through `src-tauri/src/net.rs`, never the webview. On boot, `license_ensure` calls Spiral's validator from `spiral-license`. Neither path is the webview. |
+| **The Rust boundary** | All source traffic goes through `src-tauri/src/wallpaper/net.rs`, never the webview. Spiral Live will make no network calls. On boot, `license_ensure` calls Spiral's validator from `spiral-license`. Neither path is the webview. |
 | **Error code** | A short string the backend returns — `offline`, `rate_limited`, `bad_response`, `download_failed`, `too_large`, `bad_image`, `apply_failed` — which `errorCopy` maps to brand copy. The backend never writes a user-facing sentence. `cache_failed` never reaches `errorCopy`; Settings states a cache-clear failure itself. |
 | **Thumbnail cache** | The on-disk LRU cache of thumbnails in app-data, capped at 200 MB. The cap is stated in Settings; a cap the user cannot see is not a promise. |
 | **Validated as an image** | Downloaded bytes are checked to actually start like an image before they are written to disk or handed to the OS. The extension comes from the bytes, never from the URL. |
