@@ -48,12 +48,12 @@ link inside any app. Full flow, validator deploy, and where checkout URLs live:
 
 | App | What it does | Status | Get it |
 | --- | --- | --- | --- |
-| [**Spiral**](apps/spiral/) | Wallpaper and Resume in one window. Click a wallpaper and it downloads and applies. A resume comes out as a typeset PDF or a Word file, and a fact is not allowed to change. | Published download is Spiral Wallpaper **v1.0.4**. This tree is **2.0.0** and is not published yet. macOS and Windows. | [Download 1.0.4](https://github.com/cococool13/spiral/releases/latest) · [Resume 0.1.2](https://github.com/cococool13/spiral/releases/tag/resume-v0.1.2) |
+| [**Spiral**](apps/spiral/) | Wallpaper and Resume in one window. Click a wallpaper and it downloads and applies. A resume comes out as a typeset PDF or a Word file, and a fact is not allowed to change. | Published download is Spiral **v2.0.2** on macOS. Windows stays on Spiral Wallpaper 1.0.4 until its installer rehearsal passes. | [Download](https://github.com/cococool13/spiral/releases/latest) · [Windows 1.0.4](https://github.com/cococool13/spiral/releases/tag/v1.0.4) |
 
 Resume embeds the Typst typesetter in a helper process so the preview and the
 exported PDF come from one engine. That helper is larger than the wallpaper
-shell. The published 1.0.4 download does not include it. Resume 0.1.2 remains
-at its release tag.
+shell. The Mac download includes it. The Windows download is still Wallpaper
+alone.
 
 ## Install
 
@@ -92,7 +92,7 @@ That box appears because the file is not code-signed yet.
 Every release includes `SHA256SUMS.txt`. Compare it to the file you downloaded:
 
 ```bash
-shasum -a 256 ~/Downloads/Spiral.Wallpaper_1.0.4_universal.dmg
+shasum -a 256 ~/Downloads/Spiral_2.0.2_universal.dmg
 ```
 
 If the line matches, the file is byte-for-byte what was published here.
@@ -199,8 +199,8 @@ itself is not in the release. It is a download the user chooses in Settings.
 git tag vX.Y.Z && git push origin vX.Y.Z
 
 # or let the release script do the bump, the commit and the tag
-node scripts/release.mjs spiral 2.0.0
-node scripts/release.mjs spiral 2.0.0 --push
+node scripts/release.mjs spiral 2.0.3
+node scripts/release.mjs spiral 2.0.3 --push
 ```
 
 The workflow refuses to publish a partial release. It stops before building if
@@ -255,9 +255,10 @@ things it cannot derive, checks the certificate password actually opens the
 
 ## Roadmap, stated plainly
 
-The published download is Spiral Wallpaper v1.0.4, signed and notarized on Mac.
-Windows is still unsigned. Spiral 2.0.0 is this tree. It is not published.
-Wallhaven stays the only wallpaper source. Animated wallpapers are out of scope.
+The published download is Spiral v2.0.2, signed and notarized on Mac. Windows
+stays on Spiral Wallpaper 1.0.4, unsigned, until its installer rehearsal passes.
+Still sources are listed in docs/specs/2026-10-26-live-wallpaper-and-sources.md §7.
+Live wallpaper is approved for 2.1.
 Resume keeps the rule that a fact may not change.
 
 ---

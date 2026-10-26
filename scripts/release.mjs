@@ -242,7 +242,7 @@ if (bump) {
   const siteChanged = run("git", ["status", "--porcelain", "--", "collection/lib"]).out;
   if (siteChanged) {
     say("Committing the site catalogue to match…");
-    run("git", ["add", "collection/lib/apps.ts", "collection/lib/appPages.ts"]);
+    run("git", ["add", "collection/lib"]);
     run("git", ["commit", "-aqm", `chore: point the catalogue at ${name} ${version}`]);
   }
 }

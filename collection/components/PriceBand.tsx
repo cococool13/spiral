@@ -45,8 +45,9 @@ export default function PriceBand() {
             <DownloadMenu variant="purchase" />
           </div>
           <p className="note">
-            Today’s download is Spiral Wallpaper {product.version}, notarized by Apple.
-            Resume joins it in Spiral 2.0, on the same key.{" "}
+            On Mac, today’s download is Spiral {product.version}, notarized by Apple, with
+            Wallpaper and Resume on the same key. On Windows it is still Spiral Wallpaper
+            1.0.4 for now.{" "}
             <a href={RESEND_URL} rel="noopener noreferrer">
               Lost your key?
             </a>

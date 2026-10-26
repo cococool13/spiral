@@ -4,7 +4,7 @@ Brand system, native apps, and the spiralcc.tech site.
 **Website host:** Cloudflare Pages project `spiral-collection` (`spiralcc.tech`;
 `spiral-collection.pages.dev` remains the project hostname).
 
-Current published download **v1.0.4** (Spiral Wallpaper). The app in this repo is Spiral 2.0.0.
+Current published download **v2.0.2** (Spiral, macOS). Windows stays on Spiral Wallpaper 1.0.4 until the installer hook rehearsal passes (`windowsHeld` in `scripts/apps.manifest.mjs`).
 
 > **Two Wallpaper codebases exist in history.** This repo (`github.com/cococool13/spiral`)
 > is the shipped one — pnpm **11.9**. **Closing the window quits the app**; only a running live wallpaper may keep the separate **Spiral Live** helper alive, always shown in the menu bar (approved 2026-10-26, not built yet). The Codex-built

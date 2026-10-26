@@ -65,7 +65,9 @@ test("a future catalogue bump writes Spiral asset names", () => {
   const src = readFileSync(new URL("../collection/lib/apps.ts", import.meta.url), "utf8");
   const next = rewriteCatalogue(src, "spiral", "2.0.0");
   assert.match(next, /Spiral_2\.0\.0_universal\.dmg/);
-  assert.match(next, /Spiral_2\.0\.0_x64-setup\.exe/);
+  // Windows is held at 1.0.4 until its installer rehearsal passes.
+  assert.match(next, /releases\/download\/v1\.0\.4\/Spiral\.Wallpaper_1\.0\.4_x64-setup\.exe/);
+  assert.doesNotMatch(next, /Spiral_2\.0\.0_x64-setup\.exe/);
   assert.match(next, /releases\/download\/v2\.0\.0/);
   assert.match(next, /version: "2\.0\.0"/);
   assert.doesNotMatch(next, /Spiral\.Wallpaper_2\.0\.0/);
@@ -79,7 +81,7 @@ test("the spiral release caller passes the helper bundle config", () => {
   assert.match(build, /sidecar: true/);
   assert.match(build, /updater: true/);
   assert.match(build, /github-latest: true/);
-  assert.match(build, /windows: true/);
+  assert.match(build, /windows: false/);
   const release = readFileSync(new URL("../.github/workflows/release-app.yml", import.meta.url), "utf8");
   assert.match(release, /sign-helpers\.mjs/);
   assert.match(release, /unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID/);

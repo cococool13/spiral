@@ -20,9 +20,20 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { sameFamily } from "./apps.manifest.mjs";
+import { APPS, sameFamily } from "./apps.manifest.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+// A platform held on an older build on purpose (`windowsHeld` in the
+// manifest) is not a half-done bump, so its link is exempt from the
+// version match. Only that exact URL is.
+const HELD = new Set(
+  Object.values(APPS).flatMap(({ site }) =>
+    site?.windowsHeld
+      ? [`https://github.com/${site.owner}/${site.repo}/releases/download/${site.windowsHeld.tag}/${site.windowsHeld.asset}`]
+      : [],
+  ),
+);
 const SOURCE = "collection/lib/apps.ts";
 
 let failed = false;
@@ -94,7 +105,7 @@ function check() {
     for (const url of urls) {
       const parts = dissect(url);
       // A `source` app legitimately links at a repository rather than a file.
-      if (!parts) continue;
+      if (!parts || HELD.has(url)) continue;
 
       const tagVersion = versionOf(parts.tag);
       if (tagVersion && tagVersion !== version) {

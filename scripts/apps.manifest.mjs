@@ -5,7 +5,7 @@
 export const APPS = {
   spiral: {
     name: "Spiral",
-    builds: "macOS + Windows",
+    builds: "macOS only (Windows held at 1.0.4)",
     workflow: "build.yml",
     tag: (v) => `v${v}`,
     dir: "apps/spiral",
@@ -20,6 +20,14 @@ export const APPS = {
       assets: {
         mac: (v) => `Spiral_${v}_universal.dmg`,
         windows: (v) => `Spiral_${v}_x64-setup.exe`,
+      },
+      // Windows stays on Wallpaper 1.0.4 until the installer hook rehearsal
+      // passes on a real PC (release-app.yml refuses Windows without it).
+      // While this is set, a bump leaves the site's Windows link on this
+      // build. Remove it, and set `windows: true` in build.yml, to ship both.
+      windowsHeld: {
+        tag: "v1.0.4",
+        asset: "Spiral.Wallpaper_1.0.4_x64-setup.exe",
       },
       all: "latest",
     },

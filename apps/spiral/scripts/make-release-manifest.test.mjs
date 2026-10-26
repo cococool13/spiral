@@ -82,3 +82,17 @@ test("a bundle without its signature still refuses to write a manifest", () => {
     return true;
   });
 });
+
+test("a macOS-only release writes no Windows key and needs no Windows bundle", () => {
+  const dir = mkdtempSync(join(tmpdir(), "manifest-mac-only-"));
+  writeFileSync(join(dir, "Spiral.app.tar.gz"), "mac");
+  writeFileSync(join(dir, "Spiral.app.tar.gz.sig"), "MACSIG\n");
+  writeFileSync(join(dir, "Spiral_2.0.0_universal.dmg"), "dmg");
+  execFileSync(
+    process.execPath,
+    [script, "--dir", dir, "--version", "2.0.0", "--repo", "cococool13/spiral", "--date", "2026-10-23T14:00:00Z", "--no-windows"],
+    { stdio: "pipe" },
+  );
+  const written = JSON.parse(readFileSync(join(dir, "latest.json"), "utf8"));
+  assert.deepEqual(Object.keys(written.platforms), ["darwin-aarch64"]);
+});
