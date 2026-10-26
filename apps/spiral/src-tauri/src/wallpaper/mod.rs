@@ -1,8 +1,11 @@
+mod activity;
 mod cache;
+pub mod commands;
+pub mod displays;
 mod model;
 mod net;
 mod setter;
-mod wallhaven;
+mod sources;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -27,12 +30,54 @@ pub fn clear_stored_thumbs(root: &Root) -> Result<(), UserError> {
 #[cfg(debug_assertions)]
 pub use setter::current_wallpaper;
 
-use model::{GalleryQuery, ResolvedSearch, StoredItem, StoredPage};
-use net::{LiveTransport, SharedTransport};
+pub use activity::Entry as ActivityEntry;
+pub use model::Credit;
+pub use sources::SourceInfo;
+
+use model::{GalleryQuery, ResolvedSearch, SourceFilter, StoredItem, StoredPage};
+use net::{LiveTransport, Net, SharedTransport};
+use sources::Registry;
+
+/// `$APPDATA/sources.json`: a person's own optional API keys. Mode 0600, never
+/// logged, sent only to the source it belongs to.
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct SourceKeys {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    smithsonian: Option<String>,
+}
+
+fn keys_path(root: &Root) -> std::path::PathBuf {
+    root.dir().join("sources.json")
+}
+
+fn read_keys(root: &Root) -> SourceKeys {
+    std::fs::read(keys_path(root))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default()
+}
+
+fn write_keys(root: &Root, keys: &SourceKeys) -> Result<(), UserError> {
+    let path = keys_path(root);
+    if keys.smithsonian.is_none() {
+        let _ = std::fs::remove_file(&path);
+        return Ok(());
+    }
+    let bytes = serde_json::to_vec(keys).map_err(|_| UserError::bad())?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, bytes).map_err(|_| UserError::bad())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o600));
+    }
+    std::fs::rename(&tmp, &path).map_err(|_| UserError::bad())
+}
 
 pub struct WallpaperEngine {
     root: Root,
-    transport: SharedTransport,
+    net: Arc<Net>,
+    sources: Registry,
     display: Option<DisplaySize>,
     catalog: Mutex<HashMap<WallId, StoredItem>>,
     search_job: Mutex<Option<SearchJob>>,
@@ -54,9 +99,12 @@ impl WallpaperEngine {
         transport: SharedTransport,
         display: Option<DisplaySize>,
     ) -> Arc<Self> {
+        let net = Arc::new(Net::new(transport, root.dir()));
+        let sources = Registry::new(read_keys(&root).smithsonian);
         Arc::new(Self {
             root,
-            transport,
+            net,
+            sources,
             display,
             catalog: Mutex::new(HashMap::new()),
             search_job: Mutex::new(None),
@@ -73,9 +121,61 @@ impl WallpaperEngine {
                     categories: "111".into(),
                     sorting: "toplist".into(),
                     page: 1,
+                    ..Default::default()
                 })
                 .await;
         });
+    }
+
+    pub fn sources_info(&self) -> Vec<SourceInfo> {
+        self.sources.info()
+    }
+
+    pub fn activity(&self, limit: usize) -> Vec<ActivityEntry> {
+        self.net.activity().list(limit)
+    }
+
+    pub fn clear_activity(&self) {
+        self.net.activity().clear();
+    }
+
+    /// Stores (or with `None`, removes) a person's own Smithsonian key. A key
+    /// that is not 20 to 64 letters and digits is refused, not stored.
+    pub fn set_source_key(&self, source: &str, key: Option<String>) -> Result<(), UserError> {
+        if source != "smithsonian" {
+            return Err(UserError::bad());
+        }
+        let key = match key.filter(|key| !key.trim().is_empty()) {
+            Some(raw) => Some(sources::smithsonian::clean_key(raw).ok_or_else(UserError::bad)?),
+            None => None,
+        };
+        write_keys(
+            &self.root,
+            &SourceKeys {
+                smithsonian: key.clone(),
+            },
+        )?;
+        self.sources.set_smithsonian_key(key);
+        Ok(())
+    }
+
+    /// The credit for one item: from the search answer, or for ESA from the
+    /// image's own page (one cached request).
+    pub async fn credit(&self, id: &WallId) -> Result<Option<Credit>, UserError> {
+        let item = self.item(id)?;
+        let Some(source) = self.sources.for_item(id) else {
+            return Ok(None);
+        };
+        let credit = source.credit(&item, &self.net).await;
+        if let Some(found) = &credit {
+            if item.credit.as_ref() != Some(found) {
+                let mut catalog = self.catalog.lock().expect("catalog");
+                if let Some(entry) = catalog.get_mut(id) {
+                    entry.credit = Some(found.clone());
+                }
+            }
+        }
+        Ok(credit)
     }
 
     pub fn cached_first_page(&self) -> Option<SearchPage> {
@@ -123,6 +223,10 @@ impl WallpaperEngine {
         let Ok(query) = GalleryQuery::parse(&params) else {
             return;
         };
+        // Other sources have small hourly budgets; only Wallhaven pages ahead.
+        if query.source != SourceFilter::Wallhaven {
+            return;
+        }
         let resolved = ResolvedSearch::from_query(query, self.display);
         let token = self.begin_prefetch();
         let this = Arc::clone(self);
@@ -143,7 +247,7 @@ impl WallpaperEngine {
                 }
                 let _ = cache::download_thumb(
                     &this.root,
-                    this.transport.as_ref(),
+                    &this.net,
                     &item.id,
                     item.thumb(Rendition::Small),
                     Rendition::Small,
@@ -170,13 +274,7 @@ impl WallpaperEngine {
 
     pub async fn stage_one(&self, id: WallId) -> Result<(), UserError> {
         let item = self.item(&id)?;
-        let _ = cache::download_full(
-            &self.root.staging(),
-            self.transport.as_ref(),
-            &id,
-            &item.full,
-        )
-        .await?;
+        let _ = cache::download_full(&self.root.staging(), &self.net, &id, &item.full).await?;
         cache::cap_staging(&self.root.staging());
         Ok(())
     }
@@ -191,16 +289,26 @@ impl WallpaperEngine {
         } else if let Some(existing) = cache::find_full(&self.root.wallpapers(), &id) {
             existing
         } else {
-            cache::download_full(
-                &self.root.wallpapers(),
-                self.transport.as_ref(),
-                &id,
-                &item.full,
-            )
-            .await?
+            cache::download_full(&self.root.wallpapers(), &self.net, &id, &item.full).await?
         };
         let applied = set(path.clone(), fit)?;
         cache::prune_wallpapers(&self.root.wallpapers(), &path);
+        let source = id
+            .as_str()
+            .chars()
+            .next()
+            .and_then(sources::id_for_prefix)
+            .unwrap_or("unknown");
+        let credit = self
+            .catalog
+            .lock()
+            .expect("catalog")
+            .get(&id)
+            .and_then(|item| item.credit.as_ref())
+            .map(|credit| format!("{} · {}", credit.line, credit.licence));
+        self.net
+            .activity()
+            .append(&activity::Entry::applied(source, id.as_str(), credit));
         Ok(applied)
     }
 
@@ -209,14 +317,7 @@ impl WallpaperEngine {
             return Ok(bytes);
         }
         let item = self.item(id)?;
-        cache::download_thumb(
-            &self.root,
-            self.transport.as_ref(),
-            id,
-            item.thumb(rendition),
-            rendition,
-        )
-        .await
+        cache::download_thumb(&self.root, &self.net, id, item.thumb(rendition), rendition).await
     }
 
     async fn fetch_search(&self, resolved: &ResolvedSearch) -> Result<SearchPage, UserError> {
@@ -229,19 +330,7 @@ impl WallpaperEngine {
     }
 
     async fn fetch_stored(&self, resolved: &ResolvedSearch) -> Result<StoredPage, UserError> {
-        let pairs = wallhaven::pairs(resolved);
-        let bytes = self
-            .transport
-            .get(wallhaven::endpoint(), &pairs)
-            .await
-            .map_err(|err| {
-                if err.code() == "download_failed" {
-                    UserError::bad()
-                } else {
-                    err
-                }
-            })?;
-        wallhaven::parse_page(&bytes)
+        sources::search(&self.sources, resolved, &self.net).await
     }
 
     fn remember(&self, page: &StoredPage) {
@@ -369,18 +458,11 @@ mod tests {
                 thumb_small: format!("https://th.wallhaven.cc/small/ab/{index}.jpg"),
                 thumb_large: format!("https://th.wallhaven.cc/lg/ab/{index}.jpg"),
                 full: format!("https://w.wallhaven.cc/full/ab/wallhaven-{index}.jpg"),
+                title: None,
+                credit: None,
             })
             .collect();
-        cache::write_last_page(
-            root,
-            &StoredPage {
-                v: StoredPage::VERSION,
-                page: 1,
-                last_page: 4,
-                items,
-            },
-        )
-        .unwrap();
+        cache::write_last_page(root, &StoredPage::new(1, 4, items)).unwrap();
     }
 
     #[test]
@@ -444,6 +526,7 @@ mod tests {
                 categories: "111".into(),
                 sorting: "relevance".into(),
                 page: 1,
+                ..Default::default()
             })
             .await
             .unwrap_err();
