@@ -11,10 +11,11 @@ function cssColor(name: string): string {
 
 function palette() {
   return {
-    stock: cssColor("--stock"),
-    ink: cssColor("--ink"),
-    red: cssColor("--red"),
-    rule: cssColor("--rule"),
+    // Pages are paper in a dark room, so draw them light whatever the theme.
+    stock: cssColor("--room-paper"),
+    ink: cssColor("--room"),
+    red: cssColor("--glass-500"),
+    rule: cssColor("--room-mute"),
   };
 }
 

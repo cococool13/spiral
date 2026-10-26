@@ -4,14 +4,20 @@ import { importResumeFile, parsePastedText } from "../api";
 import { scratchDoc, type ResumeDoc } from "../lib/types";
 import { Notice } from "../components/Notice";
 
+/** The empty state is one drop zone. The whole window takes the drop; the
+ *  buttons are for people who would rather click. */
 export function Input({
   onReady,
   savedAt,
   onOpenSaved,
+  opening = false,
+  openError = "",
 }: {
   onReady: (doc: ResumeDoc, how?: "scratch") => void;
   savedAt?: string | null;
   onOpenSaved?: () => void;
+  opening?: boolean;
+  openError?: string;
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,8 +25,6 @@ export function Input({
   const [over, setOver] = useState(false);
   const [paste, setPaste] = useState(false);
 
-  // Dropping the file you already have is the shortest path through this app,
-  // so the whole window is the target rather than a small rectangle.
   useEffect(() => {
     let cancelled = false;
     let stop: (() => void) | undefined;
@@ -42,18 +46,8 @@ export function Input({
           return;
         }
         setOver(false);
-        const path = event.payload.paths[0];
-        if (!path) return;
-        setBusy(true);
-        setError("");
-        try {
-          const opened = await importResumeFile();
-          if (opened) onReady(opened);
-        } catch (e) {
-          setError(`${e}`);
-        } finally {
-          setBusy(false);
-        }
+        if (!event.payload.paths[0]) return;
+        await run(importResumeFile);
       })
       .then((unlisten) => {
         if (cancelled) {
@@ -67,6 +61,7 @@ export function Input({
       cancelled = true;
       stop?.();
     };
+    // run only reads state setters and onReady.
   }, [onReady]);
 
   async function run(work: () => Promise<ResumeDoc | null>) {
@@ -82,30 +77,27 @@ export function Input({
     }
   }
 
+  const working = busy || opening;
+  const problem = error || openError;
+
   if (paste) {
     const empty = text.trim().length === 0;
     return (
-      <section className="stage">
+      <section className="drop drop--paste">
         <h2 className="visually-hidden">Paste your resume</h2>
-        <label className="field stage__paste">
-          <span className="field__label">Paste your resume</span>
-          <textarea
-            className="field__input field__input--tall"
-            value={text}
-            rows={16}
-            autoFocus
-            onChange={(e) => setText(e.target.value)}
-          />
+        <label className="field drop__paste">
+          <span>Paste your resume</span>
+          <textarea value={text} rows={16} autoFocus onChange={(e) => setText(e.target.value)} />
         </label>
         {empty ? <Notice>Paste the resume text to continue.</Notice> : null}
-        {busy ? <Notice>Reading the pasted text…</Notice> : null}
-        {error ? <Notice tone="warn">{error}</Notice> : null}
-        <div className="panel__actions">
+        {working ? <Notice>Reading the pasted text on this Mac.</Notice> : null}
+        {problem ? <Notice tone="warn">{problem}</Notice> : null}
+        <div className="drop__actions">
           <button
             type="button"
             className="btn btn--primary"
             aria-disabled={empty || undefined}
-            disabled={busy}
+            disabled={working}
             onClick={() => {
               if (empty) return;
               void run(() => parsePastedText(text));
@@ -113,7 +105,7 @@ export function Input({
           >
             Read the pasted text
           </button>
-          <button type="button" className="btn" disabled={busy} onClick={() => setPaste(false)}>
+          <button type="button" className="btn" disabled={working} onClick={() => setPaste(false)}>
             Back
           </button>
         </div>
@@ -122,65 +114,47 @@ export function Input({
   }
 
   return (
-    <section className={over ? "stage stage--drop" : "stage"}>
-      <h2 className="visually-hidden">Import</h2>
-      <div className="stage-tiles">
-        <button
-          type="button"
-          className="stage-tile"
-          aria-labelledby="import-file-name"
-          aria-describedby="import-file-note"
-          disabled={busy}
-          onClick={() => run(importResumeFile)}
-        >
-          <span id="import-file-name" className="stage-tile__name">
-            Open a file
-          </span>
-          <span id="import-file-note" className="stage-tile__note">
-            PDF, Word or text. Drag and drop, or click.
-          </span>
-        </button>
-        <button
-          type="button"
-          className="stage-tile"
-          aria-labelledby="import-scratch-name"
-          aria-describedby="import-scratch-note"
-          disabled={busy}
-          onClick={() => onReady(scratchDoc(), "scratch")}
-        >
-          <span id="import-scratch-name" className="stage-tile__name">
-            Start from scratch
-          </span>
-          <span id="import-scratch-note" className="stage-tile__note">
-            Type the facts on the next screen. Nothing is invented.
-          </span>
-        </button>
-        <button
-          type="button"
-          className="stage-tile"
-          aria-labelledby="import-paste-name"
-          aria-describedby="import-paste-note"
-          disabled={busy}
-          onClick={() => setPaste(true)}
-        >
-          <span id="import-paste-name" className="stage-tile__name">
-            Paste text
-          </span>
-          <span id="import-paste-note" className="stage-tile__note">
-            The text of the resume, as you would read it.
-          </span>
-        </button>
-      </div>
-      {savedAt && onOpenSaved ? (
-        <p className="stage__saved">
-          Saved from {new Date(savedAt).toLocaleString()}.{" "}
-          <button type="button" className="link" onClick={onOpenSaved}>
-            Open it
-          </button>
+    <section className="drop" data-over={over || undefined} aria-busy={working || undefined}>
+      <div className="drop__body">
+        <h2 className="drop__title">
+          Drop a <em>resume</em>
+        </h2>
+        <p className="drop__note" id="import-file-note">
+          PDF, Word or text. It is read on this Mac and nothing is uploaded.
         </p>
-      ) : null}
-      {busy ? <Notice>Reading the file…</Notice> : null}
-      {error ? <Notice tone="warn">{error}</Notice> : null}
+        <div className="drop__actions">
+          <button
+            type="button"
+            className="btn btn--primary"
+            aria-describedby="import-file-note"
+            aria-keyshortcuts="Meta+O"
+            disabled={working}
+            onClick={() => void run(importResumeFile)}
+          >
+            Open a file
+          </button>
+          <button type="button" className="btn" disabled={working} onClick={() => setPaste(true)}>
+            Paste text
+          </button>
+        </div>
+        <p className="drop__quiet">
+          No resume yet?{" "}
+          <button type="button" className="link" disabled={working} onClick={() => onReady(scratchDoc(), "scratch")}>
+            Start from scratch
+          </button>
+          {savedAt && onOpenSaved ? (
+            <>
+              {" "}
+              Saved from {new Date(savedAt).toLocaleString()}.{" "}
+              <button type="button" className="link" onClick={onOpenSaved}>
+                Open it
+              </button>
+            </>
+          ) : null}
+        </p>
+        {working ? <Notice>Reading the file on this Mac.</Notice> : null}
+        {problem ? <Notice tone="warn">{problem}</Notice> : null}
+      </div>
     </section>
   );
 }

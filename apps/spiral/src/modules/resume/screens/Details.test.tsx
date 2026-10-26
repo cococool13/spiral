@@ -31,7 +31,7 @@ function docWithRole(): ResumeDoc {
 
 describe("Details", () => {
   it("shows every extracted fact in an editable field", () => {
-    render(<Details doc={docWithRole()} tighten={false} onChange={vi.fn()} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={docWithRole()} tighten={false} onChange={vi.fn()} onTighten={vi.fn()} />);
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Ada");
     expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Analyst");
     expect((screen.getByLabelText("Employer") as HTMLInputElement).value).toBe("Admiralty");
@@ -53,7 +53,7 @@ describe("Details", () => {
       experience: [role],
     };
     render(
-      <Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />,
+      <Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />,
     );
 
     expect((screen.getByLabelText("Summary") as HTMLTextAreaElement).value).toBe(
@@ -81,7 +81,7 @@ describe("Details", () => {
     next.location = "Cambridge";
     const doc = { ...docWithRole(), education: [next] };
     render(
-      <Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />,
+      <Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />,
     );
     fireEvent.change(screen.getByDisplayValue("Cambridge"), { target: { value: "London" } });
     expect(onChange.mock.calls[0][0].education[0].location).toBe("London");
@@ -89,14 +89,14 @@ describe("Details", () => {
 
   it("reports an edited fact upward without keeping its own copy", () => {
     const onChange = vi.fn();
-    render(<Details doc={docWithRole()} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={docWithRole()} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Grace" } });
     expect(onChange.mock.calls[0][0].contact.name).toBe("Grace");
   });
 
   it("edits a bullet by id", () => {
     const onChange = vi.fn();
-    render(<Details doc={docWithRole()} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={docWithRole()} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
     fireEvent.change(screen.getByDisplayValue("Wrote the first algorithm"), {
       target: { value: "Wrote the algorithm" },
     });
@@ -106,7 +106,7 @@ describe("Details", () => {
 
   it("shows what tightening would do, and its advice, when it is on", async () => {
     render(
-      <Details doc={docWithRole()} tighten={true} onChange={vi.fn()} onTighten={vi.fn()} onContinue={vi.fn()} />,
+      <Details doc={docWithRole()} tighten={true} onChange={vi.fn()} onTighten={vi.fn()} />,
     );
     await waitFor(() => expect(screen.getByText(/Will become/)).toBeTruthy());
     expect(screen.getByText(/quantify it/)).toBeTruthy();
@@ -117,7 +117,7 @@ describe("Details", () => {
 
   it("says nothing about wording when tightening is off", async () => {
     render(
-      <Details doc={docWithRole()} tighten={false} onChange={vi.fn()} onTighten={vi.fn()} onContinue={vi.fn()} />,
+      <Details doc={docWithRole()} tighten={false} onChange={vi.fn()} onTighten={vi.fn()} />,
     );
     await waitFor(() => expect(reviewWording).toHaveBeenCalled());
     expect(screen.queryByText(/Will become/)).toBeNull();
@@ -127,7 +127,7 @@ describe("Details", () => {
   it("applies a single suggestion without touching the others", async () => {
     const onChange = vi.fn();
     render(
-      <Details doc={docWithRole()} tighten={true} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />,
+      <Details doc={docWithRole()} tighten={true} onChange={onChange} onTighten={vi.fn()} />,
     );
     await waitFor(() => screen.getByRole("button", { name: "Use it now" }));
     fireEvent.click(screen.getByRole("button", { name: "Use it now" }));
@@ -137,7 +137,7 @@ describe("Details", () => {
   it("reports the toggle upward", () => {
     const onTighten = vi.fn();
     render(
-      <Details doc={docWithRole()} tighten={true} onChange={vi.fn()} onTighten={onTighten} onContinue={vi.fn()} />,
+      <Details doc={docWithRole()} tighten={true} onChange={vi.fn()} onTighten={onTighten} />,
     );
     fireEvent.click(screen.getByLabelText(/Tighten wording/));
     expect(onTighten).toHaveBeenCalledWith(false);
@@ -152,7 +152,7 @@ describe("Details", () => {
     const onChange = vi.fn();
 
     const { rerender } = render(
-      <Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />,
+      <Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />,
     );
     // Remove the first role, leaving [exp-1].
     fireEvent.click(screen.getAllByRole("button", { name: "Remove this role" })[0]);
@@ -166,7 +166,7 @@ describe("Details", () => {
         tighten={false}
         onChange={onChange}
         onTighten={vi.fn()}
-        onContinue={vi.fn()}
+       
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Add a role" }));
@@ -179,7 +179,7 @@ describe("Details", () => {
 
   it("adds an empty role for a resume that parsed nothing", () => {
     const onChange = vi.fn();
-    render(<Details doc={emptyDoc()} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={emptyDoc()} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Add a role" }));
     expect(onChange.mock.calls[0][0].experience[0].id).toBe("exp-0");
     expect(onChange.mock.calls[0][0].experience[0].bullets).toEqual([
@@ -195,7 +195,7 @@ describe("Details", () => {
         tighten={false}
         onChange={vi.fn()}
         onTighten={vi.fn()}
-        onContinue={vi.fn()}
+       
       />,
     );
     expect(screen.getByRole("heading", { name: "Fill in the facts" })).toBeTruthy();
@@ -211,7 +211,7 @@ describe("Details", () => {
   it("edits a school the parser produced", () => {
     const onChange = vi.fn();
     const doc = { ...docWithRole(), education: [school()] };
-    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
 
     expect((screen.getByLabelText("Institution") as HTMLInputElement).value).toBe(
       "University of London",
@@ -225,7 +225,7 @@ describe("Details", () => {
     const project = emptyRole("proj-0");
     project.title = "Difference Engine";
     const doc = { ...docWithRole(), projects: [project] };
-    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
 
     expect((screen.getByLabelText("Project") as HTMLInputElement).value).toBe("Difference Engine");
     fireEvent.change(screen.getByLabelText("Project"), { target: { value: "Analytical Engine" } });
@@ -237,7 +237,7 @@ describe("Details", () => {
   it("mints ids in the shapes Rust mints", () => {
     const onChange = vi.fn();
     const doc = { ...docWithRole(), projects: [], education: [] };
-    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add a project" }));
     expect(onChange.mock.calls[0][0].projects[0].id).toBe("proj-0");
@@ -249,7 +249,7 @@ describe("Details", () => {
 
   it("keeps empty optional sections off the page until they are asked for", () => {
     render(
-      <Details doc={docWithRole()} tighten={false} onChange={vi.fn()} onTighten={vi.fn()} onContinue={vi.fn()} />,
+      <Details doc={docWithRole()} tighten={false} onChange={vi.fn()} onTighten={vi.fn()} />,
     );
     expect(screen.queryByRole("heading", { name: "Projects" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Awards" })).toBeNull();
@@ -259,7 +259,7 @@ describe("Details", () => {
   it("adds a note to a school under that school's id", () => {
     const onChange = vi.fn();
     const doc = { ...docWithRole(), education: [school()] };
-    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add a note" }));
     expect(onChange.mock.calls[0][0].education[0].notes[1].id).toBe("edu-0-b-1");
@@ -268,7 +268,7 @@ describe("Details", () => {
   it("removes a school", () => {
     const onChange = vi.fn();
     const doc = { ...docWithRole(), education: [school()] };
-    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} onContinue={vi.fn()} />);
+    render(<Details doc={doc} tighten={false} onChange={onChange} onTighten={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Remove this school" }));
     expect(onChange.mock.calls[0][0].education).toEqual([]);

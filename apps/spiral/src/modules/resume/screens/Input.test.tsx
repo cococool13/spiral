@@ -81,9 +81,9 @@ describe("Input", () => {
     expect(onReady.mock.calls[0][0].experience[0].id).toBe("exp-0");
   });
 
-  it("is three tiles and nothing else", () => {
+  it("is one drop zone with three ways in", () => {
     render(<Input onReady={vi.fn()} />);
-    expect(screen.getByRole("heading", { name: "Import" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Drop a resume" })).toBeTruthy();
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 

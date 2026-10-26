@@ -128,7 +128,6 @@ export function Details({
   original,
   onChange,
   onTighten,
-  onContinue,
 }: {
   doc: ResumeDoc;
   tighten: boolean;
@@ -136,7 +135,6 @@ export function Details({
   original?: ResumeDoc;
   onChange: (doc: ResumeDoc) => void;
   onTighten: (tighten: boolean) => void;
-  onContinue: () => void;
 }) {
   const changed = (next: string, previous: string | undefined) =>
     original !== undefined && next !== previous;
@@ -365,9 +363,6 @@ export function Details({
           label="Tighten wording"
           onChange={onTighten}
         />
-        <button type="button" className="btn btn--primary" onClick={onContinue}>
-          Continue to Style
-        </button>
       </div>
     </section>
   );

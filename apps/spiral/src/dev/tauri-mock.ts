@@ -9,7 +9,31 @@
 import { assertCommandArgs } from "./command-args";
 import { pageArt, plateThumb } from "./plate-art";
 
-(window as unknown as { __SPIRAL_THUMB__?: (id: string) => string }).__SPIRAL_THUMB__ = plateThumb;
+// Real photographs for the grid so visual QA sees the room the way it ships.
+const ART = Object.values(
+  import.meta.glob<string>("./art/*.jpg", { eager: true, query: "?url", import: "default" }),
+);
+function artThumb(id: string): string {
+  let n = 0;
+  for (const char of id) n = (n * 31 + char.charCodeAt(0)) >>> 0;
+  return ART.length > 0 ? (ART[n % ART.length] ?? plateThumb(id)) : plateThumb(id);
+}
+(window as unknown as { __SPIRAL_THUMB__?: (id: string) => string }).__SPIRAL_THUMB__ = artThumb;
+
+// ?caps=on lights up the parked screens that need native work, tagged Preview.
+// ?start=wallpaper|resume skips the first-run picker.
+const query = new URLSearchParams(window.location.search);
+if (query.get("caps") === "on") {
+  window.__SPIRAL_CAPS__ = {
+    liveWallpaper: true,
+    applyPerDisplay: true,
+    pauseRules: true,
+    colorSearch: true,
+    extraSources: true,
+    restoreOriginal: true,
+  };
+}
+const startAt = query.get("start");
 
 window.__SPIRAL_BOOT__ = {
   version: "2.0.0",
@@ -18,7 +42,10 @@ window.__SPIRAL_BOOT__ = {
     { id: "wallpaper", enabled: true, available: true, unavailableReason: null },
     { id: "resume", enabled: true, available: true, unavailableReason: null },
   ],
-  start: { kind: "picker", preselect: ["wallpaper", "resume"] },
+  start:
+    startAt === "wallpaper" || startAt === "resume"
+      ? { kind: "module", id: startAt }
+      : { kind: "picker", preselect: ["wallpaper", "resume"] },
   bench: false,
 };
 
@@ -43,11 +70,13 @@ const mockUpdate = () =>
     ? { rid: 1, available: true, currentVersion: "1.0.0", version: "1.1.0" }
     : null;
 
+const SIZES = ["3840x2160", "5120x2880", "2560x1440", "6016x3384", "3440x1440", "3840x2400", "1920x1080"];
+
 function searchPage(pageNum: number) {
   return {
     items: Array.from({ length: 24 }, (_, i) => ({
       id: `w-p${pageNum}i${i}`,
-      resolution: i % 3 === 0 ? "3840x2160" : "2560x1440",
+      resolution: SIZES[(i + pageNum) % SIZES.length] ?? "3840x2160",
     })),
     page: pageNum,
     lastPage: 5,
@@ -79,7 +108,7 @@ function sampleResume(name: string) {
     contact: {
       name,
       email: "maya.okafor@fastmail.com",
-      phone: "415 555 0148",
+      phone: "",
       location: "Oakland, CA",
       links: ["maya.okafor.dev"],
     },
@@ -111,7 +140,7 @@ function sampleResume(name: string) {
         institution: "Laney College",
         credential: "A.S. Business",
         location: "Oakland",
-        start: { raw: "2016", year: 2016, month: null, present: false },
+        start: { raw: "Fall term", year: null, month: null, present: false },
         end: { raw: "2018", year: 2018, month: null, present: false },
         notes: [],
       },
@@ -122,6 +151,34 @@ function sampleResume(name: string) {
     interests: [],
     skills: [{ label: "Tools", items: ["Excel", "SQL"] }],
   };
+}
+
+interface MockDate {
+  raw?: string;
+  year?: number | null;
+  present?: boolean;
+}
+
+/** Mirrors the real check closely enough to show flags and clear them on fix. */
+function mockFindings(doc: unknown) {
+  const findings: { type: string; raw?: string; field?: string }[] = [];
+  const value = doc as {
+    contact?: Record<string, unknown>;
+    experience?: { start?: MockDate; end?: MockDate }[];
+    education?: { start?: MockDate; end?: MockDate }[];
+  };
+  for (const field of ["name", "email", "phone"]) {
+    const text = value.contact?.[field];
+    if (typeof text !== "string" || text.trim() === "") findings.push({ type: "missingContact", field });
+  }
+  for (const entry of [...(value.experience ?? []), ...(value.education ?? [])]) {
+    for (const date of [entry.start, entry.end]) {
+      if (date?.raw && !date.present && !date.year && !/\d{4}/.test(date.raw)) {
+        findings.push({ type: "unparsedDate", raw: date.raw });
+      }
+    }
+  }
+  return findings;
 }
 
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
@@ -141,7 +198,7 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
       const name = doc?.contact?.name?.trim() || "Resume";
       return { pages: [pageArt(name)] };
     }
-    if (call.type === "check") return { findings: [] };
+    if (call.type === "check") return { findings: mockFindings(call.doc) };
     if (call.type === "list_accents") {
       return [
         { id: "ink", hex: "var(--ink)" },

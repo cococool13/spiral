@@ -5,17 +5,20 @@ import { readBoot } from "../../boot";
 import type { ModuleProps } from "../types";
 import { Browse } from "./Browse";
 import { errorCopy } from "./errors";
+import { useWallpaper } from "./state";
+import "./wallpaper.css";
 
 export { Frame } from "./state";
-export { Toolbar } from "./Toolbar";
+export { Dome, Tools } from "./Chrome";
 
 export default function ModuleRoot({ setStatus }: ModuleProps) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { log } = useWallpaper();
   const platform = readBoot(window.__SPIRAL_BOOT__).platform;
 
   useEffect(() => {
-    setStatus("wallhaven.cc · SFW only");
+    setStatus("Wallpaper. Searches go to wallhaven.cc, SFW only.");
   }, [setStatus]);
 
   useEffect(() => {
@@ -24,6 +27,7 @@ export default function ModuleRoot({ setStatus }: ModuleProps) {
       .then(() => {
         if (!live) return;
         mark("module_ready:wallpaper");
+        log("Opened Wallpaper.");
         setReady(true);
       })
       .catch((err: unknown) => {
@@ -33,13 +37,15 @@ export default function ModuleRoot({ setStatus }: ModuleProps) {
     return () => {
       live = false;
     };
-  }, []);
+  }, [log]);
 
   if (error) {
     return (
       <main className="browse">
-        <h1 className="visually-hidden">Browse wallpapers</h1>
-        <p role="alert">{error}</p>
+        <h1 className="visually-hidden">Wallpaper</h1>
+        <p className="browse__empty" role="alert">
+          {error}
+        </p>
       </main>
     );
   }

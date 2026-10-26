@@ -1,23 +1,41 @@
 @font-face {
-  font-family: "Host Grotesk";
+  font-family: "Bodoni Moda";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 400 900;
   font-display: swap;
-  src: url("../assets/fonts/host-grotesk-400.woff2") format("woff2");
+  src: url("../assets/fonts/bodoni-moda-var.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Host Grotesk";
-  font-style: normal;
-  font-weight: 500;
+  font-family: "Bodoni Moda";
+  font-style: italic;
+  font-weight: 400 900;
   font-display: swap;
-  src: url("../assets/fonts/host-grotesk-500.woff2") format("woff2");
+  src: url("../assets/fonts/bodoni-moda-italic-var.woff2") format("woff2");
 }
-@font-face {
-  font-family: "Host Grotesk";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("../assets/fonts/host-grotesk-600.woff2") format("woff2");
+
+/* Nocturnal. The app is one dark room lit by the wallpaper. The older
+   Proof Plate names still drive settings, license and picker; point them at
+   the room so every screen shares one material. Aliases only, no new values. */
+:root {
+  color-scheme: dark;
+  --stock: var(--room);
+  --stock-2: var(--room-panel-2);
+  --stock-3: var(--room-panel);
+  --rule: var(--room-line);
+  --ink: var(--room-paper);
+  --ink-2: var(--room-mute);
+  --ink-3: color-mix(in srgb, var(--room-mute) 72%, var(--room));
+  --red: var(--glass-500);
+  --red-press: var(--glass-700);
+  --red-text: color-mix(in srgb, var(--glass-400) 70%, var(--room-paper));
+  --on-red: var(--on-glass);
+  --font-ui: var(--font-system);
+  --spiral-font-sans: var(--font-system);
+  --spiral-font-display: var(--font-system);
+  --radius-ctl: 8px;
+  --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.099 24.3%, 1.108 26%, 1.1, 1.077 30.6%, 1.005 37.3%, 0.981 41.1%, 0.973 44.6%, 0.983 51.6%, 1.001 60.6%, 1.004 68.1%, 1);
+  --shadow-recess: inset 0 2px 4px rgb(0 0 0 / 0.32), inset 0 -1px 0 rgb(255 255 255 / 0.14);
+  --pill-h: 52px;
 }
 
 *,
@@ -30,7 +48,6 @@
 
 html {
   height: 100%;
-  color-scheme: light dark;
   background: var(--stock);
   scrollbar-color: var(--rule) var(--stock);
 }
@@ -43,7 +60,7 @@ body,
 body {
   background: var(--stock);
   color: var(--ink);
-  font-family: var(--font-ui);
+  font-family: var(--font-system);
   font-size: 13px;
   line-height: 18px;
   font-weight: 400;
@@ -86,8 +103,8 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--red);
-  outline-offset: 3px;
+  outline: 2px solid var(--room-paper);
+  outline-offset: 2px;
 }
 
 .visually-hidden {

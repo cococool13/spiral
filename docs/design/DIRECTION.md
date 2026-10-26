@@ -366,3 +366,104 @@ stay the Paper-ready source (see "Paper file" above).
   layer.
 - **Settings › Tools.** The Wallpaper toggle is drawn as `On disabled` with the "Keep one
   tool on." line, because Resume is off. The PNG shows it as plain on.
+
+---
+
+## Site: Red Glass (spiralcc.tech, 2026-10-26)
+
+Cohen picked prototype **B. Red Glass**. This section covers `collection/` only.
+Screenshots: `docs/design/2026-10-26/before/site-home-*.png` and
+`docs/design/2026-10-26/after/site-{home,privacy,thanks,work}-{1440,1024,768,390}.png`.
+
+**Mood:** Crisp native Mac pushed to a material extreme. One red glass slab under studio
+light, paper for the price, nothing else.
+
+**Signature:** the app's own toolbar is the hero. It is a recessed red-glass pill with two
+raised capsules (Wallpaper, Resume) and a dome that buys. The capsules switch the page with a
+spring (CSS `linear()` curve, about 8% overshoot, 500 ms; only `transform` animates). As you
+scroll, the same element rises and shrinks into the docked nav (one rAF transform, smoothstep,
+driven only by scroll). Inner pages use the same object at compact scale. Under reduced
+motion the capsule snaps and nothing moves on its own.
+
+**Other moments:** a live WebGL spiral in the "Live" preview (30 fps, half resolution, pauses
+off-screen, on hidden tabs and on the inactive panel, one still frame under reduced motion);
+the footer's embossed red-glass SPIRAL, cropped by the left and bottom edges, lit by an SVG
+point light that eases toward the pointer (hover devices only); one ASCII render of the mark,
+rasterised from its own paths, turning at 12 fps (still under reduced motion).
+
+**Refs:** inspora "Liquid glass" crops (material), elaya 12 Relay (toolbar as object),
+footer.design "Nothin'" (cropped giant wordmark).
+
+**Grammar:** hero (what it is, the one action) → stage (the product, switchable, with an
+honest ledger) → paper band ($15 once, the four "no"s, the named network log, buy and
+download) → footer. Inner pages: compact toolbar header, one reading column.
+
+**Honesty rules applied:** today's download is Spiral Wallpaper (version from `lib/apps.ts`).
+Resume is labelled "joins it in Spiral 2.0". Live wallpapers and the new sources are labelled
+"Coming in 2.1" and the live preview is tagged "2.1 preview". Stills are AI images from the
+prototype, captioned by subject and tagged "Sample still", never credited to NASA or a museum.
+"No device ID" was cut because the licence sends a machine hash. The network log lists only
+calls from `docs/PRODUCT.md`.
+
+**Tools:** Paper Desktop was not running, so the Paper canvas step was skipped. The Motion
+easing tool was not connected; the spring was computed by hand. No motion or GSAP library was
+added. FAL was not used ($0); the six stills were converted from the prototype to AVIF/WebP.
+Cohen's no-negative-tracking rule holds: all negative `letter-spacing` was removed.
+
+### Sloplint (served pages, `--url`)
+
+Fixed: focus-visible and `overflow-x: clip` exist in `globals.css` (the file-mode FAILs came
+from unloaded external CSS); 0 horizontal overflow at 390 and 1440 (Playwright check); 4
+weights cut to 3. Kept, with reasons:
+
+- **Home, "103 words on one screen" (stage ledger).** Each line is a product fact or an
+  honest "Coming in 2.1" label. Cutting them would cut the honesty, not filler.
+- **Home, "div.bezel over Skip to content".** False positive: the skip link is clipped until
+  focused and has `z-index: 100`, so the hit test lands on the bezel behind it.
+- **Privacy / Thanks, words per screen, CTA below fold.** These are reading pages. The
+  privacy facts and the install steps are kept verbatim by brief.
+- **Work, hero past 1920 fold, rows wrap at 320–768, text hidden on phone.** `OtherWork` keeps
+  its existing layout and logic by brief; only its type and colours changed.
+- **h1 "11 words".** Two headlines share the h1 and swap with the capsule; each is 5–6 words.
+- **"3 sections".** Deliberate: four-part grammar, no template filler.
+
+`taste-guard.sh`: ok. `impeccable detect`: no findings.
+
+### Self-critique
+
+- The stage ledger is dense on a phone; it reads as a list, not an object.
+- Rendered only in Chromium (Playwright and the app's browser). Safari's `linear()` and SVG
+  lighting, Windows ClearType and real devices are not checked.
+- Cobalt and Ink shader swatches are `rgb()` literals: product content, not brand tokens.
+- `themeColor` is an `rgb()` literal equal to `--glass-400`, because metadata cannot read CSS.
+- The OG image is still the old `hero-exit.webp`.
+
+### What makes this unmistakably Spiral?
+
+The site's hero is the app's own toolbar, in Spiral red glass, and it does the app's job: you
+switch tools with it, and you buy with its dome. Then the page shows the real product
+honestly, with every network call named and the unshipped parts labelled. No other site
+starts with its own app's chrome as the main object.
+
+## App: Nocturnal (Spiral for Mac, 2026-10-26)
+
+Supersedes Proof Plate for the app shell. Built on branch `redesign/red-glass-nocturnal` from prototype C.
+
+**Mood.** A dark room lit by the wallpaper. The chrome is one deep-red glass object; everything else gets out of the picture's way.
+
+**Signature.** One red glass pill at the top: recessed icon wells, a raised capsule that springs (280 ms, `linear()` spring) to the chosen tool, and a round glass dome beside it for the one main action (Wallpaper: Surprise me. Resume: Open a resume). No sidebar, no toolbar, no status bar.
+
+**Base layer.** Apple HIG: traffic-light inset and a drag strip behind the pill, system font for UI, Bodoni Moda only for display moments (drop title, quick-look size, editor heading). Glyphs are the app's own 22 px strokes, not Lucide.
+
+**What shipped (frontend).**
+- Wallpaper: keyboard grid (arrows, Home/End, Return sets, Space quick look, Esc, `/` search, `[` `]` recent), quick look, "Fits W × H" filter, recent row in local storage, plain-language activity drawer, undo to the previous Spiral-set wallpaper, toast.
+- Resume: one drop zone (file, paste, scratch), first result with no model setup, optional setup card after the first page, two-pane editor with template strip (⌘1–9), ⌘O, ⌘E, parse flags with one-click fixes that move focus and never type a value, Facts locked diff, Plain text tab, one Export (PDF then DOCX).
+- Native-only work sits behind `src/capabilities.ts`, all off in production. `?caps=on` in the dev mock shows it tagged Preview: live/generative gallery (WebGL), apply-to per display, colour swatches, extra sources.
+
+**Native gaps (spec agent).** No restore-original command (undo reapplies only the previous Spiral wallpaper this session). Search has no atleast/ratios/colors params and the display size is not exposed, so Fits filters client-side. `import_file` ignores a dropped path and always opens the picker. `apply` needs the id in the session catalog, so recent items from an earlier launch can fail. No `start-dragging` window permission, so the drag strip is inert. No single PDF+DOCX export (two save dialogs). Live wallpaper behind the desktop, per-display apply, pause rules, menu-bar item, extra sources and lock screen all need native work; live and menu-bar conflict with "one window, then quit" and need a product decision.
+
+**Screens.** `2026-10-26/after/app-*.png` (grid, quick look, activity, parked preview, drop, editor, facts, plain).
+
+**Self-critique.** The editor fields column is dense and still uses the older Details component; it reads as a form, not as the page. The template strip's empty right half wants the accent row moved beside the thumbnails or a page count. Paper (canvas tool) was not running, so the prototype served as the canvas.
+
+**What makes this unmistakably Spiral?** The red glass pill and dome: one material, one object, sitting over whatever picture you chose.
