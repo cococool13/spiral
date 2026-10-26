@@ -31,8 +31,8 @@ export default function ThanksPage() {
             <h2>Download</h2>
             <div>
               <p>
-                {product.name} Wallpaper {product.version}, the build that is published.
-                Resume 0.1.2 stays at its release tag.
+                {product.name} {product.version}, the build that is published. Wallpaper
+                and Resume are both in it.
               </p>
               <p style={{ marginTop: 20 }}>
                 <GlassPillCTA app={product} />
