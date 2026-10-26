@@ -437,6 +437,7 @@ weights cut to 3. Kept, with reasons:
 - Cobalt and Ink shader swatches are `rgb()` literals: product content, not brand tokens.
 - `themeColor` is an `rgb()` literal equal to `--glass-400`, because metadata cannot read CSS.
 - The OG image is still the old `hero-exit.webp`.
+- Finishing pass: weights cut to three (400/500/600), panel-in 280 ms, `scroll-margin-top` for anchored sections, the brew command wraps on a phone. Sloplint's closed-menu overflow at 375 is a false positive (panel hidden and inert).
 
 ### What makes this unmistakably Spiral?
 
@@ -460,10 +461,17 @@ Supersedes Proof Plate for the app shell. Built on branch `redesign/red-glass-no
 - Resume: one drop zone (file, paste, scratch), first result with no model setup, optional setup card after the first page, two-pane editor with template strip (⌘1–9), ⌘O, ⌘E, parse flags with one-click fixes that move focus and never type a value, Facts locked diff, Plain text tab, one Export (PDF then DOCX).
 - Native-only work sits behind `src/capabilities.ts`, all off in production. `?caps=on` in the dev mock shows it tagged Preview: live/generative gallery (WebGL), apply-to per display, colour swatches, extra sources.
 
-**Native gaps (spec agent).** No restore-original command (undo reapplies only the previous Spiral wallpaper this session). Search has no atleast/ratios/colors params and the display size is not exposed, so Fits filters client-side. `import_file` ignores a dropped path and always opens the picker. `apply` needs the id in the session catalog, so recent items from an earlier launch can fail. No `start-dragging` window permission, so the drag strip is inert. No single PDF+DOCX export (two save dialogs). Live wallpaper behind the desktop, per-display apply, pause rules, menu-bar item, extra sources and lock screen all need native work; live and menu-bar conflict with "one window, then quit" and need a product decision.
+**Native gaps (spec agent).** No restore-original command (undo reapplies only the previous Spiral wallpaper this session). Search has no atleast/ratios/colors params and the display size is not exposed, so Fits filters client-side. `import_file` ignores a dropped path and always opens the picker. `apply` needs the id in the session catalog, so recent items from an earlier launch can fail. `core:window:allow-start-dragging` is now granted in `capabilities/default.json`; the pill row and its gaps are the drag region (not yet tried in a native build). No single PDF+DOCX export (two save dialogs). Live wallpaper behind the desktop, per-display apply, pause rules, menu-bar item, extra sources and lock screen all need native work; live and menu-bar conflict with "one window, then quit" and need a product decision.
 
 **Screens.** `2026-10-26/after/app-*.png` (grid, quick look, activity, parked preview, drop, editor, facts, plain).
 
-**Self-critique.** The editor fields column is dense and still uses the older Details component; it reads as a form, not as the page. The template strip's empty right half wants the accent row moved beside the thumbnails or a page count. Paper (canvas tool) was not running, so the prototype served as the canvas.
+**Finishing pass (2026-10-26).** impeccable, emil-design-eng, motion, web-design-guidelines, hallmark sloplint, ponytail-review, simplify and taste-guard on both surfaces.
+- Room colours: the old Proof Plate names (`--ink`, `--rule`, `--stock`) had light values inside the dark room, so Resume text failed contrast in light appearance. Resume now reads only `--room-*` tokens. `--red-text` is mixed from glass and paper in `.window` until `brand/` ships `--room-red-text`.
+- Motion: one ease-out curve for entrances (search, toast, quick look, picker). The `linear()` spring stays only on the capsule and the toggle. The capsule moves by transform only; tabs are equal width, so no width animation.
+- Wallpaper never shows an internal id. Captions say the size; quick look and the activity log say `wallhaven.cc/w/<id>`, the page you can open.
+- Resume: the page fits the pane (container query, US Letter ratio). The selected template gets a glass ring and a lift, visible on white thumbnails. Name and Email span the column; Contact has its own heading. The dev mock now typesets the real facts per template and accent, so screenshots show a believable page.
+- Label rule: sentence case in the UI face; labels and table heads are 12 px, weight 600, `--room-mute`; mono only for keys, times, paths and license keys.
 
-**What makes this unmistakably Spiral?** The red glass pill and dome: one material, one object, sitting over whatever picture you chose.
+**Self-critique.** The traffic lights sit about 16 px above the pill's centre; `trafficLightPosition` y≈33 in `tauri.conf.json` would align them (not changed: Rust/config was out of scope). The window should declare `"theme": "Dark"` so native sheets match the room. The Details column is still a long form; grouping roles into collapsible cards would shorten it. "Drop a *resume*" keeps one italic word in a roman head, which the Hallmark floor bans on sites; it is kept here as the app's one Bodoni moment. Native drag, the real Typst preview, WebKit `cqh` and `linear()`, and light appearance in the real app are unverified.
+
+**What makes this unmistakably Spiral?** The red glass pill and dome: one material, one object, with a capsule that springs to the tool you chose, sitting over whatever picture you chose. Everything below it is the picture or the page, and every network call is said in plain words.

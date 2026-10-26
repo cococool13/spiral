@@ -114,7 +114,7 @@ export function Updates({ settings, knownUpdate, onSettings, onUpdateFound }: Up
           </Button>
         ) : (
           <Button disabled={phase === "checking"} onClick={() => void runCheck()}>
-            {phase === "checking" ? "Checking" : "Check for updates"}
+            {phase === "checking" ? "Checking…" : "Check for updates"}
           </Button>
         )}
       </section>

@@ -119,7 +119,7 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
                     : app.name.replace("Spiral ", "")}
                 </a>
                 {brew ? (
-                  <p className="px-4 pb-3 font-mono text-xs leading-relaxed text-gray">
+                  <p className="px-4 pb-3 font-mono text-xs leading-relaxed text-gray [overflow-wrap:anywhere]">
                     {brew}
                   </p>
                 ) : null}

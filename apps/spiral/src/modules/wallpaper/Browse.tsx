@@ -221,7 +221,7 @@ export function Browse({ platform }: BrowseProps) {
 
           {status === "ready" && items.length === 0 ? (
             <section className="browse__empty">
-              <p>Nothing on Wallhaven matches "{emptyQuery}". Try a broader search.</p>
+              <p>Nothing on Wallhaven matches “{emptyQuery}”. Try a broader search.</p>
             </section>
           ) : null}
 
@@ -248,7 +248,7 @@ export function Browse({ platform }: BrowseProps) {
           {items.length > 0 && pageNum < lastPage ? (
             <div className="browse__more">
               <Button onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? "Loading" : "Load more"}
+                {loadingMore ? "Loading…" : "Load more"}
               </Button>
             </div>
           ) : null}
@@ -268,7 +268,7 @@ export function Browse({ platform }: BrowseProps) {
               className="recent"
               aria-label={`Set again, ${sizeLabel(item.resolution)}`}
               aria-current={current?.id === item.id || undefined}
-              title={item.id}
+              title={sizeLabel(item.resolution)}
               onClick={() => void apply(item, "Recent: downloading")}
             >
               <img src={thumbSrc(item.id, "sm", platform)} alt="" />
@@ -277,7 +277,7 @@ export function Browse({ platform }: BrowseProps) {
         </div>
         <div className="dock__end">
           <ApplyTo />
-          <p className="dock__state">{current ? `On this Space: ${current.id}` : "Searches go to wallhaven.cc. SFW only."}</p>
+          <p className="dock__state">{current ? `On this Space: ${sizeLabel(current.resolution)} from wallhaven.cc` : "Searches go to wallhaven.cc. SFW only."}</p>
           <button
             type="button"
             className="dock__activity"

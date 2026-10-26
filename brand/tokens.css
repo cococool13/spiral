@@ -128,6 +128,7 @@
   --room-mute: #a1948a;
   --room-line: rgb(239 228 215 / 0.12);
   --on-glass: #ffffff;
+  --room-red-text: #ef6a62; /* red text on the dark room */
 
   --font-site-display: "Familjen Grotesk", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Bodoni Moda", "Bodoni 72", Didot, Georgia, serif;

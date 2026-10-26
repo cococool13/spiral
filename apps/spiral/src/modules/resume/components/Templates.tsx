@@ -8,7 +8,7 @@ import { useRadioGroup } from "../lib/useRadioGroup";
 function swatchFill(hex: string): string {
   if (hex.startsWith("var(") || hex.startsWith("#")) return hex;
   if (/^[0-9a-fA-F]{6}$/.test(hex)) return `#${hex}`;
-  return "var(--ink)";
+  return "var(--room)";
 }
 
 interface TemplatesProps {

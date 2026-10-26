@@ -75,7 +75,7 @@ export function EmailUnlock({ onDone }: EmailUnlockProps) {
         />
         {error ? <p className="notice notice--error" role="alert">{error}</p> : null}
         <Button variant="primary" size="large" type="submit" disabled={busy || !email.trim()}>
-          {busy ? "Sending" : "Send code"}
+          {busy ? "Sending…" : "Send code"}
         </Button>
       </form>
     );
@@ -90,7 +90,7 @@ export function EmailUnlock({ onDone }: EmailUnlockProps) {
       <p className="tile__line">6-digit code · Checked by Spiral's license server</p>
       {error ? <p className="notice notice--error" role="alert">{error}</p> : null}
       <Button variant="primary" size="large" type="submit" disabled={busy || code.length !== 6}>
-        {busy ? "Checking" : "Activate"}
+        {busy ? "Checking…" : "Activate"}
       </Button>
       <div className="stage__links">
         <button type="button" className="link" disabled={busy} onClick={() => void send(sentTo)}>

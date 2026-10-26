@@ -118,6 +118,16 @@ p {
   text-wrap: pretty;
 }
 
+b,
+strong {
+  font-weight: 600;
+}
+
+/* Anchor targets clear the docked toolbar (12px top + 58px tall). */
+[id] {
+  scroll-margin-top: 88px;
+}
+
 ::selection {
   background: var(--site-paper);
   color: var(--glass-700);
@@ -392,7 +402,7 @@ p {
   transition: opacity 200ms ease;
 }
 .tb-cap b {
-  font-weight: 650;
+  font-weight: 600;
 }
 @media (max-width: 640px) {
   .tb {
@@ -496,7 +506,7 @@ p {
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  font: 700 22px / 1 var(--font-site-display);
+  font: 600 22px / 1 var(--font-site-display);
   text-decoration: none;
   color: var(--site-paper);
 }
@@ -559,12 +569,12 @@ p {
   margin: 0 auto;
 }
 .panel:not([hidden]) {
-  animation: panel-in 500ms var(--ease-out);
+  animation: panel-in 280ms var(--ease-out);
 }
 @keyframes panel-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(8px);
   }
 }
 .panel-grid {
@@ -1145,7 +1155,7 @@ fieldset.ctl-group {
 }
 .price {
   margin: 0 0 0 -0.04em;
-  font: 700 clamp(150px, 29vw, 440px) / 0.74 var(--font-site-display);
+  font: 600 clamp(150px, 29vw, 440px) / 0.74 var(--font-site-display);
   font-variant-numeric: tabular-nums;
   color: var(--glass-700);
   white-space: nowrap;
@@ -1176,7 +1186,7 @@ fieldset.ctl-group {
   margin: 0;
   padding: 10px 0;
   border-top: 1.5px solid var(--site-ink);
-  font: 700 12px / 1.3 var(--spiral-font-mono);
+  font: 600 12px / 1.3 var(--spiral-font-mono);
   color: var(--glass-700);
 }
 .log ol {
@@ -1371,7 +1381,7 @@ fieldset.ctl-group {
 }
 .wm text {
   font-family: var(--font-site-display);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* ============================================================

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { PillCloseGlyph } from "../../ui/glyphs";
-import { sizeLabel } from "./library";
+import { sizeLabel, wallhavenPage } from "./library";
 import { useWallpaper } from "./state";
 import { thumbSrc, type ThumbPlatform } from "./thumbs";
 import type { GalleryItem } from "./types";
@@ -71,7 +71,7 @@ export function QuickLook({ items, platform, onStep }: QuickLookProps) {
       <div className="look__top">
         <p className="look__title">{sizeLabel(item.resolution)}</p>
         <p className="look__meta">
-          {item.id} · wallhaven.cc{current?.id === item.id ? " · On this Space" : ""}
+          {wallhavenPage(item.id)}{current?.id === item.id ? " · On this Space" : ""}
         </p>
       </div>
       <div className="look__bottom">
@@ -83,7 +83,7 @@ export function QuickLook({ items, platform, onStep }: QuickLookProps) {
           <p className="keys" id="look-keys">
             <span>
               <kbd>Return</kbd>
-              {applying ? "Downloading" : "Set"}
+              {applying ? "Downloading…" : "Set"}
             </span>
             <span>
               <kbd>←</kbd>

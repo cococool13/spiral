@@ -7,7 +7,7 @@
  */
 
 import { assertCommandArgs } from "./command-args";
-import { pageArt, plateThumb } from "./plate-art";
+import { ACCENT_HEX, LOOKS, pageArt, plateThumb, type PageDoc } from "./plate-art";
 
 // Real photographs for the grid so visual QA sees the room the way it ships.
 const ART = Object.values(
@@ -113,7 +113,7 @@ function sampleResume(name: string) {
       links: ["maya.okafor.dev"],
     },
     headline: "Operations lead",
-    summary: "",
+    summary: "Runs clinic operations for a three-site health group. Eight years in scheduling and logistics.",
     experience: [
       {
         id: "exp-1",
@@ -122,7 +122,11 @@ function sampleResume(name: string) {
         location: "Oakland",
         start: { raw: "2022", year: 2022, month: 3, present: false },
         end: { raw: "Present", year: null, month: null, present: true },
-        bullets: [{ id: "exp-1-b1", text: "Cut clinic wait time from 40 minutes to 18." }],
+        bullets: [
+          { id: "exp-1-b1", text: "Cut clinic wait time from 40 minutes to 18." },
+          { id: "exp-1-b2", text: "Moved three sites onto one booking system in four months." },
+          { id: "exp-1-b3", text: "Hired and trained a front-desk team of nine." },
+        ],
       },
       {
         id: "exp-2",
@@ -131,7 +135,10 @@ function sampleResume(name: string) {
         location: "Oakland",
         start: { raw: "2019", year: 2019, month: 6, present: false },
         end: { raw: "2022", year: 2022, month: 2, present: false },
-        bullets: [{ id: "exp-2-b1", text: "Scheduled 120 outbound loads a week." }],
+        bullets: [
+          { id: "exp-2-b1", text: "Scheduled 120 outbound loads a week." },
+          { id: "exp-2-b2", text: "Cut late deliveries from 9% to 3% with a daily carrier check." },
+        ],
       },
     ],
     education: [
@@ -149,7 +156,10 @@ function sampleResume(name: string) {
     leadership: [],
     awards: [],
     interests: [],
-    skills: [{ label: "Tools", items: ["Excel", "SQL"] }],
+    skills: [
+      { label: "Tools", items: ["Excel", "SQL", "Epic Cadence", "Airtable"] },
+      { label: "Languages", items: ["English", "Yoruba"] },
+    ],
   };
 }
 
@@ -187,31 +197,25 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
     const call = args.call as {
       type?: string;
       text?: string;
-      doc?: { contact?: { name?: string } };
+      doc?: PageDoc;
+      look?: string;
+      accent?: string;
     } | undefined;
     if (!call) return null;
     if (call.type === "load_document") return { stored: null };
     if (call.type === "parse_text") return sampleResume(pastedName(call.text ?? ""));
     if (call.type === "import_file") return sampleResume("Maya Okafor");
-    if (call.type === "preview") {
-      const doc = call.doc as { contact?: { name?: string } } | undefined;
-      const name = doc?.contact?.name?.trim() || "Resume";
-      return { pages: [pageArt(name)] };
-    }
+    if (call.type === "preview") return { pages: [pageArt(call.doc ?? {}, call.look ?? "", call.accent ?? "")] };
     if (call.type === "check") return { findings: mockFindings(call.doc) };
     if (call.type === "list_accents") {
-      return [
-        { id: "ink", hex: "var(--ink)" },
-        { id: "slate", hex: "var(--ink-2)" },
-        { id: "red", hex: "var(--red)" },
-      ];
+      return ACCENT_HEX.map(([id, hex]) => ({ id, hex }));
     }
     if (call.type === "thumbnails") {
       return {
-        thumbs: ["column", "ledger", "sheet", "rule"].map((id) => ({
+        thumbs: Object.entries(LOOKS).map(([id, look]) => ({
           id,
-          name: id.charAt(0).toUpperCase() + id.slice(1),
-          file: pageArt(id.charAt(0).toUpperCase() + id.slice(1)),
+          name: look.name,
+          file: pageArt(call.doc ?? {}, id, call.accent ?? ""),
           error: "",
         })),
       };
@@ -224,7 +228,7 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
         events.onmessage?.({ type: "progress", done: 2, total: 3 });
         await delay(800);
         return {
-          pages: [pageArt("Maya Okafor")],
+          pages: [pageArt(call.doc ?? {}, call.look ?? "", call.accent ?? "")],
           file: "",
           suggestedName: "Maya-Okafor.pdf",
           engine: "Built offline, no network used",

@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from "react";
 import { mark } from "../../bench";
 import { recordTileDecode } from "./decode";
+import { wallhavenPage } from "./library";
 import { useWallpaper } from "./state";
 import { Tile } from "./Tile";
 import type { ThumbPlatform } from "./thumbs";
@@ -32,7 +33,7 @@ export function WallpaperGrid({ items, platform, activeTile, onActiveTile }: Wal
   function onStage(item: GalleryItem) {
     if (staged.current.has(item.id)) return;
     staged.current.add(item.id);
-    log(`Fetching ${item.id} ahead from wallhaven.cc, because the pointer rested on it.`);
+    log(`Fetching ${wallhavenPage(item.id)} ahead, because the pointer rested on it.`);
   }
 
   function columns(grid: HTMLElement): number {

@@ -29,6 +29,12 @@ export function sizeLabel(resolution: string): string {
   return width && height ? `${width} × ${height}` : resolution;
 }
 
+/** Where the wallpaper lives on Wallhaven, as a person would type it. Spiral's
+ *  own ids carry a `w-` prefix that means nothing outside the app. */
+export function wallhavenPage(id: string): string {
+  return `wallhaven.cc/w/${id.replace(/^w-/, "")}`;
+}
+
 export const RECENT_LIMIT = 12;
 const RECENT_KEY = "spiral.wallpaper.recent";
 

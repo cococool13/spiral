@@ -161,11 +161,17 @@ export function Details({
 
   return (
     <section className="panel panel--wide">
-      <h2 className="panel__title">{fromScratch ? "Fill in the facts" : "Details"}</h2>
+      {fromScratch ? (
+        <h2 className="panel__title">Fill in the facts</h2>
+      ) : (
+        <h2 className="visually-hidden">Details</h2>
+      )}
 
+      <h3 className="panel__heading">Contact</h3>
       <div className="entry__grid">
         <Field
           label="Name"
+          wide
           value={doc.contact.name}
           autoComplete="name"
           autoFocus={fromScratch}
@@ -174,6 +180,7 @@ export function Details({
         />
         <Field
           label="Email"
+          wide
           value={doc.contact.email}
           type="email"
           autoComplete="email"

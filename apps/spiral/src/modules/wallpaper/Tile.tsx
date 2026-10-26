@@ -94,16 +94,14 @@ export function Tile({
           onLoad={onLoad}
         />
         {state === "applying" ? <span className="tile__progress" aria-hidden="true" /> : null}
-        {state === "applied" ? <span className="tile__badge">On desktop</span> : null}
+        {state === "applied" ? <span className="tile__badge">On this Space</span> : null}
       </button>
       <figcaption className={state === "error" ? "tile__line tile__line--error" : "tile__line"}>
-        {state === "applied"
-          ? "On this Space"
-          : state === "applying"
-            ? "Downloading from wallhaven.cc"
-            : state === "error"
-              ? phase?.error
-              : sizeLabel(item.resolution)}
+        {state === "applying"
+          ? "Downloading from wallhaven.cc…"
+          : state === "error"
+            ? phase?.error
+            : sizeLabel(item.resolution)}
       </figcaption>
     </figure>
   );

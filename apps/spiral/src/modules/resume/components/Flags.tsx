@@ -45,7 +45,7 @@ export function toFlag(finding: Finding, index: number): Flag {
     case "unparsedDate":
       return {
         key: `date-${finding.raw}-${index}`,
-        text: `"${finding.raw}" has no year Spiral could read.`,
+        text: `“${finding.raw}” has no year Spiral could read.`,
         fix: {
           label: "Write the year",
           run: () => focusField((input) => input.value.trim() === (finding.raw ?? "").trim()),
@@ -54,12 +54,12 @@ export function toFlag(finding: Finding, index: number): Flag {
     case "unknownHeading":
       return {
         key: `heading-${finding.raw}-${index}`,
-        text: `"${finding.raw}" is not a heading Spiral knows. Its lines stay as text.`,
+        text: `“${finding.raw}” is not a heading Spiral knows. Its lines stay as text.`,
       };
     case "hiddenText":
       return {
         key: `hidden-${finding.page}-${index}`,
-        text: `Page ${finding.page ?? 1} of the original has hidden text${finding.sample ? `: "${finding.sample}"` : ""}. Delete it in the source file.`,
+        text: `Page ${finding.page ?? 1} of the original has hidden text${finding.sample ? `: “${finding.sample}”` : ""}. Delete it in the source file.`,
       };
   }
 }

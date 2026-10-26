@@ -226,18 +226,25 @@
   text-align: center;
 }
 
+/* The whole page fits the pane, as a proof would; more pages scroll. */
+.pane__body {
+  container-type: size;
+}
+
 .sheet {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-24);
-  padding: 28px 24px 40px;
+  padding: 28px 24px;
 }
 
 .sheet__page {
   display: block;
-  width: min(612px, 100%);
-  height: auto;
+  height: calc(100cqh - 56px);
+  max-width: 100%;
+  aspect-ratio: 612 / 792;
+  object-fit: contain;
   background: var(--room-paper);
   box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.9);
   user-select: none;
@@ -281,11 +288,9 @@
   top: 0;
   background: color-mix(in srgb, var(--room) 70%, black);
   color: var(--room-mute);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
 }
 
 .facts__table thead th:first-child,
@@ -300,12 +305,10 @@
 
 .facts__state {
   color: var(--room-mute);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
   text-align: right;
-  text-transform: uppercase;
 }
 
 .facts__table tr:not([data-state="unchanged"]) .facts__state {
@@ -406,7 +409,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 10px 24px 12px;
+  padding: 6px 20px 8px;
   border-top: 1px solid var(--room-line);
   background: color-mix(in srgb, var(--room) 96%, transparent);
 }
@@ -418,7 +421,7 @@
   align-items: center;
   gap: 10px;
   overflow-x: auto;
-  padding: 4px 2px;
+  padding: 8px 4px;
   scrollbar-width: none;
 }
 
@@ -442,8 +445,15 @@
   transform: translateY(-1px);
 }
 
+/* Pages are white, so the chosen one is marked outside the paper, in glass red. */
 .strip__style[aria-checked="true"] {
-  border-color: var(--on-glass);
+  outline: 2px solid var(--glass-400);
+  outline-offset: 2px;
+  transform: translateY(-2px);
+}
+
+.strip__style:focus-visible {
+  outline-color: var(--room-paper);
 }
 
 .strip__style img {
@@ -617,19 +627,22 @@
 
 .panel__heading {
   margin: var(--space-16) 0 var(--space-8);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--room-line);
   color: var(--room-mute);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 16px;
-  text-transform: uppercase;
+}
+
+.panel > .panel__heading:first-of-type {
+  margin-top: 2px;
 }
 
 .panel__lede {
   max-width: 65ch;
   margin: 0 0 var(--space-16);
-  color: var(--ink-2);
+  color: var(--room-mute);
   font-size: 13px;
   line-height: 18px;
 }
@@ -645,7 +658,7 @@
 .panel__actions--dock {
   margin-top: var(--space-24);
   padding-top: var(--space-16);
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--room-line);
 }
 
 .panel__actions--generate {
@@ -655,7 +668,7 @@
 .field__label {
   display: block;
   margin-bottom: 6px;
-  color: var(--ink-2);
+  color: var(--room-mute);
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;
@@ -689,7 +702,7 @@ textarea.field__input {
 }
 
 .field__input::placeholder {
-  color: var(--ink-3);
+  color: var(--room-mute);
 }
 
 .entry {
@@ -740,7 +753,7 @@ textarea.field__input {
 
 .bullet-note {
   margin-top: 6px;
-  color: var(--ink-2);
+  color: var(--room-mute);
   font-size: 12px;
   line-height: 16px;
 }
@@ -756,15 +769,15 @@ textarea.field__input {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--ink);
+  color: var(--room-paper);
   font-weight: 500;
   text-decoration: underline;
-  text-decoration-color: var(--rule);
+  text-decoration-color: var(--room-line);
   text-underline-offset: 3px;
 }
 
 .btn--inline:hover:not(:disabled) {
-  text-decoration-color: var(--ink);
+  text-decoration-color: var(--room-paper);
 }
 
 .resume-toggle {
@@ -777,6 +790,14 @@ textarea.field__input {
 .fact {
   display: block;
   min-width: 0;
+}
+
+.fact--wide {
+  grid-column: 1 / -1;
+}
+
+.panel > .fact + .fact {
+  margin-top: var(--space-12);
 }
 
 .fact--edited .field > span::after,
@@ -804,7 +825,7 @@ textarea.field__input {
 }
 
 .build__stage {
-  color: var(--ink);
+  color: var(--room-paper);
   font-size: 13px;
   line-height: 18px;
 }
@@ -816,11 +837,11 @@ textarea.field__input {
   margin-top: var(--space-12);
   appearance: none;
   border: 0;
-  background: var(--rule);
+  background: var(--room-line);
 }
 
 .build__bar::-webkit-progress-bar {
-  background: var(--rule);
+  background: var(--room-line);
 }
 
 .build__bar::-webkit-progress-value {
@@ -833,7 +854,7 @@ textarea.field__input {
 
 .build__percent {
   margin-top: var(--space-8);
-  color: var(--ink-2);
+  color: var(--room-mute);
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 16px;
@@ -849,7 +870,7 @@ textarea.field__input {
 
 .model {
   padding: var(--space-12) 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--room-line);
 }
 
 .model__head {
@@ -860,7 +881,7 @@ textarea.field__input {
 }
 
 .model__name {
-  color: var(--ink);
+  color: var(--room-paper);
   font-size: 13px;
   font-weight: 600;
   line-height: 18px;
@@ -868,7 +889,7 @@ textarea.field__input {
 
 .model__size,
 .model__note {
-  color: var(--ink-2);
+  color: var(--room-mute);
   font-size: 12px;
   line-height: 16px;
 }

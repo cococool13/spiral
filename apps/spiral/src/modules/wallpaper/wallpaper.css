@@ -234,10 +234,9 @@
   border-radius: 4px;
   background: rgb(255 255 255 / 0.9);
   color: var(--room);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
 }
 
 .tile__badge--live {
@@ -281,7 +280,7 @@
   z-index: 41;
   width: min(380px, calc(100vw - 48px));
   transform: translateX(-50%);
-  animation: drop-in var(--dur-sheet) var(--ease-spring);
+  animation: drop-in var(--dur-sheet) var(--ease-out);
 }
 
 @keyframes drop-in {
@@ -316,11 +315,9 @@
   flex: none;
   margin-right: 6px;
   color: var(--room-mute);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
 }
 
 .dock__quiet,
@@ -391,7 +388,7 @@
   z-index: 45;
   background: var(--room);
   color: var(--on-glass);
-  animation: fade-in var(--dur-sheet) var(--ease-out);
+  animation: fade-in var(--dur-mark) var(--ease-out);
 }
 
 @keyframes fade-in {
@@ -540,11 +537,9 @@
 
 .activity__title {
   color: var(--room-mute);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
 }
 
 .activity__close {
@@ -608,7 +603,7 @@
   color: var(--room);
   font-size: 13px;
   transform: translateX(-50%);
-  animation: toast-in 300ms var(--ease-spring);
+  animation: toast-in var(--dur-sheet) var(--ease-out);
 }
 
 @keyframes toast-in {

@@ -69,7 +69,7 @@ export function PillBar({
   }
 
   return (
-    <div className="pillbar">
+    <div className="pillbar" data-tauri-drag-region>
       <nav className="pill" aria-label="Spiral">
         {tools}
         <PillIcon
