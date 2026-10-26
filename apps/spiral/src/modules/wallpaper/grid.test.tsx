@@ -18,6 +18,7 @@ const boot = (bench: boolean): BootState => ({
   ],
   start: { kind: "module", id: "wallpaper" },
   bench,
+  capabilities: { pinAllSpaces: false, pinReason: null },
 });
 
 function tiles(count: number): GalleryItem[] {

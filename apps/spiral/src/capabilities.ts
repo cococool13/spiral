@@ -1,8 +1,11 @@
+import { nativeCapabilities } from "./boot";
+
 /**
  * Features whose UI exists but whose native half does not ship yet.
  *
- * Every flag is false in a real build. A flag turns on only when the native
- * work behind it lands and this table is changed in the same commit. The
+ * A flag is false until the native work behind it lands, and turns on in the
+ * same commit. `pinAllSpaces` has landed; it is also off unless boot says
+ * this machine can run it (macOS 13+ with Spiral Live in the bundle). The
  * browser mock (`src/dev/tauri-mock.ts`) sets `__SPIRAL_CAPS__` so the parked
  * screens can be reviewed; production builds never read that override.
  */
@@ -19,6 +22,9 @@ export interface Capabilities {
   extraSources: boolean;
   /** Put back the wallpaper the person had before Spiral changed it. */
   restoreOriginal: boolean;
+  /** Keep one still on every Space through Spiral Live (macOS 13+). The
+   *  native half ships; boot says whether this machine can run it. */
+  pinAllSpaces: boolean;
 }
 
 const SHIPPING: Capabilities = {
@@ -30,6 +36,7 @@ const SHIPPING: Capabilities = {
   // Native undo and restore landed (wallpaper/history.rs). The control still
   // hides where `wallpaper_history` says the desktop cannot be read.
   restoreOriginal: true,
+  pinAllSpaces: true,
 };
 
 declare global {
@@ -39,10 +46,11 @@ declare global {
 }
 
 export function capabilities(): Capabilities {
+  const here = { ...SHIPPING, pinAllSpaces: SHIPPING.pinAllSpaces && nativeCapabilities().pinAllSpaces };
   if (import.meta.env.DEV && typeof window !== "undefined" && window.__SPIRAL_CAPS__) {
-    return { ...SHIPPING, ...window.__SPIRAL_CAPS__ };
+    return { ...here, ...window.__SPIRAL_CAPS__ };
   }
-  return SHIPPING;
+  return here;
 }
 
 /** True when a parked screen is on only because the browser mock asked for it. */

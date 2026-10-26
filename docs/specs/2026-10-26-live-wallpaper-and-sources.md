@@ -204,6 +204,18 @@ A helper is never started for a still. Option for Cohen: "Pin still to all Space
 the helper at 0 fps with its menu-bar item; this would bend the zero-process rule, so it
 is **not** in 2.1 unless approved.
 
+**Update 2026-10-26: approved and built (first slice of Spiral Live).** Measured on macOS
+27.0.1 (26A434): `setDesktopImageURL(_:for:options:)` writes only
+`Spaces[<current Space UUID>].Displays[<display>]` in
+`~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`; the
+`AllSpacesAndDisplays` entry and other Spaces keep their picture. So the helper is needed.
+"Pin wallpaper to all Spaces" is an explicit switch, off by default; Spiral Live re-sets the
+still per screen on `activeSpaceDidChangeNotification`, screen changes and wake, with one
+follow-up check ~1 s later because another process's change reaches
+`desktopImageURL(for:)` about a second late. IPC for this slice is `live/job.json` +
+`live/status.json` + the Darwin notification `app.spiral.wallpaper.live.job`; the socket in
+§3 comes with live video. Still to measure on 13, 14, 15 and 26.
+
 ## 10. Commands and events (frontend contract)
 
 All new commands return `Result<T, UserError>` with codes. `BootState` gains

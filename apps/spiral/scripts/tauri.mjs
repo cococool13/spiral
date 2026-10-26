@@ -15,5 +15,11 @@ if (buildEngine) {
     stdio: "inherit",
   });
 }
+// Spiral Live (the pin-to-all-Spaces helper) is nested in the bundle, so it
+// must exist before `tauri build` copies it. Dev builds it for this arch only.
+if (process.platform === "darwin" && (buildEngine || argv[0] === "dev")) {
+  const liveArgs = buildEngine ? [] : ["--dev"];
+  execFileSync(process.execPath, [join(here, "build-live.mjs"), ...liveArgs], { stdio: "inherit" });
+}
 const tauri = tauriCommand(args);
 execFileSync(tauri.file, tauri.args, { stdio: "inherit" });

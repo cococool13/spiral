@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { mark } from "../../bench";
 import { readBoot } from "../../boot";
+import { capabilities } from "../../capabilities";
+import { pinResume, pinState } from "../../lib/pin";
 import type { ModuleProps } from "../types";
 import { Browse } from "./Browse";
 import { errorCopy } from "./errors";
@@ -30,6 +32,18 @@ export default function ModuleRoot({ setStatus }: ModuleProps) {
         log("Opened Wallpaper.");
         void loadRecent();
         setReady(true);
+        // The pin is on but Spiral Live was quit from its menu or did not
+        // start at login: bring it back, and say so.
+        if (capabilities().pinAllSpaces) {
+          void pinState()
+            .then((pin) => (pin.pinned && !pin.running ? pinResume() : null))
+            .then((resumed) => {
+              if (live && resumed?.running) {
+                log("Started Spiral Live again to keep your pinned wallpaper on every Space. It shows in the menu bar.");
+              }
+            })
+            .catch(() => undefined);
+        }
       })
       .catch((err: unknown) => {
         if (!live) return;

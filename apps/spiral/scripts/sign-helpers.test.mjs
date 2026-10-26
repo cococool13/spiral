@@ -10,6 +10,8 @@ import {
   bundleConfig,
   missingHelpers,
   signFile,
+  signLiveHelper,
+  liveHelperPath,
   tauriCommand,
   signHelpers,
   tauriBuildArgs,
@@ -91,4 +93,23 @@ test("the tauri CLI runs through node, so Windows needs no .cmd shim", () => {
   assert.deepEqual(args.slice(1), ["build", "--config", bundleConfig]);
   const source = readFileSync(new URL("./tauri.mjs", import.meta.url), "utf8");
   assert.equal(source.includes('execFileSync("tauri"'), false);
+});
+
+test("Spiral Live is required and signed inside-out with no entitlements", () => {
+  const app = join(scratch, "Live.app");
+  rmSync(app, { recursive: true, force: true });
+  mkdirSync(join(app, "Contents", "MacOS"), { recursive: true });
+  assert.throws(() => signLiveHelper(app, "-", { timestamp: false }), /Spiral Live\.app/);
+  const live = liveHelperPath(app);
+  const mac = join(live, "Contents", "MacOS");
+  mkdirSync(mac, { recursive: true });
+  writeFileSync(
+    join(live, "Contents", "Info.plist"),
+    '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>app.spiral.wallpaper.live</string><key>CFBundleExecutable</key><string>Spiral Live</string></dict></plist>',
+  );
+  const source = join(scratch, "live.c");
+  writeFileSync(source, "int main(void) { return 0; }\n");
+  execFileSync("cc", ["-o", join(mac, "Spiral Live"), source], { stdio: "pipe" });
+  signLiveHelper(app, "-", { timestamp: false });
+  execFileSync("codesign", ["--verify", "--strict", live], { stdio: "pipe" });
 });

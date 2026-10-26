@@ -15,7 +15,7 @@ use tokio::sync::watch;
 use crate::paths::Root;
 use crate::settings::FitMode;
 
-pub use history::{restore_original, undo, Desktop, HistoryView, Restored};
+pub use history::{restore_original, undo, Desktop, HistoryView, Restored, Screen};
 pub use model::{
     Applied, DisplaySize, GalleryItem, Rendition, SearchPage, SearchParams, UserError, WallId,
 };

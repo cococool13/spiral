@@ -29,6 +29,10 @@ const COMMAND_ARGS: Record<string, readonly string[]> = {
   wallpaper_history: [],
   wallpaper_undo: [],
   wallpaper_restore_original: [],
+  wallpaper_pin_state: [],
+  wallpaper_pin_all_spaces: ["enabled"],
+  wallpaper_pin_keep: ["enabled"],
+  wallpaper_pin_resume: [],
   bench_mark: ["mark"],
   "plugin:opener|open_url": ["url"],
 };
