@@ -1,8 +1,8 @@
 //! Wallpapers the person set, kept across launches.
 //!
 //! `recent.json` stores enough to set an item again after a restart: the
-//! prefixed id, the resolution, the source's full and thumbnail URLs and a
-//! credit line. The webview only ever sees the id and the resolution.
+//! prefixed id, the resolution, the source's full and thumbnail URLs, and
+//! the title and credit the source sent.
 
 use std::fs::{self, File};
 use std::io::Write;
@@ -20,9 +20,6 @@ pub const RECENT_LIMIT: usize = 12;
 pub struct RecentItem {
     #[serde(flatten)]
     pub item: StoredItem,
-    /// Who made it and where it came from, as the source states it.
-    #[serde(default)]
-    pub credit: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -33,9 +30,8 @@ pub struct Recent {
 
 impl Recent {
     pub fn add(&mut self, item: StoredItem) {
-        let credit = credit_for(&item.id);
         self.items.retain(|entry| entry.item.id != item.id);
-        self.items.insert(0, RecentItem { item, credit });
+        self.items.insert(0, RecentItem { item });
         self.items.truncate(RECENT_LIMIT);
     }
 
@@ -75,16 +71,10 @@ fn file(root: &Root) -> PathBuf {
     root.dir().join("recent.json")
 }
 
-fn credit_for(id: &WallId) -> String {
-    match id.as_str().split_once('-') {
-        Some(("w", rest)) => format!("wallhaven.cc/w/{rest}"),
-        _ => String::new(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::wallpaper::model::Credit;
 
     fn item(n: usize) -> StoredItem {
         StoredItem {
@@ -93,6 +83,12 @@ mod tests {
             thumb_small: format!("https://th.wallhaven.cc/small/ab/{n}.jpg"),
             thumb_large: format!("https://th.wallhaven.cc/lg/ab/{n}.jpg"),
             full: format!("https://w.wallhaven.cc/full/ab/wallhaven-{n}.jpg"),
+            title: None,
+            credit: Some(Credit {
+                line: format!("Photo {n}"),
+                licence: "CC0".into(),
+                page: None,
+            }),
         }
     }
 
@@ -111,7 +107,7 @@ mod tests {
         let back = load(&root);
         assert_eq!(back.items.len(), RECENT_LIMIT);
         assert_eq!(back.items[0].item.id.as_str(), "w-13");
-        assert_eq!(back.items[0].credit, "wallhaven.cc/w/13");
+        assert_eq!(back.items[0].item.credit.as_ref().unwrap().line, "Photo 13");
         let found = back.find(&WallId::parse("w-5").unwrap()).unwrap();
         assert_eq!(found.full, "https://w.wallhaven.cc/full/ab/wallhaven-5.jpg");
         assert!(back.find(&WallId::parse("w-0").unwrap()).is_none());

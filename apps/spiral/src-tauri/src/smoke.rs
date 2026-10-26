@@ -59,6 +59,7 @@ async fn run(app: &tauri::AppHandle) -> Result<(), String> {
             categories: "111".into(),
             sorting: "toplist".into(),
             page: 1,
+            ..Default::default()
         })
         .await
         .map_err(|err| err.to_string())?;

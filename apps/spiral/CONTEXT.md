@@ -19,18 +19,23 @@ the file is given — those two must not drift apart.
 
 | Term | Meaning |
 | --- | --- |
-| **Source** | Wallhaven, via `src-tauri/src/wallpaper/wallhaven.rs`. New sources become adapters behind one `Source` trait (see the 2026-10-26 spec §7). |
-| **Wallhaven** | The default still source; today the only one that ships. SFW search only; there is no API-key path and no NSFW category, by product decision rather than by omission. |
-| **Adding a source** | A product decision. The approved list is in `docs/specs/2026-10-26-live-wallpaper-and-sources.md` §7. Unsplash and Pexels shipped briefly and were removed; Pexels terms forbid wallpaper apps. |
-| **Wallpaper** | One image as a source describes it: an id, a resolution, a thumbnail URL and a full-resolution URL (`WallpaperItem` in `src-tauri/src/wallpaper/net.rs`). |
-| **Prefixed id** | Every id carries its source's prefix (`w-…` for Wallhaven) so two sources can never collide in the same cache directory. |
+| **Source** | An adapter behind the `Source` trait in `src-tauri/src/wallpaper/sources/`. Still sources that ship: Wallhaven (`w-`), NASA (`n-`), ESA/Webb and ESA/Hubble (`e-`), Wikimedia Commons featured pictures (`c-`), Art Institute of Chicago (`a-`), Cleveland Museum of Art (`m-`), Bing daily (`b-`), Smithsonian Open Access (`s-`), Rijksmuseum (`r-`). Each has a recorded-fixture test. |
+| **Source filter** | The chips above the grid: All (Wallhaven, NASA, ESA, Commons, AIC, Cleveland, Bing), Wallhaven, Space (NASA, ESA), Museums (AIC, Cleveland, Rijksmuseum, Smithsonian), Commons, Bing daily. A group asks its sources at once and names any that did not answer. |
+| **Wallhaven** | The default still source. SFW search only; there is no API-key path and no NSFW category, by product decision rather than by omission. Categories and the colour palette apply only to it. |
+| **Source intro** | The sentence shown before a source's first request: who is asked, what they see (IP address and search words), and that answers are kept for a day. Remembered per source on this computer. |
+| **Credit** | The line, licence and page (no scheme) a source gives each item. Shown in quick look and written to the activity log when a wallpaper is set. ESA's comes from the image page, fetched on demand. |
+| **Own key** | Smithsonian only: a person may paste an api.data.gov key; it is stored 0600 in `$APPDATA/sources.json` and sent only to api.si.edu. Without it the demo key is used (10 requests an hour per IP). |
+| **Adding a source** | A product decision. The approved list is in `docs/specs/2026-10-26-live-wallpaper-and-sources.md` §7. Unsplash and Pexels shipped briefly and were removed; Pexels terms forbid wallpaper apps. Apple Aerials stills were skipped (§7). |
+| **Wallpaper** | One image as a source describes it: an id, a resolution, a title, a credit, a thumbnail URL and a full-resolution URL (`StoredItem` in `src-tauri/src/wallpaper/model.rs`). The webview never sees the URLs. |
+| **Prefixed id** | Every id carries its source's prefix (`w-`, `n-`, `e-`, `c-`, `a-`, `m-`, `b-`, `s-`, `r-`) so two sources can never collide in the same cache directory. |
 
 ## Network and disk
 
 | Term | Meaning |
 | --- | --- |
-| **The Rust boundary** | All source traffic goes through `src-tauri/src/wallpaper/net.rs`, never the webview. Spiral Live makes no network calls. On boot, `license_ensure` calls Spiral's validator from `spiral-license`. Neither path is the webview. |
-| **Error code** | A short string the backend returns — `offline`, `rate_limited`, `bad_response`, `download_failed`, `too_large`, `bad_image`, `apply_failed` — which `errorCopy` maps to brand copy. The backend never writes a user-facing sentence. `cache_failed` never reaches `errorCopy`; Settings states a cache-clear failure itself. |
+| **The Rust boundary** | All source traffic goes through `Net` in `src-tauri/src/wallpaper/net.rs`, never the webview: host allowlist from every source (redirects too), a rate bucket per host, a 24 h response cache in `$APPDATA/source-cache/` (file names are hashes, never search words or keys), and one line per request in `$APPDATA/activity.jsonl`. Spiral Live makes no network calls. On boot, `license_ensure` calls Spiral's validator from `spiral-license`. Neither path is the webview. |
+| **Requests log** | `$APPDATA/activity.jsonl`, rotated at 1 MB, local only. Shown under Activity, with a Clear button. |
+| **Error code** | A short string the backend returns — `offline`, `rate_limited`, `bad_response`, `source_unavailable`, `download_failed`, `too_large`, `bad_image`, `apply_failed` — which `errorCopy` maps to brand copy. The backend never writes a user-facing sentence. `cache_failed` never reaches `errorCopy`; Settings states a cache-clear failure itself. |
 | **Thumbnail cache** | The on-disk LRU cache of thumbnails in app-data, capped at 200 MB. The cap is stated in Settings; a cap the user cannot see is not a promise. |
 | **Validated as an image** | Downloaded bytes are checked to actually start like an image before they are written to disk or handed to the OS. The extension comes from the bytes, never from the URL. |
 | **Applied wallpaper** | The full-resolution file this app wrote and set as the desktop background, kept in app-data so the OS keeps pointing at something real. |

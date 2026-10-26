@@ -33,6 +33,12 @@ const COMMAND_ARGS: Record<string, readonly string[]> = {
   wallpaper_pin_all_spaces: ["enabled"],
   wallpaper_pin_keep: ["enabled"],
   wallpaper_pin_resume: [],
+  sources_list: [],
+  displays_list: [],
+  source_credit: ["id"],
+  activity_list: ["limit"],
+  activity_clear: [],
+  source_key_set: ["source", "key"],
   bench_mark: ["mark"],
   "plugin:opener|open_url": ["url"],
 };

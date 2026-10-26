@@ -16,10 +16,6 @@ export interface Capabilities {
   applyPerDisplay: boolean;
   /** Pause a live wallpaper on battery, full-screen apps, Low Power Mode, lock. */
   pauseRules: boolean;
-  /** Search Wallhaven by colour. */
-  colorSearch: boolean;
-  /** Sources other than Wallhaven. */
-  extraSources: boolean;
   /** Put back the wallpaper the person had before Spiral changed it. */
   restoreOriginal: boolean;
   /** Keep one still on every Space through Spiral Live (macOS 13+). The
@@ -31,8 +27,6 @@ const SHIPPING: Capabilities = {
   liveWallpaper: false,
   applyPerDisplay: false,
   pauseRules: false,
-  colorSearch: false,
-  extraSources: false,
   // Native undo and restore landed (wallpaper/history.rs). The control still
   // hides where `wallpaper_history` says the desktop cannot be read.
   restoreOriginal: true,

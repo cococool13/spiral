@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::paths::{self, Root};
 
 use super::model::{Rendition, StoredPage, UserError, WallId};
-use super::net::{self, Transport};
+use super::net::{self, Net};
 
 const THUMB_CAP: u64 = 200 * 1024 * 1024;
 const STAGING_CAP: usize = 2;
@@ -58,7 +58,7 @@ pub fn read_thumb(root: &Root, id: &WallId, rendition: Rendition) -> Option<Vec<
 
 pub async fn download_thumb(
     root: &Root,
-    transport: &dyn Transport,
+    net: &Net,
     id: &WallId,
     url: &str,
     rendition: Rendition,
@@ -66,7 +66,7 @@ pub async fn download_thumb(
     if let Some(bytes) = read_thumb(root, id, rendition) {
         return Ok(bytes);
     }
-    let bytes = transport.get(url, &[]).await?;
+    let bytes = net.asset(url, "thumb", id.as_str()).await?;
     let ext = net::image_ext(&bytes)?;
     let name = format!("{}.{ext}", thumb_stem(id, rendition));
     write_bytes(&root.thumbs(), &name, &bytes)?;
@@ -80,14 +80,14 @@ pub fn find_full(dir: &Path, id: &WallId) -> Option<PathBuf> {
 
 pub async fn download_full(
     dir: &Path,
-    transport: &dyn Transport,
+    net: &Net,
     id: &WallId,
     url: &str,
 ) -> Result<PathBuf, UserError> {
     if let Some(path) = find_full(dir, id) {
         return Ok(path);
     }
-    let bytes = transport.get(url, &[]).await?;
+    let bytes = net.asset(url, "download", id.as_str()).await?;
     let ext = net::image_ext(&bytes)?;
     let name = format!("{}.{ext}", id.as_str());
     write_bytes(dir, &name, &bytes)?;

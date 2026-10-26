@@ -141,14 +141,21 @@ All video is muted; audio tracks are ignored. Decision table is a pure Rust func
 same dyn-safe `BoxFuture` style as `net::Transport`, so tests inject fixtures:
 
 ```rust
+// As shipped (stills): each search answer already carries thumb, full URL and credit.
 pub trait Source: Send + Sync {
-    fn meta(&self) -> &SourceMeta; // id, prefix, kind (Still|Video), hosts, rate, licence note
-    fn search<'a>(&'a self, q: &'a Query, net: &'a Net) -> BoxFuture<'a, Result<Page, UserError>>;
-    fn resolve<'a>(&'a self, id: &'a WallId, want: Rendition, net: &'a Net)
-        -> BoxFuture<'a, Result<Download, UserError>>; // url, expected type, bytes, sha256?
-    fn credit(&self, item: &Item) -> Credit; // text, author, licence, link
+    fn meta(&self) -> &'static SourceMeta; // id, prefix, name, group, hosts, rate, licence, optional_key
+    fn search<'a>(&'a self, q: &'a ResolvedSearch, net: &'a Arc<Net>)
+        -> BoxFuture<'a, Result<StoredPage, UserError>>; // landscape, at or above q.floor()
+    fn credit<'a>(&'a self, item: &'a StoredItem, net: &'a Arc<Net>)
+        -> BoxFuture<'a, Option<Credit>>; // default: the stored credit; ESA reads its page
 }
 ```
+
+Group chips (All, Space, Museums) fan out in parallel and interleave; a source that fails is
+named in `SearchPage.unavailable` and the rest still show. "Fits your display" sends the
+largest display (`displays_list`) as the floor: Wallhaven gets `atleast`/`ratios`, the
+others filter by the item's pixel size. Every item must be landscape (at least 5:4) and at
+least 1920x1080.
 
 `Net` wraps one `reqwest` client: host allowlist from every `SourceMeta.hosts`, a token
 bucket per host, user agent `Spiral/<ver> (+https://spiralcc.tech)`, a 24 h response cache
@@ -158,23 +165,30 @@ codes; new ones: `source_unavailable`, `video_too_long`, `bad_video`, `transcode
 
 ### Launch list
 
-| Source (prefix) | Kind | Endpoint / auth | Rate budget | Credit and licence |
-| --- | --- | --- | --- | --- |
-| Wallhaven (`w-`) | still | API, no key, SFW | 40/min | unchanged |
-| NASA Images (`n-`) | still | `images-api.nasa.gov`, no key | 30/min | "NASA/<center>"; mostly public domain, show the item's own credit field when present; no NASA insignia use |
-| ESA/Hubble, ESA/Webb (`e-`) | still | public image pages / feeds, parsed (fragile) | 10/min | CC BY 4.0, credit line verbatim from page |
-| Wikimedia Commons POTD (`c-`) | still | MediaWiki API, UA with contact | 30/min | per-file licence from `extmetadata`; skip non-free and NC/ND |
-| Art Institute of Chicago (`a-`) | still | `api.artic.edu`, IIIF, `is_public_domain` | 30/min | CC0; "Art Institute of Chicago" |
-| Cleveland Museum of Art (`m-`) | still | Open Access API, `cc0` filter | 30/min | CC0 |
-| Bing daily (`b-`) | still | `HPImageArchive`, `uhd=1` (fragile) | 4/day | personal use; fetched per user, never mirrored; copyright string shown |
+| Source (prefix) | Kind | Endpoint / auth | Rate budget | Credit and licence | Verified 2026-10-26 (curl, UA `Spiral/2.0.0 (+https://spiralcc.tech)`) |
+| --- | --- | --- | --- | --- | --- |
+| Wallhaven (`w-`) | still | API, no key, SFW | 40/min | unchanged | `colors`, `atleast`, `ratios` together OK; `x-ratelimit-limit: 45` |
+| NASA Images (`n-`) | still | `images-api.nasa.gov/search`, no key; files on `images-assets.nasa.gov` | 30/min | secondary creator, photographer, else "NASA/<center>"; page `images.nasa.gov/details/<id>` | search links carry the canonical file's width and height; `~small`/`~large` thumbs |
+| ESA/Hubble, ESA/Webb (`e-`) | still | `esawebb.org` / `esahubble.org` `/images/?search=` pages, parsed `var images = [` (fragile); `cdn.*` renditions | 10/min | CC BY 4.0, credit verbatim from the image page's `<div class="credit">` (one cached request) | `thumb700x`, `screen` (1280), `publicationjpg` (4000 wide, ~3.7 MB); `/images/page/N/` pages |
+| Wikimedia Commons featured (`c-`) | still | MediaWiki API, `incategory:Featured_pictures_on_Wikimedia_Commons` + `filew`/`fileh` | 30/min | per-file licence from `extmetadata`; only CC BY/BY-SA/CC0/PD, never NC/ND | API and size filters OK; thumbs on `upload.wikimedia.org` |
+| Art Institute of Chicago (`a-`) | still | `api.artic.edu`, `is_public_domain`; IIIF on `www.artic.edu` | 30/min | CC0; artist, title, date | 200 only with a real UA; IIIF 843/1686/3000/4000 OK, wider redirects to 843, `full/full` 403 |
+| Cleveland Museum of Art (`m-`) | still | Open Access API, `cc0=1&has_image=1`, `fields=` | 30/min | CC0; page `clevelandart.org/art/<accession>` | print JPEG (~3400 px) used; full file is TIFF, not used |
+| Bing daily (`b-`) | still | `HPImageArchive` `idx=0,7&n=8` (fragile) | 4/day | personal use; fetched per user, never mirrored; copyright string shown | `_UHD.jpg` 3840x2160, `_1920x1080`, `_640x360` OK (`_480x270` 404) |
+| Smithsonian Open Access (`s-`) | still | `api.si.edu` with `DEMO_KEY`, or the person's own api.data.gov key (field in the Activity panel, stored 0600 in `sources.json`, sent only to api.si.edu) | 10/hour demo, 30/min own key | CC0 only; maker, title, unit | `DEMO_KEY` answers with `x-ratelimit-limit: 10` per client IP (api.data.gov); `ids.si.edu/ids/deliveryService?max=` 640/1600/4000 OK |
+| Rijksmuseum (`r-`) | still | `data.rijksmuseum.nl/search/collection` (Linked Art ids, `pageToken`), object JSON on `id.rijksmuseum.nl`, IIIF on `iiif.micr.io` | 30/min search, 120/min objects | public domain mark; maker and English title | search, object JSON (no Accept header; `_profile=la` 406), `info.json` sizes; renders to 4096 OK, 5120 → 400 |
 | Shaders (`g-`) | live | local | — | "Spiral" |
 | Your videos (`u-`) | live | local file | — | none |
 | **2.1.x:** Spiral library (`l-`) | live | R2 `library.spiralcc.tech/manifest.json`, Ed25519-signed, sha256 per file | 1 manifest/day | Spiral-owned or CC0 only |
 | **2.1.x:** Pixabay video (`p-`) | live | via a no-log Worker proxy holding the key, 24 h cache (their terms) | Worker-side 100/min | Pixabay Content License; "Video by <user> on Pixabay" |
 
-Deferred: Smithsonian (needs api.data.gov key → proxy), Rijksmuseum (API change unverified).
+Shipped 2026-10-26: every still row above. Smithsonian needs no proxy: the demo key is
+budgeted per client IP, and no shared secret is in the binary.
+Skipped: Apple Aerials stills read from this Mac. `/Library/Application Support/com.apple.idleassetsd`
+holds `Aerial.sqlite` and 141 snapshots, but the snapshots are 214x130 previews and the
+`Customer/4KSDR…` video folders were empty on the test Mac, so no wallpaper-grade still could be
+read or verified. Revisit with a frame grab from a downloaded aerial.
 Excluded: Pexels (terms), Unsplash, Mixkit, Videvo, Coverr, Reddit, Google Earth View,
-Apple Aerials (Apple copyright; Cohen's call to revisit), any other app's library.
+any other app's library.
 The Worker proxy and R2 see the user's IP; Spiral keeps no logs and the copy says so.
 
 ## 8. Undo, restore and the lock-screen still

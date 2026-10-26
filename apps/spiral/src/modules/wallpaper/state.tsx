@@ -8,7 +8,7 @@ import {
   undo as undoWallpaper,
 } from "./api";
 import { errorCopy } from "./errors";
-import { addRecent, displayPixels, forgetWebviewRecent, pickSurprise, sizeLabel, wallhavenPage, type DisplayPixels } from "./library";
+import { addRecent, displayPixels, forgetWebviewRecent, pickSurprise, sizeLabel, itemPage, type DisplayPixels } from "./library";
 import type { Categories, GalleryItem, HistoryView, Restored } from "./types";
 
 export const CHIPS: { label: string; categories: Categories }[] = [
@@ -134,7 +134,7 @@ export function Frame({ children }: { children: ReactNode }) {
       busy.current = true;
       setPhase({ id: item.id, phase: "applying" });
       setToast(null);
-      log(`${why ?? "Downloading"} ${wallhavenPage(item.id)} (${sizeLabel(item.resolution)}).`);
+      log(`${why ?? "Downloading"} ${itemPage(item)} (${sizeLabel(item.resolution)}).`);
       try {
         const done = await applyWallpaper(item.id);
         const where = displaysLabel(done.displays);
@@ -142,12 +142,12 @@ export function Frame({ children }: { children: ReactNode }) {
         setCurrent(item);
         setRecent((list) => addRecent(list, item));
         noteWallpaperApplied();
-        log(`Set ${wallhavenPage(item.id)} on ${where}, this Space. The previous wallpaper is kept for undo.`);
+        log(`Set ${itemPage(item)} on ${where}, this Space.${item.credit ? ` ${item.credit.line}. ${item.credit.licence}.` : ""} The previous wallpaper is kept for undo.`);
         setToast({ text: `Set on ${where}.`, undo: true });
       } catch (err: unknown) {
         const copy = errorCopy(err);
         setPhase({ id: item.id, phase: "error", error: copy });
-        log(`Did not set ${wallhavenPage(item.id)}. ${copy}`);
+        log(`Did not set ${itemPage(item)}. ${copy}`);
       } finally {
         busy.current = false;
       }

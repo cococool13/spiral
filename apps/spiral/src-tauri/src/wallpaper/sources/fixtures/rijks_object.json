@@ -1,0 +1,1109 @@
+{
+ "@context": "https://linked.art/ns/v1/linked-art.json",
+ "id": "https://id.rijksmuseum.nl/20010092",
+ "type": "HumanMadeObject",
+ "classified_as": [
+  {
+   "id": "https://id.rijksmuseum.nl/2202852",
+   "type": "Type",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300435443",
+     "type": "Type",
+     "_label": "Type of Work"
+    }
+   ],
+   "equivalent": [
+    {
+     "id": "http://vocab.getty.edu/aat/300265079",
+     "type": "Type"
+    }
+   ],
+   "notation": [
+    {
+     "@language": "en",
+     "@value": "hanging scroll"
+    },
+    {
+     "@language": "nl",
+     "@value": "hangrol"
+    }
+   ]
+  }
+ ],
+ "dimension": [
+  {
+   "type": "Dimension",
+   "classified_as": [
+    {
+     "id": "https://id.rijksmuseum.nl/22011",
+     "type": "Type",
+     "equivalent": [
+      {
+       "id": "http://vocab.getty.edu/aat/300055644",
+       "type": "Type"
+      }
+     ],
+     "notation": [
+      {
+       "@language": "en",
+       "@value": "height"
+      },
+      {
+       "@language": "nl",
+       "@value": "hoogte"
+      }
+     ]
+    }
+   ],
+   "identified_by": [
+    {
+     "type": "Name",
+     "content": "montering",
+     "language": [
+      {
+       "id": "http://vocab.getty.edu/aat/300388256",
+       "type": "Language"
+      }
+     ]
+    }
+   ],
+   "unit": {
+    "id": "http://vocab.getty.edu/aat/300379098",
+    "type": "MeasurementUnit"
+   },
+   "value": "80"
+  },
+  {
+   "type": "Dimension",
+   "classified_as": [
+    {
+     "id": "https://id.rijksmuseum.nl/22012",
+     "type": "Type",
+     "equivalent": [
+      {
+       "id": "http://vocab.getty.edu/aat/300055647",
+       "type": "Type"
+      }
+     ],
+     "notation": [
+      {
+       "@language": "en",
+       "@value": "width"
+      },
+      {
+       "@language": "nl",
+       "@value": "breedte"
+      }
+     ]
+    }
+   ],
+   "identified_by": [
+    {
+     "type": "Name",
+     "content": "montering",
+     "language": [
+      {
+       "id": "http://vocab.getty.edu/aat/300388256",
+       "type": "Language"
+      }
+     ]
+    }
+   ],
+   "unit": {
+    "id": "http://vocab.getty.edu/aat/300379098",
+    "type": "MeasurementUnit"
+   },
+   "value": "180"
+  }
+ ],
+ "equivalent": [
+  {
+   "id": "http://hdl.handle.net/10934/RM0001.COLLECT.844174",
+   "type": "HumanMadeObject"
+  }
+ ],
+ "identified_by": [
+  {
+   "type": "Identifier",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300312355",
+     "type": "Type"
+    },
+    {
+     "id": "https://id.rijksmuseum.nl/22015218",
+     "type": "Type",
+     "notation": [
+      {
+       "@language": "en",
+       "@value": "object number"
+      },
+      {
+       "@language": "nl",
+       "@value": "objectnummer"
+      }
+     ]
+    }
+   ],
+   "content": "AK-MAK-1830"
+  },
+  {
+   "id": "_:bnode0",
+   "type": "Name",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300404670",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    },
+    {
+     "id": "http://vocab.getty.edu/aat/300417207",
+     "type": "Type"
+    }
+   ],
+   "content": "Landscape in China",
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388277",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "id": "_:bnode1",
+   "type": "Name",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300404670",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    },
+    {
+     "id": "http://vocab.getty.edu/aat/300417207",
+     "type": "Type"
+    }
+   ],
+   "content": "Landschap in China",
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "type": "Name",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300417200",
+     "type": "Type"
+    }
+   ],
+   "content": "Landschap in China",
+   "identified_by": [
+    {
+     "type": "Identifier",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300456575",
+       "type": "Type"
+      }
+     ],
+     "content": "1"
+    }
+   ],
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ]
+  }
+ ],
+ "made_of": [
+  {
+   "id": "https://id.rijksmuseum.nl/2202917",
+   "type": "Material",
+   "equivalent": [
+    {
+     "id": "http://vocab.getty.edu/aat/300013109",
+     "type": "Material"
+    },
+    {
+     "id": "http://www.wikidata.org/entity/Q161179",
+     "type": "Material"
+    }
+   ],
+   "identified_by": [
+    {
+     "type": "Identifier",
+     "assigned_by": [
+      {
+       "type": "AttributeAssignment",
+       "assigned": [
+        "https://id.rijksmuseum.nl/20010092"
+       ],
+       "assigned_property": "influenced_by"
+      }
+     ],
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300456575",
+       "type": "Type"
+      }
+     ],
+     "content": "2"
+    }
+   ],
+   "notation": [
+    {
+     "@language": "en",
+     "@value": "pigment"
+    },
+    {
+     "@language": "nl",
+     "@value": "pigment"
+    }
+   ]
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/220365",
+   "type": "Material",
+   "equivalent": [
+    {
+     "id": "http://vocab.getty.edu/aat/300015012",
+     "type": "Material"
+    },
+    {
+     "id": "http://www.wikidata.org/entity/Q127418",
+     "type": "Material"
+    }
+   ],
+   "identified_by": [
+    {
+     "type": "Identifier",
+     "assigned_by": [
+      {
+       "type": "AttributeAssignment",
+       "assigned": [
+        "https://id.rijksmuseum.nl/20010092"
+       ],
+       "assigned_property": "influenced_by"
+      }
+     ],
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300456575",
+       "type": "Type"
+      }
+     ],
+     "content": "3"
+    }
+   ],
+   "notation": [
+    {
+     "@language": "en",
+     "@value": "ink"
+    },
+    {
+     "@language": "nl",
+     "@value": "inkt"
+    }
+   ]
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/22088",
+   "type": "Material",
+   "equivalent": [
+    {
+     "id": "http://vocab.getty.edu/aat/300243428",
+     "type": "Material"
+    },
+    {
+     "id": "http://www.wikidata.org/entity/Q37681",
+     "type": "Material"
+    }
+   ],
+   "identified_by": [
+    {
+     "type": "Identifier",
+     "assigned_by": [
+      {
+       "type": "AttributeAssignment",
+       "assigned": [
+        "https://id.rijksmuseum.nl/20010092"
+       ],
+       "assigned_property": "influenced_by"
+      }
+     ],
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300456575",
+       "type": "Type"
+      }
+     ],
+     "content": "1"
+    }
+   ],
+   "notation": [
+    {
+     "@language": "en",
+     "@value": "silk"
+    },
+    {
+     "@language": "nl",
+     "@value": "zijde"
+    }
+   ]
+  }
+ ],
+ "member_of": [
+  {
+   "id": "https://id.rijksmuseum.nl/260238",
+   "type": "Set"
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/260239",
+   "type": "Set"
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/260247",
+   "type": "Set"
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/260251",
+   "type": "Set"
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/26134",
+   "type": "Set"
+  }
+ ],
+ "produced_by": {
+  "type": "Production",
+  "part": [
+   {
+    "type": "Production",
+    "assigned_by": [
+     {
+      "type": "AttributeAssignment",
+      "assigned": [
+       {
+        "id": "https://id.rijksmuseum.nl/210155764",
+        "type": "Person"
+       }
+      ],
+      "assigned_property": "carried_out_by",
+      "motivated_by": [
+       {
+        "type": "LinguisticObject",
+        "carried_by": [
+         "https://id.rijksmuseum.nl/20010092"
+        ],
+        "classified_as": [
+         {
+          "id": "http://vocab.getty.edu/aat/300028705",
+          "type": "Type"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "classified_as": [
+     {
+      "id": "http://vocab.getty.edu/aat/300404450",
+      "type": "Type"
+     }
+    ],
+    "identified_by": [
+     {
+      "type": "Identifier",
+      "classified_as": [
+       {
+        "id": "http://vocab.getty.edu/aat/300456575",
+        "type": "Type"
+       }
+      ],
+      "content": "1"
+     }
+    ],
+    "referred_to_by": [
+     {
+      "type": "LinguisticObject",
+      "classified_as": [
+       {
+        "id": "http://vocab.getty.edu/aat/300435416",
+        "type": "Type"
+       }
+      ],
+      "content": "painter: Hashimoto Kansetsu (signed by artist), Tokyo",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ]
+     },
+     {
+      "type": "LinguisticObject",
+      "classified_as": [
+       {
+        "id": "http://vocab.getty.edu/aat/300435416",
+        "type": "Type"
+       }
+      ],
+      "content": "schilder: Hashimoto Kansetsu (eigenhandig gesigneerd), Tokyo",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388256",
+        "type": "Language"
+       }
+      ]
+     },
+     {
+      "type": "LinguisticObject",
+      "classified_as": [
+       {
+        "id": "http://vocab.getty.edu/aat/300435417",
+        "type": "Type"
+       }
+      ],
+      "content": "Hashimoto Kansetsu (eigenhandig gesigneerd)",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388256",
+        "type": "Language"
+       }
+      ]
+     },
+     {
+      "type": "LinguisticObject",
+      "classified_as": [
+       {
+        "id": "http://vocab.getty.edu/aat/300435417",
+        "type": "Type"
+       }
+      ],
+      "content": "Hashimoto Kansetsu (signed by artist)",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ]
+     }
+    ],
+    "technique": [
+     {
+      "id": "https://id.rijksmuseum.nl/2202217",
+      "type": "Type",
+      "equivalent": [
+       {
+        "id": "http://vocab.getty.edu/aat/300025136",
+        "type": "Type"
+       }
+      ],
+      "notation": [
+       {
+        "@language": "en",
+        "@value": "painter"
+       },
+       {
+        "@language": "nl",
+        "@value": "schilder"
+       }
+      ]
+     }
+    ],
+    "took_place_at": [
+     {
+      "id": "https://id.rijksmuseum.nl/2304002",
+      "type": "Place",
+      "equivalent": [
+       {
+        "id": "http://vocab.getty.edu/tgn/1001032",
+        "type": "Place"
+       },
+       {
+        "id": "http://www.wikidata.org/entity/Q1490",
+        "type": "Place"
+       }
+      ],
+      "notation": {
+       "@language": "nl",
+       "@value": "Tokyo"
+      }
+     }
+    ]
+   }
+  ],
+  "referred_to_by": [
+   {
+    "type": "LinguisticObject",
+    "classified_as": [
+     {
+      "id": "http://vocab.getty.edu/aat/300435416",
+      "type": "Type"
+     }
+    ],
+    "content": "Hashimoto Kansetsu (eigenhandig gesigneerd)",
+    "language": [
+     {
+      "id": "http://vocab.getty.edu/aat/300388256",
+      "type": "Language"
+     }
+    ]
+   },
+   {
+    "type": "LinguisticObject",
+    "classified_as": [
+     {
+      "id": "http://vocab.getty.edu/aat/300435416",
+      "type": "Type"
+     }
+    ],
+    "content": "Hashimoto Kansetsu (signed by artist)",
+    "language": [
+     {
+      "id": "http://vocab.getty.edu/aat/300388277",
+      "type": "Language"
+     }
+    ]
+   }
+  ],
+  "technique": [
+   {
+    "id": "https://id.rijksmuseum.nl/2204040",
+    "type": "Type",
+    "equivalent": [
+     {
+      "id": "http://vocab.getty.edu/aat/300054216",
+      "type": "Type"
+     }
+    ],
+    "identified_by": [
+     {
+      "type": "Identifier",
+      "assigned_by": [
+       {
+        "type": "AttributeAssignment",
+        "assigned": [
+         "https://id.rijksmuseum.nl/20010092"
+        ],
+        "assigned_property": "influenced_by"
+       }
+      ],
+      "classified_as": [
+       {
+        "id": "http://vocab.getty.edu/aat/300456575",
+        "type": "Type"
+       }
+      ],
+      "content": "1"
+     }
+    ],
+    "notation": [
+     {
+      "@language": "en",
+      "@value": "paint"
+     },
+     {
+      "@language": "nl",
+      "@value": "schilderen"
+     }
+    ]
+   }
+  ],
+  "timespan": {
+   "type": "TimeSpan",
+   "begin_of_the_begin": "1930-01-01T00:00:00Z",
+   "end_of_the_end": "1930-12-31T23:59:59Z",
+   "identified_by": [
+    {
+     "type": "Name",
+     "content": "c. 1930",
+     "language": [
+      {
+       "id": "http://vocab.getty.edu/aat/300388277",
+       "type": "Language"
+      }
+     ]
+    },
+    {
+     "type": "Name",
+     "content": "ca. 1930",
+     "language": [
+      {
+       "id": "http://vocab.getty.edu/aat/300388256",
+       "type": "Language"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "referred_to_by": [
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300026687",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    }
+   ],
+   "content": "Bruikleen van de Koninklijke Vereniging van Vrienden der Aziatische Kunst (gedeeltelijke schenking van de heer Chris van Otterloo, gedeeltelijke aankoop uit het Maartje Draak Fonds, 2023)",
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300026687",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    }
+   ],
+   "content": "On loan from the Royal Asian Art Society in The Netherlands (gift of Chris van Otterloo and Maartje Draak Fonds, 2023)",
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388277",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300404670",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    },
+    {
+     "id": "http://vocab.getty.edu/aat/300435452",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    }
+   ],
+   "content": "Hangrolschildering in inkt en kleur op zijde van een landschap met een grote rotspartij aan de voet waarvan twee mannen op een paard, met de maan boven zichtbaar.",
+   "created_by": {
+    "type": "Creation",
+    "timespan": {
+     "type": "TimeSpan",
+     "begin_of_the_begin": "2023-02-28T00:00:00Z",
+     "end_of_the_end": "2023-02-28T23:59:59Z",
+     "identified_by": [
+      {
+       "type": "Name",
+       "content": "2023-02-28",
+       "language": [
+        {
+         "id": "http://vocab.getty.edu/aat/300388256",
+         "type": "Language"
+        }
+       ]
+      },
+      {
+       "type": "Name",
+       "content": "2023-02-28",
+       "language": [
+        {
+         "id": "http://vocab.getty.edu/aat/300388277",
+         "type": "Language"
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300435429",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    }
+   ],
+   "content": "pigment en inkt op zijde",
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300435430",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    }
+   ],
+   "content": "height 80 cm x width 180 cm",
+   "identified_by": [
+    {
+     "type": "Identifier",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300456575",
+       "type": "Type"
+      }
+     ],
+     "content": "1"
+    }
+   ],
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388277",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300435430",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    }
+   ],
+   "content": "montering: hoogte 80 cm x breedte 180 cm",
+   "identified_by": [
+    {
+     "type": "Identifier",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300456575",
+       "type": "Type"
+      }
+     ],
+     "content": "1"
+    }
+   ],
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ]
+  }
+ ],
+ "shows": [
+  {
+   "id": "https://id.rijksmuseum.nl/20210092",
+   "type": "VisualItem"
+  }
+ ],
+ "subject_of": [
+  {
+   "type": "LinguisticObject",
+   "digitally_carried_by": [
+    {
+     "type": "DigitalObject",
+     "access_point": [
+      {
+       "id": "https://iiif.micr.io/tvgDM/full/max/0/default.jpg",
+       "type": "DigitalObject"
+      }
+     ],
+     "referred_to_by": [
+      {
+       "type": "LinguisticObject",
+       "_label": "Public Domain",
+       "classified_as": [
+        {
+         "id": "https://vocab.getty.edu/aat/300460240",
+         "type": "Type"
+        }
+       ],
+       "content": "https://creativecommons.org/publicdomain/mark/1.0/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "digitally_carried_by": [
+    {
+     "type": "DigitalObject",
+     "access_point": [
+      {
+       "id": "https://www.rijksmuseum.nl/nl/collectie/object/AK-MAK-1830--38203ce56a3f7a3b2ed1bd11e9db2957",
+       "type": "DigitalObject"
+      }
+     ],
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300264578",
+       "type": "Type"
+      }
+     ],
+     "format": "text/html"
+    }
+   ],
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300404670",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    },
+    {
+     "id": "http://vocab.getty.edu/aat/300417268",
+     "type": "Type"
+    }
+   ],
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388256",
+     "type": "Language"
+    }
+   ],
+   "part": [
+    {
+     "type": "LinguisticObject",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300048722",
+       "type": "Type"
+      }
+     ],
+     "content": "Kansetsu had een diepe belangstelling voor China en bezocht het land talloze keren. Dit landschap is geïnspireerd op werken uit de 11de eeuw. De kleine ruiters geven een gevoel van de nietigheid van de mens tegenover de overweldigende natuur. Kansetsu besteedde veel aandacht aan de textuur van de rotsen en bomen, die hij weergaf met levendige penseelstreken."
+    },
+    {
+     "type": "LinguisticObject",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300312075",
+       "type": "Type"
+      }
+     ],
+     "part": [
+      {
+       "type": "LinguisticObject",
+       "content": "Hashimoto Kansetsu (1883-1945), Japan, ca. 1930, inkt en kleur op zijde"
+      },
+      {
+       "id": "_:bnode1",
+       "type": "Name",
+       "classified_as": [
+        {
+         "id": "http://vocab.getty.edu/aat/300404670",
+         "type": "Type",
+         "classified_as": [
+          {
+           "id": "http://vocab.getty.edu/aat/300418049",
+           "type": "Type",
+           "_label": "brief text"
+          }
+         ]
+        },
+        {
+         "id": "http://vocab.getty.edu/aat/300417207",
+         "type": "Type"
+        }
+       ],
+       "content": "Landschap in China",
+       "language": [
+        {
+         "id": "http://vocab.getty.edu/aat/300388256",
+         "type": "Language"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300404670",
+     "type": "Type",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300418049",
+       "type": "Type",
+       "_label": "brief text"
+      }
+     ]
+    },
+    {
+     "id": "http://vocab.getty.edu/aat/300417268",
+     "type": "Type"
+    }
+   ],
+   "language": [
+    {
+     "id": "http://vocab.getty.edu/aat/300388277",
+     "type": "Language"
+    }
+   ],
+   "part": [
+    {
+     "type": "LinguisticObject",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300048722",
+       "type": "Type"
+      }
+     ],
+     "content": "Kansetsu had a deep and abiding interest in China and visited the country numerous times. This landscape was inspired by works from the 11th century. The tiny horsemen give a sense of man’s insignificance in the face of overwhelming nature. Kansetsu paid great attention to the texture of the rocks and trees, rendering them with lively brushstrokes."
+    },
+    {
+     "type": "LinguisticObject",
+     "classified_as": [
+      {
+       "id": "http://vocab.getty.edu/aat/300312075",
+       "type": "Type"
+      }
+     ],
+     "part": [
+      {
+       "type": "LinguisticObject",
+       "content": "Hashimoto Kansetsu (1883-1945), Japan, c. 1930, ink and colour on silk"
+      },
+      {
+       "id": "_:bnode0",
+       "type": "Name",
+       "classified_as": [
+        {
+         "id": "http://vocab.getty.edu/aat/300404670",
+         "type": "Type",
+         "classified_as": [
+          {
+           "id": "http://vocab.getty.edu/aat/300418049",
+           "type": "Type",
+           "_label": "brief text"
+          }
+         ]
+        },
+        {
+         "id": "http://vocab.getty.edu/aat/300417207",
+         "type": "Type"
+        }
+       ],
+       "content": "Landscape in China",
+       "language": [
+        {
+         "id": "http://vocab.getty.edu/aat/300388277",
+         "type": "Language"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "https://data.rijksmuseum.nl/20010092",
+   "type": "LinguisticObject",
+   "classified_as": [
+    {
+     "id": "http://vocab.getty.edu/aat/300379475",
+     "type": "Type"
+    }
+   ],
+   "subject_to": [
+    {
+     "type": "Right",
+     "classified_as": [
+      {
+       "id": "https://creativecommons.org/publicdomain/zero/1.0/",
+       "type": "Type"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { capabilities } from "../../capabilities";
 import { PIN_PROMISE, usePin } from "../../lib/pin";
 import { PillCloseGlyph } from "../../ui/glyphs";
+import { sourceCredit } from "./api";
 import { sizeLabel, wallhavenPage } from "./library";
 import { useWallpaper } from "./state";
 import { thumbSrc, type ThumbPlatform } from "./thumbs";
-import type { GalleryItem } from "./types";
+import type { Credit, GalleryItem } from "./types";
 
 interface QuickLookProps {
   items: GalleryItem[];
@@ -25,6 +26,26 @@ export function QuickLook({ items, platform, onStep }: QuickLookProps) {
   const item = index >= 0 ? items[index] : null;
   const open = item !== null;
   const pin = usePin(capabilities().pinAllSpaces && open);
+  const [sharp, setSharp] = useState<string | null>(null);
+  const [fetched, setFetched] = useState<{ id: string; credit: Credit } | null>(null);
+  const itemId = item?.id ?? null;
+  const known = item?.credit;
+  const credit = fetched && fetched.id === itemId ? fetched.credit : known;
+
+  // ESA names its credit only on the image's page; ask once per item. Other
+  // sources already sent it, so this answers from memory.
+  useEffect(() => {
+    if (!itemId || known || itemId.startsWith("w-")) return;
+    let live = true;
+    void sourceCredit(itemId)
+      .then((found) => {
+        if (live && found) setFetched({ id: itemId, credit: found });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [itemId, known]);
 
   // Focus moves only when the look opens and closes, not on every step.
   useEffect(() => {
@@ -92,13 +113,27 @@ export function QuickLook({ items, platform, onStep }: QuickLookProps) {
         }
       }}
     >
-      <img className="look__art" src={thumbSrc(item.id, "lg", platform)} alt="" />
+      <img className="look__art" src={thumbSrc(item.id, "sm", platform)} alt="" />
+      <img
+        key={item.id}
+        className="look__art look__art--sharp"
+        src={thumbSrc(item.id, "lg", platform)}
+        alt=""
+        data-loaded={sharp === item.id}
+        onLoad={() => setSharp(item.id)}
+      />
       <div className="look__top">
-        <p className="look__title">{sizeLabel(item.resolution)}</p>
+        <p className="look__title">{item.title ?? sizeLabel(item.resolution)}</p>
         <p className="look__meta">
-          {wallhavenPage(item.id)}
+          {item.title ? `${sizeLabel(item.resolution)} · ` : ""}
+          {item.id.startsWith("w-") ? wallhavenPage(item.id) : (credit?.page ?? "")}
           {pinned ? " · On all Spaces" : onThisSpace ? " · On this Space" : ""}
         </p>
+        {credit ? (
+          <p className="look__credit">
+            {credit.line} <span className="look__licence">{credit.licence}</span>
+          </p>
+        ) : null}
         {canPin ? (
           <button
             ref={pinRef}

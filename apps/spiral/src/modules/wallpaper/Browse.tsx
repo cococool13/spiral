@@ -2,17 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { capabilities } from "../../capabilities";
 import { useDebounce } from "../../hooks/useDebounce";
 import { Button } from "../../ui/Button";
-import { cachedPage, prefetchPage, search as searchWallpapers } from "./api";
+import { cachedPage, displaysList, prefetchPage, search as searchWallpapers, sourcesList } from "./api";
 import { Activity } from "./Activity";
 import { errorCopy } from "./errors";
-import { WallpaperGrid } from "./grid";
-import { fitsDisplay, sizeLabel, stepRecent } from "./library";
-import { ApplyTo, ColourSwatches, LiveGallery, SourceChips } from "./live/Parked";
+import { SkeletonGrid, WallpaperGrid } from "./grid";
+import { fitsDisplay, itemPage, sizeLabel, stepRecent, type DisplayPixels } from "./library";
+import { ApplyTo, LiveGallery } from "./live/Parked";
 import { QuickLook } from "./QuickLook";
+import { PaletteSwatches, SourceFilterChips, SourceIntro } from "./Sources";
+import {
+  errorSource,
+  filterChip,
+  needsIntro,
+  readIntroduced,
+  sourceName,
+  writeIntroduced,
+  type FilterChip,
+} from "./catalog";
 import { CHIPS, useWallpaper } from "./state";
 import type { ThumbPlatform } from "./thumbs";
 import { thumbSrc } from "./thumbs";
-import type { GalleryItem, SearchParams, Sorting } from "./types";
+import type { Categories, GalleryItem, SearchParams, SourceFilter, SourceInfo, Sorting } from "./types";
 
 const SEARCH_DEBOUNCE_MS = 500;
 
@@ -41,14 +51,43 @@ export function Browse({ platform }: BrowseProps) {
   const [error, setError] = useState<string>();
   const [activeTile, setActiveTile] = useState(0);
   const [live, setLive] = useState(false);
+  const [source, setSource] = useState<SourceFilter>("wallhaven");
+  const [colour, setColour] = useState<string | null>(null);
+  const [infos, setInfos] = useState<SourceInfo[]>([]);
+  const [largest, setLargest] = useState<DisplayPixels | null>(null);
+  const [introduced, setIntroduced] = useState(() => readIntroduced());
+  const [unavailable, setUnavailable] = useState<string[]>([]);
   const requestId = useRef(0);
   const caps = capabilities();
+  const filter = filterChip(source);
+  const pendingIntro = needsIntro(filter, introduced);
+  const asking = errorSource(filter, infos);
+  const infosRef = useRef(infos);
+  infosRef.current = infos;
 
+  useEffect(() => {
+    void sourcesList()
+      .then(setInfos)
+      .catch(() => undefined);
+    void displaysList()
+      .then((list) => {
+        const best = list.reduce<DisplayPixels | null>(
+          (top, entry) => (!top || entry.width * entry.height > top.width * top.height ? entry : top),
+          null,
+        );
+        if (best) setLargest({ width: best.width, height: best.height });
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const target = largest ?? display;
   const shown = useMemo(
-    () => (fits ? items.filter((item) => fitsDisplay(item.resolution, display)) : items),
-    [display, fits, items],
+    () => (fits ? items.filter((item) => fitsDisplay(item.resolution, target)) : items),
+    [target, fits, items],
   );
-  const displayLabel = `${display.width} × ${display.height}`;
+  const displayLabel = `${target.width} × ${target.height}`;
+  const categories: Categories = source === "wallhaven" ? CHIPS[chip].categories : "111";
+  const colours = source === "wallhaven" ? (colour ?? undefined) : undefined;
 
   useEffect(() => {
     setVisible(shown);
@@ -56,11 +95,25 @@ export function Browse({ platform }: BrowseProps) {
 
   const search = useCallback(() => {
     const id = ++requestId.current;
-    const params = currentParams(debouncedQuery, CHIPS[chip].categories, 1);
+    if (pendingIntro.length > 0) {
+      // Nothing is asked until the person continues; the intro card shows
+      // instead of the grid, and the skeleton takes over on Continue.
+      setItems([]);
+      setStatus("loading");
+      return;
+    }
+    const params = currentParams(debouncedQuery, categories, 1, source, colours, fits);
     let fresh = false;
     setStatus("loading");
     setError(undefined);
-    if (params.query === "" && params.categories === "111" && params.sorting === "toplist") {
+    setUnavailable([]);
+    if (
+      params.source === "wallhaven" &&
+      !params.colors &&
+      params.query === "" &&
+      params.categories === "111" &&
+      params.sorting === "toplist"
+    ) {
       void cachedPage()
         .then((cached) => {
           if (fresh || id !== requestId.current || !cached) return;
@@ -72,7 +125,7 @@ export function Browse({ platform }: BrowseProps) {
         })
         .catch(() => undefined);
     }
-    log(`Searching wallhaven.cc: ${describe(params)}.`);
+    log(`Searching ${hostsFor(filter, infosRef.current)}: ${describe(params)}.`);
     void searchWallpapers(params)
       .then((result) => {
         if (id !== requestId.current) return;
@@ -81,9 +134,13 @@ export function Browse({ platform }: BrowseProps) {
         setItems(result.items);
         setPageNum(result.page);
         setLastPage(result.lastPage);
+        setUnavailable(result.unavailable);
         setStatus("ready");
-        log(`Wallhaven sent ${result.items.length} wallpapers, page 1 of ${result.lastPage}.`);
-        if (result.page < result.lastPage) {
+        log(`${capital(errorSource(filter, infosRef.current))} sent ${result.items.length} wallpapers, page 1 of ${result.lastPage}.`);
+        if (result.unavailable.length > 0) {
+          log(`${namesOf(result.unavailable, infosRef.current)} did not answer this time.`);
+        }
+        if (params.source === "wallhaven" && result.page < result.lastPage) {
           log(`Fetching page ${result.page + 1} ahead from wallhaven.cc.`);
           void prefetchPage({ ...params, page: result.page + 1 });
         }
@@ -91,16 +148,24 @@ export function Browse({ platform }: BrowseProps) {
       .catch((err: unknown) => {
         if (id !== requestId.current) return;
         fresh = true;
-        const copy = errorCopy(err);
+        const copy = errorCopy(err, capital(errorSource(filter, infosRef.current)));
         setError(copy);
         setStatus("error");
         log(`Search failed. ${copy}`);
       });
-  }, [chip, debouncedQuery, log]);
+    // `pendingIntro` is derived from `filter` and `introduced`; its length is enough.
+  }, [categories, colours, debouncedQuery, filter, fits, log, pendingIntro.length, source]);
 
   useEffect(() => {
     search();
   }, [search]);
+
+  function continueIntro() {
+    const next = new Set(introduced);
+    for (const id of pendingIntro) next.add(id);
+    writeIntroduced(next);
+    setIntroduced(next);
+  }
 
   // `[` and `]` walk the recent row; Space opens quick look when nothing has focus.
   useEffect(() => {
@@ -131,36 +196,50 @@ export function Browse({ platform }: BrowseProps) {
 
   async function loadMore() {
     const id = requestId.current;
-    const params = currentParams(debouncedQuery, CHIPS[chip].categories, pageNum + 1);
+    const params = currentParams(debouncedQuery, categories, pageNum + 1, source, colours, fits);
     setLoadingMore(true);
     setError(undefined);
-    log(`Loading page ${params.page} from wallhaven.cc.`);
+    log(`Loading page ${params.page} from ${hostsFor(filter, infos)}.`);
     try {
       const result = await searchWallpapers(params);
       if (id !== requestId.current) return;
-      setItems((existing) => [...existing, ...result.items]);
+      setItems((existing) => {
+        const seen = new Set(existing.map((item) => item.id));
+        return [...existing, ...result.items.filter((item) => !seen.has(item.id))];
+      });
       setPageNum(result.page);
       setLastPage(result.lastPage);
-      if (result.page < result.lastPage) {
+      setUnavailable(result.unavailable);
+      if (params.source === "wallhaven" && result.page < result.lastPage) {
         void prefetchPage({ ...params, page: result.page + 1 });
       }
     } catch (err: unknown) {
-      if (id === requestId.current) setError(errorCopy(err));
+      if (id === requestId.current) setError(errorCopy(err, capital(asking)));
     } finally {
       setLoadingMore(false);
     }
   }
 
+  function pickSource(next: SourceFilter) {
+    if (next === source) return;
+    requestId.current += 1;
+    setLive(false);
+    setItems([]);
+    setActiveTile(0);
+    setSource(next);
+  }
+
   const emptyQuery = debouncedQuery.length > 0 ? debouncedQuery : query;
   const hiddenBySize = status === "ready" && items.length > 0 && shown.length === 0;
+  const introducing = !live && pendingIntro.length > 0;
 
   return (
     <main className="browse">
       <h1 className="visually-hidden">Wallpaper</h1>
       <span className="visually-hidden" role="status">
         {status === "loading"
-          ? "Searching Wallhaven."
-          : status === "ready"
+          ? `Searching ${asking}.`
+          : status === "ready" && !introducing
             ? shown.length === 0
               ? "No results."
               : `${shown.length} wallpapers.`
@@ -168,10 +247,11 @@ export function Browse({ platform }: BrowseProps) {
       </span>
 
       <div className="filters">
-        <SourceChips />
+        <SourceFilterChips value={source} onChange={pickSource} />
         <div className="filters__row">
+          {source === "wallhaven" || caps.liveWallpaper ? (
           <div className="chips" role="radiogroup" aria-label="Category">
-            {CHIPS.map((item, index) => (
+            {(source === "wallhaven" ? CHIPS : []).map((item, index) => (
               <button
                 key={item.label}
                 type="button"
@@ -198,12 +278,13 @@ export function Browse({ platform }: BrowseProps) {
               </button>
             ) : null}
           </div>
-          <ColourSwatches />
+          ) : null}
+          {source === "wallhaven" && !live ? <PaletteSwatches value={colour} onChange={setColour} /> : null}
           <button
             type="button"
             className="chip chip--fit"
             aria-pressed={fits}
-            title="Only show wallpapers at least as large as this display"
+            title="Ask sources only for wallpapers at least as large as your largest display"
             onClick={() => setFits(!fits)}
           >
             Fits {displayLabel}
@@ -217,7 +298,16 @@ export function Browse({ platform }: BrowseProps) {
         </div>
       ) : (
         <div className="browse__scroll">
-          {status === "loading" && items.length === 0 ? <div className="grid grid--loading" aria-hidden="true" /> : null}
+          {introducing ? (
+            <SourceIntro
+              ids={pendingIntro}
+              infos={infos}
+              onContinue={continueIntro}
+              onBack={() => pickSource("wallhaven")}
+            />
+          ) : null}
+
+          {status === "loading" && items.length === 0 && !introducing ? <SkeletonGrid /> : null}
 
           {status === "error" && items.length === 0 ? (
             <section className="browse__empty" role="alert">
@@ -226,10 +316,20 @@ export function Browse({ platform }: BrowseProps) {
             </section>
           ) : null}
 
-          {status === "ready" && items.length === 0 ? (
+          {status === "ready" && items.length === 0 && !introducing ? (
             <section className="browse__empty">
-              <p>Nothing on Wallhaven matches “{emptyQuery}”. Try a broader search.</p>
+              <p>
+                {emptyQuery
+                  ? `Nothing on ${capital(asking)} matches “${emptyQuery}”. Try a broader search.`
+                  : `${capital(asking)} had nothing at wallpaper size on this page.`}
+              </p>
             </section>
+          ) : null}
+
+          {unavailable.length > 0 && items.length > 0 ? (
+            <p className="notice" role="status">
+              {namesOf(unavailable, infos)} did not answer this time. Showing the others.
+            </p>
           ) : null}
 
           {hiddenBySize ? (
@@ -284,7 +384,7 @@ export function Browse({ platform }: BrowseProps) {
         </div>
         <div className="dock__end">
           <ApplyTo />
-          <p className="dock__state">{current ? `On this Space: ${sizeLabel(current.resolution)} from wallhaven.cc` : "Searches go to wallhaven.cc. SFW only."}</p>
+          <p className="dock__state">{current ? `On this Space: ${sizeLabel(current.resolution)}, ${current.credit ? current.credit.line : itemPage(current)}` : source === "wallhaven" ? "Searches go to wallhaven.cc. SFW only." : `Searches go to ${hostsFor(filter, infos)}.`}</p>
           <button
             type="button"
             className="dock__activity"
@@ -326,12 +426,43 @@ function Toast() {
 }
 
 function describe(params: SearchParams): string {
-  const category = CHIPS.find((item) => item.categories === params.categories)?.label ?? "All";
-  const what = params.query ? `"${params.query}"` : params.sorting === "toplist" ? "top of the month" : "relevance";
-  return `${what}, ${category.toLowerCase()}, page ${params.page}`;
+  const what = params.query ? `"${params.query}"` : params.sorting === "toplist" ? "top picks" : "relevance";
+  const parts = [what];
+  if (params.source === "wallhaven") {
+    const category = CHIPS.find((item) => item.categories === params.categories)?.label ?? "All";
+    parts.push(category.toLowerCase());
+    if (params.colors) parts.push(`colour ${params.colors}`);
+  }
+  if (params.fit) parts.push("display size or larger");
+  parts.push(`page ${params.page}`);
+  return parts.join(", ");
 }
 
-function currentParams(query: string, categories: SearchParams["categories"], page: number): SearchParams {
+function currentParams(
+  query: string,
+  categories: Categories,
+  page: number,
+  source: SourceFilter,
+  colors: string | undefined,
+  fit: boolean,
+): SearchParams {
   const sorting: Sorting = query ? "relevance" : "toplist";
-  return { query, categories, sorting, page };
+  const params: SearchParams = { query, categories, sorting, page, source, fit };
+  if (colors) params.colors = colors;
+  return params;
 }
+
+/** The hosts behind a chip, as a person would read them. */
+function hostsFor(chip: FilterChip, infos: SourceInfo[]): string {
+  const hosts = chip.members.flatMap((id) => infos.find((info) => info.id === id)?.hosts.slice(0, 1) ?? []);
+  return hosts.length > 0 ? hosts.join(", ") : chip.label;
+}
+
+function namesOf(ids: string[], infos: SourceInfo[]): string {
+  return ids.map((id) => sourceName(id, infos)).join(", ");
+}
+
+function capital(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+

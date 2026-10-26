@@ -35,6 +35,13 @@ export function wallhavenPage(id: string): string {
   return `wallhaven.cc/w/${id.replace(/^w-/, "")}`;
 }
 
+/** How the activity log and quick look name an item: its page for Wallhaven
+ *  and for sources that give one, else its title. */
+export function itemPage(item: GalleryItem): string {
+  if (item.id.startsWith("w-")) return wallhavenPage(item.id);
+  return item.credit?.page ?? item.title ?? item.credit?.line ?? "this picture";
+}
+
 export const RECENT_LIMIT = 12;
 const RECENT_KEY = "spiral.wallpaper.recent";
 

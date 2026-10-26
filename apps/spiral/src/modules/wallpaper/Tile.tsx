@@ -37,6 +37,7 @@ export function Tile({
   const frame = useRef<HTMLElement>(null);
   const hover = useRef<number | undefined>(undefined);
   const [rendition, setRendition] = useState(renditionFor(0));
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const el = frame.current;
@@ -57,6 +58,7 @@ export function Tile({
 
   function onLoad(event: SyntheticEvent<HTMLImageElement>) {
     const img = event.currentTarget;
+    setLoaded(true);
     const pending = typeof img.decode === "function" ? img.decode() : Promise.resolve();
     void pending.then(() => onDecoded(index)).catch(() => undefined);
   }
@@ -92,16 +94,19 @@ export function Tile({
           decoding="async"
           loading={index < 12 ? "eager" : "lazy"}
           onLoad={onLoad}
+          data-loaded={loaded}
         />
         {state === "applying" ? <span className="tile__progress" aria-hidden="true" /> : null}
         {state === "applied" ? <span className="tile__badge">On this Space</span> : null}
       </button>
       <figcaption className={state === "error" ? "tile__line tile__line--error" : "tile__line"}>
         {state === "applying"
-          ? "Downloading from wallhaven.cc…"
+          ? `Downloading ${item.title ?? sizeLabel(item.resolution)}…`
           : state === "error"
             ? phase?.error
-            : sizeLabel(item.resolution)}
+            : item.title
+              ? `${item.title} · ${sizeLabel(item.resolution)}`
+              : sizeLabel(item.resolution)}
       </figcaption>
     </figure>
   );
