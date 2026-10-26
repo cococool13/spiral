@@ -1,8 +1,8 @@
 import type { ModuleId } from "../boot";
-import { ResumeGlyph, WallpaperGlyph } from "../ui/glyphs";
+import { PillDocGlyph, PillImageGlyph } from "../ui/glyphs";
 import type { ModuleBundle } from "./types";
 
-type Glyph = typeof WallpaperGlyph;
+type Glyph = typeof PillImageGlyph;
 
 export interface ModuleDef {
   title: string;
@@ -13,12 +13,12 @@ export interface ModuleDef {
 export const MODULES = {
   wallpaper: {
     title: "Wallpaper",
-    Glyph: WallpaperGlyph,
+    Glyph: PillImageGlyph,
     load: () => import("./wallpaper"),
   },
   resume: {
     title: "Resume",
-    Glyph: ResumeGlyph,
+    Glyph: PillDocGlyph,
     load: () => import("./resume"),
   },
 } satisfies Record<ModuleId, ModuleDef>;

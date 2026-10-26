@@ -15,11 +15,13 @@ export default function SectionRedirect({
     window.location.replace(href);
   }, [href]);
   return (
-    <main id="content" className="information-page shell">
-      <h1 className="type-display text-4xl text-paper">{title}</h1>
-      <p className="mt-8 text-lg text-gray">
-        <a href={href}>{sentence}</a>
-      </p>
+    <main id="content" className="page">
+      <div className="page-in">
+        <h1>{title}</h1>
+        <p className="lede">
+          <a href={href}>{sentence}</a>
+        </p>
+      </div>
     </main>
   );
 }

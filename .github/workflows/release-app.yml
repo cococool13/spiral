@@ -200,7 +200,19 @@ jobs:
         run: |
           set -euo pipefail
           APP=$(echo src-tauri/target/${{ inputs.macos-target }}/release/bundle/macos/*.app)
+          # Inside-out: MacOS helpers, then Contents/Library/LoginItems/Spiral
+          # Live.app (its executable, then its bundle), then the outer app.
+          # scripts/tauri.mjs built Spiral Live universal with swift before
+          # `tauri build` copied it in; Tauri does not sign nested bundles.
           node scripts/sign-helpers.mjs "$APP"
+          if [ -d live ]; then
+            LIVE="$APP/Contents/Library/LoginItems/Spiral Live.app"
+            codesign --verify --strict "$LIVE"
+            codesign -dv "$LIVE" 2>&1 | grep -q "runtime" \
+              || { echo "::error::Spiral Live is not signed with the hardened runtime"; exit 1; }
+            lipo -archs "$LIVE/Contents/MacOS/Spiral Live" | grep -q "x86_64 arm64" \
+              || { echo "::error::Spiral Live is not universal"; exit 1; }
+          fi
 
       - name: Notarize the app and rebuild the disk image
         run: |

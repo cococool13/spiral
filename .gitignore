@@ -8,6 +8,9 @@ node_modules/
 apps/spiral/dist/
 apps/spiral/src-tauri/target/
 apps/spiral/src-tauri/gen/
+apps/spiral/live/.build/
+apps/spiral/live/build/
+apps/spiral/live/.swiftpm/
 
 # Local agent settings
 .claude/settings.local.json

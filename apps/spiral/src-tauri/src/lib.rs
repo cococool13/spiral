@@ -1,9 +1,11 @@
+mod activity;
 mod bench;
 mod boot;
 mod bundle;
 
 pub use bundle::payload_after_archive_root;
 mod license;
+mod live;
 mod paths;
 mod resume;
 mod settings;
@@ -61,10 +63,39 @@ async fn resume(
         return resume::snapshot::load(&shell.root().resume_dir());
     }
     let call = match call {
+        // A path means a file dropped on the window; an empty one means the
+        // person clicked Open, so the picker asks.
+        resume_proto::Call::ImportFile { path } if !path.is_empty() => {
+            resume_proto::Call::ImportFile {
+                path: resume::dialog::dropped(&path)?,
+            }
+        }
         resume_proto::Call::ImportFile { .. } => match resume::dialog::pick_open(&app)? {
             None => return Ok(serde_json::Value::Null),
             Some(path) => resume_proto::Call::ImportFile { path },
         },
+        resume_proto::Call::ExportBoth {
+            doc,
+            look,
+            accent,
+            aim,
+            tighten,
+            dir,
+            replace,
+        } => {
+            let Some(dir) = resume::dialog::export_dir(&app, &dir)? else {
+                return Ok(serde_json::Value::Null);
+            };
+            resume_proto::Call::ExportBoth {
+                doc,
+                look,
+                accent,
+                aim,
+                tighten,
+                dir,
+                replace,
+            }
+        }
         resume_proto::Call::SaveBuilt { path } => {
             match resume::dialog::pick_save(&app, &suggested_save_name(&path))? {
                 None => return Ok(serde_json::Value::Null),
@@ -115,6 +146,14 @@ async fn resume(
     .map_err(|_| "Resume's engine did not answer in time. Try again.".to_string())??;
     if is_check {
         bench::mark("ats_check:resume");
+    }
+    if let Some(files) = value.get("files").and_then(|files| files.as_array()) {
+        let written: Vec<std::path::PathBuf> = files
+            .iter()
+            .filter_map(|file| file.as_str().map(std::path::PathBuf::from))
+            .collect();
+        // Shows both new files selected in Finder (Explorer on Windows).
+        let _ = tauri_plugin_opener::reveal_items_in_dir(&written);
     }
     resume::publish::absolutize(&dir, &mut value);
     Ok(value)
@@ -179,12 +218,151 @@ async fn wallpaper_apply(
         .lock()
         .expect("settings")
         .fit_mode;
+    let root = shell.root().clone();
     engine
-        .apply(id, fit, |path, fit| {
-            wallpaper::set_wallpaper(&app, path, fit)
-        })
+        .apply_tracked(id, fit, &PinFollowing { app: &app, root: &root })
         .await
         .map_err(|err| err.to_string())
+}
+
+/// The native desktop, plus Spiral Live: while a still is pinned, every
+/// picture Spiral sets, undoes or restores becomes the pinned one, so the
+/// helper never puts the old picture back on the next Space switch.
+struct PinFollowing<'a> {
+    app: &'a AppHandle,
+    root: &'a paths::Root,
+}
+
+impl PinFollowing<'_> {
+    fn fit(&self) -> settings::FitMode {
+        self.app
+            .state::<SettingsState>()
+            .0
+            .lock()
+            .expect("settings")
+            .fit_mode
+    }
+}
+
+impl wallpaper::Desktop for PinFollowing<'_> {
+    fn capture(&self) -> Result<Vec<wallpaper::Screen>, wallpaper::UserError> {
+        wallpaper::NativeDesktop(self.app).capture()
+    }
+
+    fn set(
+        &self,
+        path: std::path::PathBuf,
+        fit: settings::FitMode,
+    ) -> Result<Applied, wallpaper::UserError> {
+        let applied = wallpaper::NativeDesktop(self.app).set(path.clone(), fit)?;
+        live::follow_apply(self.root, &path, fit);
+        Ok(applied)
+    }
+
+    fn restore(&self, screens: &[wallpaper::Screen]) -> Result<u32, wallpaper::UserError> {
+        let changed = wallpaper::NativeDesktop(self.app).restore(screens)?;
+        if let Ok(now) = live::current_desktop(self.app) {
+            live::follow_apply(self.root, &now, self.fit());
+        }
+        Ok(changed)
+    }
+
+    fn supported(&self) -> bool {
+        wallpaper::NativeDesktop(self.app).supported()
+    }
+}
+
+#[tauri::command]
+fn wallpaper_recent(shell: State<'_, shell::Shell>) -> Vec<wallpaper::GalleryItem> {
+    wallpaper::recent_items(shell.root())
+}
+
+#[tauri::command]
+fn wallpaper_history(app: AppHandle, shell: State<'_, shell::Shell>) -> wallpaper::HistoryView {
+    wallpaper::history_view(shell.root(), &wallpaper::NativeDesktop(&app))
+}
+
+#[tauri::command]
+async fn wallpaper_undo(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+) -> Result<wallpaper::Restored, String> {
+    let root = shell.root().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        wallpaper::undo(&root, &PinFollowing { app: &app, root: &root })
+    })
+    .await
+    .map_err(|_| "apply_failed".to_string())?
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+async fn wallpaper_restore_original(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+) -> Result<wallpaper::Restored, String> {
+    let root = shell.root().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        wallpaper::restore_original(&root, &PinFollowing { app: &app, root: &root })
+    })
+    .await
+    .map_err(|_| "apply_failed".to_string())?
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn wallpaper_pin_state(shell: State<'_, shell::Shell>) -> live::PinState {
+    live::state(shell.root())
+}
+
+/// On: pin the picture on this Space to every Space through Spiral Live.
+/// Off: Spiral Live unpins, removes its login item and exits.
+#[tauri::command]
+async fn wallpaper_pin_all_spaces(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+    enabled: bool,
+) -> Result<live::PinState, String> {
+    let root = shell.root().clone();
+    if !enabled {
+        return tokio::task::spawn_blocking(move || live::unpin(&root))
+            .await
+            .map_err(|_| "pin_failed".to_string())?;
+    }
+    license::require(&app).await?;
+    let source = live::current_desktop(&app)?;
+    let fit = app
+        .state::<SettingsState>()
+        .0
+        .lock()
+        .expect("settings")
+        .fit_mode;
+    tokio::task::spawn_blocking(move || live::pin(&root, &source, fit))
+        .await
+        .map_err(|_| "pin_failed".to_string())?
+}
+
+#[tauri::command]
+async fn wallpaper_pin_keep(
+    shell: State<'_, shell::Shell>,
+    enabled: bool,
+) -> Result<live::PinState, String> {
+    let root = shell.root().clone();
+    tokio::task::spawn_blocking(move || live::set_keep(&root, enabled))
+        .await
+        .map_err(|_| "pin_failed".to_string())?
+}
+
+#[tauri::command]
+async fn wallpaper_pin_resume(
+    app: AppHandle,
+    shell: State<'_, shell::Shell>,
+) -> Result<live::PinState, String> {
+    license::require(&app).await?;
+    let root = shell.root().clone();
+    tokio::task::spawn_blocking(move || live::resume(&root))
+        .await
+        .map_err(|_| "pin_failed".to_string())?
 }
 
 fn suggested_save_name(path: &str) -> String {
@@ -454,6 +632,20 @@ pub fn run() {
             wallpaper_prefetch_page,
             wallpaper_stage_full,
             wallpaper_apply,
+            wallpaper_recent,
+            wallpaper_history,
+            wallpaper_undo,
+            wallpaper_restore_original,
+            wallpaper_pin_state,
+            wallpaper_pin_all_spaces,
+            wallpaper_pin_keep,
+            wallpaper_pin_resume,
+            wallpaper::commands::sources_list,
+            wallpaper::commands::displays_list,
+            wallpaper::commands::source_credit,
+            wallpaper::commands::activity_list,
+            wallpaper::commands::activity_clear,
+            wallpaper::commands::source_key_set,
             general_view,
             general_update,
             thumb_cache_size,

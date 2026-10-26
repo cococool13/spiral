@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Footer from "@/components/Footer";
-import Nav from "@/components/Nav";
 import OtherWork from "@/components/OtherWork";
+import PageHeader from "@/components/PageHeader";
 
 export const metadata: Metadata = {
   title: "Other work, Spiral",
@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 export default function WorkPage() {
   return (
     <>
-      <Nav />
-      <main id="content" className="pt-8">
+      <PageHeader />
+      <main id="content" className="page">
         <OtherWork />
       </main>
       <Footer />

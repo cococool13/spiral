@@ -1,5 +1,10 @@
 {
   "bundle": {
-    "externalBin": ["binaries/spiral-resume-engine", "binaries/llama-server"]
+    "externalBin": ["binaries/spiral-resume-engine", "binaries/llama-server"],
+    "macOS": {
+      "files": {
+        "Library/LoginItems/Spiral Live.app": "../live/build/Spiral Live.app"
+      }
+    }
   }
 }

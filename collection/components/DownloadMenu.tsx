@@ -85,7 +85,7 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
         aria-hidden={!open}
         inert={!open ? true : undefined}
         className={[
-          "download-panel absolute z-20 w-[min(16rem,calc(100vw-2rem))] overflow-hidden border border-paper/15 bg-black/95 text-left shadow-2xl backdrop-blur",
+          "download-panel absolute z-20 w-[min(16rem,calc(100vw-2rem))] overflow-hidden bg-black/95 text-left shadow-2xl backdrop-blur",
           hero
             ? "bottom-full left-1/2 mb-3 -translate-x-1/2"
             : variant === "purchase"
@@ -112,14 +112,14 @@ export default function DownloadMenu({ variant = "nav" }: Props) {
               <li key={app.slug} className="border-b border-paper/10 last:border-0">
                 <a
                   href={offer.url}
-                  className="flex min-h-11 items-center px-4 text-sm text-paper transition-colors hover:bg-paper/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-red"
+                  className="flex min-h-11 items-center px-4 text-sm text-paper transition-colors hover:bg-paper/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-paper"
                 >
                   {offer.source
                     ? `${app.name.replace("Spiral ", "")}, ${offer.label}`
                     : app.name.replace("Spiral ", "")}
                 </a>
                 {brew ? (
-                  <p className="px-4 pb-3 font-mono text-xs leading-relaxed text-gray">
+                  <p className="px-4 pb-3 font-mono text-xs leading-relaxed text-gray [overflow-wrap:anywhere]">
                     {brew}
                   </p>
                 ) : null}

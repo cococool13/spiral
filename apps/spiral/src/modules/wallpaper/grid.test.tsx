@@ -18,6 +18,7 @@ const boot = (bench: boolean): BootState => ({
   ],
   start: { kind: "module", id: "wallpaper" },
   bench,
+  capabilities: { pinAllSpaces: false, pinReason: null },
 });
 
 function tiles(count: number): GalleryItem[] {
@@ -31,7 +32,16 @@ async function loadGrid() {
   vi.resetModules();
   const bootMod = await import("../../boot");
   const grid = await import("./grid");
-  return { readBoot: bootMod.readBoot, WallpaperGrid: grid.WallpaperGrid };
+  const state = await import("./state");
+  // The grid reads apply state from the module frame, as it does in the app.
+  function WallpaperGrid(props: Parameters<typeof grid.WallpaperGrid>[0]) {
+    return (
+      <state.Frame>
+        <grid.WallpaperGrid {...props} />
+      </state.Frame>
+    );
+  }
+  return { readBoot: bootMod.readBoot, WallpaperGrid };
 }
 
 async function decodeAt(index: number) {

@@ -7,7 +7,7 @@ Brand system, native apps, and the spiralcc.tech site.
 Current published download **v1.0.4** (Spiral Wallpaper). The app in this repo is Spiral 2.0.0.
 
 > **Two Wallpaper codebases exist in history.** This repo (`github.com/cococool13/spiral`)
-> is the shipped one — pnpm **11.9**, **no tray, closing the window quits**. The Codex-built
+> is the shipped one — pnpm **11.9**. **Closing the window quits the app**; only a running live wallpaper may keep the separate **Spiral Live** helper alive, always shown in the menu bar (approved 2026-10-26, not built yet). The Codex-built
 > variant is gone locally; do not transfer tray/settings claims from it into this repo.
 
 ## Read first
@@ -26,7 +26,7 @@ Current published download **v1.0.4** (Spiral Wallpaper). The app in this repo i
 - **App** (`apps/spiral`): React + Vite + strict TypeScript UI;
   Tauri 2 / Rust owns network, cache, settings, OS ops. Fonts self-hosted (no font CDN).
   Wallpaper and Resume are modules. Resume's typesetter and model runner live in a
-  helper process, not in the shell.
+  helper process, not in the shell. Spiral Live (`apps/spiral/live`, Swift, nested at `Contents/Library/LoginItems/Spiral Live.app`) makes no network calls. Today it pins a still to all Spaces (`src-tauri/src/live.rs`, job file `live/job.json`); live wallpaper renders there later (spec: `docs/specs/2026-10-26-live-wallpaper-and-sources.md`).
 - **Website** (`collection/`): Next.js App Router + React 19 + Tailwind v4, `output: 'export'`,
   Biome 2 lint/format. Deployed to Cloudflare Pages. Checkout URLs in
   `collection/lib/checkout.ts`.
@@ -119,11 +119,11 @@ only in Documents or a sibling repo.
 
 - **Never define a brand value outside `brand/`.** Synced copies are deleted on the next build.
 - Use exact tokens from `brand/tokens.css`; `pnpm build` enforces the approved color set — no one-off hex.
-- Wallhaven is the only source; a second provider needs explicit product approval.
+- Sources are the approved list in `docs/specs/2026-10-26-live-wallpaper-and-sources.md` §7. Still sources that ship: Wallhaven, NASA, ESA/Webb and ESA/Hubble, Wikimedia Commons featured pictures, Art Institute of Chicago, Cleveland Museum of Art, Bing daily, Smithsonian Open Access, Rijksmuseum. A new one needs explicit product approval. Never Pexels (its terms forbid wallpaper apps); never another app's library.
 - State material background/network actions in plain language before they happen; errors name the problem and a next step.
 - Preserve keyboard nav, visible focus, and reduced-motion behavior.
-- Source-only, privacy-first: no accounts, no silent startup, and no undisclosed background process. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. License validation is a named call to Spiral's validator on launch. See `docs/licensing.md`.
-- Wallpaper: Wallhaven SFW only; closing the window quits (no tray); static wallpapers only until approved otherwise.
+- Source-only, privacy-first: no accounts, no silent startup, and no undisclosed background process. Only Spiral Live may outlive the window, always with its menu-bar item: while a live wallpaper runs, or while **Pin wallpaper to all Spaces** is on (an explicit switch, off by default, whose copy says "Keeps a small helper running so every Space shows this wallpaper. It shows in the menu bar."). Otherwise a still leaves nothing running. **Keep pinned after restart** (login item via `SMAppService`) is a separate switch, also off by default. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. License validation is a named call to Spiral's validator on launch. See `docs/licensing.md`.
+- Wallpaper: stills and live wallpapers (live approved 2026-10-26, macOS 13+, ships in 2.1). Wallhaven stays SFW only. Live auto-pauses by default and sets a matching still for the lock screen through public APIs only (no private frameworks). Every apply can be undone. Live UI stays behind `capabilities.liveWallpaper` until native lands.
 - Resume: **no fact may ever change** (`apps/spiral/src-tauri/crates/resume-core/src/gate.rs`). The parser lives in `parse_text/`. Typst is in the helper, so preview and PDF cannot disagree. New templates and fields must appear in both Typst and DOCX halves and in the shared `FACTS` list in `docx.rs`.
 - Native behavior must be verified on the affected OS; a frontend build alone does not prove wallpaper, signing, or installer behavior.
 
@@ -144,6 +144,6 @@ repo), not here. See `docs/licensing.md`.
 
 ## Definition of done
 
-- **App:** `pnpm build` in `apps/spiral`. For Rust, wallpaper, cache, installer, updater, or platform changes, also the relevant native smoke or build on the affected OS. Resume parser and template changes also need `cargo test` and `cargo clippy --all-targets` from `src-tauri`.
+- **App:** `pnpm build` in `apps/spiral`. For Rust, wallpaper, cache, installer, updater, or platform changes, also the relevant native smoke or build on the affected OS. Resume parser and template changes also need `cargo test` and `cargo clippy --all-targets` from `src-tauri`. Spiral Live changes: `pnpm test:live` (`swift test` in `apps/spiral/live`), `pnpm build-live` (universal, signed inside-out), and `SPIRAL_SMOKE=pin pnpm smoke` on macOS.
 - **Website:** `pnpm lint`, `pnpm typecheck`, `pnpm build`.
 - Report exact commands run and anything still platform-unverified.

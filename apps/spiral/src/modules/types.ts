@@ -7,6 +7,10 @@ export interface ModuleProps {
 
 export interface ModuleBundle {
   default: ComponentType<ModuleProps>;
+  /** Holds the module's state, so the pill and the dome can reach it. */
   Frame: ComponentType<{ children: ReactNode }>;
-  Toolbar: ComponentType;
+  /** Recessed icon buttons the module adds to the left of the pill. */
+  Tools: ComponentType;
+  /** The round dome beside the pill: the module's one main action. */
+  Dome: ComponentType;
 }

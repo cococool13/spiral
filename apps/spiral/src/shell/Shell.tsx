@@ -4,7 +4,6 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { begin, noteToolChosen, setAnalyticsRoute, type AnalyticsRoute } from "./analytics/client";
 import { mark } from "../bench";
 import { readBoot, type ModuleId, type ModuleState } from "../boot";
-import { MODULES } from "../modules/registry";
 import { ActivateRoute } from "./license/ActivateRoute";
 import { useLicense } from "./license/useLicense";
 import type { LicenseView } from "./license/types";
@@ -12,9 +11,7 @@ import { ModuleHost, useModuleBundle } from "./ModuleHost";
 import { Picker } from "./Picker";
 import { SettingsPane } from "./settings/SettingsPane";
 import { generalView, type GeneralSettings } from "./settings/api";
-import { Sidebar } from "./Sidebar";
-import { StatusBar } from "./StatusBar";
-import { Toolbar } from "./Toolbar";
+import { PillBar } from "./PillBar";
 import "./picker.css";
 
 type Route = { kind: "picker" } | { kind: "module"; id: ModuleId } | { kind: "settings" };
@@ -28,7 +25,6 @@ export default function Shell() {
     boot.modules.filter((module) => module.enabled).map((module) => module.id),
   );
   const [active, setActive] = useState<ModuleId>(() => initialActive(boot));
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("Checking the license.");
@@ -89,7 +85,7 @@ export default function Shell() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (route.kind === "picker") return;
+      if (route.kind === "picker" || event.defaultPrevented) return;
       if (!event.metaKey || event.shiftKey || event.altKey || event.ctrlKey) return;
       if (event.key === ",") {
         event.preventDefault();
@@ -153,14 +149,12 @@ export default function Shell() {
       route={route}
       active={active}
       enabled={enabled}
-      sidebarOpen={sidebarOpen}
       status={license.kind === "checking" ? "Checking the license." : status}
       update={update}
       license={license}
       settings={settings}
       settingsError={settingsError}
       moduleId={moduleId}
-      onSidebar={() => setSidebarOpen((open) => !open)}
       onSettings={() =>
         setRoute((current) =>
           current.kind === "settings" ? { kind: "module", id: active } : { kind: "settings" },
@@ -200,14 +194,12 @@ interface FrameProps {
   route: Route;
   active: ModuleId;
   enabled: ModuleId[];
-  sidebarOpen: boolean;
   status: string;
   update: Update | null;
   license: LicenseView;
   settings: GeneralSettings | null;
   settingsError: boolean;
   moduleId: ModuleId | null;
-  onSidebar: () => void;
   onSettings: () => void;
   onSelect: (id: ModuleId) => void;
   onTools: (next: ModuleId[], active: ModuleId) => void;
@@ -221,40 +213,30 @@ interface FrameProps {
 
 function Frame(props: FrameProps) {
   const bundle = useModuleBundle(props.moduleId);
-  const showSide = props.enabled.length > 1;
-  const title = props.route.kind === "settings" ? "Settings" : MODULES[props.active].title;
-  const licenseLine = licenseFoot(props.license);
-  const chrome = (toolbar: ReactNode, body: ReactNode) => (
-    <div
-      className="frame"
-      data-sidebar={showSide && props.sidebarOpen ? "on" : "off"}
-      data-platform={props.boot.platform}
-    >
-      <Toolbar
-        title={title}
-        platform={props.boot.platform}
-        showSidebarToggle={showSide}
-        sidebarOpen={props.sidebarOpen}
-        settingsOn={props.route.kind === "settings"}
-        onSidebar={props.onSidebar}
+  const inSettings = props.route.kind === "settings";
+  const chrome = (tools: ReactNode, dome: ReactNode, body: ReactNode) => (
+    <div className="window" data-platform={props.boot.platform}>
+      <div className="window__drag" data-tauri-drag-region aria-hidden="true" />
+      <PillBar
+        modules={props.boot.modules}
+        enabled={props.enabled}
+        current={inSettings ? null : props.active}
+        settingsOn={inSettings}
+        tools={tools}
+        dome={dome}
+        update={props.update ? `Spiral ${props.update.version} is ready` : null}
+        onSelect={props.onSelect}
         onSettings={props.onSettings}
-      >
-        {toolbar}
-      </Toolbar>
-      {showSide && props.sidebarOpen ? (
-        <Sidebar
-          modules={props.boot.modules}
-          enabled={props.enabled}
-          current={props.route.kind === "module" ? props.route.id : null}
-          licenseLine={licenseLine}
-          onSelect={props.onSelect}
-        />
+      />
+      {props.saveError ? (
+        <p className="notice notice--error window__alert" role="alert">
+          {props.saveError}
+        </p>
       ) : null}
       {body}
-      <StatusBar
-        line={props.status}
-        update={props.update ? `Spiral ${props.update.version} is ready.` : null}
-      />
+      <p className="visually-hidden" role="status">
+        {props.status}
+      </p>
     </div>
   );
 
@@ -263,13 +245,9 @@ function Frame(props: FrameProps) {
     return (
       <ModuleHost bundle={bundle}>
         {chrome(
-          <bundle.Toolbar />,
-          <div className="content">
-            {props.saveError ? (
-              <p className="notice notice--error" role="alert">
-                {props.saveError}
-              </p>
-            ) : null}
+          <bundle.Tools />,
+          <bundle.Dome />,
+          <div className="room">
             <Root setStatus={props.setStatus} onChooseWallpaper={props.onChooseWallpaper} />
           </div>,
         )}
@@ -278,13 +256,8 @@ function Frame(props: FrameProps) {
   }
 
   const body = (
-    <div className="content">
-      {props.saveError ? (
-        <p className="notice notice--error" role="alert">
-          {props.saveError}
-        </p>
-      ) : null}
-      {props.route.kind === "settings" ? (
+    <div className="room room--sheet">
+      {inSettings ? (
         props.settings ? (
           <SettingsPane
             settings={props.settings}
@@ -298,21 +271,19 @@ function Frame(props: FrameProps) {
             onUpdateFound={props.onUpdateFound}
             onLicense={props.onLicense}
           />
+        ) : props.settingsError ? (
+          <p className="notice notice--error" role="alert">
+            Settings would not load. Close the window and open it again.
+          </p>
         ) : (
-          props.settingsError ? (
-            <p className="notice notice--error" role="alert">
-              Settings would not load. Close the window and open it again.
-            </p>
-          ) : (
-            <p className="notice">Loading settings.</p>
-          )
+          <p className="notice">Loading settings.</p>
         )
       ) : (
         <div aria-busy="true" />
       )}
     </div>
   );
-  return chrome(null, body);
+  return chrome(null, null, body);
 }
 
 function initialActive(boot: ReturnType<typeof readBoot>): ModuleId {
@@ -343,11 +314,4 @@ function analyticsRoute(
   if (route.kind === "settings") return "settings";
   if (route.kind === "module") return route.id;
   return "picker";
-}
-
-function licenseFoot(view: LicenseView): string {
-  if (view.kind === "licensed" && view.grace) return "Licensed. Offline.";
-  if (view.kind === "licensed") return "Licensed";
-  if (view.kind === "checking") return "Checking the license.";
-  return "Not activated";
 }

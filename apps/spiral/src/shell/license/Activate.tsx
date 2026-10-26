@@ -68,7 +68,7 @@ export function Activate({ onDone }: ActivateProps) {
           />
           {error ? <p className="notice notice--error" role="alert">{error}</p> : null}
           <Button variant="primary" size="large" type="submit" disabled={busy || !key.trim()}>
-            {busy ? "Checking" : "Activate"}
+            {busy ? "Checking…" : "Activate"}
           </Button>
         </form>
       )}

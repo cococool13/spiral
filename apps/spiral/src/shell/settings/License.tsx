@@ -186,7 +186,7 @@ export function License({ view, onView }: LicenseProps) {
                 onChange={(event) => setKey(event.target.value)}
               />
               <Button variant="primary" type="submit" disabled={busy || !key.trim()}>
-                {busy ? "Checking" : "Activate"}
+                {busy ? "Checking…" : "Activate"}
               </Button>
             </form>
           )}

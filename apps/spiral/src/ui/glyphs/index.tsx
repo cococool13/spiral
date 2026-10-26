@@ -20,29 +20,12 @@ function Icon({
     height: size,
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.4,
+    strokeWidth: size >= 22 ? 1.5 : 1.4,
+    strokeLinecap: size >= 22 ? "round" : undefined,
+    strokeLinejoin: size >= 22 ? "round" : undefined,
     "aria-hidden": true,
   };
   return <svg {...props}>{children}</svg>;
-}
-
-export function WallpaperGlyph({ className }: GlyphProps) {
-  return (
-    <Icon size={16} className={className}>
-      <rect x="1.5" y="2.5" width="13" height="11" />
-      <path d="M1.5 11l4-4 3 3 2-2 4 4" />
-      <circle cx="11" cy="5.5" r="1" />
-    </Icon>
-  );
-}
-
-export function ResumeGlyph({ className }: GlyphProps) {
-  return (
-    <Icon size={16} className={className}>
-      <path d="M3.5 1.5h6l3 3v10h-9z" />
-      <path d="M6 7h5M6 9.5h5M6 12h3" />
-    </Icon>
-  );
 }
 
 export function SearchGlyph({ className }: GlyphProps) {
@@ -50,15 +33,6 @@ export function SearchGlyph({ className }: GlyphProps) {
     <Icon size={16} className={className}>
       <circle cx="7" cy="7" r="4.5" />
       <path d="M10.5 10.5l3.5 3.5" />
-    </Icon>
-  );
-}
-
-export function SidebarGlyph({ className }: GlyphProps) {
-  return (
-    <Icon size={16} className={className}>
-      <rect x="1.5" y="2.5" width="13" height="11" />
-      <path d="M6 2.5v11" />
     </Icon>
   );
 }
@@ -100,11 +74,65 @@ export function UpdatesGlyph({ className }: GlyphProps) {
   );
 }
 
-export function ReturnGlyph({ className }: GlyphProps) {
+/* Pill toolbar set: 22pt grid, 1.5 stroke, round caps (SF Symbols weight "light"). */
+
+export function PillSearchGlyph({ className }: GlyphProps) {
   return (
-    <Icon size={16} className={className}>
-      <path d="M12 4v5H5" />
-      <path d="M7.5 6.5L5 9l2.5 2.5" />
+    <Icon size={22} className={className}>
+      <circle cx="9.75" cy="9.75" r="5.75" />
+      <path d="M14 14l4.75 4.75" />
+    </Icon>
+  );
+}
+
+export function PillGearGlyph({ className }: GlyphProps) {
+  return (
+    <Icon size={22} className={className}>
+      <circle cx="11" cy="11" r="2.75" />
+      <path d="M11 2.75l1.5 2 2.5-.45.85 2.4 2.3 1.1-.75 2.4 1.3 2.2-1.85 1.75-.2 2.5-2.5.35L11 19.25l-2.2-1.4-2.5-.35-.2-2.5L4.25 13.25l1.3-2.2-.75-2.4 2.3-1.1.85-2.4 2.5.45z" />
+    </Icon>
+  );
+}
+
+export function PillImageGlyph({ className }: GlyphProps) {
+  return (
+    <Icon size={22} className={className}>
+      <rect x="3.25" y="4.25" width="15.5" height="13.5" rx="2.5" />
+      <circle cx="8.25" cy="9.25" r="1.5" />
+      <path d="M3.75 15.75l4.5-4 3.25 2.75 3.25-3.25 3.75 3.75" />
+    </Icon>
+  );
+}
+
+export function PillDocGlyph({ className }: GlyphProps) {
+  return (
+    <Icon size={22} className={className}>
+      <path d="M6 3.25h7.25L17 7v11.75H6z" />
+      <path d="M12.75 3.25v4.25H17M8.75 11.5h5.5M8.75 14.75h5.5" />
+    </Icon>
+  );
+}
+
+export function PillShuffleGlyph({ className }: GlyphProps) {
+  return (
+    <Icon size={22} className={className}>
+      <path d="M3.75 6.5H7c4.5 0 3.75 9 8.25 9h3M3.75 15.5H7c1.5 0 2.4-1.1 3.1-2.4M15.25 6.5h3M16.25 4.25l2.25 2.25-2.25 2.25M16.25 13.25l2.25 2.25-2.25 2.25" />
+    </Icon>
+  );
+}
+
+export function PillPlusGlyph({ className }: GlyphProps) {
+  return (
+    <Icon size={22} className={className}>
+      <path d="M11 4.5v13M4.5 11h13" />
+    </Icon>
+  );
+}
+
+export function PillCloseGlyph({ className }: GlyphProps) {
+  return (
+    <Icon size={22} className={className}>
+      <path d="M6 6l10 10M16 6L6 16" />
     </Icon>
   );
 }

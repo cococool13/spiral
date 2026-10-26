@@ -73,7 +73,7 @@ describe("Resume editor", () => {
 
   it("marks the module ready and shows a saved resume before any preview", async () => {
     show();
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Drop a resume" })).toBeTruthy();
     await waitFor(() => expect(screen.getByText(/Saved from/)).toBeTruthy());
     expect(marks).toContain("module_ready:resume");
     expect(marks).not.toContain("first_useful_action:resume");

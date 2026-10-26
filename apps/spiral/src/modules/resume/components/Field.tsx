@@ -11,6 +11,8 @@ interface TextFieldProps {
   autoFocus?: boolean;
   id?: string;
   edited?: boolean;
+  /** Spans both columns of a field grid, for values that run long. */
+  wide?: boolean;
 }
 
 export function Field({
@@ -23,16 +25,18 @@ export function Field({
   autoFocus = false,
   id,
   edited = false,
+  wide = false,
 }: TextFieldProps) {
   const generated = useId();
   return (
-    <span className={edited ? "fact fact--edited" : "fact"}>
+    <span className={["fact", edited && "fact--edited", wide && "fact--wide"].filter(Boolean).join(" ")}>
     <ShellField
       id={id ?? generated}
       label={label}
       value={value}
       type={type}
       autoComplete={autoComplete}
+      spellCheck={type === "email" || type === "tel" ? false : undefined}
       autoFocus={autoFocus}
       multiline={multiline}
       onChange={(event) => onChange(event.target.value)}

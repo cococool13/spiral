@@ -1,10 +1,16 @@
 #[cfg(debug_assertions)]
 pub fn maybe_run(app: tauri::AppHandle) {
-    if std::env::var("SPIRAL_SMOKE").as_deref() != Ok("1") {
+    let mode = std::env::var("SPIRAL_SMOKE").unwrap_or_default();
+    if mode != "1" && mode != "pin" {
         return;
     }
     tauri::async_runtime::spawn(async move {
-        let code = match run(&app).await {
+        let result = if mode == "pin" {
+            pin(&app).await
+        } else {
+            run(&app).await
+        };
+        let code = match result {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("SMOKE FAIL: {err}");
@@ -53,6 +59,7 @@ async fn run(app: &tauri::AppHandle) -> Result<(), String> {
             categories: "111".into(),
             sorting: "toplist".into(),
             page: 1,
+            ..Default::default()
         })
         .await
         .map_err(|err| err.to_string())?;
@@ -87,6 +94,56 @@ async fn run(app: &tauri::AppHandle) -> Result<(), String> {
         None => println!("SMOKE WARN: no previous wallpaper was recorded, so none was restored."),
     }
 
+    println!("SMOKE OK");
+    Ok(())
+}
+
+/// `SPIRAL_SMOKE=pin`: pin the picture on this Space through Spiral Live,
+/// check the helper started, acknowledged the job and set the still, then
+/// unpin and check it exited. The desktop keeps the same picture throughout.
+#[cfg(debug_assertions)]
+async fn pin(app: &tauri::AppHandle) -> Result<(), String> {
+    use crate::live;
+    use crate::settings::FitMode;
+    use tauri::Manager;
+
+    let helper = live::availability().map_err(|reason| format!("pin unavailable: {reason}"))?;
+    println!("SMOKE pin helper {}", helper.display());
+    let root = app.state::<crate::shell::Shell>().root().clone();
+    let source = live::current_desktop(app)?;
+    println!("SMOKE pin source {}", source.display());
+    if !live::is_still(&source) {
+        return Err(format!(
+            "the desktop on this Space is not a still ({}); set one first",
+            source.display()
+        ));
+    }
+    let pinned = tauri::async_runtime::spawn_blocking({
+        let root = root.clone();
+        move || live::pin(&root, &source, FitMode::Fill)
+    })
+    .await
+    .map_err(|err| err.to_string())??;
+    if !pinned.pinned || !pinned.running {
+        return Err(format!("pin did not start Spiral Live: {pinned:?}"));
+    }
+    let status = live::read_status(&live::LivePaths::new(&root)).ok_or("no status.json")?;
+    println!(
+        "SMOKE pin running pid {} applied {} login {}",
+        status.pid, status.applied, status.login_item
+    );
+    let off = tauri::async_runtime::spawn_blocking(move || live::unpin(&root))
+        .await
+        .map_err(|err| err.to_string())??;
+    // The rule: nothing to do means gone within a second.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(1);
+    while live::helper_running() && std::time::Instant::now() < deadline {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    if off.pinned || live::helper_running() {
+        return Err(format!("unpin left Spiral Live running: {off:?}"));
+    }
+    println!("SMOKE pin unpinned, helper exited");
     println!("SMOKE OK");
     Ok(())
 }

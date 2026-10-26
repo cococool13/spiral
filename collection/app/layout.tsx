@@ -1,8 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import tokens from "@/lib/brand-tokens.json";
 import "./globals.css";
 
-const VOID = tokens.color.void;
+// The social card: the live hero, rendered by scripts/render-og.mjs (brand/hero/HERO.md).
+const OG_IMAGE = {
+  url: "/brand/hero/og-card.png",
+  width: 1200,
+  height: 630,
+  type: "image/png",
+  alt: "Spiral: the red glass toolbar with Wallpaper selected, a Resume tab and a buy button. Buy Spiral, $15 once. Mac and Windows.",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://spiralcc.tech"),
@@ -21,26 +27,20 @@ export const metadata: Metadata = {
     title: "Spiral. Wallpaper and Resume.",
     description:
       "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
-    images: [
-      {
-        url: "/brand/hero/hero-exit.webp",
-        width: 2400,
-        height: 1350,
-        alt: "A dark corridor with daylight at the far door.",
-      },
-    ],
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "Spiral. Wallpaper and Resume.",
     description:
       "Spiral. Wallpaper and Resume. One $15 license. Anonymous, privacy-safe usage stats only: no personal data or content, IP discarded, and you can turn it off in Settings. The app quits when you close the window. Mac and Windows.",
-    images: ["/brand/hero/hero-exit.webp"],
+    images: [OG_IMAGE],
   },
 };
 
+// The hero's top edge: --glass-400 from brand/tokens.css. Metadata cannot read CSS.
 export const viewport: Viewport = {
-  themeColor: VOID,
+  themeColor: "rgb(195 56 63)",
 };
 
 export default function RootLayout({
@@ -51,7 +51,7 @@ export default function RootLayout({
       <head>
         <link
           rel="preload"
-          href="/brand/fonts/host-grotesk-400.woff2"
+          href="/brand/fonts/familjen-grotesk-var.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

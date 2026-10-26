@@ -2,17 +2,15 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { invoke } from "@tauri-apps/api/core";
 import { mark } from "../../bench";
 import {
-  cacheSrc,
+  importResumeFile,
   loadDocument,
   previewDocument,
   saveDocument,
   takeImportedText,
 } from "./api";
-import type { Step } from "./components/Stepper";
+import { recommendTemplate } from "./lib/recommend";
 import { useDebounced } from "./lib/useDebounced";
 import { emptyDoc, type Draft, type ResumeDoc } from "./lib/types";
-
-const ORDER: Step[] = ["import", "details", "style", "build", "check", "export"];
 
 function blank(): Draft {
   return { doc: emptyDoc(), template: "", format: "", accent: "ink", tighten: false };
@@ -49,30 +47,28 @@ function editedCount(doc: ResumeDoc, baseline: ResumeDoc | null): number {
   return pairs.filter(([next, previous]) => next !== previous).length;
 }
 
+export type Stage = "empty" | "editor";
+
 export interface ResumeSession {
-  step: Step;
-  reached: Step[];
+  stage: Stage;
   draft: Draft;
   savedAt: string | null;
   fromScratch: boolean;
   baseline: ResumeDoc | null;
   source: string;
   setup: boolean;
-  generate: boolean;
-  versions: import("./lib/types").BuiltVersion[];
   pages: string[];
   saveError: string;
+  opening: boolean;
+  openError: string;
   line: string;
-  go: (step: Step) => void;
   edit: (changed: Partial<Draft>) => void;
   ready: (doc: ResumeDoc, how?: "scratch") => void;
+  openFile: () => void;
   openSaved: () => void;
   openSetup: () => void;
   closeSetup: () => void;
-  startBuild: () => void;
-  built: (result: import("./lib/types").BuildResult) => void;
-  backToFormat: () => void;
-  anotherStyle: () => void;
+  startOver: () => void;
   painted: () => void;
 }
 
@@ -90,16 +86,15 @@ export function Frame({ children }: { children: ReactNode }) {
 }
 
 function useResumeSession(): ResumeSession {
-  const [step, setStep] = useState<Step>("import");
-  const [reached, setReached] = useState<Step[]>(["import"]);
+  const [stage, setStage] = useState<Stage>("empty");
   const [draft, setDraft] = useState<Draft>(blank);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [fromScratch, setFromScratch] = useState(false);
   const [baseline, setBaseline] = useState<ResumeDoc | null>(null);
   const [source, setSource] = useState("");
   const [setup, setSetup] = useState(false);
-  const [generate, setGenerate] = useState(false);
-  const [versions, setVersions] = useState<ResumeSession["versions"]>([]);
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState("");
   const [pages, setPages] = useState<string[]>([]);
   const [saveError, setSaveError] = useState("");
   const edited = useRef(false);
@@ -175,7 +170,7 @@ function useResumeSession(): ResumeSession {
   }, []);
 
   useEffect(() => {
-    if (step === "import") return;
+    if (stage !== "editor") return;
     const empty = !draft.doc.contact.name.trim() && draft.doc.experience.length === 0;
     if (empty) return;
     const timer = window.setTimeout(() => {
@@ -184,31 +179,33 @@ function useResumeSession(): ResumeSession {
         .catch(() => setPages([]));
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [draft, step]);
-
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" || event.defaultPrevented) return;
-      const target = event.target;
-      if (target instanceof HTMLElement && target.closest("input, textarea, select, [role='radio']")) return;
-      const index = ORDER.indexOf(step);
-      const next = ORDER[index + (event.key === "ArrowRight" ? 1 : -1)];
-      if (next && reached.includes(next)) go(next);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
-  function go(next: Step) {
-    setStep(next);
-    setReached((seen) => (seen.includes(next) ? seen : [...seen, next]));
-    if (next === "build") setGenerate(false);
-  }
+  }, [draft, stage]);
 
   function edit(changed: Partial<Draft>) {
     edited.current = true;
     setDraft((current) => ({ ...current, ...changed }));
-    if (changed.template || changed.accent || changed.doc) setVersions([]);
+  }
+
+  function ready(doc: ResumeDoc, how?: "scratch") {
+    edited.current = true;
+    setSource(takeImportedText() || source);
+    setFromScratch(how === "scratch");
+    setBaseline(doc);
+    setDraft((current) => ({ ...current, doc, template: current.template || recommendTemplate(doc) }));
+    setPages([]);
+    setStage("editor");
+  }
+
+  function openFile() {
+    if (opening) return;
+    setOpening(true);
+    setOpenError("");
+    void importResumeFile()
+      .then((doc) => {
+        if (doc) ready(doc);
+      })
+      .catch((err: unknown) => setOpenError(`${err}`))
+      .finally(() => setOpening(false));
   }
 
   const facts = factCount(draft.doc);
@@ -217,49 +214,31 @@ function useResumeSession(): ResumeSession {
   const line = `${draft.doc.contact.name || "Resume"} · ${pageCount} ${pageCount === 1 ? "page" : "pages"} · ${facts} ${facts === 1 ? "fact" : "facts"}${editedFacts > 0 ? ` · ${editedFacts} edited` : ""}`;
 
   return {
-    step,
-    reached,
+    stage,
     draft,
     savedAt,
     fromScratch,
     baseline,
     source,
     setup,
-    generate,
-    versions,
     pages,
     saveError,
+    opening,
+    openError,
     line,
-    go,
     edit,
-    ready: (doc, how) => {
-      edited.current = true;
-      setSource(takeImportedText() || source);
-      setFromScratch(how === "scratch");
-      setBaseline(doc);
-      setDraft((current) => ({ ...current, doc }));
-      go("details");
-    },
+    ready,
+    openFile,
     openSaved: () => {
       setFromScratch(false);
       setBaseline(draft.doc);
-      go("details");
+      setStage("editor");
     },
     openSetup: () => setSetup(true),
     closeSetup: () => setSetup(false),
-    startBuild: () => setGenerate(true),
-    built: (result) => {
-      setVersions((all) => [...all, { ...result, style: draft.template }]);
-      go("check");
-    },
-    backToFormat: () => {
-      edit({ format: "" });
-      setGenerate(false);
-    },
-    anotherStyle: () => {
-      setVersions([]);
-      setGenerate(false);
-      go("style");
+    startOver: () => {
+      setStage("empty");
+      setPages([]);
     },
     painted: () => {
       if (paintedOnce.current) return;
@@ -267,21 +246,4 @@ function useResumeSession(): ResumeSession {
       mark("first_useful_action:resume");
     },
   };
-}
-
-export function Preview({ pages, line, onPaint }: { pages: string[]; line: string; onPaint: () => void }) {
-  return (
-    <aside className="proof" aria-label="Preview">
-      <p className="tile__line">
-        {line}
-        {line.includes("edited") ? <span className="fact-dot" aria-hidden="true" /> : null}
-      </p>
-      <div className="proof__pages">
-        {pages.length === 0 ? <p className="panel__lede">Drawing the page.</p> : null}
-        {pages.map((page) => (
-          <img key={page} src={cacheSrc(page)} alt="" onLoad={onPaint} />
-        ))}
-      </div>
-    </aside>
-  );
 }

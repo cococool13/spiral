@@ -1,0 +1,727 @@
+{
+ "status": 200,
+ "responseCode": 1,
+ "response": {
+  "rows": [
+   {
+    "id": "ld1-1643399887910-1643399893919-2",
+    "title": "Mountains, Mexico",
+    "unitCode": "CHNDM",
+    "content": {
+     "freetext": {
+      "name": [
+       {
+        "label": "Artist",
+        "content": "Frederic Edwin Church, American, 1826–1900"
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "Cooper Hewitt, Smithsonian Design Museum"
+       }
+      ]
+     },
+     "descriptiveNonRepeating": {
+      "data_source": "Cooper Hewitt, Smithsonian Design Museum",
+      "record_link": "https://collection.cooperhewitt.org/view/objects/asitem/id/22244",
+      "online_media": {
+       "media": [
+        {
+         "id": "media:CHSDM-22244_02-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9898f9838-ee94-46df-9d77-42c94744dc93",
+         "type": "Images",
+         "idsId": "CHSDM-22244_02-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 5988,
+         "height": 3620,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22244_02-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22244_02-000001",
+         "altTextAccessibility": "MOUNTAINS, MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22244_02-000001.tif",
+           "width": 5988,
+           "height": 3620,
+           "dimensions": "5988x3620"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22244_02-000001.jpg",
+           "width": 5988,
+           "height": 3620,
+           "dimensions": "5988x3620"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22244_02-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22244_02-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-236FEAF3C5FF2_001-000001",
+         "guid": "http://n2t.net/ark:/65665/vc95d26ca67-8bbf-4227-88b6-b5f682b93dce",
+         "type": "Images",
+         "idsId": "CHSDM-236FEAF3C5FF2_001-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 3106,
+         "height": 1866,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-236FEAF3C5FF2_001-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-236FEAF3C5FF2_001-000001",
+         "altTextAccessibility": "MOUNTAINS, MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-236FEAF3C5FF2_001-000001.jpg",
+           "width": 3106,
+           "height": 1866,
+           "dimensions": "3106x1866"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-236FEAF3C5FF2_001-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-236FEAF3C5FF2_001-000001_thumb"
+          }
+         ]
+        }
+       ],
+       "mediaCount": 2
+      }
+     }
+    }
+   },
+   {
+    "id": "ld1-1643381040022-1643381051777-1",
+    "title": "Sulphur Mountain",
+    "unitCode": "SAAM",
+    "content": {
+     "freetext": {
+      "name": [
+       {
+        "label": "Artist",
+        "content": "Thomas Moran, born Bolton, England 1837-died Santa Barbara, CA 1926"
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "Smithsonian American Art Museum"
+       }
+      ]
+     },
+     "descriptiveNonRepeating": {
+      "data_source": "Smithsonian American Art Museum",
+      "record_link": "https://americanart.si.edu/collections/search/artwork/?id=17868",
+      "online_media": {
+       "media": [
+        {
+         "id": "media:SAAM-1947.13.10_1",
+         "guid": "http://n2t.net/ark:/65665/bj939985477-5870-4785-b233-3133ec2e2c49",
+         "type": "Images",
+         "idsId": "SAAM-1947.13.10_1",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 3000,
+         "height": 1915,
+         "content": "https://ids.si.edu/ids/deliveryService?id=SAAM-1947.13.10_1",
+         "maxsize": 3000,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=SAAM-1947.13.10_1",
+         "altTextAccessibility": "",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=SAAM-1947.13.10_1.tif",
+           "width": 3000,
+           "height": 1915,
+           "dimensions": "3000x1915"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=SAAM-1947.13.10_1.jpg",
+           "width": 3000,
+           "height": 1915,
+           "dimensions": "3000x1915"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=SAAM-1947.13.10_1_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=SAAM-1947.13.10_1_thumb"
+          }
+         ]
+        }
+       ],
+       "mediaCount": 1
+      }
+     }
+    }
+   },
+   {
+    "id": "ld1-1643399887910-1643399894171-0",
+    "title": "Mountains near Mocha, Ecuador",
+    "unitCode": "CHNDM",
+    "content": {
+     "freetext": {
+      "name": [
+       {
+        "label": "Artist",
+        "content": "Frederic Edwin Church, American, 1826–1900"
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "Cooper Hewitt, Smithsonian Design Museum"
+       }
+      ]
+     },
+     "descriptiveNonRepeating": {
+      "data_source": "Cooper Hewitt, Smithsonian Design Museum",
+      "record_link": "https://collection.cooperhewitt.org/view/objects/asitem/id/22746",
+      "online_media": {
+       "media": [
+        {
+         "id": "media:CHSDM-22746_02-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9b646bd09-6298-4bf6-90b5-8afb9f255033",
+         "type": "Images",
+         "idsId": "CHSDM-22746_02-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 6599,
+         "height": 3833,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22746_02-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22746_02-000001",
+         "altTextAccessibility": "MOUNTAINS NEAR MOCHA, ECUADOR",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22746_02-000001.tif",
+           "width": 6599,
+           "height": 3833,
+           "dimensions": "6599x3833"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22746_02-000001.jpg",
+           "width": 6599,
+           "height": 3833,
+           "dimensions": "6599x3833"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22746_02-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22746_02-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-D050E368BCE02-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9f5c51d42-6a66-46e5-9e74-9a40c4715e00",
+         "type": "Images",
+         "idsId": "CHSDM-D050E368BCE02-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 7802,
+         "height": 4578,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-D050E368BCE02-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-D050E368BCE02-000001",
+         "altTextAccessibility": "MOUNTAINS NEAR MOCHA, ECUADOR",
+         "resources": [
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-D050E368BCE02-000001.jpg",
+           "width": 7802,
+           "height": 4578,
+           "dimensions": "7802x4578"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-D050E368BCE02-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-D050E368BCE02-000001_thumb"
+          }
+         ]
+        }
+       ],
+       "mediaCount": 2
+      }
+     }
+    }
+   },
+   {
+    "id": "ld1-1643399887910-1643399894499-1",
+    "title": "From Bird Mountain, Vermont",
+    "unitCode": "CHNDM",
+    "content": {
+     "freetext": {
+      "name": [
+       {
+        "label": "Artist",
+        "content": "Frederic Edwin Church, American, 1826–1900"
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "Cooper Hewitt, Smithsonian Design Museum"
+       }
+      ]
+     },
+     "descriptiveNonRepeating": {
+      "data_source": "Cooper Hewitt, Smithsonian Design Museum",
+      "record_link": "https://collection.cooperhewitt.org/view/objects/asitem/id/23247",
+      "online_media": {
+       "media": [
+        {
+         "id": "media:CHSDM-23247_02-000001",
+         "guid": "http://n2t.net/ark:/65665/vc98a92f144-b592-49b8-98cc-adbde072c434",
+         "type": "Images",
+         "idsId": "CHSDM-23247_02-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 6410,
+         "height": 4244,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-23247_02-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-23247_02-000001",
+         "altTextAccessibility": "FROM BIRD MOUNTAIN, VERMONT",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-23247_02-000001.tif",
+           "width": 6410,
+           "height": 4244,
+           "dimensions": "6410x4244"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-23247_02-000001.jpg",
+           "width": 6410,
+           "height": 4244,
+           "dimensions": "6410x4244"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-23247_02-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-23247_02-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-36A295DB1DBF2-000001",
+         "guid": "http://n2t.net/ark:/65665/vc906ce5317-206e-4630-a537-5feeff087276",
+         "type": "Images",
+         "idsId": "CHSDM-36A295DB1DBF2-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 7095,
+         "height": 4639,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-36A295DB1DBF2-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-36A295DB1DBF2-000001",
+         "altTextAccessibility": "FROM BIRD MOUNTAIN, VERMONT",
+         "resources": [
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-36A295DB1DBF2-000001.jpg",
+           "width": 7095,
+           "height": 4639,
+           "dimensions": "7095x4639"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-36A295DB1DBF2-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-36A295DB1DBF2-000001_thumb"
+          }
+         ]
+        }
+       ],
+       "mediaCount": 2
+      }
+     }
+    }
+   },
+   {
+    "id": "ld1-1643399887910-1643399893928-0",
+    "title": "Mountainous Landscape, Mexico",
+    "unitCode": "CHNDM",
+    "content": {
+     "freetext": {
+      "name": [
+       {
+        "label": "Artist",
+        "content": "Frederic Edwin Church, American, 1826–1900"
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "Cooper Hewitt, Smithsonian Design Museum"
+       }
+      ]
+     },
+     "descriptiveNonRepeating": {
+      "data_source": "Cooper Hewitt, Smithsonian Design Museum",
+      "record_link": "https://collection.cooperhewitt.org/view/objects/asitem/id/22263",
+      "online_media": {
+       "media": [
+        {
+         "id": "media:CHSDM-22263_03-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9dab26302-6f80-4c82-af6e-9dcee8406a5b",
+         "type": "Images",
+         "idsId": "CHSDM-22263_03-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 5965,
+         "height": 3653,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22263_03-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22263_03-000001",
+         "altTextAccessibility": "MOUNTAINOUS LANDSCAPE, MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_03-000001.tif",
+           "width": 5965,
+           "height": 3653,
+           "dimensions": "5965x3653"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_03-000001.jpg",
+           "width": 5965,
+           "height": 3653,
+           "dimensions": "5965x3653"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_03-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_03-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-22263_04-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9bc0dc51b-4519-4b32-b2a3-5f6e2bc9cfa3",
+         "type": "Images",
+         "idsId": "CHSDM-22263_04-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 6023,
+         "height": 3659,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22263_04-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22263_04-000001",
+         "altTextAccessibility": "MOUNTAINOUS LANDSCAPE, MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_04-000001.tif",
+           "width": 6023,
+           "height": 3659,
+           "dimensions": "6023x3659"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_04-000001.jpg",
+           "width": 6023,
+           "height": 3659,
+           "dimensions": "6023x3659"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_04-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22263_04-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-65569E9F82062_001-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9d6028bd3-2853-4c47-8a20-bc5524d6c3d3",
+         "type": "Images",
+         "idsId": "CHSDM-65569E9F82062_001-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 3063,
+         "height": 1861,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-65569E9F82062_001-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-65569E9F82062_001-000001",
+         "altTextAccessibility": "MOUNTAINOUS LANDSCAPE, MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-65569E9F82062_001-000001.jpg",
+           "width": 3063,
+           "height": 1861,
+           "dimensions": "3063x1861"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-65569E9F82062_001-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-65569E9F82062_001-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-65569E9F82062_002-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9b0e8d077-f385-4d22-84b7-97cd0711a436",
+         "type": "Images",
+         "idsId": "CHSDM-65569E9F82062_002-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 3063,
+         "height": 1861,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-65569E9F82062_002-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-65569E9F82062_002-000001",
+         "altTextAccessibility": "MOUNTAINOUS LANDSCAPE, MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-65569E9F82062_002-000001.jpg",
+           "width": 3063,
+           "height": 1861,
+           "dimensions": "3063x1861"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-65569E9F82062_002-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-65569E9F82062_002-000001_thumb"
+          }
+         ]
+        }
+       ],
+       "mediaCount": 4
+      }
+     }
+    }
+   },
+   {
+    "id": "ld1-1643399887910-1643399893903-1",
+    "title": "Mountains in Mexico",
+    "unitCode": "CHNDM",
+    "content": {
+     "freetext": {
+      "name": [
+       {
+        "label": "Artist",
+        "content": "Frederic Edwin Church, American, 1826–1900"
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "Cooper Hewitt, Smithsonian Design Museum"
+       }
+      ]
+     },
+     "descriptiveNonRepeating": {
+      "data_source": "Cooper Hewitt, Smithsonian Design Museum",
+      "record_link": "https://collection.cooperhewitt.org/view/objects/asitem/id/22209",
+      "online_media": {
+       "media": [
+        {
+         "id": "media:CHSDM-22209_03-000001",
+         "guid": "http://n2t.net/ark:/65665/vc967fed7fb-18e8-4245-acb3-5fbaf30013b5",
+         "type": "Images",
+         "idsId": "CHSDM-22209_03-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 6128,
+         "height": 3707,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22209_03-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22209_03-000001",
+         "altTextAccessibility": "MOUNTAINS IN MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_03-000001.tif",
+           "width": 6128,
+           "height": 3707,
+           "dimensions": "6128x3707"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_03-000001.jpg",
+           "width": 6128,
+           "height": 3707,
+           "dimensions": "6128x3707"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_03-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_03-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-22209_04-000001",
+         "guid": "http://n2t.net/ark:/65665/vc957cf6fd5-cf5f-492e-bff8-a32404c87440",
+         "type": "Images",
+         "idsId": "CHSDM-22209_04-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 6139,
+         "height": 3660,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22209_04-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-22209_04-000001",
+         "altTextAccessibility": "MOUNTAINS IN MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_04-000001.tif",
+           "width": 6139,
+           "height": 3660,
+           "dimensions": "6139x3660"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_04-000001.jpg",
+           "width": 6139,
+           "height": 3660,
+           "dimensions": "6139x3660"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_04-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-22209_04-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-BAA27B2A67432_001-000001",
+         "guid": "http://n2t.net/ark:/65665/vc9a8794778-9619-43b4-a518-aee283b99595",
+         "type": "Images",
+         "idsId": "CHSDM-BAA27B2A67432_001-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 3019,
+         "height": 1875,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-BAA27B2A67432_001-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-BAA27B2A67432_001-000001",
+         "altTextAccessibility": "MOUNTAINS IN MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-BAA27B2A67432_001-000001.jpg",
+           "width": 3019,
+           "height": 1875,
+           "dimensions": "3019x1875"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-BAA27B2A67432_001-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-BAA27B2A67432_001-000001_thumb"
+          }
+         ]
+        },
+        {
+         "id": "media:CHSDM-BAA27B2A67432_002-000001",
+         "guid": "http://n2t.net/ark:/65665/vc91b71145b-18ef-4428-84b6-91ac78f6510d",
+         "type": "Images",
+         "idsId": "CHSDM-BAA27B2A67432_002-000001",
+         "usage": {
+          "access": "CC0"
+         },
+         "width": 3019,
+         "height": 1875,
+         "content": "https://ids.si.edu/ids/deliveryService?id=CHSDM-BAA27B2A67432_002-000001",
+         "maxsize": 0,
+         "thumbnail": "https://ids.si.edu/ids/deliveryService?id=CHSDM-BAA27B2A67432_002-000001",
+         "altTextAccessibility": "MOUNTAINS IN MEXICO",
+         "resources": [
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-BAA27B2A67432_002-000001.jpg",
+           "width": 3019,
+           "height": 1875,
+           "dimensions": "3019x1875"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-BAA27B2A67432_002-000001_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=CHSDM-BAA27B2A67432_002-000001_thumb"
+          }
+         ]
+        }
+       ],
+       "mediaCount": 4
+      }
+     }
+    }
+   }
+  ],
+  "facets": {},
+  "rowCount": 149603,
+  "message": "content found"
+ }
+}

@@ -104,6 +104,26 @@ export function signHelpers(app, identity, options = {}) {
   assertHelperEntitlements(app);
 }
 
+/** Spiral Live, nested at Contents/Library/LoginItems (build-live.mjs). */
+export function liveHelperPath(app) {
+  return join(app, "Contents", "Library", "LoginItems", "Spiral Live.app");
+}
+
+/** Inside-out: the helper's executable, then its bundle. Hardened runtime and
+ *  no entitlements. Runs before the outer app is signed, which seals it. */
+export function signLiveHelper(app, identity, options = {}) {
+  const live = liveHelperPath(app);
+  if (!existsSync(live)) {
+    throw new Error("missing Contents/Library/LoginItems/Spiral Live.app");
+  }
+  signFile(join(live, "Contents", "MacOS", "Spiral Live"), emptyEntitlements, identity, options);
+  signFile(live, emptyEntitlements, identity, options);
+  const keys = entitlementKeys(live);
+  if (keys.length !== 0) {
+    throw new Error(`Spiral Live has entitlements ${keys.join(", ")}`);
+  }
+}
+
 export function signBundle(app, identity, options = {}) {
   signFile(app, emptyEntitlements, identity, options);
 }
@@ -120,6 +140,8 @@ if (invoked) {
     process.exit(1);
   }
   signHelpers(app, identity);
+  signLiveHelper(app, identity);
   signBundle(app, identity);
+  execFileSync("codesign", ["--verify", "--deep", "--strict", app], { stdio: "inherit" });
   assertHelperEntitlements(app);
 }
