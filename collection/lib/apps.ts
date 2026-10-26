@@ -44,8 +44,8 @@ export const apps: SpiralApp[] = [
         label: "Download for Mac",
       },
       windows: {
-        url: `${RELEASE}/Spiral_2.0.0_x64-setup.exe`,
-        label: "Download for Windows",
+        url: "https://github.com/cococool13/spiral/releases/download/v1.0.4/Spiral.Wallpaper_1.0.4_x64-setup.exe",
+        label: "Download for Windows (Wallpaper 1.0.4)",
       },
       all: "https://github.com/cococool13/spiral/releases/latest",
     },

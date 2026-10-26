@@ -254,7 +254,9 @@ jobs:
       app-dir: apps/spiral
       artifact-prefix: spiral
       macos: true
-      windows: true
+      # Held until the Windows hook rehearsal passes; the site keeps Windows on
+      # 1.0.4 (scripts/apps.manifest.mjs windowsHeld).
+      windows: false
       updater: true
       github-latest: true
       sidecar: true
