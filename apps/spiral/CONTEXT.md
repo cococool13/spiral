@@ -9,7 +9,10 @@ the file is given — those two must not drift apart.
 | --- | --- |
 | **Spiral Wallpaper** | The first app in the Spiral collection: click a wallpaper, it downloads and applies. macOS and Windows. _Avoid_: the wallpaper changer, Spiral Wallpapers. |
 | **The errand** | What a session is. Open, browse, click, done — under a minute. Anything that turns the errand into a workflow is out of scope, which is why there is no favourites list, no sync and no account. |
-| **Closing the window quits** | The app always quits with its window. Only **Spiral Live** (approved, not built yet) can stay, only while a live wallpaper runs, and it always shows a menu-bar item. A still leaves nothing running. |
+| **Closing the window quits** | The app always quits with its window. Only **Spiral Live** can stay, always with a menu-bar item: while a live wallpaper runs (not built yet), or while **Pin wallpaper to all Spaces** is on. Otherwise a still leaves nothing running. |
+| **Spiral Live** | The Swift helper app in `live/`, nested at `Contents/Library/LoginItems/Spiral Live.app`, bundle id `app.spiral.wallpaper.live`. Menu-bar only (LSUIElement), no network, no timers; exits within a second when it has nothing to do. Reads `live/job.json` (written by `src-tauri/src/live.rs`), writes `live/status.json`, wakes on the Darwin notification `app.spiral.wallpaper.live.job`. |
+| **Pin wallpaper to all Spaces** | Off by default. `setDesktopImageURL` sets the Space in front only (measured on macOS 27.0.1), so Spiral Live sets the pinned still again each time a Space comes to the front. The switch says: "Keeps a small helper running so every Space shows this wallpaper. It shows in the menu bar." Its menu: Spiral · Wallpaper pinned to all Spaces · Unpin · Open Spiral · Quit. Quit stops it until Wallpaper opens again; Unpin turns the switch off. |
+| **Keep pinned after restart** | A second switch, off by default, shown only while pinned. Spiral Live registers itself with `SMAppService.mainApp`, so it is listed in System Settings, General, Login Items. |
 | **Spiral Collection license** | One purchase unlocks every app. On boot, `license_ensure` verifies the signed key offline and asks Spiral's licensing server about once a week (30-day grace when it cannot be reached). Without a stored key, **Activate** blocks the main UI until a key validates. Buy link: `src/lib/checkout.ts`. See [`docs/licensing.md`](../../docs/licensing.md). |
 
 ## Sources
@@ -26,7 +29,7 @@ the file is given — those two must not drift apart.
 
 | Term | Meaning |
 | --- | --- |
-| **The Rust boundary** | All source traffic goes through `src-tauri/src/wallpaper/net.rs`, never the webview. Spiral Live will make no network calls. On boot, `license_ensure` calls Spiral's validator from `spiral-license`. Neither path is the webview. |
+| **The Rust boundary** | All source traffic goes through `src-tauri/src/wallpaper/net.rs`, never the webview. Spiral Live makes no network calls. On boot, `license_ensure` calls Spiral's validator from `spiral-license`. Neither path is the webview. |
 | **Error code** | A short string the backend returns — `offline`, `rate_limited`, `bad_response`, `download_failed`, `too_large`, `bad_image`, `apply_failed` — which `errorCopy` maps to brand copy. The backend never writes a user-facing sentence. `cache_failed` never reaches `errorCopy`; Settings states a cache-clear failure itself. |
 | **Thumbnail cache** | The on-disk LRU cache of thumbnails in app-data, capped at 200 MB. The cap is stated in Settings; a cap the user cannot see is not a promise. |
 | **Validated as an image** | Downloaded bytes are checked to actually start like an image before they are written to disk or handed to the OS. The extension comes from the bytes, never from the URL. |
@@ -39,6 +42,7 @@ the file is given — those two must not drift apart.
 | --- | --- |
 | **Stated before it happens** | Every material action — a network call, a cache cap, an update check — is on screen before it runs. This is the app's first design principle and the reason most of its copy exists. |
 | **Update check** | One request to GitHub when the app opens, named in Settings and switchable off. Off means the app never asks GitHub on its own. `license_ensure` still runs on boot. |
-| **Launch at login** | Off by default, and stated in Settings. Spiral does not add itself to anything quietly. |
+| **Launch at login** | Off by default, and stated in Settings. Spiral does not add itself to anything quietly. **Keep pinned after restart** is a separate switch for Spiral Live, also off by default. |
+| **Activity log** | `activity.jsonl` in app-data (`src-tauri/src/activity.rs`), local only. The app writes `apply/pin` and `apply/unpin`; Spiral Live writes `live/started` and `live/stopped` with a reason, and `login/registered` or `login/removed`. |
 | **First run** | The one-time screen that says what the app is about to do before it does any of it. |
-| **Smoke** | `pnpm smoke` — the end-to-end native check: search, download, set the wallpaper, then put the user's own wallpaper back. It exits non-zero on failure, so it can gate a release. |
+| **Smoke** | `pnpm smoke` — the end-to-end native check: search, download, set the wallpaper, then put the user's own wallpaper back. It exits non-zero on failure, so it can gate a release. `SPIRAL_SMOKE=pin` instead pins the still on this Space, checks Spiral Live started and set it, then unpins and checks it exited within a second. |
