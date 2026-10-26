@@ -481,6 +481,36 @@
   color: var(--on-glass);
 }
 
+/* Pin to all Spaces: one quiet pill under the meta line; filled while pinned
+   so the state reads without the label. */
+.look__pin {
+  align-self: flex-start;
+  margin-top: var(--space-8);
+  padding: 5px 12px;
+  border: 1px solid rgb(239 228 215 / 0.28);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.45);
+  color: var(--on-glass);
+  font-size: 12.5px;
+}
+
+.look__pin:hover {
+  background: rgb(0 0 0 / 0.65);
+}
+
+.look__pin--on {
+  border-color: var(--glass-500);
+  background: var(--glass-500);
+}
+
+.look__pin--on:hover {
+  background: var(--glass-500);
+}
+
+.look__pin:disabled {
+  opacity: 0.7;
+}
+
 .look__close:hover {
   background: rgb(0 0 0 / 0.65);
 }

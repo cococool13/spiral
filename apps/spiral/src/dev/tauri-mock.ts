@@ -47,6 +47,17 @@ window.__SPIRAL_BOOT__ = {
       ? { kind: "module", id: startAt }
       : { kind: "picker", preselect: ["wallpaper", "resume"] },
   bench: false,
+  capabilities: { pinAllSpaces: true, pinReason: null },
+};
+
+const pin = {
+  available: true,
+  reason: null as string | null,
+  pinned: false,
+  running: false,
+  keepAfterRestart: false,
+  loginItem: "off",
+  error: null as string | null,
 };
 
 interface MockGeneral {
@@ -308,6 +319,27 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   wallpaper_apply: async () => {
     await delay(1400);
     return { displays: 1, spaces: "current" };
+  },
+  wallpaper_pin_state: () => ({ ...pin }),
+  wallpaper_pin_all_spaces: async (args) => {
+    await delay(500);
+    pin.pinned = args.enabled === true;
+    pin.running = pin.pinned;
+    if (!pin.pinned) {
+      pin.keepAfterRestart = false;
+      pin.loginItem = "off";
+    }
+    return { ...pin };
+  },
+  wallpaper_pin_keep: async (args) => {
+    await delay(300);
+    pin.keepAfterRestart = args.enabled === true;
+    pin.loginItem = pin.keepAfterRestart ? "enabled" : "off";
+    return { ...pin };
+  },
+  wallpaper_pin_resume: () => {
+    pin.running = pin.pinned;
+    return { ...pin };
   },
   thumb_cache_size: () => 37_400_000,
   clear_thumb_cache: () => undefined,

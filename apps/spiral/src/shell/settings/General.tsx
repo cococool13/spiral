@@ -6,6 +6,7 @@ import { Segmented } from "../../ui/Segmented";
 import { Toggle } from "../../ui/Toggle";
 import { setSharing } from "../analytics/client";
 import { generalUpdate, type FitMode, type GeneralSettings } from "./api";
+import { PinRows } from "./PinRows";
 import { renameApply, renameDecline, renameOffer, trashCopy, type RenameOffer } from "./rename";
 
 const FIT: { value: FitMode; label: string }[] = [
@@ -148,6 +149,7 @@ export function General({ settings, onSettings }: GeneralProps) {
           onChange={(fitMode) => void patch({ ...settings, fitMode })}
         />
       </section>
+      <PinRows />
       <section className="set-row">
         <div className="set-row__copy">
           <h2>Thumbnail cache</h2>

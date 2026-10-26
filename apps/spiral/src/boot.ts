@@ -17,7 +17,17 @@ export interface BootState {
   modules: ModuleState[];
   start: Start;
   bench: boolean;
+  /** Native features this machine can run, decided by Rust at launch. */
+  capabilities: NativeCapabilities;
 }
+
+export interface NativeCapabilities {
+  /** Pin wallpaper to all Spaces: macOS 13+ with Spiral Live in the bundle. */
+  pinAllSpaces: boolean;
+  pinReason: string | null;
+}
+
+const NO_NATIVE: NativeCapabilities = { pinAllSpaces: false, pinReason: null };
 
 const MODULE_IDS: readonly ModuleId[] = ["wallpaper", "resume"];
 
@@ -39,6 +49,11 @@ export function readBoot(value: unknown): BootState {
 
 export function benchEnabled(): boolean {
   return cached?.bench === true;
+}
+
+/** What Rust said this machine can run; all off before boot is read. */
+export function nativeCapabilities(): NativeCapabilities {
+  return cached?.capabilities ?? NO_NATIVE;
 }
 
 function parseBoot(value: unknown): BootState {
@@ -69,7 +84,20 @@ function parseBoot(value: unknown): BootState {
     modules,
     start: parseStart(value.start),
     bench: value.bench,
+    capabilities: parseCapabilities(value.capabilities),
   };
+}
+
+/** Missing means an older shell: every native capability off. */
+function parseCapabilities(value: unknown): NativeCapabilities {
+  if (value === undefined) return NO_NATIVE;
+  if (!isRecord(value) || typeof value.pinAllSpaces !== "boolean") {
+    throw new BootShapeError("The capability list is missing.");
+  }
+  if (value.pinReason !== null && value.pinReason !== undefined && typeof value.pinReason !== "string") {
+    throw new BootShapeError("The capability list is missing.");
+  }
+  return { pinAllSpaces: value.pinAllSpaces, pinReason: (value.pinReason as string | null | undefined) ?? null };
 }
 
 function parseModule(value: unknown): ModuleState {
