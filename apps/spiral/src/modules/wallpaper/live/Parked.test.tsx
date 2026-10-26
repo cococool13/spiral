@@ -22,8 +22,10 @@ afterEach(() => {
 });
 
 describe("capability gate", () => {
-  it("ships with every native-only feature off", () => {
-    expect(Object.values(capabilities()).every((on) => on === false)).toBe(true);
+  it("ships with every native-only feature off, except those whose native half landed", () => {
+    const { restoreOriginal, ...parkedCaps } = capabilities();
+    expect(restoreOriginal).toBe(true);
+    expect(Object.values(parkedCaps).every((on) => on === false)).toBe(true);
     expect(previewing()).toBe(false);
   });
 

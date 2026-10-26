@@ -1,9 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { noteWallpaperApplied } from "../../shell/analytics/client";
-import { apply as applyWallpaper } from "./api";
+import {
+  apply as applyWallpaper,
+  history as readHistory,
+  recent as readRecent,
+  restoreOriginal as restoreOriginalWallpaper,
+  undo as undoWallpaper,
+} from "./api";
 import { errorCopy } from "./errors";
-import { addRecent, displayPixels, pickSurprise, readRecent, sizeLabel, wallhavenPage, writeRecent, type DisplayPixels } from "./library";
-import type { Categories, GalleryItem } from "./types";
+import { addRecent, displayPixels, forgetWebviewRecent, pickSurprise, sizeLabel, wallhavenPage, type DisplayPixels } from "./library";
+import type { Categories, GalleryItem, HistoryView, Restored } from "./types";
 
 export const CHIPS: { label: string; categories: Categories }[] = [
   { label: "All", categories: "111" },
@@ -26,7 +32,8 @@ export interface ApplyPhase {
 
 export interface Toast {
   text: string;
-  undo?: GalleryItem;
+  /** Offer the native undo, which puts back the desktop from before the last change. */
+  undo?: boolean;
 }
 
 interface WallpaperState {
@@ -43,9 +50,15 @@ interface WallpaperState {
   visible: GalleryItem[];
   setVisible: (items: GalleryItem[]) => void;
   recent: GalleryItem[];
+  /** Reads the recent row Rust kept across launches. */
+  loadRecent: () => Promise<void>;
   current: GalleryItem | null;
   phase: ApplyPhase | null;
   apply: (item: GalleryItem, why?: string) => Promise<void>;
+  undo: () => Promise<void>;
+  restoreOriginal: () => Promise<void>;
+  history: HistoryView | null;
+  loadHistory: () => Promise<void>;
   surprise: () => void;
   toast: Toast | null;
   dismissToast: () => void;
@@ -59,16 +72,26 @@ interface WallpaperState {
 
 const WallpaperContext = createContext<WallpaperState | null>(null);
 
+function displaysLabel(count: number): string {
+  return count === 1 ? "1 display" : `${count} displays`;
+}
+
+function missingNote(restored: Restored): string {
+  if (restored.missing.length === 0) return "";
+  return ` ${restored.missing.join(", ")} is no longer on this computer, so that screen was left as it was.`;
+}
+
 export function Frame({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState("");
   const [chip, setChip] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [fits, setFits] = useState(true);
   const [visible, setVisible] = useState<GalleryItem[]>([]);
-  const [recent, setRecent] = useState<GalleryItem[]>(() => readRecent());
+  const [recent, setRecent] = useState<GalleryItem[]>([]);
   const [current, setCurrent] = useState<GalleryItem | null>(null);
   const [phase, setPhase] = useState<ApplyPhase | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [history, setHistory] = useState<HistoryView | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [activityOpen, setActivityOpen] = useState(false);
   const [quickLook, setQuickLook] = useState<string | null>(null);
@@ -79,6 +102,8 @@ export function Frame({ children }: { children: ReactNode }) {
   currentRef.current = current;
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
+  const recentRef = useRef(recent);
+  recentRef.current = recent;
 
   const log = useCallback((text: string) => {
     serial.current += 1;
@@ -86,30 +111,39 @@ export function Frame({ children }: { children: ReactNode }) {
     setActivity((all) => [entry, ...all].slice(0, 80));
   }, []);
 
+  const loadRecent = useCallback(async () => {
+    forgetWebviewRecent();
+    try {
+      setRecent(await readRecent());
+    } catch {
+      // Recent is a convenience. A row that cannot be read stays empty.
+    }
+  }, []);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      setHistory(await readHistory());
+    } catch {
+      setHistory(null);
+    }
+  }, []);
+
   const apply = useCallback(
     async (item: GalleryItem, why?: string) => {
       if (busy.current) return;
       busy.current = true;
-      const previous = currentRef.current;
       setPhase({ id: item.id, phase: "applying" });
       setToast(null);
       log(`${why ?? "Downloading"} ${wallhavenPage(item.id)} (${sizeLabel(item.resolution)}).`);
       try {
         const done = await applyWallpaper(item.id);
-        const where = done.displays === 1 ? "1 display" : `${done.displays} displays`;
+        const where = displaysLabel(done.displays);
         setPhase({ id: item.id, phase: "applied" });
         setCurrent(item);
-        setRecent((list) => {
-          const next = addRecent(list, item);
-          writeRecent(next);
-          return next;
-        });
+        setRecent((list) => addRecent(list, item));
         noteWallpaperApplied();
-        log(`Set ${wallhavenPage(item.id)} on ${where}, this Space.`);
-        setToast({
-          text: `Set on ${where}.`,
-          undo: previous && previous.id !== item.id ? previous : undefined,
-        });
+        log(`Set ${wallhavenPage(item.id)} on ${where}, this Space. The previous wallpaper is kept for undo.`);
+        setToast({ text: `Set on ${where}.`, undo: true });
       } catch (err: unknown) {
         const copy = errorCopy(err);
         setPhase({ id: item.id, phase: "error", error: copy });
@@ -119,6 +153,54 @@ export function Frame({ children }: { children: ReactNode }) {
       }
     },
     [log],
+  );
+
+  /** Runs one undo or restore, then says what changed in the toast and the log. */
+  const putBack = useCallback(
+    async (start: string, work: () => Promise<Restored>, done: (restored: Restored) => string) => {
+      if (busy.current) return;
+      busy.current = true;
+      setToast(null);
+      log(start);
+      try {
+        const restored = await work();
+        const item = restored.current ? recentRef.current.find((entry) => entry.id === restored.current) : undefined;
+        setCurrent(item ?? null);
+        setPhase(null);
+        const text = `${done(restored)}${missingNote(restored)}`;
+        log(text);
+        // Undo walks further back; after a restore it brings Spiral's wallpaper back.
+        setToast({ text, undo: true });
+      } catch (err: unknown) {
+        const copy = errorCopy(err);
+        log(copy);
+        setToast({ text: copy });
+      } finally {
+        busy.current = false;
+        void loadHistory();
+      }
+    },
+    [loadHistory, log],
+  );
+
+  const undo = useCallback(
+    () =>
+      putBack(
+        "Undo: putting back the wallpaper from before the last change. Nothing is downloaded.",
+        undoWallpaper,
+        (restored) => `Put back the previous wallpaper on ${displaysLabel(restored.displays)}.`,
+      ),
+    [putBack],
+  );
+
+  const restoreOriginal = useCallback(
+    () =>
+      putBack(
+        "Putting back your own wallpaper from before Spiral changed it. Nothing is downloaded.",
+        restoreOriginalWallpaper,
+        (restored) => `Your own wallpaper is back on ${displaysLabel(restored.displays)}.`,
+      ),
+    [putBack],
   );
 
   const dismissToast = useCallback(() => setToast(null), []);
@@ -142,9 +224,14 @@ export function Frame({ children }: { children: ReactNode }) {
       visible,
       setVisible,
       recent,
+      loadRecent,
       current,
       phase,
       apply,
+      undo,
+      restoreOriginal,
+      history,
+      loadHistory,
       surprise,
       toast,
       dismissToast,
@@ -155,7 +242,7 @@ export function Frame({ children }: { children: ReactNode }) {
       quickLook,
       setQuickLook,
     }),
-    [query, chip, searchOpen, fits, display, visible, recent, current, phase, apply, surprise, toast, dismissToast, activity, log, activityOpen, quickLook],
+    [query, chip, searchOpen, fits, display, visible, recent, loadRecent, current, phase, apply, undo, restoreOriginal, history, loadHistory, surprise, toast, dismissToast, activity, log, activityOpen, quickLook],
   );
   return <WallpaperContext.Provider value={value}>{children}</WallpaperContext.Provider>;
 }

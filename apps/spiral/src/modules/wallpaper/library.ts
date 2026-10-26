@@ -42,32 +42,13 @@ export function addRecent(list: GalleryItem[], item: GalleryItem): GalleryItem[]
   return [item, ...list.filter((entry) => entry.id !== item.id)].slice(0, RECENT_LIMIT);
 }
 
-export function readRecent(storage: Pick<Storage, "getItem"> | null = safeStorage()): GalleryItem[] {
+/** Recent used to live in the webview's storage, without the URLs needed to
+ *  set an item after a restart. Rust keeps it now; the old copy is removed. */
+export function forgetWebviewRecent(storage: Pick<Storage, "removeItem"> | null = safeStorage()): void {
   try {
-    const raw = storage?.getItem(RECENT_KEY);
-    if (!raw) return [];
-    const value: unknown = JSON.parse(raw);
-    if (!Array.isArray(value)) return [];
-    return value
-      .filter(
-        (entry): entry is GalleryItem =>
-          typeof entry === "object" &&
-          entry !== null &&
-          typeof (entry as GalleryItem).id === "string" &&
-          /^w-[A-Za-z0-9]+$/.test((entry as GalleryItem).id) &&
-          typeof (entry as GalleryItem).resolution === "string",
-      )
-      .slice(0, RECENT_LIMIT);
+    storage?.removeItem(RECENT_KEY);
   } catch {
-    return [];
-  }
-}
-
-export function writeRecent(list: GalleryItem[], storage: Pick<Storage, "setItem"> | null = safeStorage()): void {
-  try {
-    storage?.setItem(RECENT_KEY, JSON.stringify(list));
-  } catch {
-    // Recent is a convenience. A full or blocked store only loses the row.
+    // A blocked store has nothing of ours to remove.
   }
 }
 

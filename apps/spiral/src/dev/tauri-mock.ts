@@ -64,6 +64,11 @@ const general: MockGeneral = {
 };
 
 let licensed = true;
+let mockRecent: { id: string; resolution: string }[] = [
+  { id: "w-p1i3", resolution: "5120x2880" },
+  { id: "w-p1i7", resolution: "3840x2160" },
+];
+let mockUndo = 0;
 
 const mockUpdate = () =>
   (window as unknown as Record<string, unknown>).__SPIRAL_MOCK_UPDATE__
@@ -305,9 +310,31 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   },
   wallpaper_prefetch_page: () => undefined,
   wallpaper_stage_full: () => undefined,
-  wallpaper_apply: async () => {
+  wallpaper_apply: async (args) => {
     await delay(1400);
+    if (typeof args.id === "string") {
+      mockRecent = [{ id: args.id, resolution: "3840x2160" }, ...mockRecent.filter((item) => item.id !== args.id)].slice(0, 12);
+    }
+    mockUndo += 1;
     return { displays: 1, spaces: "current" };
+  },
+  wallpaper_recent: () => mockRecent,
+  wallpaper_history: () => ({
+    supported: true,
+    undo: mockUndo,
+    original: mockUndo > 0 ? { name: "Sonoma Horizon.heic", exists: true } : null,
+  }),
+  wallpaper_undo: async () => {
+    await delay(300);
+    if (mockUndo === 0) throw "nothing_to_undo";
+    mockUndo -= 1;
+    return { displays: 1, missing: [], current: mockRecent[1]?.id ?? null };
+  },
+  wallpaper_restore_original: async () => {
+    await delay(300);
+    if (mockUndo === 0) throw "no_original";
+    mockUndo += 1;
+    return { displays: 1, missing: [], current: null };
   },
   thumb_cache_size: () => 37_400_000,
   clear_thumb_cache: () => undefined,

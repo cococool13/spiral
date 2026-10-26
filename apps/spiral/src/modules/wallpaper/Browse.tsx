@@ -105,6 +105,13 @@ export function Browse({ platform }: BrowseProps) {
   // `[` and `]` walk the recent row; Space opens quick look when nothing has focus.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      // ⌘Z (Ctrl+Z on Windows) puts back the desktop from before the last change.
+      const command = platform === "windows" ? event.ctrlKey : event.metaKey;
+      if (command && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "z" && !typing(event.target)) {
+        event.preventDefault();
+        void wall.undo();
+        return;
+      }
       if (event.metaKey || event.ctrlKey || event.altKey || typing(event.target) || wall.quickLook) return;
       if (event.key === "[" || event.key === "]") {
         const next = stepRecent(recent, current?.id ?? null, event.key);
@@ -120,7 +127,7 @@ export function Browse({ platform }: BrowseProps) {
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [activeTile, apply, current, recent, shown, wall]);
+  }, [activeTile, apply, current, platform, recent, shown, wall]);
 
   async function loadMore() {
     const id = requestId.current;
@@ -300,18 +307,17 @@ export function Browse({ platform }: BrowseProps) {
 }
 
 function Toast() {
-  const { toast, dismissToast, apply } = useWallpaper();
+  const { toast, dismissToast, undo } = useWallpaper();
   useEffect(() => {
-    const timer = window.setTimeout(dismissToast, 6000);
+    const timer = window.setTimeout(dismissToast, 10000);
     return () => window.clearTimeout(timer);
   }, [dismissToast, toast]);
   if (!toast) return null;
-  const undo = toast.undo;
   return (
     <div className="toast" role="status">
       <span>{toast.text}</span>
-      {undo ? (
-        <button type="button" className="toast__undo" onClick={() => void apply(undo, "Undo: putting back")}>
+      {toast.undo ? (
+        <button type="button" className="toast__undo" aria-keyshortcuts="Meta+Z" onClick={() => void undo()}>
           Undo
         </button>
       ) : null}

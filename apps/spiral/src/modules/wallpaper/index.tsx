@@ -14,7 +14,7 @@ export { Dome, Tools } from "./Chrome";
 export default function ModuleRoot({ setStatus }: ModuleProps) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { log } = useWallpaper();
+  const { log, loadRecent } = useWallpaper();
   const platform = readBoot(window.__SPIRAL_BOOT__).platform;
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export default function ModuleRoot({ setStatus }: ModuleProps) {
         if (!live) return;
         mark("module_ready:wallpaper");
         log("Opened Wallpaper.");
+        void loadRecent();
         setReady(true);
       })
       .catch((err: unknown) => {
@@ -37,7 +38,7 @@ export default function ModuleRoot({ setStatus }: ModuleProps) {
     return () => {
       live = false;
     };
-  }, [log]);
+  }, [loadRecent, log]);
 
   if (error) {
     return (

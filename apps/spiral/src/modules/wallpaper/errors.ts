@@ -7,10 +7,19 @@ const COPY: Record<string, string> = {
   bad_image: "The file that arrived wasn't an image, so Spiral discarded it. Try another wallpaper.",
   module_inactive: "Wallpaper is not open.",
   unknown_wallpaper: "That wallpaper is no longer in this page. Search again.",
+  nothing_to_undo: "There is nothing left to undo. Spiral keeps the last 20 wallpapers it changed.",
+  no_original: "Spiral has not changed your wallpaper yet, so there is nothing to put back.",
+  history_failed: "Spiral could not save its undo list. Check that the disk has free space, then try again.",
+  restore_unsupported: "Spiral cannot read the desktop on this system, so it cannot put a wallpaper back.",
 };
 
 export function errorCopy(error: unknown): string {
   const raw = String(error);
+  if (raw.startsWith("restore_missing")) {
+    const name = raw.slice("restore_missing:".length);
+    const what = name.length > 0 ? name : "That wallpaper";
+    return `${what} is no longer on this computer, so Spiral could not put it back. Choose a picture in your system's wallpaper settings instead.`;
+  }
   if (raw.startsWith("apply_failed")) {
     const screen = raw.slice("apply_failed:".length);
     if (screen.length > 0) {

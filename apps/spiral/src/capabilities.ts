@@ -27,7 +27,9 @@ const SHIPPING: Capabilities = {
   pauseRules: false,
   colorSearch: false,
   extraSources: false,
-  restoreOriginal: false,
+  // Native undo and restore landed (wallpaper/history.rs). The control still
+  // hides where `wallpaper_history` says the desktop cannot be read.
+  restoreOriginal: true,
 };
 
 declare global {

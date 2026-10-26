@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { addRecent, fitsDisplay, pickSurprise, readRecent, RECENT_LIMIT, sizeLabel, stepRecent } from "./library";
+import { describe, expect, it, vi } from "vitest";
+import { addRecent, fitsDisplay, forgetWebviewRecent, pickSurprise, RECENT_LIMIT, sizeLabel, stepRecent } from "./library";
 
 const item = (id: string, resolution = "3840x2160") => ({ id, resolution });
 
@@ -24,10 +24,17 @@ describe("wallpaper library", () => {
     expect(list).toHaveLength(RECENT_LIMIT);
   });
 
-  it("reads only well-formed recent entries", () => {
-    const raw = JSON.stringify([item("w-ok"), { id: "../etc", resolution: "1x1" }, { id: 4 }]);
-    expect(readRecent({ getItem: () => raw }).map((entry) => entry.id)).toEqual(["w-ok"]);
-    expect(readRecent({ getItem: () => "{broken" })).toEqual([]);
+  it("removes the old webview copy of recent, and survives a blocked store", () => {
+    const removeItem = vi.fn();
+    forgetWebviewRecent({ removeItem });
+    expect(removeItem).toHaveBeenCalledWith("spiral.wallpaper.recent");
+    expect(() =>
+      forgetWebviewRecent({
+        removeItem: () => {
+          throw new Error("blocked");
+        },
+      }),
+    ).not.toThrow();
   });
 
   it("steps through recent with [ and ]", () => {
