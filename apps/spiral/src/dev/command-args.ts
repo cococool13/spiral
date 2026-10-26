@@ -25,6 +25,12 @@ const COMMAND_ARGS: Record<string, readonly string[]> = {
   wallpaper_prefetch_page: ["params"],
   wallpaper_stage_full: ["id"],
   wallpaper_apply: ["id"],
+  sources_list: [],
+  displays_list: [],
+  source_credit: ["id"],
+  activity_list: ["limit"],
+  activity_clear: [],
+  source_key_set: ["source", "key"],
   bench_mark: ["mark"],
   "plugin:opener|open_url": ["url"],
 };

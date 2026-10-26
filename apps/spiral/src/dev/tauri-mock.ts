@@ -28,8 +28,6 @@ if (query.get("caps") === "on") {
     liveWallpaper: true,
     applyPerDisplay: true,
     pauseRules: true,
-    colorSearch: true,
-    extraSources: true,
     restoreOriginal: true,
   };
 }
@@ -72,16 +70,55 @@ const mockUpdate = () =>
 
 const SIZES = ["3840x2160", "5120x2880", "2560x1440", "6016x3384", "3440x1440", "3840x2400", "1920x1080"];
 
-function searchPage(pageNum: number) {
+const MOCK_SOURCES = [
+  { id: "wallhaven", prefix: "w", name: "Wallhaven", group: "wallhaven", hosts: ["wallhaven.cc"], licence: "Wallhaven SFW." },
+  { id: "nasa", prefix: "n", name: "NASA", group: "space", hosts: ["images-api.nasa.gov"], licence: "NASA images, generally not copyrighted." },
+  { id: "esa", prefix: "e", name: "ESA/Webb and ESA/Hubble", group: "space", hosts: ["esawebb.org", "esahubble.org"], licence: "CC BY 4.0, credit required." },
+  { id: "commons", prefix: "c", name: "Wikimedia Commons", group: "commons", hosts: ["commons.wikimedia.org"], licence: "Featured pictures under free licences." },
+  { id: "aic", prefix: "a", name: "Art Institute of Chicago", group: "museums", hosts: ["api.artic.edu"], licence: "CC0." },
+  { id: "cleveland", prefix: "m", name: "Cleveland Museum of Art", group: "museums", hosts: ["openaccess-api.clevelandart.org"], licence: "CC0." },
+  { id: "bing", prefix: "b", name: "Bing daily", group: "bing", hosts: ["www.bing.com"], licence: "Personal use." },
+  { id: "smithsonian", prefix: "s", name: "Smithsonian Open Access", group: "museums", hosts: ["api.si.edu"], licence: "CC0.", optionalKey: true },
+  { id: "rijks", prefix: "r", name: "Rijksmuseum", group: "museums", hosts: ["data.rijksmuseum.nl"], licence: "Public domain." },
+].map((source) => ({ optionalKey: false, keyed: false, ...source }));
+
+const GROUPS: Record<string, string[]> = {
+  all: ["wallhaven", "nasa", "esa", "commons", "aic", "cleveland", "bing"],
+  space: ["nasa", "esa"],
+  museums: ["aic", "cleveland", "rijks", "smithsonian"],
+};
+
+function searchPage(pageNum: number, source = "wallhaven") {
+  const members = GROUPS[source] ?? [source];
   return {
-    items: Array.from({ length: 24 }, (_, i) => ({
-      id: `w-p${pageNum}i${i}`,
-      resolution: SIZES[(i + pageNum) % SIZES.length] ?? "3840x2160",
-    })),
+    items: Array.from({ length: 24 }, (_, i) => {
+      const from = MOCK_SOURCES.find((entry) => entry.id === members[i % members.length]) ?? MOCK_SOURCES[0];
+      const id = `${from.prefix}-p${pageNum}i${i}`;
+      return from.id === "wallhaven"
+        ? { id, resolution: SIZES[(i + pageNum) % SIZES.length] ?? "3840x2160" }
+        : {
+            id,
+            resolution: SIZES[(i + pageNum) % SIZES.length] ?? "3840x2160",
+            title: `Study ${i + 1}`,
+            credit: { line: `Mock artist, Study ${i + 1}`, licence: from.licence, page: `${from.hosts[0]}/item/${i}` },
+          };
+    }),
     page: pageNum,
-    lastPage: 5,
+    lastPage: members.length > 1 || source === "wallhaven" ? 5 : 2,
+    unavailable: source === "museums" ? ["smithsonian"] : [],
   };
 }
+
+function sourceArg(args: Record<string, unknown>): string {
+  const params = args.params;
+  if (typeof params === "object" && params !== null && "source" in params) {
+    const source = (params as { source?: unknown }).source;
+    if (typeof source === "string") return source;
+  }
+  return "wallhaven";
+}
+
+const mockRequests: Record<string, unknown>[] = [];
 
 function pageArg(args: Record<string, unknown>): number {
   const params = args.params;
@@ -301,8 +338,21 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   wallpaper_cached_page: () => null,
   wallpaper_search: async (args) => {
     await delay(450);
-    return searchPage(pageArg(args));
+    const source = sourceArg(args);
+    for (const id of GROUPS[source] ?? [source]) {
+      const host = MOCK_SOURCES.find((entry) => entry.id === id)?.hosts[0];
+      mockRequests.unshift({ v: 1, at: new Date().toISOString(), actor: "app", kind: "network", action: "search", source: id, host, result: "ok", code: null });
+    }
+    return searchPage(pageArg(args), source);
   },
+  sources_list: () => MOCK_SOURCES,
+  displays_list: () => [{ name: "Built-in Retina Display", width: 3024, height: 1964, scale: 2, isMain: true }],
+  source_credit: () => ({ line: "ESA/Webb, NASA & CSA", licence: "CC BY 4.0 · ESA/Webb", page: "esawebb.org/images/mock/" }),
+  activity_list: () => mockRequests.slice(0, 200),
+  activity_clear: () => {
+    mockRequests.length = 0;
+  },
+  source_key_set: () => undefined,
   wallpaper_prefetch_page: () => undefined,
   wallpaper_stage_full: () => undefined,
   wallpaper_apply: async () => {

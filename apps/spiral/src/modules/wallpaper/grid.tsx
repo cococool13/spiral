@@ -1,7 +1,7 @@
 import { useRef, type KeyboardEvent } from "react";
 import { mark } from "../../bench";
 import { recordTileDecode } from "./decode";
-import { wallhavenPage } from "./library";
+import { itemPage } from "./library";
 import { useWallpaper } from "./state";
 import { Tile } from "./Tile";
 import type { ThumbPlatform } from "./thumbs";
@@ -12,6 +12,22 @@ interface WallpaperGridProps {
   platform: ThumbPlatform;
   activeTile: number;
   onActiveTile: (index: number) => void;
+}
+
+const SKELETON_TILES = 12;
+
+/** Placeholders the same size as real tiles, so the grid does not jump when
+ *  pictures arrive. */
+export function SkeletonGrid() {
+  return (
+    <div className="grid" aria-hidden="true">
+      {Array.from({ length: SKELETON_TILES }, (_, index) => (
+        <div className="tile tile--skeleton" key={index}>
+          <div className="tile__ghost" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 const MOVES = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
@@ -33,7 +49,7 @@ export function WallpaperGrid({ items, platform, activeTile, onActiveTile }: Wal
   function onStage(item: GalleryItem) {
     if (staged.current.has(item.id)) return;
     staged.current.add(item.id);
-    log(`Fetching ${wallhavenPage(item.id)} ahead, because the pointer rested on it.`);
+    log(`Fetching ${itemPage(item)} ahead, because the pointer rested on it.`);
   }
 
   function columns(grid: HTMLElement): number {

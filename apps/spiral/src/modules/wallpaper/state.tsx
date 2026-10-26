@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { noteWallpaperApplied } from "../../shell/analytics/client";
 import { apply as applyWallpaper } from "./api";
 import { errorCopy } from "./errors";
-import { addRecent, displayPixels, pickSurprise, readRecent, sizeLabel, wallhavenPage, writeRecent, type DisplayPixels } from "./library";
+import { addRecent, displayPixels, pickSurprise, readRecent, sizeLabel, itemPage, writeRecent, type DisplayPixels } from "./library";
 import type { Categories, GalleryItem } from "./types";
 
 export const CHIPS: { label: string; categories: Categories }[] = [
@@ -93,7 +93,7 @@ export function Frame({ children }: { children: ReactNode }) {
       const previous = currentRef.current;
       setPhase({ id: item.id, phase: "applying" });
       setToast(null);
-      log(`${why ?? "Downloading"} ${wallhavenPage(item.id)} (${sizeLabel(item.resolution)}).`);
+      log(`${why ?? "Downloading"} ${itemPage(item)} (${sizeLabel(item.resolution)}).`);
       try {
         const done = await applyWallpaper(item.id);
         const where = done.displays === 1 ? "1 display" : `${done.displays} displays`;
@@ -105,7 +105,7 @@ export function Frame({ children }: { children: ReactNode }) {
           return next;
         });
         noteWallpaperApplied();
-        log(`Set ${wallhavenPage(item.id)} on ${where}, this Space.`);
+        log(`Set ${itemPage(item)} on ${where}, this Space.${item.credit ? ` ${item.credit.line}. ${item.credit.licence}.` : ""}`);
         setToast({
           text: `Set on ${where}.`,
           undo: previous && previous.id !== item.id ? previous : undefined,
@@ -113,7 +113,7 @@ export function Frame({ children }: { children: ReactNode }) {
       } catch (err: unknown) {
         const copy = errorCopy(err);
         setPhase({ id: item.id, phase: "error", error: copy });
-        log(`Did not set ${wallhavenPage(item.id)}. ${copy}`);
+        log(`Did not set ${itemPage(item)}. ${copy}`);
       } finally {
         busy.current = false;
       }

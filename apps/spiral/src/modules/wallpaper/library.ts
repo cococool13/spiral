@@ -1,4 +1,4 @@
-import type { GalleryItem } from "./types";
+import { WALL_ID, type GalleryItem } from "./types";
 
 /** Pure helpers behind the grid: fit, recent and surprise. No React, no IPC. */
 
@@ -35,6 +35,13 @@ export function wallhavenPage(id: string): string {
   return `wallhaven.cc/w/${id.replace(/^w-/, "")}`;
 }
 
+/** How the activity log and quick look name an item: its page for Wallhaven
+ *  and for sources that give one, else its title. */
+export function itemPage(item: GalleryItem): string {
+  if (item.id.startsWith("w-")) return wallhavenPage(item.id);
+  return item.credit?.page ?? item.title ?? item.credit?.line ?? "this picture";
+}
+
 export const RECENT_LIMIT = 12;
 const RECENT_KEY = "spiral.wallpaper.recent";
 
@@ -54,7 +61,7 @@ export function readRecent(storage: Pick<Storage, "getItem"> | null = safeStorag
           typeof entry === "object" &&
           entry !== null &&
           typeof (entry as GalleryItem).id === "string" &&
-          /^w-[A-Za-z0-9]+$/.test((entry as GalleryItem).id) &&
+          WALL_ID.test((entry as GalleryItem).id) &&
           typeof (entry as GalleryItem).resolution === "string",
       )
       .slice(0, RECENT_LIMIT);

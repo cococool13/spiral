@@ -13,10 +13,6 @@ export interface Capabilities {
   applyPerDisplay: boolean;
   /** Pause a live wallpaper on battery, full-screen apps, Low Power Mode, lock. */
   pauseRules: boolean;
-  /** Search Wallhaven by colour. */
-  colorSearch: boolean;
-  /** Sources other than Wallhaven. */
-  extraSources: boolean;
   /** Put back the wallpaper the person had before Spiral changed it. */
   restoreOriginal: boolean;
 }
@@ -25,8 +21,6 @@ const SHIPPING: Capabilities = {
   liveWallpaper: false,
   applyPerDisplay: false,
   pauseRules: false,
-  colorSearch: false,
-  extraSources: false,
   restoreOriginal: false,
 };
 

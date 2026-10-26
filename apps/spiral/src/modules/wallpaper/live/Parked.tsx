@@ -17,65 +17,6 @@ function PreviewTag() {
   return previewing() ? <span className="parked-tag">Preview</span> : null;
 }
 
-const SOURCES = ["Wallhaven", "Spiral Generative", "Apple Aerials", "NASA", "Museum open access", "Your files"];
-
-export function SourceChips() {
-  const { log } = useWallpaper();
-  const [source, setSource] = useState("Wallhaven");
-  if (!capabilities().extraSources) return null;
-  return (
-    <div className="chips" role="group" aria-label="Source">
-      {SOURCES.map((name) => (
-        <button
-          key={name}
-          type="button"
-          className="chip"
-          aria-pressed={source === name}
-          onClick={() => {
-            setSource(name);
-            if (name !== "Wallhaven") log(`${name}: ${NOT_WIRED}`);
-          }}
-        >
-          {name}
-        </button>
-      ))}
-      <PreviewTag />
-    </div>
-  );
-}
-
-const COLOURS: { id: string; label: string; fill: string }[] = [
-  { id: "red", label: "Red", fill: "var(--glass-500)" },
-  { id: "warm", label: "Warm", fill: "rgb(217 135 58)" },
-  { id: "green", label: "Green", fill: "rgb(95 176 142)" },
-  { id: "blue", label: "Blue", fill: "rgb(95 127 192)" },
-  { id: "dark", label: "Dark", fill: "var(--room-panel-2)" },
-];
-
-export function ColourSwatches() {
-  const { log } = useWallpaper();
-  const [colour, setColour] = useState<string | null>(null);
-  if (!capabilities().colorSearch) return null;
-  return (
-    <div className="swatches" role="group" aria-label="Colour">
-      {COLOURS.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className="swatch"
-          aria-label={item.label}
-          aria-pressed={colour === item.id}
-          style={{ background: item.fill }}
-          onClick={() => {
-            setColour(colour === item.id ? null : item.id);
-            log(`Colour ${item.label}: ${NOT_WIRED}`);
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 type Target = "all" | "this" | "each";
 
 export function ApplyTo() {
