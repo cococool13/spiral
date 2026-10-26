@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { importResumeFile, parsePastedText } from "../api";
+import { importDroppedFile, importResumeFile, parsePastedText } from "../api";
 import { scratchDoc, type ResumeDoc } from "../lib/types";
 import { Notice } from "../components/Notice";
 
@@ -46,8 +46,15 @@ export function Input({
           return;
         }
         setOver(false);
-        if (!event.payload.paths[0]) return;
-        await run(importResumeFile);
+        const paths = event.payload.paths;
+        const path = paths[0];
+        if (!path) return;
+        if (paths.length > 1) {
+          setError("Drop one resume at a time. Spiral did not read any of these files.");
+          return;
+        }
+        // The dropped file is read directly; the picker is only for Open a file.
+        await run(() => importDroppedFile(path));
       })
       .then((unlisten) => {
         if (cancelled) {
