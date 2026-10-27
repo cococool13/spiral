@@ -66,6 +66,26 @@ paths = [
   '''(^|/)crates/spiral-license/src/migrate\.rs$''',
 ]
 
+# Recorded public API responses for the wallpaper source tests. Bing's
+# archive names each day's quiz `HPQuiz_<date>_<Name>`, and the Rijksmuseum
+# search pages with a base64 token that decodes to {"token": "<public object
+# id URL>"}. generic-api-key matches both because they sit beside `"quiz":`
+# and `"id":`. Neither is a credential. The quiz names are matched by shape and
+# the two page tokens by exact value, only inside the fixtures folder, so a
+# real key in that folder or anywhere else still fails.
+[[allowlists]]
+description = "Public Bing quiz names and Rijksmuseum page tokens in source fixtures"
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^HPQuiz_\d{8}_[A-Za-z]+$''',
+  '''^eyJ0b2tlbiI6ICJodHRwczovL2lkLnJpamtzbXVzZXVtLm5sLzIwMDE0NDczNyJ9$''',
+  '''^eyJ0b2tlbiI6ICJodHRwczovL2lkLnJpamtzbXVzZXVtLm5sLzIwMDgyMDQ2NSJ9$''',
+]
+paths = [
+  '''(^|/)apps/spiral/src-tauri/src/wallpaper/sources/fixtures/[a-z0-9_]+\.json$''',
+]
+
 # Generated trees, excluded by path rather than by value.
 #
 # `gitleaks detect` over history never sees these — they are all gitignored.

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::paths::{self, Root};
 
 use super::model::{Rendition, StoredPage, UserError, WallId};
-use super::net::{self, Transport};
+use super::net::{self, Net};
 
 const THUMB_CAP: u64 = 200 * 1024 * 1024;
 const STAGING_CAP: usize = 2;
@@ -58,7 +58,7 @@ pub fn read_thumb(root: &Root, id: &WallId, rendition: Rendition) -> Option<Vec<
 
 pub async fn download_thumb(
     root: &Root,
-    transport: &dyn Transport,
+    net: &Net,
     id: &WallId,
     url: &str,
     rendition: Rendition,
@@ -66,7 +66,7 @@ pub async fn download_thumb(
     if let Some(bytes) = read_thumb(root, id, rendition) {
         return Ok(bytes);
     }
-    let bytes = transport.get(url, &[]).await?;
+    let bytes = net.asset(url, "thumb", id.as_str()).await?;
     let ext = net::image_ext(&bytes)?;
     let name = format!("{}.{ext}", thumb_stem(id, rendition));
     write_bytes(&root.thumbs(), &name, &bytes)?;
@@ -80,14 +80,14 @@ pub fn find_full(dir: &Path, id: &WallId) -> Option<PathBuf> {
 
 pub async fn download_full(
     dir: &Path,
-    transport: &dyn Transport,
+    net: &Net,
     id: &WallId,
     url: &str,
 ) -> Result<PathBuf, UserError> {
     if let Some(path) = find_full(dir, id) {
         return Ok(path);
     }
-    let bytes = transport.get(url, &[]).await?;
+    let bytes = net.asset(url, "download", id.as_str()).await?;
     let ext = net::image_ext(&bytes)?;
     let name = format!("{}.{ext}", id.as_str());
     write_bytes(dir, &name, &bytes)?;
@@ -112,13 +112,16 @@ pub fn promote(src: &Path, dest_dir: &Path) -> Result<PathBuf, UserError> {
     }
 }
 
-pub fn prune_wallpapers(dir: &Path, keep: &Path) {
+/// Removes applied wallpapers nothing points at any more. `keep` is the file
+/// just set plus every file undo history may put back.
+pub fn prune_wallpapers(dir: &Path, keep: &[PathBuf]) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if !path.is_file() || same_file(&path, keep) || !inside(dir, &path) {
+        if !path.is_file() || keep.iter().any(|kept| same_file(&path, kept)) || !inside(dir, &path)
+        {
             continue;
         }
         let _ = fs::remove_file(path);
@@ -325,14 +328,17 @@ mod tests {
         let keep = root.wallpapers().join("w-keep.jpg");
         fs::write(&keep, b"keep").unwrap();
         fs::write(root.wallpapers().join("w-old.jpg"), b"old").unwrap();
+        let pinned = root.wallpapers().join("w-undo.jpg");
+        fs::write(&pinned, b"undo").unwrap();
         let outside = root.staging();
         fs::create_dir_all(&outside).unwrap();
         let outside_file = outside.join("w-keep.jpg");
         fs::write(&outside_file, b"outside").unwrap();
 
-        prune_wallpapers(&root.wallpapers(), &keep);
+        prune_wallpapers(&root.wallpapers(), &[keep.clone(), pinned.clone()]);
 
         assert!(keep.is_file());
+        assert!(pinned.is_file());
         assert!(!root.wallpapers().join("w-old.jpg").exists());
         assert_eq!(fs::read(&outside_file).unwrap(), b"outside");
     }

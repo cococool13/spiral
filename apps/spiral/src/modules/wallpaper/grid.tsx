@@ -1,6 +1,8 @@
 import { useRef, type KeyboardEvent } from "react";
 import { mark } from "../../bench";
 import { recordTileDecode } from "./decode";
+import { itemPage } from "./library";
+import { useWallpaper } from "./state";
 import { Tile } from "./Tile";
 import type { ThumbPlatform } from "./thumbs";
 import type { GalleryItem } from "./types";
@@ -12,8 +14,29 @@ interface WallpaperGridProps {
   onActiveTile: (index: number) => void;
 }
 
+const SKELETON_TILES = 12;
+
+/** Placeholders the same size as real tiles, so the grid does not jump when
+ *  pictures arrive. */
+export function SkeletonGrid() {
+  return (
+    <div className="grid" aria-hidden="true">
+      {Array.from({ length: SKELETON_TILES }, (_, index) => (
+        <div className="tile tile--skeleton" key={index}>
+          <div className="tile__ghost" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const MOVES = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
+
+/** Keyboard first: arrows move, Return sets, Space opens quick look. */
 export function WallpaperGrid({ items, platform, activeTile, onActiveTile }: WallpaperGridProps) {
+  const { phase, current, apply, setQuickLook, log } = useWallpaper();
   const seen = useRef(new Set<number>());
+  const staged = useRef(new Set<string>());
   const gridRef = useRef<HTMLDivElement>(null);
   const tabbable = Math.min(activeTile, Math.max(items.length - 1, 0));
 
@@ -23,45 +46,58 @@ export function WallpaperGrid({ items, platform, activeTile, onActiveTile }: Wal
     if (next.useful) mark("first_useful_action:wallpaper");
   }
 
-  function onGridKeyDown(event: KeyboardEvent) {
-    const handled = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
-    if (!handled.includes(event.key) || !gridRef.current) return;
-    const grid = gridRef.current;
-    const buttons = Array.from(grid.querySelectorAll<HTMLButtonElement>(".tile button"));
-    if (buttons.length === 0) return;
+  function onStage(item: GalleryItem) {
+    if (staged.current.has(item.id)) return;
+    staged.current.add(item.id);
+    log(`Fetching ${itemPage(item)} ahead, because the pointer rested on it.`);
+  }
 
+  function columns(grid: HTMLElement): number {
     const tiles = Array.from(grid.children) as HTMLElement[];
-    const firstRowTop = tiles[0]?.offsetTop;
-    const columns = Math.max(1, tiles.filter((tile) => tile.offsetTop === firstRowTop).length);
-    const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
-    const last = buttons.length - 1;
-    let next: number;
-    switch (event.key) {
-      case "ArrowLeft":
-        next = Math.max(0, current - 1);
-        break;
-      case "ArrowRight":
-        next = Math.min(last, current + 1);
-        break;
-      case "ArrowUp":
-        next = Math.max(0, current - columns);
-        break;
-      case "ArrowDown":
-        next = Math.min(last, current < 0 ? 0 : current + columns);
-        break;
-      case "Home":
-        next = 0;
-        break;
-      default:
-        next = last;
+    const top = tiles[0]?.offsetTop;
+    return Math.max(1, tiles.filter((tile) => tile.offsetTop === top).length);
+  }
+
+  function onGridKeyDown(event: KeyboardEvent) {
+    const grid = gridRef.current;
+    if (!grid || items.length === 0) return;
+    if (event.key === " ") {
+      event.preventDefault();
+      setQuickLook(items[tabbable]?.id ?? null);
+      return;
     }
+    if (!MOVES.includes(event.key)) return;
+    const buttons = Array.from(grid.querySelectorAll<HTMLButtonElement>(".tile__hit"));
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const now = at < 0 ? tabbable : at;
+    const step = columns(grid);
+    const last = buttons.length - 1;
+    const next =
+      event.key === "ArrowLeft"
+        ? Math.max(0, now - 1)
+        : event.key === "ArrowRight"
+          ? Math.min(last, now + 1)
+          : event.key === "ArrowUp"
+            ? Math.max(0, now - step)
+            : event.key === "ArrowDown"
+              ? Math.min(last, now + step)
+              : event.key === "Home"
+                ? 0
+                : last;
+    event.preventDefault();
     buttons[next]?.focus();
     onActiveTile(next);
-    event.preventDefault();
   }
 
   return (
-    <div className="browse__grid" ref={gridRef} onKeyDown={onGridKeyDown}>
+    <div
+      className="grid"
+      ref={gridRef}
+      role="group"
+      aria-label="Wallpapers"
+      aria-describedby="grid-keys"
+      onKeyDown={onGridKeyDown}
+    >
       {items.map((item, index) => (
         <Tile
           key={item.id}
@@ -70,6 +106,11 @@ export function WallpaperGrid({ items, platform, activeTile, onActiveTile }: Wal
           total={items.length}
           tabbable={index === tabbable}
           platform={platform}
+          phase={phase?.id === item.id && phase.phase !== "applied" ? phase : null}
+          onDesktop={current?.id === item.id}
+          onApply={(chosen) => void apply(chosen)}
+          onFocus={onActiveTile}
+          onStage={onStage}
           onDecoded={onDecoded}
         />
       ))}

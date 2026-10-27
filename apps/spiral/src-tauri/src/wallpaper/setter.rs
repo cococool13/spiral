@@ -2,7 +2,78 @@ use std::path::PathBuf;
 
 use crate::settings::FitMode;
 
+use super::history::{Desktop, Screen};
 use super::model::{Applied, DisplaySize, UserError};
+
+/// The real desktop: reads and sets pictures through the OS, on the main
+/// thread where AppKit needs it.
+pub struct NativeDesktop<'a>(pub &'a tauri::AppHandle);
+
+impl Desktop for NativeDesktop<'_> {
+    fn capture(&self) -> Result<Vec<Screen>, UserError> {
+        capture_desktop(self.0)
+    }
+
+    fn set(&self, path: PathBuf, fit: FitMode) -> Result<Applied, UserError> {
+        set_wallpaper(self.0, path, fit)
+    }
+
+    fn restore(&self, screens: &[Screen]) -> Result<u32, UserError> {
+        restore_desktop(self.0, screens.to_vec())
+    }
+
+    fn supported(&self) -> bool {
+        cfg!(any(target_os = "macos", windows))
+    }
+}
+
+fn capture_desktop(app: &tauri::AppHandle) -> Result<Vec<Screen>, UserError> {
+    #[cfg(target_os = "macos")]
+    {
+        let (tx, rx) = std::sync::mpsc::channel();
+        app.run_on_main_thread(move || {
+            let _ = tx.send(macos::capture());
+        })
+        .map_err(|_| UserError::apply("this Mac"))?;
+        rx.recv().map_err(|_| UserError::apply("this Mac"))?
+    }
+
+    #[cfg(windows)]
+    {
+        let _ = app;
+        return windows::capture();
+    }
+
+    #[cfg(not(any(target_os = "macos", windows)))]
+    {
+        let _ = app;
+        Err(UserError::new("restore_unsupported"))
+    }
+}
+
+fn restore_desktop(app: &tauri::AppHandle, screens: Vec<Screen>) -> Result<u32, UserError> {
+    #[cfg(target_os = "macos")]
+    {
+        let (tx, rx) = std::sync::mpsc::channel();
+        app.run_on_main_thread(move || {
+            let _ = tx.send(macos::restore(&screens));
+        })
+        .map_err(|_| UserError::apply("this Mac"))?;
+        rx.recv().map_err(|_| UserError::apply("this Mac"))?
+    }
+
+    #[cfg(windows)]
+    {
+        let _ = app;
+        return windows::restore(&screens);
+    }
+
+    #[cfg(not(any(target_os = "macos", windows)))]
+    {
+        let _ = (app, screens);
+        Err(UserError::new("restore_unsupported"))
+    }
+}
 
 pub fn set_wallpaper(
     app: &tauri::AppHandle,
@@ -88,6 +159,7 @@ mod macos {
 
     use crate::settings::FitMode;
 
+    use super::super::history::{self, Screen};
     use super::super::model::{Applied, DisplaySize, UserError};
 
     type DesktopOptions = NSDictionary<NSWorkspaceDesktopImageOptionKey, AnyObject>;
@@ -131,6 +203,90 @@ mod macos {
             .map_err(|_| UserError::apply(&label))?;
         }
         Ok(Applied::here(screens.len() as u32))
+    }
+
+    fn screen_label(name: String, index: usize) -> String {
+        if name.is_empty() {
+            format!("Display {}", index + 1)
+        } else {
+            name
+        }
+    }
+
+    /// Every screen's current picture and placement, through the public
+    /// `desktopImageURL(for:)` and `desktopImageOptions(for:)`.
+    pub fn capture() -> Result<Vec<Screen>, UserError> {
+        let mtm = MainThreadMarker::new().ok_or_else(|| UserError::apply("this Mac"))?;
+        let workspace = NSWorkspace::sharedWorkspace();
+        let mut out = Vec::new();
+        for (index, screen) in NSScreen::screens(mtm).iter().enumerate() {
+            let Some(path) = workspace
+                .desktopImageURLForScreen(&screen)
+                .and_then(|url| url.path())
+            else {
+                continue;
+            };
+            let options = workspace.desktopImageOptionsForScreen(&screen);
+            let number = |key: &NSString| {
+                options
+                    .as_ref()
+                    .and_then(|options| options.objectForKey(key))
+                    .and_then(|value| value.downcast::<NSNumber>().ok())
+            };
+            let (scaling, clipping) = unsafe {
+                (
+                    number(NSWorkspaceDesktopImageScalingKey).map(|n| n.as_isize() as i64),
+                    number(NSWorkspaceDesktopImageAllowClippingKey).map(|n| n.as_bool()),
+                )
+            };
+            out.push(Screen {
+                name: screen.localizedName().to_string(),
+                index: index as u32,
+                path: path.to_string().into(),
+                scaling,
+                clipping,
+            });
+        }
+        Ok(out)
+    }
+
+    /// Sets each live screen back to the matching saved picture. A screen with
+    /// no match is left alone.
+    pub fn restore(screens: &[Screen]) -> Result<u32, UserError> {
+        let mtm = MainThreadMarker::new().ok_or_else(|| UserError::apply("this Mac"))?;
+        let workspace = NSWorkspace::sharedWorkspace();
+        let mut changed = 0;
+        for (index, screen) in NSScreen::screens(mtm).iter().enumerate() {
+            let name = screen.localizedName().to_string();
+            let Some(saved) = history::match_screen(screens, &name, index as u32) else {
+                continue;
+            };
+            let url = NSURL::fileURLWithPath(&NSString::from_str(&saved.path.to_string_lossy()));
+            let scaling = saved.scaling.map(|raw| NSNumber::new_isize(raw as isize));
+            let clipping = saved.clipping.map(NSNumber::new_bool);
+            let mut keys: Vec<&NSWorkspaceDesktopImageOptionKey> = Vec::new();
+            let mut values: Vec<&AnyObject> = Vec::new();
+            unsafe {
+                if let Some(scaling) = &scaling {
+                    keys.push(NSWorkspaceDesktopImageScalingKey);
+                    values.push(scaling as &AnyObject);
+                }
+                if let Some(clipping) = &clipping {
+                    keys.push(NSWorkspaceDesktopImageAllowClippingKey);
+                    values.push(clipping as &AnyObject);
+                }
+            }
+            let options = NSDictionary::from_slices(&keys, &values);
+            unsafe {
+                workspace.setDesktopImageURL_forScreen_options_error(&url, &screen, &options)
+            }
+            .map_err(|_| UserError::apply(&screen_label(name, index)))?;
+            changed += 1;
+        }
+        if changed == 0 {
+            return Err(UserError::apply("this Mac"));
+        }
+        Ok(changed)
     }
 
     pub fn largest() -> Option<DisplaySize> {
@@ -201,6 +357,7 @@ mod windows {
 
     use crate::settings::FitMode;
 
+    use super::super::history::Screen;
     use super::super::model::{Applied, DisplaySize, UserError};
 
     pub fn set(path: &Path, fit: FitMode) -> Result<Applied, UserError> {
@@ -209,6 +366,52 @@ mod windows {
             FitMode::Fit => "6",
             FitMode::Center => "0",
         };
+        set_style(path, style)
+    }
+
+    /// The one desktop picture Windows keeps, and its `WallpaperStyle`.
+    pub fn capture() -> Result<Vec<Screen>, UserError> {
+        use std::os::windows::ffi::OsStringExt;
+        let mut buf = [0u16; 1024];
+        let ok = unsafe {
+            windows_sys::Win32::UI::WindowsAndMessaging::SystemParametersInfoW(
+                windows_sys::Win32::UI::WindowsAndMessaging::SPI_GETDESKWALLPAPER,
+                buf.len() as u32,
+                buf.as_mut_ptr().cast(),
+                0,
+            )
+        };
+        if ok == 0 {
+            return Err(UserError::apply("this display"));
+        }
+        let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+        if len == 0 {
+            return Ok(Vec::new());
+        }
+        let path = std::ffi::OsString::from_wide(&buf[..len]);
+        let style = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER)
+            .open_subkey("Control Panel\\Desktop")
+            .ok()
+            .and_then(|key| key.get_value::<String, _>("WallpaperStyle").ok())
+            .and_then(|value| value.trim().parse::<i64>().ok());
+        Ok(vec![Screen {
+            name: String::new(),
+            index: 0,
+            path: path.into(),
+            scaling: style,
+            clipping: None,
+        }])
+    }
+
+    pub fn restore(screens: &[Screen]) -> Result<u32, UserError> {
+        let Some(saved) = screens.first() else {
+            return Err(UserError::apply("this display"));
+        };
+        let style = saved.scaling.unwrap_or(10).to_string();
+        set_style(&saved.path, &style).map(|applied| applied.displays)
+    }
+
+    fn set_style(path: &Path, style: &str) -> Result<Applied, UserError> {
         let desktop = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER)
             .open_subkey_with_flags("Control Panel\\Desktop", winreg::enums::KEY_SET_VALUE)
             .map_err(|_| UserError::apply("this display"))?;

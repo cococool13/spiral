@@ -1,0 +1,323 @@
+{
+ "batchcomplete": true,
+ "continue": {
+  "gsroffset": 6,
+  "continue": "gsroffset||"
+ },
+ "query": {
+  "pages": [
+   {
+    "pageid": 201875537,
+    "ns": 6,
+    "title": "File:Bab Bhar 1.jpg",
+    "index": 6,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 14918455,
+      "width": 6125,
+      "height": 4807,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/Bab_Bhar_1.jpg/960px-Bab_Bhar_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 960,
+      "thumbheight": 753,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/Bab_Bhar_1.jpg/1920px-Bab_Bhar_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/Bab_Bhar_1.jpg/960px-Bab_Bhar_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 960,
+       "height": 753,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/Bab_Bhar_1.jpg/1920px-Bab_Bhar_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b6/Bab_Bhar_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Bab_Bhar_1.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=201875537",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Bab Bhar 1",
+        "source": "mediawiki-metadata"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:IssamBarhoumi\" title=\"User:IssamBarhoumi\">IssamBarhoumi</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 201885587,
+    "ns": 6,
+    "title": "File:Red Arrows aerobatic display team of the RAF at NATO Days 2026 in Ostrava, 20260919 1534 1602.jpg",
+    "index": 5,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 7701629,
+      "width": 4275,
+      "height": 2855,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg/960px-Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 960,
+      "thumbheight": 641,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg/1920px-Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg/960px-Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 960,
+       "height": 641,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg/1920px-Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava%2C_20260919_1534_1602.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Red_Arrows_aerobatic_display_team_of_the_RAF_at_NATO_Days_2026_in_Ostrava,_20260919_1534_1602.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=201885587",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Red Arrows aerobatic display team of the RAF at NATO Days 2026 in Ostrava, 20260919 1534 1602",
+        "source": "mediawiki-metadata"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Jakubhal\" title=\"User:Jakubhal\">Jakub Hałun</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 201943933,
+    "ns": 6,
+    "title": "File:Qubbat al-Hawa during sunrise.jpg",
+    "index": 4,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 8577163,
+      "width": 5171,
+      "height": 3313,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Qubbat_al-Hawa_during_sunrise.jpg/960px-Qubbat_al-Hawa_during_sunrise.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 960,
+      "thumbheight": 615,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Qubbat_al-Hawa_during_sunrise.jpg/1920px-Qubbat_al-Hawa_during_sunrise.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Qubbat_al-Hawa_during_sunrise.jpg/960px-Qubbat_al-Hawa_during_sunrise.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 960,
+       "height": 615,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Qubbat_al-Hawa_during_sunrise.jpg/1920px-Qubbat_al-Hawa_during_sunrise.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Qubbat_al-Hawa_during_sunrise.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Qubbat_al-Hawa_during_sunrise.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=201943933",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Qubbat al-Hawa during sunrise",
+        "source": "mediawiki-metadata"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:IssamBarhoumi\" title=\"User:IssamBarhoumi\">IssamBarhoumi</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 201958119,
+    "ns": 6,
+    "title": "File:Freshwater copepod (Copepoda) under darkfield microscopy.jpg",
+    "index": 3,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 6063696,
+      "width": 5184,
+      "height": 3456,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg/960px-Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 960,
+      "thumbheight": 640,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg/1920px-Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg/960px-Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 960,
+       "height": 640,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg/1920px-Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f5/Freshwater_copepod_%28Copepoda%29_under_darkfield_microscopy.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Freshwater_copepod_(Copepoda)_under_darkfield_microscopy.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=201958119",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Freshwater copepod (Copepoda) under darkfield microscopy",
+        "source": "mediawiki-metadata"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Janeklass\" title=\"User:Janeklass\">Janeklass</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 201972656,
+    "ns": 6,
+    "title": "File:Resin on the trunk of a domestic plum tree.jpg",
+    "index": 2,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 9084464,
+      "width": 5905,
+      "height": 3937,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Resin_on_the_trunk_of_a_domestic_plum_tree.jpg/960px-Resin_on_the_trunk_of_a_domestic_plum_tree.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 960,
+      "thumbheight": 640,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Resin_on_the_trunk_of_a_domestic_plum_tree.jpg/1920px-Resin_on_the_trunk_of_a_domestic_plum_tree.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Resin_on_the_trunk_of_a_domestic_plum_tree.jpg/960px-Resin_on_the_trunk_of_a_domestic_plum_tree.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 960,
+       "height": 640,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Resin_on_the_trunk_of_a_domestic_plum_tree.jpg/1920px-Resin_on_the_trunk_of_a_domestic_plum_tree.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/61/Resin_on_the_trunk_of_a_domestic_plum_tree.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Resin_on_the_trunk_of_a_domestic_plum_tree.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=201972656",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "Resin on the trunk of a domestic plum tree",
+        "source": "mediawiki-metadata"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Krigore\" title=\"User:Krigore\">Krigore</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   },
+   {
+    "pageid": 202062422,
+    "ns": 6,
+    "title": "File:2026-10-20 Panorama Colored Orbit Trap Menger Sponge (Reihung) hell.jpg",
+    "index": 1,
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "size": 26263928,
+      "width": 8000,
+      "height": 4000,
+      "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg/960px-2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "thumbwidth": 960,
+      "thumbheight": 480,
+      "responsiveUrls": {
+       "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg/1920px-2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      "thumbattribs": {
+       "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg/960px-2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+       "decoding": "async",
+       "loading": "lazy",
+       "width": 960,
+       "height": 480,
+       "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg/1920px-2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+      },
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/24/2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_%28Reihung%29_hell.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:2026-10-20_Panorama_Colored_Orbit_Trap_Menger_Sponge_(Reihung)_hell.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=202062422",
+      "extmetadata": {
+       "ObjectName": {
+        "value": "2026-10-20 Panorama Colored Orbit Trap Menger Sponge (Reihung) hell",
+        "source": "mediawiki-metadata"
+       },
+       "Artist": {
+        "value": "<ul><li>Originalcode: Krzysztof Marczak (via CC BY-4.0)</li>\n<li>Fraktal selbst entfernt und Panoramaprojektion und Rendering und ewige Reihung: <a href=\"//commons.wikimedia.org/wiki/User:PantheraLeo1359531\" title=\"User:PantheraLeo1359531\">PantheraLeo1359531 😺</a> (<a href=\"//commons.wikimedia.org/wiki/User_talk:PantheraLeo1359531\" title=\"User talk:PantheraLeo1359531\"><span class=\"signature-talk\">talk</span></a>)</li></ul>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY 4.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-4.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      },
+      "mime": "image/jpeg"
+     }
+    ]
+   }
+  ]
+ }
+}

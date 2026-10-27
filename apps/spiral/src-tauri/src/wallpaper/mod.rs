@@ -1,8 +1,13 @@
+mod activity;
 mod cache;
+mod history;
+pub mod commands;
+pub mod displays;
 mod model;
 mod net;
+mod recent;
 mod setter;
-mod wallhaven;
+mod sources;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -13,8 +18,20 @@ use tokio::sync::watch;
 use crate::paths::Root;
 use crate::settings::FitMode;
 
-pub use model::{Applied, DisplaySize, Rendition, SearchPage, SearchParams, UserError, WallId};
-pub use setter::{largest_display, set_wallpaper};
+pub use history::{restore_original, undo, Desktop, HistoryView, Restored, Screen};
+pub use model::{
+    Applied, DisplaySize, GalleryItem, Rendition, SearchPage, SearchParams, UserError, WallId,
+};
+pub use setter::{largest_display, set_wallpaper, NativeDesktop};
+
+/// The recent row, read from disk so it shows before Wallpaper finishes opening.
+pub fn recent_items(root: &Root) -> Vec<GalleryItem> {
+    recent::load(root).public()
+}
+
+pub fn history_view(root: &Root, desktop: &dyn Desktop) -> HistoryView {
+    history::load(root).view(desktop.supported())
+}
 
 pub fn stored_thumb_bytes(root: &Root) -> u64 {
     cache::thumb_cache_size(root)
@@ -27,12 +44,54 @@ pub fn clear_stored_thumbs(root: &Root) -> Result<(), UserError> {
 #[cfg(debug_assertions)]
 pub use setter::current_wallpaper;
 
-use model::{GalleryQuery, ResolvedSearch, StoredItem, StoredPage};
-use net::{LiveTransport, SharedTransport};
+pub use activity::Entry as ActivityEntry;
+pub use model::Credit;
+pub use sources::SourceInfo;
+
+use model::{GalleryQuery, ResolvedSearch, SourceFilter, StoredItem, StoredPage};
+use net::{LiveTransport, Net, SharedTransport};
+use sources::Registry;
+
+/// `$APPDATA/sources.json`: a person's own optional API keys. Mode 0600, never
+/// logged, sent only to the source it belongs to.
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct SourceKeys {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    smithsonian: Option<String>,
+}
+
+fn keys_path(root: &Root) -> std::path::PathBuf {
+    root.dir().join("sources.json")
+}
+
+fn read_keys(root: &Root) -> SourceKeys {
+    std::fs::read(keys_path(root))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default()
+}
+
+fn write_keys(root: &Root, keys: &SourceKeys) -> Result<(), UserError> {
+    let path = keys_path(root);
+    if keys.smithsonian.is_none() {
+        let _ = std::fs::remove_file(&path);
+        return Ok(());
+    }
+    let bytes = serde_json::to_vec(keys).map_err(|_| UserError::bad())?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, bytes).map_err(|_| UserError::bad())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o600));
+    }
+    std::fs::rename(&tmp, &path).map_err(|_| UserError::bad())
+}
 
 pub struct WallpaperEngine {
     root: Root,
-    transport: SharedTransport,
+    net: Arc<Net>,
+    sources: Registry,
     display: Option<DisplaySize>,
     catalog: Mutex<HashMap<WallId, StoredItem>>,
     search_job: Mutex<Option<SearchJob>>,
@@ -54,9 +113,12 @@ impl WallpaperEngine {
         transport: SharedTransport,
         display: Option<DisplaySize>,
     ) -> Arc<Self> {
+        let net = Arc::new(Net::new(transport, root.dir()));
+        let sources = Registry::new(read_keys(&root).smithsonian);
         Arc::new(Self {
             root,
-            transport,
+            net,
+            sources,
             display,
             catalog: Mutex::new(HashMap::new()),
             search_job: Mutex::new(None),
@@ -73,9 +135,61 @@ impl WallpaperEngine {
                     categories: "111".into(),
                     sorting: "toplist".into(),
                     page: 1,
+                    ..Default::default()
                 })
                 .await;
         });
+    }
+
+    pub fn sources_info(&self) -> Vec<SourceInfo> {
+        self.sources.info()
+    }
+
+    pub fn activity(&self, limit: usize) -> Vec<ActivityEntry> {
+        self.net.activity().list(limit)
+    }
+
+    pub fn clear_activity(&self) {
+        self.net.activity().clear();
+    }
+
+    /// Stores (or with `None`, removes) a person's own Smithsonian key. A key
+    /// that is not 20 to 64 letters and digits is refused, not stored.
+    pub fn set_source_key(&self, source: &str, key: Option<String>) -> Result<(), UserError> {
+        if source != "smithsonian" {
+            return Err(UserError::bad());
+        }
+        let key = match key.filter(|key| !key.trim().is_empty()) {
+            Some(raw) => Some(sources::smithsonian::clean_key(raw).ok_or_else(UserError::bad)?),
+            None => None,
+        };
+        write_keys(
+            &self.root,
+            &SourceKeys {
+                smithsonian: key.clone(),
+            },
+        )?;
+        self.sources.set_smithsonian_key(key);
+        Ok(())
+    }
+
+    /// The credit for one item: from the search answer, or for ESA from the
+    /// image's own page (one cached request).
+    pub async fn credit(&self, id: &WallId) -> Result<Option<Credit>, UserError> {
+        let item = self.item(id)?;
+        let Some(source) = self.sources.for_item(id) else {
+            return Ok(None);
+        };
+        let credit = source.credit(&item, &self.net).await;
+        if let Some(found) = &credit {
+            if item.credit.as_ref() != Some(found) {
+                let mut catalog = self.catalog.lock().expect("catalog");
+                if let Some(entry) = catalog.get_mut(id) {
+                    entry.credit = Some(found.clone());
+                }
+            }
+        }
+        Ok(credit)
     }
 
     pub fn cached_first_page(&self) -> Option<SearchPage> {
@@ -123,6 +237,10 @@ impl WallpaperEngine {
         let Ok(query) = GalleryQuery::parse(&params) else {
             return;
         };
+        // Other sources have small hourly budgets; only Wallhaven pages ahead.
+        if query.source != SourceFilter::Wallhaven {
+            return;
+        }
         let resolved = ResolvedSearch::from_query(query, self.display);
         let token = self.begin_prefetch();
         let this = Arc::clone(self);
@@ -143,7 +261,7 @@ impl WallpaperEngine {
                 }
                 let _ = cache::download_thumb(
                     &this.root,
-                    this.transport.as_ref(),
+                    &this.net,
                     &item.id,
                     item.thumb(Rendition::Small),
                     Rendition::Small,
@@ -170,13 +288,7 @@ impl WallpaperEngine {
 
     pub async fn stage_one(&self, id: WallId) -> Result<(), UserError> {
         let item = self.item(&id)?;
-        let _ = cache::download_full(
-            &self.root.staging(),
-            self.transport.as_ref(),
-            &id,
-            &item.full,
-        )
-        .await?;
+        let _ = cache::download_full(&self.root.staging(), &self.net, &id, &item.full).await?;
         cache::cap_staging(&self.root.staging());
         Ok(())
     }
@@ -191,17 +303,53 @@ impl WallpaperEngine {
         } else if let Some(existing) = cache::find_full(&self.root.wallpapers(), &id) {
             existing
         } else {
-            cache::download_full(
-                &self.root.wallpapers(),
-                self.transport.as_ref(),
-                &id,
-                &item.full,
-            )
-            .await?
+            cache::download_full(&self.root.wallpapers(), &self.net, &id, &item.full).await?
         };
         let applied = set(path.clone(), fit)?;
-        cache::prune_wallpapers(&self.root.wallpapers(), &path);
+        let mut keep = history::load(&self.root).pinned();
+        keep.push(path);
+        cache::prune_wallpapers(&self.root.wallpapers(), &keep);
+        let mut recent = recent::load(&self.root);
+        recent.add(item);
+        let _ = recent::save(&self.root, &recent);
+        let source = id
+            .as_str()
+            .chars()
+            .next()
+            .and_then(sources::id_for_prefix)
+            .unwrap_or("unknown");
+        let credit = self
+            .catalog
+            .lock()
+            .expect("catalog")
+            .get(&id)
+            .and_then(|item| item.credit.as_ref())
+            .map(|credit| format!("{} · {}", credit.line, credit.licence));
+        self.net
+            .activity()
+            .append(&activity::Entry::applied(source, id.as_str(), credit));
         Ok(applied)
+    }
+
+    /// `apply`, plus a snapshot of the desktop it replaces for undo and
+    /// restore. A desktop Spiral cannot read is applied over without one.
+    pub async fn apply_tracked(
+        &self,
+        id: WallId,
+        fit: FitMode,
+        desktop: &dyn Desktop,
+    ) -> Result<Applied, UserError> {
+        let root = self.root.clone();
+        self.apply(id, fit, move |path, fit| {
+            let _guard = history::lock();
+            let before = desktop.capture().unwrap_or_default();
+            let applied = desktop.set(path, fit)?;
+            let mut stored = history::load(&root);
+            stored.record(before, &root.wallpapers());
+            let _ = history::save(&root, &stored);
+            Ok(applied)
+        })
+        .await
     }
 
     pub async fn thumb(&self, id: &WallId, rendition: Rendition) -> Result<Vec<u8>, UserError> {
@@ -209,14 +357,7 @@ impl WallpaperEngine {
             return Ok(bytes);
         }
         let item = self.item(id)?;
-        cache::download_thumb(
-            &self.root,
-            self.transport.as_ref(),
-            id,
-            item.thumb(rendition),
-            rendition,
-        )
-        .await
+        cache::download_thumb(&self.root, &self.net, id, item.thumb(rendition), rendition).await
     }
 
     async fn fetch_search(&self, resolved: &ResolvedSearch) -> Result<SearchPage, UserError> {
@@ -229,19 +370,7 @@ impl WallpaperEngine {
     }
 
     async fn fetch_stored(&self, resolved: &ResolvedSearch) -> Result<StoredPage, UserError> {
-        let pairs = wallhaven::pairs(resolved);
-        let bytes = self
-            .transport
-            .get(wallhaven::endpoint(), &pairs)
-            .await
-            .map_err(|err| {
-                if err.code() == "download_failed" {
-                    UserError::bad()
-                } else {
-                    err
-                }
-            })?;
-        wallhaven::parse_page(&bytes)
+        sources::search(&self.sources, resolved, &self.net).await
     }
 
     fn remember(&self, page: &StoredPage) {
@@ -251,12 +380,12 @@ impl WallpaperEngine {
         }
     }
 
+    /// This session's search results first, then the recent row saved on
+    /// disk, so an item set in an earlier launch can be set again.
     fn item(&self, id: &WallId) -> Result<StoredItem, UserError> {
-        self.catalog
-            .lock()
-            .expect("catalog")
-            .get(id)
-            .cloned()
+        let known = self.catalog.lock().expect("catalog").get(id).cloned();
+        known
+            .or_else(|| recent::load(&self.root).find(id))
             .ok_or_else(UserError::unknown)
     }
 }
@@ -369,18 +498,11 @@ mod tests {
                 thumb_small: format!("https://th.wallhaven.cc/small/ab/{index}.jpg"),
                 thumb_large: format!("https://th.wallhaven.cc/lg/ab/{index}.jpg"),
                 full: format!("https://w.wallhaven.cc/full/ab/wallhaven-{index}.jpg"),
+                title: None,
+                credit: None,
             })
             .collect();
-        cache::write_last_page(
-            root,
-            &StoredPage {
-                v: StoredPage::VERSION,
-                page: 1,
-                last_page: 4,
-                items,
-            },
-        )
-        .unwrap();
+        cache::write_last_page(root, &StoredPage::new(1, 4, items)).unwrap();
     }
 
     #[test]
@@ -444,6 +566,7 @@ mod tests {
                 categories: "111".into(),
                 sorting: "relevance".into(),
                 page: 1,
+                ..Default::default()
             })
             .await
             .unwrap_err();
@@ -492,5 +615,140 @@ mod tests {
         assert_eq!(script.hits.load(Ordering::Relaxed), hits);
         assert!(outside.is_file());
         assert_eq!(fs::read(&outside).unwrap(), b"outside");
+    }
+
+    /// One screen whose picture is whatever was last set or restored.
+    struct FakeDesktop(Mutex<history::Screen>);
+
+    impl FakeDesktop {
+        fn showing(path: &std::path::Path) -> Self {
+            Self(Mutex::new(history::Screen {
+                name: "Built-in Display".into(),
+                index: 0,
+                path: path.to_path_buf(),
+                scaling: Some(3),
+                clipping: Some(true),
+            }))
+        }
+
+        fn path(&self) -> std::path::PathBuf {
+            self.0.lock().unwrap().path.clone()
+        }
+    }
+
+    impl Desktop for FakeDesktop {
+        fn capture(&self) -> Result<Vec<history::Screen>, UserError> {
+            Ok(vec![self.0.lock().unwrap().clone()])
+        }
+
+        fn set(&self, path: std::path::PathBuf, _fit: FitMode) -> Result<Applied, UserError> {
+            let mut screen = self.0.lock().unwrap();
+            screen.path = path;
+            screen.scaling = Some(3);
+            Ok(Applied::here(1))
+        }
+
+        fn restore(&self, screens: &[history::Screen]) -> Result<u32, UserError> {
+            *self.0.lock().unwrap() = screens[0].clone();
+            Ok(1)
+        }
+    }
+
+    fn jpeg_engine(dir: &Dir) -> (Arc<WallpaperEngine>, Arc<Script>) {
+        let script = Arc::new(Script {
+            hits: AtomicUsize::new(0),
+            body: vec![0xFF, 0xD8, 0xFF, 0x00],
+            fail: false,
+        });
+        let transport: SharedTransport = script.clone();
+        let engine = WallpaperEngine::with_transport(dir.0.clone(), transport, None);
+        (engine, script)
+    }
+
+    #[tokio::test]
+    async fn undo_walks_back_through_applies_and_restore_puts_back_the_original() {
+        let dir = scratch("undo");
+        seed(&dir.0, 3);
+        let original = dir.0.dir().join("beach.jpg");
+        fs::write(&original, b"mine").unwrap();
+        let desktop = FakeDesktop::showing(&original);
+        let (engine, _) = jpeg_engine(&dir);
+        engine.cached_first_page().unwrap();
+        let first = WallId::parse("w-0").unwrap();
+        let second = WallId::parse("w-1").unwrap();
+        engine
+            .apply_tracked(first.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        engine
+            .apply_tracked(second.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-1.jpg"));
+        assert!(
+            dir.0.wallpapers().join("w-0.jpg").is_file(),
+            "a file undo may put back is pinned"
+        );
+        let view = history_view(&dir.0, &desktop);
+        assert_eq!(view.undo, 2);
+        assert_eq!(view.original.unwrap().name, "beach.jpg");
+
+        let back = undo(&dir.0, &desktop).unwrap();
+        assert_eq!(back.current, Some(first));
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-0.jpg"));
+
+        let restored = restore_original(&dir.0, &desktop).unwrap();
+        assert_eq!(restored.current, None);
+        assert_eq!(desktop.path(), original);
+        undo(&dir.0, &desktop).unwrap();
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-0.jpg"));
+
+        fs::remove_file(&original).unwrap();
+        let err = restore_original(&dir.0, &desktop).unwrap_err();
+        assert_eq!(err.to_string(), "restore_missing:beach.jpg");
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-0.jpg"));
+    }
+
+    #[tokio::test]
+    async fn undo_with_nothing_recorded_says_so() {
+        let dir = scratch("empty-undo");
+        let desktop = FakeDesktop::showing(std::path::Path::new("/nowhere.jpg"));
+        assert_eq!(
+            undo(&dir.0, &desktop).unwrap_err().to_string(),
+            "nothing_to_undo"
+        );
+        assert_eq!(
+            restore_original(&dir.0, &desktop).unwrap_err().to_string(),
+            "no_original"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_recent_item_from_an_earlier_launch_applies_and_downloads_again_if_evicted() {
+        let dir = scratch("recent");
+        seed(&dir.0, 3);
+        let desktop = FakeDesktop::showing(std::path::Path::new("/nowhere.jpg"));
+        let (engine, _) = jpeg_engine(&dir);
+        engine.cached_first_page().unwrap();
+        let id = WallId::parse("w-2").unwrap();
+        engine
+            .apply_tracked(id.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        assert_eq!(recent_items(&dir.0)[0].id, id);
+
+        fs::remove_file(dir.0.last_page()).unwrap();
+        fs::remove_dir_all(dir.0.wallpapers()).unwrap();
+        let (fresh, script) = jpeg_engine(&dir);
+        fresh
+            .apply_tracked(id.clone(), FitMode::Fill, &desktop)
+            .await
+            .unwrap();
+        assert_eq!(script.hits.load(Ordering::Relaxed), 1);
+        assert_eq!(desktop.path(), dir.0.wallpapers().join("w-2.jpg"));
+        assert!(fresh
+            .apply_tracked(WallId::parse("w-9").unwrap(), FitMode::Fill, &desktop)
+            .await
+            .is_err());
     }
 }

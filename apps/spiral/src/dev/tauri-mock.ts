@@ -7,9 +7,31 @@
  */
 
 import { assertCommandArgs } from "./command-args";
-import { pageArt, plateThumb } from "./plate-art";
+import { ACCENT_HEX, LOOKS, pageArt, plateThumb, type PageDoc } from "./plate-art";
 
-(window as unknown as { __SPIRAL_THUMB__?: (id: string) => string }).__SPIRAL_THUMB__ = plateThumb;
+// Real photographs for the grid so visual QA sees the room the way it ships.
+const ART = Object.values(
+  import.meta.glob<string>("./art/*.jpg", { eager: true, query: "?url", import: "default" }),
+);
+function artThumb(id: string): string {
+  let n = 0;
+  for (const char of id) n = (n * 31 + char.charCodeAt(0)) >>> 0;
+  return ART.length > 0 ? (ART[n % ART.length] ?? plateThumb(id)) : plateThumb(id);
+}
+(window as unknown as { __SPIRAL_THUMB__?: (id: string) => string }).__SPIRAL_THUMB__ = artThumb;
+
+// ?caps=on lights up the parked screens that need native work, tagged Preview.
+// ?start=wallpaper|resume skips the first-run picker.
+const query = new URLSearchParams(window.location.search);
+if (query.get("caps") === "on") {
+  window.__SPIRAL_CAPS__ = {
+    liveWallpaper: true,
+    applyPerDisplay: true,
+    pauseRules: true,
+    restoreOriginal: true,
+  };
+}
+const startAt = query.get("start");
 
 window.__SPIRAL_BOOT__ = {
   version: "2.0.0",
@@ -18,8 +40,22 @@ window.__SPIRAL_BOOT__ = {
     { id: "wallpaper", enabled: true, available: true, unavailableReason: null },
     { id: "resume", enabled: true, available: true, unavailableReason: null },
   ],
-  start: { kind: "picker", preselect: ["wallpaper", "resume"] },
+  start:
+    startAt === "wallpaper" || startAt === "resume"
+      ? { kind: "module", id: startAt }
+      : { kind: "picker", preselect: ["wallpaper", "resume"] },
   bench: false,
+  capabilities: { pinAllSpaces: true, pinReason: null },
+};
+
+const pin = {
+  available: true,
+  reason: null as string | null,
+  pinned: false,
+  running: false,
+  keepAfterRestart: false,
+  loginItem: "off",
+  error: null as string | null,
 };
 
 interface MockGeneral {
@@ -37,22 +73,69 @@ const general: MockGeneral = {
 };
 
 let licensed = true;
+let mockRecent: { id: string; resolution: string }[] = [
+  { id: "w-p1i3", resolution: "5120x2880" },
+  { id: "w-p1i7", resolution: "3840x2160" },
+];
+let mockUndo = 0;
+let mockExported = false;
 
 const mockUpdate = () =>
   (window as unknown as Record<string, unknown>).__SPIRAL_MOCK_UPDATE__
     ? { rid: 1, available: true, currentVersion: "1.0.0", version: "1.1.0" }
     : null;
 
-function searchPage(pageNum: number) {
+const SIZES = ["3840x2160", "5120x2880", "2560x1440", "6016x3384", "3440x1440", "3840x2400", "1920x1080"];
+
+const MOCK_SOURCES = [
+  { id: "wallhaven", prefix: "w", name: "Wallhaven", group: "wallhaven", hosts: ["wallhaven.cc"], licence: "Wallhaven SFW." },
+  { id: "nasa", prefix: "n", name: "NASA", group: "space", hosts: ["images-api.nasa.gov"], licence: "NASA images, generally not copyrighted." },
+  { id: "esa", prefix: "e", name: "ESA/Webb and ESA/Hubble", group: "space", hosts: ["esawebb.org", "esahubble.org"], licence: "CC BY 4.0, credit required." },
+  { id: "commons", prefix: "c", name: "Wikimedia Commons", group: "commons", hosts: ["commons.wikimedia.org"], licence: "Featured pictures under free licences." },
+  { id: "aic", prefix: "a", name: "Art Institute of Chicago", group: "museums", hosts: ["api.artic.edu"], licence: "CC0." },
+  { id: "cleveland", prefix: "m", name: "Cleveland Museum of Art", group: "museums", hosts: ["openaccess-api.clevelandart.org"], licence: "CC0." },
+  { id: "bing", prefix: "b", name: "Bing daily", group: "bing", hosts: ["www.bing.com"], licence: "Personal use." },
+  { id: "smithsonian", prefix: "s", name: "Smithsonian Open Access", group: "museums", hosts: ["api.si.edu"], licence: "CC0.", optionalKey: true },
+  { id: "rijks", prefix: "r", name: "Rijksmuseum", group: "museums", hosts: ["data.rijksmuseum.nl"], licence: "Public domain." },
+].map((source) => ({ optionalKey: false, keyed: false, ...source }));
+
+const GROUPS: Record<string, string[]> = {
+  all: ["wallhaven", "nasa", "esa", "commons", "aic", "cleveland", "bing"],
+  space: ["nasa", "esa"],
+  museums: ["aic", "cleveland", "rijks", "smithsonian"],
+};
+
+function searchPage(pageNum: number, source = "wallhaven") {
+  const members = GROUPS[source] ?? [source];
   return {
-    items: Array.from({ length: 24 }, (_, i) => ({
-      id: `w-p${pageNum}i${i}`,
-      resolution: i % 3 === 0 ? "3840x2160" : "2560x1440",
-    })),
+    items: Array.from({ length: 24 }, (_, i) => {
+      const from = MOCK_SOURCES.find((entry) => entry.id === members[i % members.length]) ?? MOCK_SOURCES[0];
+      const id = `${from.prefix}-p${pageNum}i${i}`;
+      return from.id === "wallhaven"
+        ? { id, resolution: SIZES[(i + pageNum) % SIZES.length] ?? "3840x2160" }
+        : {
+            id,
+            resolution: SIZES[(i + pageNum) % SIZES.length] ?? "3840x2160",
+            title: `Study ${i + 1}`,
+            credit: { line: `Mock artist, Study ${i + 1}`, licence: from.licence, page: `${from.hosts[0]}/item/${i}` },
+          };
+    }),
     page: pageNum,
-    lastPage: 5,
+    lastPage: members.length > 1 || source === "wallhaven" ? 5 : 2,
+    unavailable: source === "museums" ? ["smithsonian"] : [],
   };
 }
+
+function sourceArg(args: Record<string, unknown>): string {
+  const params = args.params;
+  if (typeof params === "object" && params !== null && "source" in params) {
+    const source = (params as { source?: unknown }).source;
+    if (typeof source === "string") return source;
+  }
+  return "wallhaven";
+}
+
+const mockRequests: Record<string, unknown>[] = [];
 
 function pageArg(args: Record<string, unknown>): number {
   const params = args.params;
@@ -79,12 +162,12 @@ function sampleResume(name: string) {
     contact: {
       name,
       email: "maya.okafor@fastmail.com",
-      phone: "415 555 0148",
+      phone: "",
       location: "Oakland, CA",
       links: ["maya.okafor.dev"],
     },
     headline: "Operations lead",
-    summary: "",
+    summary: "Runs clinic operations for a three-site health group. Eight years in scheduling and logistics.",
     experience: [
       {
         id: "exp-1",
@@ -93,7 +176,11 @@ function sampleResume(name: string) {
         location: "Oakland",
         start: { raw: "2022", year: 2022, month: 3, present: false },
         end: { raw: "Present", year: null, month: null, present: true },
-        bullets: [{ id: "exp-1-b1", text: "Cut clinic wait time from 40 minutes to 18." }],
+        bullets: [
+          { id: "exp-1-b1", text: "Cut clinic wait time from 40 minutes to 18." },
+          { id: "exp-1-b2", text: "Moved three sites onto one booking system in four months." },
+          { id: "exp-1-b3", text: "Hired and trained a front-desk team of nine." },
+        ],
       },
       {
         id: "exp-2",
@@ -102,7 +189,10 @@ function sampleResume(name: string) {
         location: "Oakland",
         start: { raw: "2019", year: 2019, month: 6, present: false },
         end: { raw: "2022", year: 2022, month: 2, present: false },
-        bullets: [{ id: "exp-2-b1", text: "Scheduled 120 outbound loads a week." }],
+        bullets: [
+          { id: "exp-2-b1", text: "Scheduled 120 outbound loads a week." },
+          { id: "exp-2-b2", text: "Cut late deliveries from 9% to 3% with a daily carrier check." },
+        ],
       },
     ],
     education: [
@@ -111,7 +201,7 @@ function sampleResume(name: string) {
         institution: "Laney College",
         credential: "A.S. Business",
         location: "Oakland",
-        start: { raw: "2016", year: 2016, month: null, present: false },
+        start: { raw: "Fall term", year: null, month: null, present: false },
         end: { raw: "2018", year: 2018, month: null, present: false },
         notes: [],
       },
@@ -120,8 +210,39 @@ function sampleResume(name: string) {
     leadership: [],
     awards: [],
     interests: [],
-    skills: [{ label: "Tools", items: ["Excel", "SQL"] }],
+    skills: [
+      { label: "Tools", items: ["Excel", "SQL", "Epic Cadence", "Airtable"] },
+      { label: "Languages", items: ["English", "Yoruba"] },
+    ],
   };
+}
+
+interface MockDate {
+  raw?: string;
+  year?: number | null;
+  present?: boolean;
+}
+
+/** Mirrors the real check closely enough to show flags and clear them on fix. */
+function mockFindings(doc: unknown) {
+  const findings: { type: string; raw?: string; field?: string }[] = [];
+  const value = doc as {
+    contact?: Record<string, unknown>;
+    experience?: { start?: MockDate; end?: MockDate }[];
+    education?: { start?: MockDate; end?: MockDate }[];
+  };
+  for (const field of ["name", "email", "phone"]) {
+    const text = value.contact?.[field];
+    if (typeof text !== "string" || text.trim() === "") findings.push({ type: "missingContact", field });
+  }
+  for (const entry of [...(value.experience ?? []), ...(value.education ?? [])]) {
+    for (const date of [entry.start, entry.end]) {
+      if (date?.raw && !date.present && !date.year && !/\d{4}/.test(date.raw)) {
+        findings.push({ type: "unparsedDate", raw: date.raw });
+      }
+    }
+  }
+  return findings;
 }
 
 const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
@@ -130,31 +251,25 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
     const call = args.call as {
       type?: string;
       text?: string;
-      doc?: { contact?: { name?: string } };
+      doc?: PageDoc;
+      look?: string;
+      accent?: string;
     } | undefined;
     if (!call) return null;
     if (call.type === "load_document") return { stored: null };
     if (call.type === "parse_text") return sampleResume(pastedName(call.text ?? ""));
     if (call.type === "import_file") return sampleResume("Maya Okafor");
-    if (call.type === "preview") {
-      const doc = call.doc as { contact?: { name?: string } } | undefined;
-      const name = doc?.contact?.name?.trim() || "Resume";
-      return { pages: [pageArt(name)] };
-    }
-    if (call.type === "check") return { findings: [] };
+    if (call.type === "preview") return { pages: [pageArt(call.doc ?? {}, call.look ?? "", call.accent ?? "")] };
+    if (call.type === "check") return { findings: mockFindings(call.doc) };
     if (call.type === "list_accents") {
-      return [
-        { id: "ink", hex: "var(--ink)" },
-        { id: "slate", hex: "var(--ink-2)" },
-        { id: "red", hex: "var(--red)" },
-      ];
+      return ACCENT_HEX.map(([id, hex]) => ({ id, hex }));
     }
     if (call.type === "thumbnails") {
       return {
-        thumbs: ["column", "ledger", "sheet", "rule"].map((id) => ({
+        thumbs: Object.entries(LOOKS).map(([id, look]) => ({
           id,
-          name: id.charAt(0).toUpperCase() + id.slice(1),
-          file: pageArt(id.charAt(0).toUpperCase() + id.slice(1)),
+          name: look.name,
+          file: pageArt(call.doc ?? {}, id, call.accent ?? ""),
           error: "",
         })),
       };
@@ -167,7 +282,7 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
         events.onmessage?.({ type: "progress", done: 2, total: 3 });
         await delay(800);
         return {
-          pages: [pageArt("Maya Okafor")],
+          pages: [pageArt(call.doc ?? {}, call.look ?? "", call.accent ?? "")],
           file: "",
           suggestedName: "Maya-Okafor.pdf",
           engine: "Built offline, no network used",
@@ -176,6 +291,26 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
       })();
     }
     if (call.type === "save_built") return null;
+    if (call.type === "export_both") {
+      const both = call as { dir?: string; replace?: boolean };
+      const dir = both.dir || "/Users/maya/Documents";
+      const files = ["Maya Okafor Resume.pdf", "Maya Okafor Resume.docx"];
+      if (mockExported && !both.replace) return { conflict: files, dir };
+      return (async () => {
+        const events = args.events as { onmessage?: (event: { type: string; done: number; total: number }) => void };
+        for (const done of [20, 55, 85]) {
+          events.onmessage?.({ type: "progress", done, total: 100 });
+          await delay(300);
+        }
+        mockExported = true;
+        return {
+          files: files.map((name) => `${dir}/${name}`),
+          dir,
+          engine: "Built offline, no network used",
+          notes: [],
+        };
+      })();
+    }
     if (call.type === "review_wording") return [];
     if (call.type === "engine_info") {
       return {
@@ -240,13 +375,69 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   wallpaper_cached_page: () => null,
   wallpaper_search: async (args) => {
     await delay(450);
-    return searchPage(pageArg(args));
+    const source = sourceArg(args);
+    for (const id of GROUPS[source] ?? [source]) {
+      const host = MOCK_SOURCES.find((entry) => entry.id === id)?.hosts[0];
+      mockRequests.unshift({ v: 1, at: new Date().toISOString(), actor: "app", kind: "network", action: "search", source: id, host, result: "ok", code: null });
+    }
+    return searchPage(pageArg(args), source);
   },
+  sources_list: () => MOCK_SOURCES,
+  displays_list: () => [{ name: "Built-in Retina Display", width: 3024, height: 1964, scale: 2, isMain: true }],
+  source_credit: () => ({ line: "ESA/Webb, NASA & CSA", licence: "CC BY 4.0 · ESA/Webb", page: "esawebb.org/images/mock/" }),
+  activity_list: () => mockRequests.slice(0, 200),
+  activity_clear: () => {
+    mockRequests.length = 0;
+  },
+  source_key_set: () => undefined,
   wallpaper_prefetch_page: () => undefined,
   wallpaper_stage_full: () => undefined,
-  wallpaper_apply: async () => {
+  wallpaper_apply: async (args) => {
     await delay(1400);
+    if (typeof args.id === "string") {
+      mockRecent = [{ id: args.id, resolution: "3840x2160" }, ...mockRecent.filter((item) => item.id !== args.id)].slice(0, 12);
+    }
+    mockUndo += 1;
     return { displays: 1, spaces: "current" };
+  },
+  wallpaper_recent: () => mockRecent,
+  wallpaper_history: () => ({
+    supported: true,
+    undo: mockUndo,
+    original: mockUndo > 0 ? { name: "Sonoma Horizon.heic", exists: true } : null,
+  }),
+  wallpaper_undo: async () => {
+    await delay(300);
+    if (mockUndo === 0) throw "nothing_to_undo";
+    mockUndo -= 1;
+    return { displays: 1, missing: [], current: mockRecent[1]?.id ?? null };
+  },
+  wallpaper_restore_original: async () => {
+    await delay(300);
+    if (mockUndo === 0) throw "no_original";
+    mockUndo += 1;
+    return { displays: 1, missing: [], current: null };
+  },
+  wallpaper_pin_state: () => ({ ...pin }),
+  wallpaper_pin_all_spaces: async (args) => {
+    await delay(500);
+    pin.pinned = args.enabled === true;
+    pin.running = pin.pinned;
+    if (!pin.pinned) {
+      pin.keepAfterRestart = false;
+      pin.loginItem = "off";
+    }
+    return { ...pin };
+  },
+  wallpaper_pin_keep: async (args) => {
+    await delay(300);
+    pin.keepAfterRestart = args.enabled === true;
+    pin.loginItem = pin.keepAfterRestart ? "enabled" : "off";
+    return { ...pin };
+  },
+  wallpaper_pin_resume: () => {
+    pin.running = pin.pinned;
+    return { ...pin };
   },
   thumb_cache_size: () => 37_400_000,
   clear_thumb_cache: () => undefined,

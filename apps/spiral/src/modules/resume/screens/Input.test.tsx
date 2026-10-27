@@ -10,18 +10,60 @@ function named(name: string): ResumeDoc {
 const importResumeFile = vi.fn(async (): Promise<ResumeDoc | null> => named("Grace Hopper"));
 const parsePastedText = vi.fn(async (text: string) => named(text.split("\n")[0]));
 
+const importDroppedFile = vi.fn(async (path: string) => named(path.split("/").pop() ?? ""));
+
+type DropPayload = { type: "over" | "leave" } | { type: "drop"; paths: string[] };
+const drag = vi.hoisted(() => ({ handler: null as null | ((event: { payload: DropPayload }) => Promise<void>) }));
+
 vi.mock("../api", () => ({
   importResumeFile: () => importResumeFile(),
-  importDroppedFile: vi.fn(),
+  importDroppedFile: (path: string) => importDroppedFile(path),
   parsePastedText: (text: string) => parsePastedText(text),
 }));
 
 vi.mock("@tauri-apps/api/webview", () => ({
-  getCurrentWebview: () => ({ onDragDropEvent: async () => () => undefined }),
+  getCurrentWebview: () => ({
+    onDragDropEvent: async (handler: (event: { payload: DropPayload }) => Promise<void>) => {
+      drag.handler = handler;
+      return () => undefined;
+    },
+  }),
 }));
 
 describe("Input", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    drag.handler = null;
+  });
+
+  it("imports a dropped file directly, without the picker", async () => {
+    const onReady = vi.fn();
+    render(<Input onReady={onReady} />);
+    await waitFor(() => expect(drag.handler).not.toBeNull());
+    await drag.handler?.({ payload: { type: "drop", paths: ["/Users/ada/Ada Lovelace.pdf"] } });
+    await waitFor(() => expect(onReady).toHaveBeenCalled());
+    expect(importDroppedFile).toHaveBeenCalledWith("/Users/ada/Ada Lovelace.pdf");
+    expect(importResumeFile).not.toHaveBeenCalled();
+    expect(onReady.mock.calls[0][0].contact.name).toBe("Ada Lovelace.pdf");
+  });
+
+  it("refuses several dropped files at once and says why", async () => {
+    render(<Input onReady={vi.fn()} />);
+    await waitFor(() => expect(drag.handler).not.toBeNull());
+    await drag.handler?.({ payload: { type: "drop", paths: ["/a.pdf", "/b.docx"] } });
+    expect(await screen.findByText(/Drop one resume at a time/)).toBeTruthy();
+    expect(importDroppedFile).not.toHaveBeenCalled();
+  });
+
+  it("shows the reason a dropped file was refused", async () => {
+    importDroppedFile.mockRejectedValueOnce(
+      "Spiral reads PDF, Word (.docx) and text files, and photo.png is none of these. Save it as a PDF or paste the text instead.",
+    );
+    render(<Input onReady={vi.fn()} />);
+    await waitFor(() => expect(drag.handler).not.toBeNull());
+    await drag.handler?.({ payload: { type: "drop", paths: ["/photo.png"] } });
+    expect(await screen.findByText(/photo.png is none of these/)).toBeTruthy();
+  });
 
   it("imports the file the user chose", async () => {
     const onReady = vi.fn();
@@ -81,9 +123,9 @@ describe("Input", () => {
     expect(onReady.mock.calls[0][0].experience[0].id).toBe("exp-0");
   });
 
-  it("is three tiles and nothing else", () => {
+  it("is one drop zone with three ways in", () => {
     render(<Input onReady={vi.fn()} />);
-    expect(screen.getByRole("heading", { name: "Import" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Drop a resume" })).toBeTruthy();
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 

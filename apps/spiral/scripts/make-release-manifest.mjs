@@ -30,6 +30,9 @@ const repo = arg("repo");
 const notes = arg("notes", false) ?? "";
 // Passed in rather than generated, so re-running produces an identical file.
 const pubDate = arg("date", false) ?? new Date().toISOString().replace(/\.\d+Z$/, "Z");
+// A macOS-only release (Windows held back) writes no "windows-x86_64" key, so
+// an installed Windows build finds no update and stays where it is.
+const withWindows = !process.argv.includes("--no-windows");
 
 const files = readdirSync(dir);
 const find = (pattern, what) => {
@@ -48,7 +51,7 @@ const find = (pattern, what) => {
 // notarized successfully. Windows is the opposite — its installer name does
 // carry both — which is why only one of the two patterns looks stripped down.
 const macBundle = find(/\.app\.tar\.gz$/, "macOS updater bundle");
-const winBundle = find(/_x64-setup\.exe$/, "Windows updater bundle");
+const winBundle = withWindows ? find(/_x64-setup\.exe$/, "Windows updater bundle") : null;
 
 const signatureFor = (bundle) => {
   const sig = `${bundle}.sig`;
@@ -71,7 +74,7 @@ const assetName = (file) => file.replaceAll(" ", ".");
 const url = (file) => `https://github.com/${repo}/releases/download/v${version}/${assetName(file)}`;
 
 const mac = { signature: signatureFor(macBundle), url: url(macBundle) };
-const win = { signature: signatureFor(winBundle), url: url(winBundle) };
+const win = winBundle ? { signature: signatureFor(winBundle), url: url(winBundle) } : null;
 
 // macOS gets exactly one key, "darwin-aarch64", pointing at the universal
 // bundle. tauri-plugin-updater 2.14.0 (what Wallpaper 1.0.4 ships) builds
@@ -101,7 +104,7 @@ const manifest = {
   pub_date: pubDate,
   platforms: {
     "darwin-aarch64": mac,
-    "windows-x86_64": win,
+    ...(win ? { "windows-x86_64": win } : {}),
   },
 };
 
@@ -122,6 +125,6 @@ if (sums === "") throw new Error(`no releasable files found in ${dir}`);
 writeFileSync(join(dir, "SHA256SUMS.txt"), `${sums}\n`);
 
 process.stdout.write(
-  `manifest: v${version} — macOS ${macBundle}, Windows ${winBundle}\n` +
+  `manifest: v${version} — macOS ${macBundle}, Windows ${winBundle ?? "held back"}\n` +
     `checksums: ${sums.split("\n").length} files\n`,
 );

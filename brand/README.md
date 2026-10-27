@@ -17,7 +17,7 @@ The mark is the original filled helix — three bands, not a stroke redraw.
 | `logo/mark-red.svg` | Mark in helix red | apps |
 | `logo/lockup-red.svg` | Helix + drawn SPIRAL. First-run screens only | `apps/spiral` |
 | `logo/png/mark-{16..1024}.png` | Icon-pipeline sources (tall helix) | Tauri icon generation |
-| `hero/hero-exit.webp` | Dark corridor, daylight at the far door | Wallpaper product plate + social card (synced to `/brand/hero/`) |
+| `hero/og-card.png` | 1200 × 630 social card, rendered from the live hero by `scripts/render-og.mjs` (see `hero/HERO.md`) | Open Graph + Twitter card (synced to `/brand/hero/`) |
 | `guide.html` | Full brand reference | humans |
 
 ## How surfaces consume it

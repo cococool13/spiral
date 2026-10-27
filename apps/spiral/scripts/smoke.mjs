@@ -16,7 +16,8 @@ const FAIL = "SMOKE FAIL";
 const WARN = "SMOKE WARN";
 
 const child = spawn("pnpm", ["tauri", "dev"], {
-  env: { ...process.env, SPIRAL_SMOKE: "1" },
+  // `SPIRAL_SMOKE=pin pnpm smoke` runs the pin-to-all-Spaces check instead.
+  env: { ...process.env, SPIRAL_SMOKE: process.env.SPIRAL_SMOKE || "1" },
   stdio: ["inherit", "pipe", "pipe"],
 });
 

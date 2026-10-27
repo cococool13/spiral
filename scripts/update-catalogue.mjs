@@ -46,10 +46,13 @@ export function rewriteCatalogue(src, app, version) {
     /\$\{RELEASE\}\/[^`"']+_universal\.dmg/,
     `\${RELEASE}/${site.assets.mac(version)}`,
   );
-  updated = updated.replace(
-    /\$\{RELEASE\}\/[^`"']+_x64-setup\.exe/,
-    `\${RELEASE}/${site.assets.windows(version)}`,
-  );
+  const windowsUrl = /(windows:\s*\{\s*url:\s*)[`"][^`"]+_x64-setup\.exe[`"]/;
+  if (!windowsUrl.test(updated)) die(`windows download for ${site.slug}`);
+  const held = site.windowsHeld;
+  const windows = held
+    ? `"https://github.com/${site.owner}/${site.repo}/releases/download/${held.tag}/${held.asset}"`
+    : `\`\${RELEASE}/${site.assets.windows(version)}\``;
+  updated = updated.replace(windowsUrl, `$1${windows}`);
   return next.slice(0, open) + updated + next.slice(end);
 }
 

@@ -1,99 +1,83 @@
-import type { ReactNode } from "react";
 import { apps } from "@/lib/apps";
-import Mark from "./Mark";
+import { RESEND_URL } from "@/lib/checkout";
+import AsciiMark from "./AsciiMark";
+import GlassWordmark from "./GlassWordmark";
 
 const EMAIL = "cohenbcoolidge@gmail.com";
 const GITHUB = "https://github.com/cococool13";
-const year = 2026;
 
-const sections = apps[0].sections;
+const COLUMNS: {
+  title: string;
+  links: { href: string; label: string; external?: true }[];
+}[] = [
+  {
+    title: "Spiral",
+    links: [
+      ...apps[0].sections.map((s) => ({ href: `/#${s.id}`, label: s.name })),
+      { href: "/#price", label: "Price" },
+      {
+        href: apps[0].downloads?.all ?? "/#price",
+        label: "All downloads",
+        external: true,
+      },
+    ],
+  },
+  {
+    title: "After you buy",
+    links: [
+      { href: "/thanks/", label: "Set up" },
+      { href: RESEND_URL, label: "Lost key", external: true },
+      { href: "/privacy/", label: "Privacy" },
+    ],
+  },
+  {
+    title: "Cohen Coolidge",
+    links: [
+      { href: `mailto:${EMAIL}`, label: EMAIL },
+      { href: GITHUB, label: "GitHub", external: true },
+      { href: "/work/", label: "Other work" },
+      {
+        href: "https://github.com/cococool13/spiral/blob/main/LICENSE",
+        label: "MIT licence",
+        external: true,
+      },
+    ],
+  },
+];
 
-/** Product index and ownership details, followed by the collection signature. */
 export default function Footer() {
   return (
-    <footer className="close">
-      <div className="close-shell">
-        <div className="close-cols">
-          <Col title="Spiral">
-            {sections.map((section) => (
-              <li key={section.id}>
-                <a href={`/#${section.id}`} className="close-link">
-                  {section.name}
-                </a>
-              </li>
+    <footer className="foot">
+      <div className="foot-top">
+        <AsciiMark />
+        <div>
+          <div className="cols">
+            {COLUMNS.map((col) => (
+              <nav key={col.title} aria-label={col.title}>
+                <h2>{col.title}</h2>
+                <ul>
+                  {col.links.map((l) => (
+                    <li key={l.href}>
+                      <a
+                        href={l.href}
+                        {...(l.external
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
+                      >
+                        {l.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             ))}
-          </Col>
-          <Col title="Contact">
-            <li>
-              <a href={`mailto:${EMAIL}`} className="close-link">
-                {EMAIL}
-              </a>
-            </li>
-            <li>
-              <a
-                href={GITHUB}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="close-link"
-              >
-                GitHub
-              </a>
-            </li>
-          </Col>
-          <Col title="Site">
-            <li>
-              <a href="/thanks/" className="close-link">
-                After you pay
-              </a>
-            </li>
-            <li>
-              <a href="/privacy/" className="close-link">
-                Privacy
-              </a>
-            </li>
-            <li>
-              <a href="/work/" className="close-link">
-                Other work
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://github.com/cococool13/spiral/blob/main/LICENSE"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="close-link"
-              >
-                MIT licence
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://unsplash.com/photos/E_kMaBHrw0k"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="close-link"
-              >
-                Photograph
-              </a>
-            </li>
-          </Col>
-          <p className="close-copyright obs-readout">© {year} Cohen Coolidge</p>
+          </div>
+          <p className="legal">
+            © 2026 Cohen Coolidge. Source is public; the app needs a key.
+          </p>
         </div>
       </div>
-
-      <div className="close-signature shell" aria-hidden="true">
-        <span>Spiral.</span>
-        <Mark size={112} />
-      </div>
+      <GlassWordmark />
     </footer>
-  );
-}
-
-function Col({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div>
-      <p className="obs-readout close-col-title">{title}</p>
-      <ul className="close-list">{children}</ul>
-    </div>
   );
 }

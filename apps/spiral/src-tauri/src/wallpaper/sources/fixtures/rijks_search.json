@@ -1,0 +1,36 @@
+{
+ "@context": "https://linked.art/ns/v1/search.json",
+ "id": "https://data.rijksmuseum.nl/search/collection?description=landscape&imageAvailable=true",
+ "type": "OrderedCollectionPage",
+ "partOf": {
+  "id": "https://data.rijksmuseum.nl/search/collection?description=landscape&imageAvailable=true",
+  "type": "OrderedCollection",
+  "totalItems": 348,
+  "first": {
+   "id": "https://data.rijksmuseum.nl/search/collection?description=landscape&imageAvailable=true",
+   "type": "OrderedCollectionPage"
+  },
+  "last": {
+   "id": "https://data.rijksmuseum.nl/search/collection?description=landscape&imageAvailable=true&pageToken=eyJ0b2tlbiI6ICJodHRwczovL2lkLnJpamtzbXVzZXVtLm5sLzIwMDgyMDQ2NSJ9",
+   "type": "OrderedCollectionPage"
+  }
+ },
+ "next": {
+  "id": "https://data.rijksmuseum.nl/search/collection?description=landscape&imageAvailable=true&pageToken=eyJ0b2tlbiI6ICJodHRwczovL2lkLnJpamtzbXVzZXVtLm5sLzIwMDE0NDczNyJ9",
+  "type": "OrderedCollectionPage"
+ },
+ "orderedItems": [
+  {
+   "id": "https://id.rijksmuseum.nl/20010092",
+   "type": "HumanMadeObject"
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/200107418",
+   "type": "HumanMadeObject"
+  },
+  {
+   "id": "https://id.rijksmuseum.nl/200107792",
+   "type": "HumanMadeObject"
+  }
+ ]
+}
