@@ -30,7 +30,7 @@ fixes almost everything it flags.
 Read this before applying anything you learned in `apps/`. The two surfaces
 share a brand; they do not share a performance charter.
 
-An app is a tool someone keeps open. The website is a thing someone *looks at*
+An app is a tool someone keeps open. The website is a thing someone _looks at_
 once and decides from. So the app's restraint is a feature, and copying it here
 would be a mistake.
 
@@ -46,13 +46,13 @@ would be a mistake.
 - **Voice.** State, never sell. Buttons say exactly what happens. Errors name
   the problem and the fix.
 
-### Does *not* carry over
+### Does _not_ carry over
 
-| App rule | Why it doesn't apply here |
-| --- | --- |
+| App rule                                                       | Why it doesn't apply here                                                                                                               |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | "A handful of glass controls per screen — we don't pay frames" | The app protects a 150 MB RAM budget on someone's desktop all day. A landing page is a few seconds of full attention. Spend the frames. |
-| "Static only, no video" | That is the wallpaper app's product scope, not a brand rule. Video belongs here. |
-| Binary-size and idle-RAM budgets | Meaningless for a static site. The budgets that matter here are the ones below. |
+| "Static only, no video"                                        | That is the wallpaper app's product scope, not a brand rule. Video belongs here.                                                        |
+| Binary-size and idle-RAM budgets                               | Meaningless for a static site. The budgets that matter here are the ones below.                                                         |
 
 The website is an Instrument Utility catalogue: dark Cron palette, Control-sharp
 chrome (0° radius, mono labels, parts-sheet index), selectable real-output
@@ -75,7 +75,6 @@ platform-aware offer.
 ### The budgets that do apply
 
 These exist so it stays fast.
-
 - **`prefers-reduced-motion` is not optional.** Every animation needs a
   reduced path. This is an accessibility requirement, not a preference.
 - **Nothing animates the LCP element on arrival.** The headline may enter, but
@@ -91,13 +90,13 @@ These exist so it stays fast.
 
 ## Layout
 
-| Path | What |
-| --- | --- |
-| `app/` | App Router entry — `layout.tsx`, `page.tsx`, `globals.css` (the `@theme` token bridge, nav bar, footer close, shared motion), `home.css` (observatory hero, app frames, rules board, letter) |
-| `components/` | Flat, one file per component. Not shadcn — no `ui/` subfolder. |
-| `lib/` | `apps.ts` (the app catalogue — edit this to add an app), `checkout.ts` (checkout and lost-key URLs), `otherWork.ts`, `useOS.ts` |
-| Root `scripts/sync-brand.mjs collection` | Copies `/brand` → `public/brand/` (gitignored); allowlist in `scripts/brand-manifest.mjs` |
-| `public/brand/` | **Generated. Never edit** — deleted and rewritten on every build. |
+| Path                                     | What                                                                                                                                                                                         |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`                                   | App Router entry — `layout.tsx`, `page.tsx`, `globals.css` (the `@theme` token bridge, nav bar, footer close, shared motion), `home.css` (observatory hero, app frames, rules board, letter) |
+| `components/`                            | Flat, one file per component. Not shadcn — no `ui/` subfolder.                                                                                                                               |
+| `lib/`                                   | `apps.ts` (the app catalogue — edit this to add an app), `checkout.ts` (checkout and lost-key URLs), `otherWork.ts`, `useOS.ts`                                                              |
+| Root `scripts/sync-brand.mjs collection` | Copies `/brand` → `public/brand/` (gitignored); allowlist in `scripts/brand-manifest.mjs`                                                                                                    |
+| `public/brand/`                          | **Generated. Never edit** — deleted and rewritten on every build.                                                                                                                            |
 
 Tokens reach Tailwind through `@theme` in `app/globals.css`, which maps
 `--spiral-*` custom properties to Tailwind colour names (`text-paper`,
