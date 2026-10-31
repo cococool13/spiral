@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
       - run: node scripts/check-checkout.mjs
 
   crate:
@@ -38,7 +40,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
       - uses: dtolnay/rust-toolchain@stable
+      # The crate belongs to the app workspace, so the lockfile and target
+      # directory live there. Keyed on Cargo.lock. Saved only on main; the
+      # three OS jobs restore that cache on pull requests.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/spiral/src-tauri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Test spiral-license crate
         working-directory: crates/spiral-license
         run: cargo test

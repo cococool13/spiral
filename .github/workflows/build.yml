@@ -28,6 +28,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
+# website, spiral, and windows have no `needs`, so a pull request runs them
+# at the same time. The windows job is the packaging build and is unchanged.
+# release and docs are the tag path and are unchanged.
 jobs:
   # Builds the website on every push and pull request, and deploys it when the
   # push is to main. It used to only build: deploying was a manual Pages
@@ -49,7 +52,10 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
+      # Shallow clone. Lint, typecheck, and the static export read this tree.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
 
       - name: Check checkout URLs
         working-directory: .
@@ -62,11 +68,34 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: collection/pnpm-lock.yaml
+
+      # Keyed on collection/pnpm-lock.yaml. Saved only on main, so a pull
+      # request restores main's store (GitHub serves the default-branch cache)
+      # and does not write a cache nothing else can seed from. A lockfile
+      # change misses the exact key and restores the prefix, which is still
+      # main's store.
+      - name: pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm store
+        id: pnpm-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-collection-${{ hashFiles('collection/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-collection-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Save pnpm store
+        if: github.ref == 'refs/heads/main' && steps.pnpm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
 
       # brand-tokens.json and public/brand are gitignored sync outputs; typecheck
       # imports the JSON and CSS imports the tokens file.
@@ -130,7 +159,10 @@ jobs:
       run:
         working-directory: apps/spiral
     steps:
+      # Shallow clone. The frontend gates and the Rust checks read this tree.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
 
       - uses: pnpm/action-setup@v6
         with:
@@ -139,19 +171,43 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: apps/spiral/pnpm-lock.yaml
+
+      # Keyed on apps/spiral/pnpm-lock.yaml. Saved only on main; pull requests
+      # restore that cache. See the website job for why the prefix exists.
+      - name: pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm store
+        id: pnpm-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-spiral-${{ hashFiles('apps/spiral/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-spiral-
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
+      # rust-cache hashes Cargo.lock into the key. Saved only on main so a
+      # pull request restores main's registry and target instead of writing
+      # a per-branch cache.
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: apps/spiral/src-tauri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Save pnpm store
+        if: github.ref == 'refs/heads/main' && steps.pnpm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
 
       - name: Sync brand assets
         run: pnpm sync-brand
