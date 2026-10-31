@@ -1,0 +1,307 @@
+#!/usr/bin/env bash
+# Fast checks for the commits about to be pushed. CI still runs the full set.
+#
+# TypeScript, on the changed files:
+#   collection: biome check (format and lint), then tsc --noEmit
+#   apps/spiral: tsc --noEmit
+#   either surface, when its sources or brand/ change: check-hex
+# Rust, when a crate changes:
+#   rustfmt --check on the changed .rs files. That is the formatter cargo fmt
+#   runs. cargo fmt itself has no file filter, and this workspace is not
+#   fmt-clean, so a package-wide `cargo fmt --check` would fail on files the
+#   push did not touch.
+#   cargo clippy -p <crate> --all-targets -- -D warnings
+#   Clippy is per changed crate, smallest first, and only while it finishes
+#   inside the budget. A crate that is still compiling is left to CI, which
+#   runs cargo clippy --workspace --all-targets -- -D warnings.
+#
+# Enable it once per clone: ./scripts/setup-hooks.sh
+#
+# Bash 3.2 compatible (macOS /bin/bash).
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+start=$SECONDS
+zero=0000000000000000000000000000000000000000
+# Clippy budget for the whole push, in seconds. fmt and tsc are not capped.
+CLIPPY_BUDGET=10
+
+die() {
+  printf 'pre-push: %s\n' "$1" >&2
+  exit 1
+}
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || die "$1 is not on PATH"
+}
+
+files=$(mktemp)
+lint_files=$(mktemp)
+rs_files=$(mktemp)
+on_exit() {
+  code=$?
+  rm -f "$files" "$lint_files" "$rs_files"
+  if [ "$code" -ne 0 ]; then
+    printf 'pre-push: failed (%ss)\n' "$((SECONDS - start))" >&2
+  fi
+  exit "$code"
+}
+trap on_exit EXIT
+
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -n "${local_sha:-}" ] || continue
+  if [ "$local_sha" = "$zero" ]; then
+    continue
+  fi
+  local_commit=$(git rev-parse "${local_sha}^{commit}")
+  if [ "$remote_sha" = "$zero" ]; then
+    base=""
+    if git rev-parse --verify --quiet origin/main >/dev/null; then
+      base=$(git merge-base "$local_commit" origin/main 2>/dev/null || true)
+    fi
+    if [ -z "$base" ] && git rev-parse --verify --quiet main >/dev/null; then
+      base=$(git merge-base "$local_commit" main 2>/dev/null || true)
+    fi
+    if [ -z "$base" ]; then
+      die "no merge-base with main. Fetch origin and push again."
+    fi
+    git diff --name-only --diff-filter=ACMRD "$base" "$local_commit"
+  else
+    remote_commit=$(git rev-parse "${remote_sha}^{commit}")
+    git diff --name-only --diff-filter=ACMRD "$remote_commit" "$local_commit"
+  fi
+done >>"$files"
+
+sort -u "$files" -o "$files"
+
+collection_lint=0
+collection_lint_all=0
+collection_ts=0
+collection_hex=0
+spiral_ts=0
+spiral_hex=0
+brand=0
+# Space-padded so membership tests stay exact.
+pkgs=" "
+
+add_pkg() {
+  case "$pkgs" in
+    *" $1 "*) ;;
+    *) pkgs="$pkgs$1 " ;;
+  esac
+}
+
+# Bash case `*` matches slashes, so collection/*.ts is the whole tree.
+# Exclusions come first: generated and vendored files are not lint inputs.
+is_collection_lintable() {
+  case "$1" in
+    collection/pnpm-lock.yaml|collection/next-env.d.ts) return 1 ;;
+    collection/out/*|collection/.next/*|collection/.wrangler/*) return 1 ;;
+    collection/public/brand/*|collection/public/resume/*) return 1 ;;
+    collection/*.ts|collection/*.tsx|collection/*.js|collection/*.jsx|collection/*.mjs|collection/*.cjs|collection/*.css|collection/*.json) return 0 ;;
+  esac
+  return 1
+}
+
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  case "$f" in
+    collection/biome.json) collection_lint=1; collection_lint_all=1 ;;
+    collection/tsconfig.json|collection/tsconfig.*.json) collection_ts=1 ;;
+    apps/spiral/tsconfig.json|apps/spiral/tsconfig.*.json) spiral_ts=1 ;;
+    brand/*) brand=1 ;;
+    apps/spiral/src-tauri/Cargo.toml|apps/spiral/src-tauri/Cargo.lock)
+      add_pkg resume-proto
+      add_pkg spiral-license
+      add_pkg resume-core
+      add_pkg spiral-resume-engine
+      add_pkg spiral-wallpaper
+      ;;
+    crates/spiral-license/*) add_pkg spiral-license ;;
+    apps/spiral/src-tauri/crates/resume-proto/*) add_pkg resume-proto ;;
+    apps/spiral/src-tauri/crates/resume-core/*) add_pkg resume-core ;;
+    apps/spiral/src-tauri/engine/*) add_pkg spiral-resume-engine ;;
+    apps/spiral/src-tauri/*) add_pkg spiral-wallpaper ;;
+  esac
+  case "$f" in
+    *.ts|*.tsx)
+      case "$f" in
+        collection/*) collection_ts=1 ;;
+        apps/spiral/*) spiral_ts=1 ;;
+      esac
+      ;;
+    *.rs)
+      case "$f" in
+        crates/spiral-license/*|apps/spiral/src-tauri/*)
+          if [ -f "$f" ]; then
+            printf '%s\n' "$f" >>"$rs_files"
+          fi
+          ;;
+      esac
+      ;;
+  esac
+  if is_collection_lintable "$f"; then
+    collection_lint=1
+    rel=${f#collection/}
+    if [ -f "$f" ]; then
+      printf '%s\n' "$rel" >>"$lint_files"
+    fi
+  fi
+  case "$f" in
+    collection/app/*|collection/components/*|collection/lib/*) collection_hex=1 ;;
+    apps/spiral/src/*|apps/spiral/index.html) spiral_hex=1 ;;
+  esac
+done <"$files"
+
+if [ "$brand" -eq 1 ]; then
+  collection_hex=1
+  spiral_hex=1
+fi
+
+run_biome() {
+  # A rule change applies to every file, so the config itself means a full check.
+  # An empty file list (a deletion) does too: there is nothing left to pass.
+  if [ "$collection_lint_all" -eq 1 ]; then
+    printf 'pre-push: biome check .\n'
+    (cd collection && pnpm lint)
+    return 0
+  fi
+  set --
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    set -- "$@" "$rel"
+  done <"$lint_files"
+  if [ "$#" -eq 0 ]; then
+    printf 'pre-push: biome check .\n'
+    (cd collection && pnpm lint)
+    return 0
+  fi
+  if [ "$#" -eq 1 ]; then
+    printf 'pre-push: biome check (1 file)\n'
+  else
+    printf 'pre-push: biome check (%s files)\n' "$#"
+  fi
+  # Same checker as `pnpm lint` (`biome check`). Scoped to the files in the push.
+  (cd collection && pnpm exec biome check --no-errors-on-unmatched "$@")
+}
+
+run_clippy_pkg() {
+  pkg=$1
+  left=$2
+  if [ "$left" -le 0 ]; then
+    printf 'pre-push: clippy -p %s left for CI (budget spent)\n' "$pkg"
+    return 0
+  fi
+  printf 'pre-push: cargo clippy -p %s --all-targets -- -D warnings\n' "$pkg"
+  log=$(mktemp)
+  # Own process group so the watchdog can stop cargo and its rustc children.
+  set -m
+  (
+    cd apps/spiral/src-tauri
+    cargo clippy -p "$pkg" --all-targets -- -D warnings
+  ) >"$log" 2>&1 &
+  pid=$!
+  i=0
+  while [ "$i" -lt "$left" ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      code=0
+      wait "$pid" || code=$?
+      cat "$log"
+      rm -f "$log"
+      return "$code"
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  rm -f "$log"
+  printf 'pre-push: clippy -p %s did not finish in %ss. CI runs cargo clippy --workspace --all-targets -- -D warnings.\n' "$pkg" "$left"
+  return 0
+}
+
+any=0
+
+if [ "$collection_hex" -eq 1 ] || [ "$spiral_hex" -eq 1 ]; then
+  need node
+fi
+if [ "$collection_hex" -eq 1 ]; then
+  any=1
+  printf 'pre-push: check-hex collection\n'
+  node scripts/check-hex.mjs collection
+fi
+if [ "$spiral_hex" -eq 1 ]; then
+  any=1
+  printf 'pre-push: check-hex spiral\n'
+  node scripts/check-hex.mjs spiral
+fi
+
+if [ "$collection_lint" -eq 1 ] || [ "$collection_ts" -eq 1 ]; then
+  need pnpm
+  need node
+  if [ ! -d collection/node_modules ]; then
+    die "collection dependencies are not installed. Run: cd collection && pnpm install"
+  fi
+fi
+if [ "$collection_lint" -eq 1 ]; then
+  any=1
+  run_biome
+fi
+if [ "$collection_ts" -eq 1 ]; then
+  any=1
+  printf 'pre-push: sync-brand collection\n'
+  (cd collection && pnpm sync-brand)
+  printf 'pre-push: tsc --noEmit (collection)\n'
+  (cd collection && pnpm typecheck)
+fi
+
+if [ "$spiral_ts" -eq 1 ]; then
+  need pnpm
+  need node
+  if [ ! -d apps/spiral/node_modules ]; then
+    die "app dependencies are not installed. Run: cd apps/spiral && pnpm install"
+  fi
+  any=1
+  printf 'pre-push: sync-brand spiral\n'
+  (cd apps/spiral && pnpm sync-brand)
+  printf 'pre-push: tsc --noEmit (apps/spiral)\n'
+  (cd apps/spiral && pnpm exec tsc --noEmit)
+fi
+
+if [ "$pkgs" != " " ]; then
+  need cargo
+  any=1
+  set --
+  while IFS= read -r rs; do
+    [ -n "$rs" ] || continue
+    set -- "$@" "$rs"
+  done <"$rs_files"
+  if [ "$#" -gt 0 ]; then
+    need rustfmt
+    if [ "$#" -eq 1 ]; then
+      printf 'pre-push: rustfmt --check (1 file)\n'
+    else
+      printf 'pre-push: rustfmt --check (%s files)\n' "$#"
+    fi
+    rustfmt --check --edition 2021 "$@"
+  fi
+  clip_start=$SECONDS
+  for pkg in resume-proto spiral-license resume-core spiral-resume-engine spiral-wallpaper; do
+    case "$pkgs" in
+      *" $pkg "*) ;;
+      *) continue ;;
+    esac
+    used=$((SECONDS - clip_start))
+    left=$((CLIPPY_BUDGET - used))
+    run_clippy_pkg "$pkg" "$left"
+  done
+fi
+
+elapsed=$((SECONDS - start))
+if [ "$any" -eq 0 ]; then
+  printf 'pre-push: no TypeScript or Rust changes (%ss)\n' "$elapsed"
+else
+  printf 'pre-push: done (%ss)\n' "$elapsed"
+fi
