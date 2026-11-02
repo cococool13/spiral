@@ -22,6 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          # Full history on purpose. gitleaks walks every commit; a shallow
+          # or blobless clone would miss a secret that is not in the tip tree.
           fetch-depth: 0
       - name: gitleaks
         run: |
