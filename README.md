@@ -159,7 +159,13 @@ into the one you want.
 ```bash
 cd apps/spiral && pnpm install && pnpm tauri dev   # the desktop app
 cd collection  && pnpm install && pnpm dev         # the website (localhost:3000)
+./scripts/setup-hooks.sh                           # once per clone
 ```
+
+`./scripts/setup-hooks.sh` points this clone at `.githooks`. The pre-push hook
+runs format, lint, and typecheck for the TypeScript in the push, and rustfmt
+plus clippy for changed Rust crates when clippy finishes within about 10
+seconds. CI still runs the full checks.
 
 | Command | Where | What it does |
 | --- | --- | --- |
