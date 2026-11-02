@@ -229,10 +229,39 @@ jobs:
         working-directory: apps/spiral/src-tauri
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+  # Decides whether a pull request can affect the Windows build. Job level, not
+  # `paths:` on the workflow: windows is a required check, and a workflow that
+  # never starts leaves it pending forever, which strands Dependabot auto-merge.
+  # A skipped job reports success.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      windows: ${{ steps.filter.outputs.windows }}
+    steps:
+      - id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            windows:
+              - "apps/spiral/**"
+              - "crates/**"
+              - "scripts/**"
+              - "brand/**"
+              - ".github/workflows/build.yml"
+
   # Per-push compile, not the release build. On a tag the shared workflow
   # builds Windows itself.
+  #
+  # Only pull requests can skip it. Pushes to main always build, which also
+  # keeps the sidecar cache seeded where every pull request can read it. If the
+  # filter itself fails this runs anyway: a skip would count as a pass.
   windows:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    needs: [changes]
+    if: ${{ !cancelled() && !startsWith(github.ref, 'refs/tags/') && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.windows == 'true') }}
     runs-on: windows-latest
     defaults:
       run:
@@ -267,10 +296,22 @@ jobs:
       - name: Build the frontend
         run: pnpm build
 
+      # Its own cache because rust-cache prunes the sidecar under target/, which
+      # made every run recompile llama.cpp for about nine minutes. The script
+      # holds the pinned tag and the cmake flags, so hashing it is the key.
+      # Release builds still compile their own in release-app.yml.
+      - name: Restore the sidecar
+        id: sidecar-cache
+        uses: actions/cache@v6
+        with:
+          path: apps/spiral/src-tauri/binaries/llama-server-x86_64-pc-windows-msvc.exe
+          key: llama-server-${{ runner.os }}-${{ hashFiles('apps/spiral/scripts/build-sidecar.mjs') }}
+
       # `pnpm tauri build` adds the helper bundle config, whose externalBin
       # includes llama-server, so the sidecar has to exist first. Same step as
       # the Windows job in release-app.yml.
       - name: Build the sidecar
+        if: steps.sidecar-cache.outputs.cache-hit != 'true'
         run: pnpm build-sidecar
 
       - name: Build Tauri app (signed)
