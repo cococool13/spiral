@@ -36,16 +36,16 @@ for hold in "${holds[@]}"; do
   if grep -qiE '^[[:space:]]*products[[:space:]]*:' "$hold"; then
     # Match product as a list item (not inside comments after # on that line)
     if awk -v p="$product" '
-      BEGIN{IGNORECASE=1}
+      BEGIN{IGNORECASE=1; found=0}
       /^[[:space:]]*products[[:space:]]*:/ {
         line=$0; sub(/#.*/,"",line)
         n=split(line, a, /[:,]/)
         for(i=1;i<=n;i++){
           gsub(/^[[:space:]]+|[[:space:]]+$/,"",a[i])
-          if (tolower(a[i])==tolower(p)) exit 0
+          if (tolower(a[i])==tolower(p)) found=1
         }
       }
-      END{exit 1}
+      END{ exit found ? 0 : 1 }
     ' "$hold"; then
       product_held_by="$hold"
       break
