@@ -23,8 +23,13 @@ pub fn text_from_docx(bytes: &[u8]) -> Result<String, String> {
         .map_err(|_| "That file is not a Word document. Choose a .docx file.".to_string())?;
     let mut xml = String::new();
     // Read the names first: naming what the file actually is needs the whole
-    // archive, and `by_name` holds a borrow of it while it fails.
-    let names: Vec<String> = archive.file_names().map(str::to_string).collect();
+    // archive, and `by_name` holds a borrow of it while it fails. A name that
+    // will not decode is skipped: these only choose the error message, so it
+    // must not stop a readable document from opening.
+    let names: Vec<String> = archive
+        .file_names()
+        .filter_map(|name| name.ok().map(|name| name.into_owned()))
+        .collect();
     archive
         .by_name(DOCUMENT)
         .map_err(|_| other_zip(&names))?
@@ -407,6 +412,20 @@ mod tests {
             experience < algorithm && algorithm < skills && skills < rust,
             "columns interleaved:\n{text}"
         );
+    }
+
+    #[test]
+    fn a_zip_without_a_document_is_named_by_what_is_inside_it() {
+        use std::io::Write;
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        writer
+            .start_file("content.xml", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(b"<office:document/>").unwrap();
+        let bytes = writer.finish().unwrap().into_inner();
+
+        let err = text_from_docx(&bytes).unwrap_err();
+        assert!(err.starts_with("That is an OpenDocument file"), "got {err}");
     }
 
     #[test]
