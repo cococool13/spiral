@@ -60,4 +60,8 @@ jobs:
             export PR_LABELS="$(cat "$GUARDRAILS_TMP/pr-labels.txt")"
           fi
           ./scripts/guardrails/check-bug-then-rule.sh "$(cat "$GUARDRAILS_TMP/pr-title.txt")" "$GUARDRAILS_TMP/pr-body.txt" "$GUARDRAILS_TMP/changed-files.txt"
+      - name: Stripe HOLD awk regression
+        run: |
+          set -euo pipefail
+          bash scripts/guardrails/check-stripe-hold.test.sh
 
