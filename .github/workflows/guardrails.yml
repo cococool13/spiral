@@ -1,0 +1,67 @@
+# Software-factory guardrails 7+8 (Reviewed-by, bug-then-rule).
+# Cohen approved 2026-11-02 10:15 AM ET: "Go with all 11 recommended guardrails".
+name: guardrails
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: guardrails-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guardrails:
+    name: guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Collect PR metadata and changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GUARDRAILS_TMP: ${{ runner.temp }}/guardrails-${{ github.run_id }}-${{ github.job }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GUARDRAILS_TMP"
+          # Fresh body/title/labels from the API so an edited Reviewed-by line is seen.
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            > "$GUARDRAILS_TMP/pr.json"
+          python3 scripts/guardrails/extract-pr-meta.py
+          # Diff against the PR base SHA already present in the checkout (no extra fetch).
+          git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD > "$GUARDRAILS_TMP/changed-files.txt"
+          echo "TITLE=$(cat "$GUARDRAILS_TMP/pr-title.txt")"
+          echo "LABELS=$(cat "$GUARDRAILS_TMP/pr-labels.txt")"
+          echo "HEAD=${{ github.event.pull_request.head.sha }}"
+          wc -l "$GUARDRAILS_TMP/changed-files.txt"
+      - name: Reviewed-by line
+        env:
+          GUARDRAILS_TMP: ${{ runner.temp }}/guardrails-${{ github.run_id }}-${{ github.job }}
+        run: |
+          set -euo pipefail
+          ./scripts/guardrails/check-reviewed-by.sh "$GUARDRAILS_TMP/pr-body.txt" "${{ github.event.pull_request.head.sha }}"
+      - name: Bug-then-rule
+        env:
+          GUARDRAILS_TMP: ${{ runner.temp }}/guardrails-${{ github.run_id }}-${{ github.job }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          if [[ -f "$GUARDRAILS_TMP/pr-labels.txt" ]]; then
+            export PR_LABELS="$(cat "$GUARDRAILS_TMP/pr-labels.txt")"
+          fi
+          ./scripts/guardrails/check-bug-then-rule.sh "$(cat "$GUARDRAILS_TMP/pr-title.txt")" "$GUARDRAILS_TMP/pr-body.txt" "$GUARDRAILS_TMP/changed-files.txt"
+      - name: Stripe HOLD awk regression
+        run: |
+          set -euo pipefail
+          bash scripts/guardrails/check-stripe-hold.test.sh
+
