@@ -3,7 +3,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import ts from "typescript";
+// TypeScript 7 ships no JS compiler API; this scanner reads the AST through the 6.x package.
+import ts from "@typescript/typescript6";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(here, "../src");
