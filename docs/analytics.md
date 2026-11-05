@@ -49,11 +49,6 @@ The Tauri content security policy `connect-src` includes `https://us.i.posthog.c
 
 ### Where this repo differs from the master spec
 
-Section 2. Events (same names everywhere):
-
-| `picker_opened` | Spiral | the first-run picker or the Settings tools picker is shown | none |
-| `tool_chosen` | Spiral | a tool is enabled | `tool` (`wallpaper` or `resume`) |
-
 Section 5. Privacy:
 
 - IP: PostHog never stores client IPs once the project setting "Discard client IP data" is on (Cohen ticks it
