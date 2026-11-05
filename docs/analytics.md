@@ -7,7 +7,7 @@ super-properties, privacy rules and keys live there. Read it before changing ana
 
 Spiral sends anonymous usage events from the desktop window to PostHog US when every gate below is open. The site does not load PostHog.
 
-The project key is the empty string in `apps/spiral/src/shell/analytics/config.ts`. The host is `https://us.i.posthog.com`. `~/.agents/posthog-keys.sh` fills the key. A `phx_` key is never committed.
+The shared "Cohen Apps" `phc_` key is set in `apps/spiral/src/shell/analytics/config.ts`. The host is `https://us.i.posthog.com`. A `phx_` key is never committed.
 
 Code:
 
