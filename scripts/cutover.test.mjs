@@ -9,6 +9,9 @@ import { SURFACES } from "./brand-manifest.mjs";
 import { APPS, RETIRED, isRetiredTag, parseTag } from "./apps.manifest.mjs";
 
 const node = process.execPath;
+const { version: currentVersion } = JSON.parse(
+  readFileSync(new URL(`../${APPS.spiral.dir}/package.json`, import.meta.url), "utf8"),
+);
 
 function run(args) {
   return spawnSync(node, args, { encoding: "utf8" });
@@ -17,17 +20,20 @@ function run(args) {
 test("the live version files agree", () => {
   const result = run(["scripts/version.mjs", "check"]);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /spiral: 2\.0\.0/);
+  assert.equal(result.stdout, `spiral: ${currentVersion} — all four agree\n`);
 });
 
 test("a v2 tag is checked against the live files", () => {
-  const ok = run(["scripts/version.mjs", "tag", "v2.0.0"]);
+  const tag = APPS.spiral.tag(currentVersion);
+  const ok = run(["scripts/version.mjs", "tag", tag]);
   assert.equal(ok.status, 0, ok.stderr);
-  assert.match(ok.stdout, /v2\.0\.0: spiral 2\.0\.0/);
+  assert.equal(ok.stdout, `${tag}: spiral ${currentVersion}\n`);
 
-  const ahead = run(["scripts/version.mjs", "tag", "v2.0.1"]);
+  const [major, minor, patch] = currentVersion.split(".").map(Number);
+  const nextTag = APPS.spiral.tag(`${major}.${minor}.${patch + 1}`);
+  const ahead = run(["scripts/version.mjs", "tag", nextTag]);
   assert.equal(ahead.status, 1);
-  assert.match(ahead.stderr, /2\.0\.0/);
+  assert.ok(ahead.stderr.includes(`but all four files say ${currentVersion}.`));
 });
 
 test("retired tags exit 0 and do not read a deleted app", () => {
