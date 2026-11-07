@@ -26,9 +26,7 @@ const SEMVER_IN_TEXT = /\d+\.\d+\.\d+/;
 const RULES = [
   // Phrases that currently exist in the docs. Drop a rule when the line goes;
   // never leave a dead pattern — unmatched rules exit 1 on every release.
-  { file: "README.md", pattern: /Spiral_\d+\.\d+\.\d+_universal\.dmg/g },
   { file: "README.md", pattern: /Published download is Spiral \*\*v\d+\.\d+\.\d+\*\*/g },
-  { file: "README.md", pattern: /published download is Spiral v\d+\.\d+\.\d+/g },
   { file: "AGENTS.md", pattern: /Current published download \*\*v\d+\.\d+\.\d+\*\*/g },
 ];
 
