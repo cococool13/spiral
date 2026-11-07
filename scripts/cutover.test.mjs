@@ -27,7 +27,7 @@ test("a v2 tag is checked against the live files", () => {
   const tag = APPS.spiral.tag(currentVersion);
   const ok = run(["scripts/version.mjs", "tag", tag]);
   assert.equal(ok.status, 0, ok.stderr);
-  assert.equal(ok.stdout, `${tag}: spiral ${currentVersion}\n`);
+  assert.equal(ok.stdout, `${tag}: spiral ${currentVersion} — all four files agree\n`);
 
   const [major, minor, patch] = currentVersion.split(".").map(Number);
   const nextTag = APPS.spiral.tag(`${major}.${minor}.${patch + 1}`);
