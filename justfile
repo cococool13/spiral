@@ -71,7 +71,7 @@ gitleaks:
 
 # design-guard.yml (taste on pull requests).
 taste:
-    "${DESIGN_GUARD:-$HOME/Projects/Design Guard}/taste-guard.sh" .
+    .ci/bin/ci-taste v1
 
 ci-drift:
     .ci/bin/ci-sync --check .
