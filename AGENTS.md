@@ -144,6 +144,7 @@ repo), not here. See `docs/licensing.md`.
 
 ## Definition of done
 
+- Checks run on this Mac too. `just check` before claiming done (same command as pre-push and `ship`); `just check-fast` while working. Never `--no-verify`. Land work only with `.ci/bin/ship`: it checks the exact commit, posts `ci/just-check`, and merges or labels the PR `needs-cohen` (CI, hooks, workflows, release paths). GitHub Actions still run here (public repo), and merging to main deploys the website through `build.yml`.
 - **App:** `pnpm build` in `apps/spiral`. For Rust, wallpaper, cache, installer, updater, or platform changes, also the relevant native smoke or build on the affected OS. Resume parser and template changes also need `cargo test` and `cargo clippy --all-targets` from `src-tauri`. Spiral Live changes: `pnpm test:live` (`swift test` in `apps/spiral/live`), `pnpm build-live` (universal, signed inside-out), and `SPIRAL_SMOKE=pin pnpm smoke` on macOS.
 - **Website:** `pnpm lint`, `pnpm typecheck`, `pnpm build`.
 - Report exact commands run and anything still platform-unverified.
