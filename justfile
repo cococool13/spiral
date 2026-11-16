@@ -67,7 +67,7 @@ versions:
 
 # ci.yml: full history, with .gitleaks.toml and .gitleaksignore.
 gitleaks:
-    gitleaks git --no-banner --redact .
+    .ci/bin/ci-gitleaks
 
 # design-guard.yml (taste on pull requests).
 taste:
@@ -75,3 +75,7 @@ taste:
 
 ci-drift:
     .ci/bin/ci-sync --check .
+
+# Whole history (nightly).
+gitleaks-full:
+    .ci/bin/ci-gitleaks --full
