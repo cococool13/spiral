@@ -107,6 +107,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Stripe HOLD gate
+        run: |
+          set -euo pipefail
+          # Guardrail 10: refuse publish while STRIPE_HOLD exists in the repo.
+          bash scripts/guardrails/check-stripe-hold.sh Spiral
+
       # Stop before building rather than after. An unsigned or un-notarized
       # macOS build is worse than no release: Gatekeeper blocks it. Naming the
       # missing secrets is the whole job of this step.
@@ -235,12 +241,18 @@ jobs:
           VERSION="${GITHUB_REF_NAME##*v}"
           DMG="$DMG_DIR/Spiral_${VERSION}_universal.dmg"
           hdiutil create -volname "Spiral" -srcfolder "$APP" -ov -format UDZO "$DMG"
+          # Guardrail 9 (2026-11-02): DMG itself must be signed before notarize.
+          # Spiral 2.0.2 failed spctl ("no usable signature") when only the app was sealed.
+          codesign --force --sign "$APPLE_SIGNING_IDENTITY" --timestamp "$DMG"
           xcrun notarytool submit "$DMG" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
           xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+          codesign --verify --verbose=4 "$DMG"
+          spctl -a -t open --context context:primary-signature "$DMG"
           if [ "${{ inputs.updater }}" = "true" ]; then
             PACK="$WORK/pack"
             mkdir -p "$PACK"
@@ -458,3 +470,29 @@ jobs:
             --generate-notes \
             "$LATEST_FLAG" \
             artifacts/*
+
+
+      - name: Verify live GitHub release DMG hash
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Guardrail 9: live download URL sha256 must match the artifact we just published.
+          dmg=$(ls artifacts/*.dmg | head -n1)
+          local_sha=$(shasum -a 256 "$dmg" | awk '{print $1}')
+          # Prefer the browser_download_url for the .dmg asset on this tag.
+          url=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" \
+            --jq '.assets[] | select(.name|test("\\.dmg$")) | .browser_download_url' | head -n1)
+          if [ -z "$url" ]; then
+            echo "::error::No DMG asset URL on release $GITHUB_REF_NAME"
+            exit 1
+          fi
+          tmp=$(mktemp)
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+            "$url" -o "$tmp" || curl -fsSL "$url" -o "$tmp"
+          live_sha=$(shasum -a 256 "$tmp" | awk '{print $1}')
+          rm -f "$tmp"
+          echo "local=$local_sha"
+          echo "live=$live_sha url=$url"
+          [ "$local_sha" = "$live_sha" ] || { echo "::error::live DMG hash mismatch"; exit 1; }
