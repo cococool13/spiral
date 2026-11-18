@@ -163,9 +163,11 @@ cd collection  && pnpm install && pnpm dev         # the website (localhost:3000
 ```
 
 `./scripts/setup-hooks.sh` points this clone at `.githooks`. The pre-push hook
-runs format, lint, and typecheck for the TypeScript in the push, and rustfmt
-plus clippy for changed Rust crates when clippy finishes within about 10
-seconds. CI still runs the full checks.
+runs `just check` on each pushed commit: the same checks as the GitHub
+workflows (minus the Windows packaging build and the release path), on this
+machine. `just check-fast` runs format, lint, and typecheck for changed
+TypeScript, and rustfmt plus clippy for changed Rust crates when clippy
+finishes within about 10 seconds.
 
 | Command | Where | What it does |
 | --- | --- | --- |
