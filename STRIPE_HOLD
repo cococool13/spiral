@@ -1,0 +1,4 @@
+# Stripe HOLD — refuse prod deploy until live keys exist.
+# House source: /workspace/house/forge/STRIPE-HOLD
+# Cohen: 2026-11-02 10:15 AM ET — "Go with all 11 recommended guardrails"
+products: Spiral, Ember, Lumen, Unboxed, licensing
