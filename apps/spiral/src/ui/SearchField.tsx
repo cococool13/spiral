@@ -3,7 +3,7 @@ import { SearchGlyph } from "./glyphs";
 
 interface SearchFieldProps {
   value: string;
-  inputRef: RefObject<HTMLInputElement>;
+  inputRef: RefObject<HTMLInputElement | null>;
   onChange: (value: string) => void;
 }
 
