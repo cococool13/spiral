@@ -1,8 +1,8 @@
 mod activity;
 mod cache;
-mod history;
 pub mod commands;
 pub mod displays;
+mod history;
 mod model;
 mod net;
 mod recent;
