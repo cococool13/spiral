@@ -31,7 +31,7 @@ Current published download **v2.0.2** (Spiral, macOS). Windows stays on Spiral W
   Biome 2 lint/format. Deployed to Cloudflare Pages. Checkout URLs in
   `collection/lib/checkout.ts`.
 - **Licensing:** one-time purchase ($15) through Stripe checkout. Apps gate on `crates/spiral-license`;
-  keys are issued and checked by the shared licensing Worker in `~/Projects/licensing`. See `docs/licensing.md`.
+  keys are issued and checked by the shared licensing Worker in `~/Projects/licensing` (its own repo, not here). See `docs/licensing.md`.
 - **Brand** (`brand/`): single source of truth. Sync with
   `node scripts/sync-brand.mjs <surface>` (allowlists in `scripts/brand-manifest.mjs`).
   Hex gate: `node scripts/check-hex.mjs <surface>`. Never edit a synced copy.
@@ -53,7 +53,7 @@ native behavior on macOS/Windows. On the VM, the JS/TS frontend and `cargo test`
 
 The snapshot already has Rust stable via rustup (≥1.85 / edition2024), Tauri
 GTK/WebKit libs, and pytest (`python3 -m pytest`; `~/.local/bin` is not on
-`PATH`). There is no root workspace: `cd` into a project first.
+`PATH`).
 
 ## Commands
 
@@ -139,11 +139,9 @@ pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --b
 
 `--branch=main` marks production; without it Pages files a preview and the live site does not move.
 
-Licensing server: the shared `licensing` Worker lives in `~/Projects/licensing` (its own
-repo), not here. See `docs/licensing.md`.
-
 ## Definition of done
 
+- Checks run on this Mac too. `just check` before claiming done (same command as pre-push and `ship`); `just check-fast` while working. Never `--no-verify`. Land work only with `.ci/bin/ship`: it checks the exact commit, posts `ci/just-check`, and merges or labels the PR `needs-cohen` (CI, hooks, workflows, release paths). GitHub Actions still run here (public repo), and merging to main deploys the website through `build.yml`.
 - **App:** `pnpm build` in `apps/spiral`. For Rust, wallpaper, cache, installer, updater, or platform changes, also the relevant native smoke or build on the affected OS. Resume parser and template changes also need `cargo test` and `cargo clippy --all-targets` from `src-tauri`. Spiral Live changes: `pnpm test:live` (`swift test` in `apps/spiral/live`), `pnpm build-live` (universal, signed inside-out), and `SPIRAL_SMOKE=pin pnpm smoke` on macOS.
 - **Website:** `pnpm lint`, `pnpm typecheck`, `pnpm build`.
 - Report exact commands run and anything still platform-unverified.
