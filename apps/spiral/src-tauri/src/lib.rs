@@ -220,7 +220,14 @@ async fn wallpaper_apply(
         .fit_mode;
     let root = shell.root().clone();
     engine
-        .apply_tracked(id, fit, &PinFollowing { app: &app, root: &root })
+        .apply_tracked(
+            id,
+            fit,
+            &PinFollowing {
+                app: &app,
+                root: &root,
+            },
+        )
         .await
         .map_err(|err| err.to_string())
 }
@@ -289,7 +296,13 @@ async fn wallpaper_undo(
 ) -> Result<wallpaper::Restored, String> {
     let root = shell.root().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        wallpaper::undo(&root, &PinFollowing { app: &app, root: &root })
+        wallpaper::undo(
+            &root,
+            &PinFollowing {
+                app: &app,
+                root: &root,
+            },
+        )
     })
     .await
     .map_err(|_| "apply_failed".to_string())?
@@ -303,7 +316,13 @@ async fn wallpaper_restore_original(
 ) -> Result<wallpaper::Restored, String> {
     let root = shell.root().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        wallpaper::restore_original(&root, &PinFollowing { app: &app, root: &root })
+        wallpaper::restore_original(
+            &root,
+            &PinFollowing {
+                app: &app,
+                root: &root,
+            },
+        )
     })
     .await
     .map_err(|_| "apply_failed".to_string())?
