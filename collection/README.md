@@ -75,6 +75,7 @@ platform-aware offer.
 ### The budgets that do apply
 
 These exist so it stays fast.
+
 - **`prefers-reduced-motion` is not optional.** Every animation needs a
   reduced path. This is an accessibility requirement, not a preference.
 - **Nothing animates the LCP element on arrival.** The headline may enter, but
