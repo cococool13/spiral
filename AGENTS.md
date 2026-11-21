@@ -97,7 +97,10 @@ Live tags are `v2` and later. `v1`, `slim-v*`, `clean-v*`, and `resume-v*` are r
 Release builds are manual until replaced: GitHub Actions is disabled and the old
 `release-app.yml` workflow is deleted, so a pushed tag builds nothing. Builds need the
 sidecar and `src-tauri/tauri.bundle.conf.json`. Models download at runtime.
-The deleted workflow is the step list: `git show df14ebf:.github/workflows/release-app.yml`.
+The deleted workflows are the step list: `git show df14ebf:.github/workflows/release-app.yml`,
+run with the inputs from the `release` job in `git show df14ebf:.github/workflows/build.yml`
+(updater and github-latest on, Windows off). So: `make-release-manifest.mjs --no-windows`,
+and publish with `gh release ... --latest=true`. The workflow defaults leave both off.
 A release is not complete without the updater assets: the signed `*.app.tar.gz` and
 `.sig`, plus the `latest.json` from `apps/spiral/scripts/make-release-manifest.mjs`.
 Installed copies fetch `latest.json`, so a release with only the DMG strands them.
