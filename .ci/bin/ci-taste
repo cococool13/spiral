@@ -4,6 +4,8 @@
 # The release is exported (git archive) into ~/.cache/ci/design-guard/<sha>, so
 # whatever branch the local Design Guard checkout is on never changes results.
 set -euo pipefail
+# A git hook exports GIT_DIR and friends; they would aim `git -C <design-guard>` at this repo.
+unset $(git rev-parse --local-env-vars)
 ref="${1:-${DESIGN_GUARD_REF:-v1}}"
 src="${DESIGN_GUARD:-$HOME/Projects/Design Guard}"
 if ! sha="$(git -C "$src" rev-parse -q --verify "$ref^{commit}")"; then

@@ -105,29 +105,17 @@ Tokens reach Tailwind through `@theme` in `app/globals.css`, which maps
 
 ## Deploying
 
-**Merging to `main` publishes.** The `website` job in
-[`.github/workflows/build.yml`](../.github/workflows/build.yml) lints,
-typechecks, builds, and deploys that same `out/` — so the live site is the
-export CI just checked, not a rebuild of the same commit. Pull requests build
-but never deploy; a production deploy from an unreviewed branch is the one
-thing this must not do.
+Nothing deploys automatically. Merging to `main` doesn't deploy, and pull requests don't either.
 
-This replaces the CLI-only rule that used to live here. It was not arbitrary —
-it kept unreviewed work off the live site — but the cost was that `main` could
-be green and correct for days while the site served something older, with
-nothing anywhere saying so. The `if:` on the deploy step is what now enforces
-the part worth keeping.
+Only deploy from `main` after the change is merged. Don't deploy unreviewed branch work to production.
 
-To publish from a branch, or when CI is not an option, the manual path is
-unchanged:
+From the collection folder, run:
 
 ```bash
 pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --branch=main
 ```
 
-`--branch=main` is what makes it a production deploy. Leave it off and Pages
-files the upload as a preview, which succeeds, prints a URL, and does not move
-the live site.
+`--branch=main` makes it a production deploy. If you leave `--branch` off, Wrangler uses the current git branch name. On `main`, that still deploys to production. For a preview, pass a non-production name like `--branch=preview`. A preview upload succeeds and prints a URL, but it doesn't move the live site.
 
 `public/_headers` carries the cache and security headers; the static export
 copies it to `out/_headers`, which is where Pages reads it. Wrangler uploads a
