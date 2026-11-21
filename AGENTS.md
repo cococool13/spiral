@@ -97,6 +97,11 @@ Live tags are `v2` and later. `v1`, `slim-v*`, `clean-v*`, and `resume-v*` are r
 Release builds are manual until replaced: GitHub Actions is disabled and the old
 `release-app.yml` workflow is deleted, so a pushed tag builds nothing. Builds need the
 sidecar and `src-tauri/tauri.bundle.conf.json`. Models download at runtime.
+The deleted workflow is the step list: `git show df14ebf:.github/workflows/release-app.yml`.
+A release is not complete without the updater assets: the signed `*.app.tar.gz` and
+`.sig`, plus the `latest.json` from `apps/spiral/scripts/make-release-manifest.mjs`.
+Installed copies fetch `latest.json`, so a release with only the DMG strands them.
+Publish the GitHub release with every asset before deploying the catalogue that links it.
 
 **Every macOS release:** bump the matching cask in
 [`cococool13/homebrew-spiral`](https://github.com/cococool13/homebrew-spiral)
@@ -137,7 +142,7 @@ cd collection
 pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --branch=main
 ```
 
-`--branch=main` marks production; without it Pages files a preview and the live site does not move.
+`--branch=main` marks production. Without `--branch`, Wrangler uses the current git branch, so on `main` it still deploys production. For a preview, pass a non-production name such as `--branch=preview`.
 
 ## Definition of done
 

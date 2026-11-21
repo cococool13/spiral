@@ -115,7 +115,7 @@ From the collection folder, run:
 pnpm build && npx wrangler pages deploy out --project-name=spiral-collection --branch=main
 ```
 
-`--branch=main` makes it a production deploy. Without it, Pages files the upload as a preview. The upload succeeds and prints a URL, but it doesn't move the live site.
+`--branch=main` makes it a production deploy. If you leave `--branch` off, Wrangler uses the current git branch name. On `main`, that still deploys to production. For a preview, pass a non-production name like `--branch=preview`. A preview upload succeeds and prints a URL, but it doesn't move the live site.
 
 `public/_headers` carries the cache and security headers; the static export
 copies it to `out/_headers`, which is where Pages reads it. Wrangler uploads a

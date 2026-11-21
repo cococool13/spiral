@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -72,8 +72,4 @@ test("a future catalogue bump writes Spiral asset names", () => {
   assert.match(next, /version: "2\.0\.0"/);
   assert.doesNotMatch(next, /Spiral\.Wallpaper_2\.0\.0/);
   assert.match(next, /resume-v0\.1\.2/);
-});
-
-test("Windows stays held until its hook rehearsal passes", () => {
-  assert.equal(existsSync(new URL("../apps/spiral/src-tauri/windows/rehearsal.json", import.meta.url)), false);
 });

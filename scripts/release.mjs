@@ -172,8 +172,7 @@ Nothing has been pushed. Publishing is a separate, deliberate act:
 
   git push origin main ${tag}
 
-or re-run this with --push. GitHub Actions is off, so pushing the tag does
-not build or publish anything. Build, sign, notarize and publish by hand.
+GitHub Actions is off, so pushing the tag does not build or publish anything. Build, sign, notarize and publish by hand.
 `);
   process.exit(0);
 }
