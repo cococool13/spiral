@@ -12,10 +12,6 @@ version: 2
 #
 # This does NOT mute security updates. Dependabot security PRs bypass `ignore`
 # entirely, so a CVE in any of these still opens a PR.
-#
-# github-actions deliberately keeps majors: that ecosystem is grouped into a
-# single PR, so a major there costs one PR rather than many, and stale actions
-# are their own problem.
 updates:
   - package-ecosystem: npm
     directory: /collection
@@ -58,13 +54,3 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      actions:
-        patterns:
-          - "*"

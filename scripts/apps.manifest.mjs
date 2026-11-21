@@ -6,7 +6,6 @@ export const APPS = {
   spiral: {
     name: "Spiral",
     builds: "macOS only (Windows held at 1.0.4)",
-    workflow: "build.yml",
     tag: (v) => `v${v}`,
     dir: "apps/spiral",
     crate: "spiral-wallpaper",
