@@ -105,10 +105,9 @@ Tokens reach Tailwind through `@theme` in `app/globals.css`, which maps
 
 ## Deploying
 
-**Merging to `main` publishes.** The `website` job in
-[`.github/workflows/build.yml`](../.github/workflows/build.yml) lints,
-typechecks, builds, and deploys that same `out/` — so the live site is the
-export CI just checked, not a rebuild of the same commit. Pull requests build
+**Merging to `main` publishes.** GitHub Actions is
+disabled, so nothing deploys automatically: build and deploy by hand with the
+`wrangler pages deploy` command in the repo's `AGENTS.md` (Deploy). Pull requests build
 but never deploy; a production deploy from an unreviewed branch is the one
 thing this must not do.
 

@@ -1,12 +1,11 @@
 # CI contract. Agents, the pre-push hook and `ship` all run `just check`.
 # Kit: .ci/ (vendored with ci-sync; `just ci-drift` shows drift).
-# GitHub Actions still run here too (public repo). Not in `just check`, and why:
-#   build.yml windows: Windows packaging build, needs a Windows runner.
-#   build.yml release/docs, release-app.yml: tag-only release path (signing).
-#   build.yml website deploy: runs on GitHub on push to main.
-#   versions.yml tag/downloads: tag-only, and `downloads.mjs latest` reads
-#   live GitHub releases (run by hand after a release).
-#   dependabot-auto-merge.yml: not a check.
+# GitHub Actions are removed and disabled; nothing runs on GitHub. Recipe
+# comments name the old workflow job each recipe replaced. Not in `just check`:
+#   Windows packaging build: needs a Windows machine.
+#   Release build and signing (old release-app.yml): manual until replaced.
+#   Website deploy: manual (AGENTS.md, Deploy).
+#   `downloads.mjs latest`: reads live GitHub releases (run by hand after a release).
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 # taste runs first and alone: it scans the tree, and the other recipes write

@@ -74,36 +74,6 @@ test("a future catalogue bump writes Spiral asset names", () => {
   assert.match(next, /resume-v0\.1\.2/);
 });
 
-test("the spiral release caller passes the helper bundle config", () => {
-  const build = readFileSync(new URL("../.github/workflows/build.yml", import.meta.url), "utf8");
-  assert.match(build, /app-dir: apps\/spiral/);
-  assert.match(build, /bundle-config: src-tauri\/tauri.bundle.conf.json/);
-  assert.match(build, /sidecar: true/);
-  assert.match(build, /updater: true/);
-  assert.match(build, /github-latest: true/);
-  assert.match(build, /windows: false/);
-  const release = readFileSync(new URL("../.github/workflows/release-app.yml", import.meta.url), "utf8");
-  assert.match(release, /sign-helpers\.mjs/);
-  assert.match(release, /unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID/);
-  assert.match(release, /Windows hook rehearsal has not passed/);
+test("Windows stays held until its hook rehearsal passes", () => {
   assert.equal(existsSync(new URL("../apps/spiral/src-tauri/windows/rehearsal.json", import.meta.url)), false);
-});
-
-test("the per-push Windows build makes the sidecar the bundle config needs", () => {
-  const build = readFileSync(new URL("../.github/workflows/build.yml", import.meta.url), "utf8");
-  const windows = build.slice(build.indexOf("\n  windows:"));
-  const sidecar = windows.indexOf("run: pnpm build-sidecar");
-  assert.notEqual(sidecar, -1);
-  assert.ok(sidecar < windows.indexOf("run: pnpm tauri build"));
-});
-
-test("the updater tarball is packed without AppleDouble files", () => {
-  const release = readFileSync(new URL("../.github/workflows/release-app.yml", import.meta.url), "utf8");
-  const packs = release.split("\n").filter((line) => /\btar -c/.test(line) || /\btar .*-czf/.test(line));
-  assert.ok(packs.length > 0);
-  for (const line of packs) {
-    assert.match(line, /COPYFILE_DISABLE=1/);
-    assert.match(line, /--no-mac-metadata/);
-    assert.match(line, /--no-xattrs/);
-  }
 });
